@@ -69,6 +69,22 @@ export class CompanyService {
   }
 
   /**
+   * Find company by org number
+   */
+  static async findByOrgNumber(orgNumber: string): Promise<Company | null> {
+    if (!orgNumber || orgNumber.startsWith('PLACEHOLDER-')) return null;
+    
+    const { data, error } = await supabase
+      .from('companies')
+      .select('*')
+      .eq('org_number', orgNumber)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data as Company | null;
+  }
+
+  /**
    * Get enhanced company data with contact info
    */
   static async getEnhancedData(orgNumber: string): Promise<EnhancedCompanyData | null> {
