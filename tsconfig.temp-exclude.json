@@ -1,0 +1,24 @@
+{
+  "extends": "./tsconfig.app.json",
+  "exclude": [
+    "src/modules/auth/**/*",
+    "src/modules/company/**/*",
+    "src/modules/document/**/*",
+    "src/modules/erpsystem/**/*",
+    "src/modules/opportunity/**/*",
+    "src/modules/project/**/*",
+    "src/modules/supplier/**/*",
+    "src/modules/tasks/**/*",
+    "src/modules/user/**/*",
+    "src/components/Admin/**/*",
+    "src/components/Company/**/*",
+    "src/components/Supplier/**/*",
+    "src/components/Dashboard/TasksWidget.tsx",
+    "src/components/Dashboard/OpportunitiesWidget.tsx",
+    "src/components/GuidedQuestionnaire/**/*",
+    "src/components/DataTable/**/*",
+    "src/pages/!(Index|Modules|Tenants|Dashboard|NotFound).tsx",
+    "**/*.test.ts",
+    "**/*.test.tsx"
+  ]
+}

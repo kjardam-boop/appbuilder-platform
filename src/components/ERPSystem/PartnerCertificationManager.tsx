@@ -1,16 +1,16 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-export default function SuppliersList() {
+export const PartnerCertificationManager = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Suppliers</CardTitle>
+        <CardTitle>Partner Certifications</CardTitle>
       </CardHeader>
       <CardContent>
         <p className="text-muted-foreground">
-          Database not configured. This feature requires migration.
+          Database tables not yet configured. This feature will be available after migration.
         </p>
       </CardContent>
     </Card>
   );
-}
+};
