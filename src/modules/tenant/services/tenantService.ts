@@ -43,20 +43,12 @@ const connectionCache = new TenantConnectionCache();
 
 /**
  * Get tenant configuration by host
+ * Uses the new tenant resolver with domain/subdomain support
  */
 export async function getTenantByHost(host: string): Promise<TenantConfig | null> {
-  try {
-    // In production, this would query the database
-    // For now, we'll load from config file
-    const response = await fetch('/config/tenants.json');
-    const tenants: TenantConfig[] = await response.json();
-    
-    const tenant = tenants.find(t => t.host === host);
-    return tenant || null;
-  } catch (error) {
-    console.error('[TenantService] Error fetching tenant by host:', error);
-    return null;
-  }
+  // Import here to avoid circular dependency
+  const { resolveTenantByHost } = await import('./tenantResolver');
+  return resolveTenantByHost(host);
 }
 
 /**

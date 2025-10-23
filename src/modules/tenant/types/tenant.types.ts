@@ -8,6 +8,8 @@ export interface TenantConfig extends BaseEntity {
   tenant_id: string;
   name: string;
   host: string;
+  domain?: string; // Custom domain (e.g., customer.com)
+  subdomain?: string; // Subdomain (e.g., customer.platform.com)
   database_schema?: string;
   enabled_modules: string[];
   custom_config: Record<string, any>;

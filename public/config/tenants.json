@@ -6,6 +6,7 @@
     "tenant_id": "default",
     "name": "Default Tenant",
     "host": "localhost",
+    "subdomain": "default",
     "database_schema": "public",
     "enabled_modules": [
       "company",
@@ -33,6 +34,41 @@
       "max_users": 100,
       "max_projects": 50,
       "max_storage_mb": 5000
+    }
+  },
+  {
+    "id": "demo-tenant-001",
+    "created_at": "2025-01-01T00:00:00.000Z",
+    "updated_at": "2025-01-01T00:00:00.000Z",
+    "tenant_id": "demo",
+    "name": "Demo Tenant",
+    "subdomain": "demo",
+    "domain": "demo.example.com",
+    "database_schema": "public",
+    "enabled_modules": [
+      "company",
+      "project",
+      "document",
+      "tasks",
+      "ai"
+    ],
+    "custom_config": {
+      "language": "en",
+      "timezone": "Europe/Oslo"
+    },
+    "branding": {
+      "primary_color": "#10b981",
+      "secondary_color": "#3b82f6"
+    },
+    "features": {
+      "ai_enabled": true,
+      "integrations_enabled": false,
+      "custom_modules": []
+    },
+    "limits": {
+      "max_users": 10,
+      "max_projects": 5,
+      "max_storage_mb": 1000
     }
   }
 ]

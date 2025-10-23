@@ -57,9 +57,10 @@ serve(async (req) => {
 
     console.log(`[TenantConfig] Fetching config for tenant: ${tenantId}`);
 
-    // In production, this would fetch from database
+    // In production, this would fetch from control database
     // For now, we'll use the static config file approach
-    const tenantsResponse = await fetch(`${Deno.env.get('VITE_SUPABASE_URL')}/config/tenants.json`);
+    const configUrl = new URL('/config/tenants.json', Deno.env.get('VITE_SUPABASE_URL') || 'http://localhost:5173');
+    const tenantsResponse = await fetch(configUrl.toString());
     
     if (!tenantsResponse.ok) {
       throw new Error('Failed to load tenant configurations');

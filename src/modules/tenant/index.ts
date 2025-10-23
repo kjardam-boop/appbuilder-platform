@@ -10,6 +10,7 @@ export * from "./types/tenant.types";
 
 // Export services
 export * from "./services/tenantService";
+export * from "./services/tenantResolver";
 
 // Module configuration
 export const TENANT_MODULE = {

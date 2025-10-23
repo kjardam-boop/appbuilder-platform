@@ -1,4 +1,4 @@
-import type { IntegrationAdapter, AdapterConfig, AdapterConfigField, AdapterAction, StandardBaseAdapter } from "../base/StandardAdapter";
+import type { IntegrationAdapter } from "../adapters/base/StandardAdapter";
 import { BrregAdapter } from "../adapters/brreg/BrregAdapter";
 
 /**
