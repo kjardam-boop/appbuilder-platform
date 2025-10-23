@@ -1,0 +1,61 @@
+{
+  "roles": {
+    "admin": {
+      "name": "Administrator",
+      "description": "Full access to all resources",
+      "permissions": ["*:*"]
+    },
+    "manager": {
+      "name": "Manager",
+      "description": "Manage projects and teams",
+      "permissions": [
+        "company:read",
+        "company:update",
+        "project:*",
+        "document:*",
+        "tasks:*",
+        "opportunity:read",
+        "opportunity:update"
+      ]
+    },
+    "user": {
+      "name": "User",
+      "description": "Standard user access",
+      "permissions": [
+        "company:read",
+        "project:read",
+        "project:update",
+        "document:read",
+        "document:create",
+        "tasks:read",
+        "tasks:update"
+      ]
+    },
+    "viewer": {
+      "name": "Viewer",
+      "description": "Read-only access",
+      "permissions": [
+        "company:read",
+        "project:read",
+        "document:read",
+        "tasks:read"
+      ]
+    }
+  },
+  "resources": [
+    "company",
+    "project",
+    "document",
+    "tasks",
+    "opportunity",
+    "supplier",
+    "integration"
+  ],
+  "actions": [
+    "create",
+    "read",
+    "update",
+    "delete",
+    "list"
+  ]
+}

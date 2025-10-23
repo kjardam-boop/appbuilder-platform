@@ -1,0 +1,38 @@
+[
+  {
+    "id": "default-tenant-001",
+    "created_at": "2025-01-01T00:00:00.000Z",
+    "updated_at": "2025-01-01T00:00:00.000Z",
+    "tenant_id": "default",
+    "name": "Default Tenant",
+    "host": "localhost",
+    "database_schema": "public",
+    "enabled_modules": [
+      "company",
+      "project",
+      "document",
+      "tasks",
+      "opportunity",
+      "ai",
+      "integrations"
+    ],
+    "custom_config": {
+      "language": "no",
+      "timezone": "Europe/Oslo"
+    },
+    "branding": {
+      "primary_color": "#2563eb",
+      "secondary_color": "#7c3aed"
+    },
+    "features": {
+      "ai_enabled": true,
+      "integrations_enabled": true,
+      "custom_modules": []
+    },
+    "limits": {
+      "max_users": 100,
+      "max_projects": 50,
+      "max_storage_mb": 5000
+    }
+  }
+]
