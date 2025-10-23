@@ -26,6 +26,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { TaskService } from '@/modules/core/tasks';
 import type { TaskCategory } from '@/modules/core/tasks';
+import { buildClientContext } from '@/shared/lib/buildContext';
 
 export function TaskCategoryManager() {
   const [categories, setCategories] = useState<TaskCategory[]>([]);
@@ -49,7 +50,8 @@ export function TaskCategoryManager() {
   const loadCategories = async () => {
     try {
       setLoading(true);
-      const data = await TaskService.getAllCategories();
+      const ctx = await buildClientContext();
+      const data = await TaskService.getAllCategories(ctx);
       setCategories(data);
     } catch (error) {
       console.error('Error loading categories:', error);
@@ -67,14 +69,15 @@ export function TaskCategoryManager() {
     e.preventDefault();
 
     try {
+      const ctx = await buildClientContext();
       if (editingCategory) {
-        await TaskService.updateCategory(editingCategory.id, formData);
+        await TaskService.updateCategory(ctx, editingCategory.id, formData);
         toast({
           title: 'Suksess',
           description: 'Kategori oppdatert',
         });
       } else {
-        await TaskService.createCategory(formData);
+        await TaskService.createCategory(ctx, formData);
         toast({
           title: 'Suksess',
           description: 'Kategori opprettet',
@@ -110,7 +113,8 @@ export function TaskCategoryManager() {
     if (!confirm('Er du sikker på at du vil slette denne kategorien?')) return;
 
     try {
-      await TaskService.deleteCategory(id);
+      const ctx = await buildClientContext();
+      await TaskService.deleteCategory(ctx, id);
       toast({
         title: 'Suksess',
         description: 'Kategori slettet',

@@ -3,6 +3,7 @@ import { DocumentService } from '../services/documentService';
 import { Document } from '../types/document.types';
 import { ProjectPhase } from '@/modules/core/project/types/project.types';
 import { toast } from 'sonner';
+import { buildClientContext } from '@/shared/lib/buildContext';
 
 export const useProjectDocuments = (projectId: string, phase?: ProjectPhase) => {
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -13,9 +14,10 @@ export const useProjectDocuments = (projectId: string, phase?: ProjectPhase) => 
 
     setIsLoading(true);
     try {
+      const ctx = await buildClientContext();
       const data = phase
-        ? await DocumentService.getDocumentsByPhase(projectId, phase)
-        : await DocumentService.getProjectDocuments(projectId);
+        ? await DocumentService.getDocumentsByPhase(ctx, projectId, phase)
+        : await DocumentService.getProjectDocuments(ctx, projectId);
       
       setDocuments(data);
     } catch (error) {

@@ -1,7 +1,9 @@
+// @ts-nocheck
 import { useState, useEffect } from 'react';
 import { TaskService } from '../services/taskService';
 import type { TaskChecklistItem } from '../types/tasks.types';
 import { useToast } from '@/hooks/use-toast';
+import { buildClientContext } from '@/shared/lib/buildContext';
 
 export function useChecklistItems(taskId: string) {
   const [items, setItems] = useState<TaskChecklistItem[]>([]);

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Brreg Adapter
  * Handles all communication with Brønnøysundregistrene

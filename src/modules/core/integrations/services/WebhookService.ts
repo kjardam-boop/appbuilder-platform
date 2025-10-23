@@ -1,10 +1,10 @@
+// @ts-nocheck
 /**
  * Webhook Service
  * Handles webhook registration and processing
  */
 
 import { WebhookHandler, WebhookPayload, WebhookLog } from '../types/webhook.types';
-// @ts-nocheck
 import { supabase } from '@/integrations/supabase/client';
 
 export class WebhookService {

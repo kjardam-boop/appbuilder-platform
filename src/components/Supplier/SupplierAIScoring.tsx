@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Brain, AlertTriangle, HelpCircle, Loader2 } from "lucide-react";
 import { AIScoringService } from "@/modules/core/supplier/services/aiScoringService";
 import { toast } from "sonner";
+import { buildClientContext } from "@/shared/lib/buildContext";
 
 interface SupplierAIScoringProps {
   projectId: string;
@@ -30,11 +31,12 @@ export const SupplierAIScoring = ({ projectId, supplierId, supplierName }: Suppl
   const loadData = async () => {
     setLoading(true);
     try {
+      const ctx = await buildClientContext();
       const [scoresData, criteriaData, risksData, questionsData] = await Promise.all([
-        AIScoringService.getSupplierScores(projectId, supplierId),
-        AIScoringService.getCriteria(projectId),
-        AIScoringService.getRisks(projectId, supplierId),
-        AIScoringService.getFollowUpQuestions(projectId, supplierId)
+        AIScoringService.getSupplierScores(ctx, projectId, supplierId),
+        AIScoringService.getCriteria(ctx, projectId),
+        AIScoringService.getRisks(ctx, projectId, supplierId),
+        AIScoringService.getFollowUpQuestions(ctx, projectId, supplierId)
       ]);
 
       setScores(scoresData);
@@ -59,7 +61,8 @@ export const SupplierAIScoring = ({ projectId, supplierId, supplierName }: Suppl
   const handleAnalyze = async () => {
     setAnalyzing(true);
     try {
-      await AIScoringService.analyzeSupplier(projectId, supplierId);
+      const ctx = await buildClientContext();
+      await AIScoringService.analyzeSupplier(ctx, projectId, supplierId);
       toast.success('AI-analyse fullført');
       loadData();
     } catch (error) {

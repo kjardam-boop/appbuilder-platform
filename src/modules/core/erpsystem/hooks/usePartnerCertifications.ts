@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { PartnerCertificationService } from "../services/partnerCertificationService";
 import type { PartnerCertificationInput } from "../types/erpsystem.types";
 import { useToast } from "@/hooks/use-toast";
+import { buildClientContext } from "@/shared/lib/buildContext";
 
 const QUERY_KEYS = {
   certifiedPartners: (erpSystemId: string) => ["certified-partners", erpSystemId],
@@ -15,7 +16,10 @@ const QUERY_KEYS = {
 export const useCertifiedPartners = (erpSystemId: string) => {
   return useQuery({
     queryKey: QUERY_KEYS.certifiedPartners(erpSystemId),
-    queryFn: () => PartnerCertificationService.getCertifiedPartners(erpSystemId),
+    queryFn: async () => {
+      const ctx = await buildClientContext();
+      return PartnerCertificationService.getCertifiedPartners(ctx, erpSystemId);
+    },
     enabled: !!erpSystemId,
   });
 };
@@ -26,7 +30,10 @@ export const useCertifiedPartners = (erpSystemId: string) => {
 export const usePartnerCertifications = (partnerId: string) => {
   return useQuery({
     queryKey: QUERY_KEYS.partnerCertifications(partnerId),
-    queryFn: () => PartnerCertificationService.getPartnerCertifications(partnerId),
+    queryFn: async () => {
+      const ctx = await buildClientContext();
+      return PartnerCertificationService.getPartnerCertifications(ctx, partnerId);
+    },
     enabled: !!partnerId,
   });
 };
@@ -37,7 +44,10 @@ export const usePartnerCertifications = (partnerId: string) => {
 export const useErpCertifications = (erpSystemId: string) => {
   return useQuery({
     queryKey: QUERY_KEYS.erpCertifications(erpSystemId),
-    queryFn: () => PartnerCertificationService.getErpCertifications(erpSystemId),
+    queryFn: async () => {
+      const ctx = await buildClientContext();
+      return PartnerCertificationService.getErpCertifications(ctx, erpSystemId);
+    },
     enabled: !!erpSystemId,
   });
 };
@@ -50,8 +60,10 @@ export const useAddCertification = () => {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: (input: PartnerCertificationInput) =>
-      PartnerCertificationService.addCertification(input),
+    mutationFn: async (input: PartnerCertificationInput) => {
+      const ctx = await buildClientContext();
+      return PartnerCertificationService.addCertification(ctx, input);
+    },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.certifiedPartners(variables.erp_system_id),
@@ -85,7 +97,10 @@ export const useRemoveCertification = () => {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: (id: string) => PartnerCertificationService.removeCertification(id),
+    mutationFn: async (id: string) => {
+      const ctx = await buildClientContext();
+      return PartnerCertificationService.removeCertification(ctx, id);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["certified-partners"] });
       queryClient.invalidateQueries({ queryKey: ["partner-certifications"] });

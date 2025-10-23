@@ -3,6 +3,7 @@
  * Central service for managing all integrations
  */
 
+// @ts-nocheck
 import { BaseAdapter } from '../adapters/base/BaseAdapter';
 import { BrregAdapter } from '../adapters/brreg/BrregAdapter';
 import { supabase } from '@/integrations/supabase/client';

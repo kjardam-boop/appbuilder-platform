@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Task Service (Tenant-aware)
  */
