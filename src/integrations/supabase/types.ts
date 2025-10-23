@@ -101,6 +101,48 @@ export type Database = {
         }
         Relationships: []
       }
+      integration_usage_logs: {
+        Row: {
+          action: string
+          adapter_id: string
+          created_at: string
+          error_message: string | null
+          id: string
+          request_payload: Json | null
+          response_status: number
+          response_time_ms: number
+          tenant_id: string
+          timestamp: string
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          adapter_id: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          request_payload?: Json | null
+          response_status: number
+          response_time_ms: number
+          tenant_id: string
+          timestamp?: string
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          adapter_id?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          request_payload?: Json | null
+          response_status?: number
+          response_time_ms?: number
+          tenant_id?: string
+          timestamp?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       retention_policies: {
         Row: {
           anonymize_before_delete: boolean | null
@@ -129,6 +171,45 @@ export type Database = {
           policy_config?: Json | null
           resource_type?: string
           retention_days?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      tenant_integrations: {
+        Row: {
+          adapter_id: string
+          config: Json
+          created_at: string
+          credentials: Json | null
+          id: string
+          is_active: boolean
+          last_used_at: string | null
+          rate_limit: Json | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          adapter_id: string
+          config?: Json
+          created_at?: string
+          credentials?: Json | null
+          id?: string
+          is_active?: boolean
+          last_used_at?: string | null
+          rate_limit?: Json | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          adapter_id?: string
+          config?: Json
+          created_at?: string
+          credentials?: Json | null
+          id?: string
+          is_active?: boolean
+          last_used_at?: string | null
+          rate_limit?: Json | null
           tenant_id?: string
           updated_at?: string
         }
