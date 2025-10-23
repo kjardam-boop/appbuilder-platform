@@ -24,6 +24,12 @@ export interface AICriteria {
   weight: number;
   category: string;
   source: string;
+  evaluation_target?: {
+    app_type?: string;
+    app_product_id?: string;
+    sku_id?: string;
+    company_app_id?: string;
+  };
 }
 
 export interface AIRisk {

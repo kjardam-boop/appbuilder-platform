@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { SupplierEvaluationExport } from "./SupplierEvaluationExport";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -95,10 +96,19 @@ export const SupplierAIScoring = ({ projectId, supplierId, supplierName }: Suppl
               <div className="text-3xl font-bold">{totalScore.toFixed(2)}/5.0</div>
             </div>
           )}
-          <Button onClick={handleAnalyze} disabled={analyzing}>
-            <Brain className="mr-2 h-4 w-4" />
-            {analyzing ? 'Analyserer...' : scores.length > 0 ? 'Analyser på nytt' : 'Start AI-analyse'}
-          </Button>
+          <div className="flex items-center gap-2">
+            {scores.length > 0 && (
+              <SupplierEvaluationExport 
+                projectId={projectId}
+                supplierId={supplierId}
+                supplierName={supplierName}
+              />
+            )}
+            <Button onClick={handleAnalyze} disabled={analyzing}>
+              <Brain className="mr-2 h-4 w-4" />
+              {analyzing ? 'Analyserer...' : scores.length > 0 ? 'Analyser på nytt' : 'Start AI-analyse'}
+            </Button>
+          </div>
         </div>
       </div>
 

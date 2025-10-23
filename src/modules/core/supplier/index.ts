@@ -1,5 +1,6 @@
 export { EvaluationService } from './services/evaluationService';
 export { AIScoringService } from './services/aiScoringService';
+export { EvaluationExportService } from './services/evaluationExportService';
 export {
   useSupplierEvaluations,
   useEvaluationSummary,
@@ -20,6 +21,8 @@ export type {
   AIRisk,
   AIFollowUpQuestion,
 } from './services/aiScoringService';
+export type { EvaluationTarget, CriteriaWithTarget } from './types/evaluationTarget.types';
+export type { EvaluationReportData } from './services/evaluationExportService';
 
 // Register module
 export const SUPPLIER_MODULE = {
