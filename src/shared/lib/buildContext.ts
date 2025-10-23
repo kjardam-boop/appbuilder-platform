@@ -1,4 +1,4 @@
-import { RequestContext } from "@/modules/tenant/types/tenant.types";
+import { RequestContext, TenantConfig } from "@/modules/tenant/types/tenant.types";
 import { supabase } from "@/integrations/supabase/client";
 
 /**
@@ -12,15 +12,16 @@ export function buildClientContext(tenantId?: string): RequestContext {
   const tenant_id = tenantId || 'default';
   
   // In production, fetch actual tenant config from control DB
-  const tenant = {
+  const tenant: TenantConfig = {
+    id: crypto.randomUUID(),
     tenant_id,
     name: 'Default Tenant',
     host: window.location.hostname,
-    database_url: '', // Not used client-side
     enabled_modules: ['all'],
-    settings: {},
+    custom_config: {},
     is_active: true,
     created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
   };
 
   return {

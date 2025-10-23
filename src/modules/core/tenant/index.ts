@@ -1,3 +1,3 @@
-export * from "./types/tenant.types";
-export { TenantService } from "./services/tenantService";
-export { resolveTenantByHost, extractSubdomain } from "./services/tenantResolver";
+// Tenant module exports
+// Note: TenantService and tenantResolver are in separate module
+export * from "@/modules/tenant/types/tenant.types";

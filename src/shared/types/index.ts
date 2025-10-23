@@ -2,6 +2,8 @@
  * Shared types used across the platform
  */
 
+export type { RequestContext, TenantConfig } from "@/modules/tenant/types/tenant.types";
+
 export interface ApiResponse<T = any> {
   success: boolean;
   data?: T;
