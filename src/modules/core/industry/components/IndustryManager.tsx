@@ -11,8 +11,12 @@ import { Plus, Pencil, Trash2, Upload } from "lucide-react";
 import { useIndustries, useCreateIndustry, useUpdateIndustry, useDeleteIndustry, useSeedIndustries } from "../hooks/useIndustries";
 import type { Industry, IndustryInput } from "../types/industry.types";
 
-export const IndustryManager = () => {
-  const { data: industries, isLoading } = useIndustries();
+interface IndustryManagerProps {
+  searchQuery?: string;
+}
+
+export const IndustryManager = ({ searchQuery = "" }: IndustryManagerProps) => {
+  const { data: industries = [], isLoading } = useIndustries();
   const createMutation = useCreateIndustry();
   const updateMutation = useUpdateIndustry();
   const deleteMutation = useDeleteIndustry();

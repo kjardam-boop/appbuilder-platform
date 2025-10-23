@@ -101,6 +101,48 @@ export type Database = {
         }
         Relationships: []
       }
+      industries: {
+        Row: {
+          created_at: string
+          default_modules: string[] | null
+          description: string | null
+          id: string
+          is_active: boolean
+          key: string
+          nace_codes: string[]
+          name: string
+          parent_key: string | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          default_modules?: string[] | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          key: string
+          nace_codes?: string[]
+          name: string
+          parent_key?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          default_modules?: string[] | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          key?: string
+          nace_codes?: string[]
+          name?: string
+          parent_key?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       integration_usage_logs: {
         Row: {
           action: string
@@ -215,15 +257,83 @@ export type Database = {
         }
         Relationships: []
       }
+      tenant_users: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          id: string
+          invited_at: string
+          invited_by: string | null
+          is_active: boolean
+          roles: Database["public"]["Enums"]["app_role"][]
+          tenant_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          id?: string
+          invited_at?: string
+          invited_by?: string | null
+          is_active?: boolean
+          roles?: Database["public"]["Enums"]["app_role"][]
+          tenant_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          id?: string
+          invited_at?: string
+          invited_by?: string | null
+          is_active?: boolean
+          roles?: Database["public"]["Enums"]["app_role"][]
+          tenant_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_roles: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: Database["public"]["Enums"]["app_role"][]
+      }
+      user_has_any_role: {
+        Args: {
+          _roles: Database["public"]["Enums"]["app_role"][]
+          _tenant_id: string
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      user_has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _tenant_id: string
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role:
+        | "platform_owner"
+        | "platform_support"
+        | "tenant_owner"
+        | "tenant_admin"
+        | "security_admin"
+        | "compliance_officer"
+        | "project_owner"
+        | "analyst"
+        | "contributor"
+        | "viewer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -350,6 +460,19 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: [
+        "platform_owner",
+        "platform_support",
+        "tenant_owner",
+        "tenant_admin",
+        "security_admin",
+        "compliance_officer",
+        "project_owner",
+        "analyst",
+        "contributor",
+        "viewer",
+      ],
+    },
   },
 } as const
