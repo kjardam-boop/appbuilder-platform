@@ -9,6 +9,7 @@ export { industrySchema, STANDARD_INDUSTRIES } from "./types/industry.types";
 
 // Services
 export { IndustryService } from "./services/industryService";
+export { seedIndustries } from "./services/seedIndustries";
 
 // Hooks
 export {
@@ -18,6 +19,7 @@ export {
   useUpdateIndustry,
   useDeleteIndustry,
   useSeedIndustries,
+  useSeedIndustriesNew,
 } from "./hooks/useIndustries";
 
 // Module metadata

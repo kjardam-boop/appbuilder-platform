@@ -78,3 +78,21 @@ export const useSeedIndustries = () => {
     },
   });
 };
+
+export const useSeedIndustriesNew = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (tenantId?: string) => {
+      const { seedIndustries } = await import("../services/seedIndustries");
+      await seedIndustries(tenantId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["industries"] });
+      toast.success("Bransjer oppdatert med NACE-klassifisering");
+    },
+    onError: (error: Error) => {
+      toast.error(`Kunne ikke oppdatere bransjer: ${error.message}`);
+    },
+  });
+};

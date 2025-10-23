@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Pencil, Trash2, Upload } from "lucide-react";
-import { useIndustries, useCreateIndustry, useUpdateIndustry, useDeleteIndustry, useSeedIndustries } from "../hooks/useIndustries";
+import { useIndustries, useCreateIndustry, useUpdateIndustry, useDeleteIndustry, useSeedIndustriesNew } from "../hooks/useIndustries";
 import type { Industry, IndustryInput } from "../types/industry.types";
 
 interface IndustryManagerProps {
@@ -20,7 +20,7 @@ export const IndustryManager = ({ searchQuery = "" }: IndustryManagerProps) => {
   const createMutation = useCreateIndustry();
   const updateMutation = useUpdateIndustry();
   const deleteMutation = useDeleteIndustry();
-  const seedMutation = useSeedIndustries();
+  const seedMutation = useSeedIndustriesNew();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingIndustry, setEditingIndustry] = useState<Industry | null>(null);
@@ -100,11 +100,11 @@ export const IndustryManager = ({ searchQuery = "" }: IndustryManagerProps) => {
           <div className="flex gap-2">
             <Button
               variant="outline"
-              onClick={() => seedMutation.mutate()}
+              onClick={() => seedMutation.mutate(undefined)}
               disabled={seedMutation.isPending}
             >
               <Upload className="mr-2 h-4 w-4" />
-              Last inn standard bransjer
+              Last inn norske bransjer (NACE)
             </Button>
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>

@@ -59,12 +59,22 @@ export class IndustryService {
   }
 
   /**
+   * Alias for getByKey (for consistency with other services)
+   */
+  static async findByKey(ctx: any, key: string): Promise<Industry | null> {
+    return this.getByKey(key);
+  }
+
+  /**
    * Create industry and clear cache
    */
-  static async create(input: IndustryInput): Promise<Industry> {
+  static async create(ctxOrInput: any, input?: IndustryInput): Promise<Industry> {
+    // Support both create(input) and create(ctx, input) signatures
+    const actualInput = input || ctxOrInput;
+    
     const { data, error } = await supabase
       .from("industries")
-      .insert(input)
+      .insert(actualInput)
       .select()
       .single();
 
@@ -79,11 +89,15 @@ export class IndustryService {
   /**
    * Update industry and clear cache
    */
-  static async update(id: string, input: Partial<IndustryInput>): Promise<Industry> {
+  static async update(ctxOrId: any, idOrInput: string | Partial<IndustryInput>, input?: Partial<IndustryInput>): Promise<Industry> {
+    // Support both update(id, input) and update(ctx, id, input) signatures
+    const actualId = typeof idOrInput === 'string' ? idOrInput : ctxOrId;
+    const actualInput = input || (typeof idOrInput === 'object' ? idOrInput : {});
+    
     const { data, error } = await supabase
       .from("industries")
-      .update(input)
-      .eq("id", id)
+      .update(actualInput)
+      .eq("id", actualId)
       .select()
       .single();
 
