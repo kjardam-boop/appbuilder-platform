@@ -1,5 +1,6 @@
 import { BaseEntity } from "@/core/types/common.types";
 import { z } from "zod";
+import type { ERPExtension } from "./erpExtension.types";
 
 export type AppType = "ERP" | "CRM" | "EmailSuite" | "HRPayroll" | "BI" | "iPaaS" | "CMS" | "eCommerce" | "WMS" | "TMS" | "PLM" | "MES" | "ITSM" | "IAM" | "RPA" | "ProjectMgmt" | "ServiceMgmt";
 export type DeploymentModel = "SaaS" | "Hosted" | "On-premises" | "Hybrid";
@@ -34,6 +35,7 @@ export interface AppProduct extends BaseEntity {
   description: string | null;
   vendor?: AppVendor;
   skus?: SKU[];
+  erp_extension?: ERPExtension;
 }
 
 export interface SKU extends BaseEntity {

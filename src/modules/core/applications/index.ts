@@ -27,6 +27,18 @@ export type {
   ProjectAppStage,
 } from "./types/application.types";
 
+export type {
+  ERPExtension,
+  ERPExtensionInput,
+} from "./types/erpExtension.types";
+
+export {
+  erpExtensionSchema,
+  ERP_MODULES,
+  ERP_LOCALIZATIONS,
+  ERP_INDUSTRIES,
+} from "./types/erpExtension.types";
+
 export {
   appVendorSchema,
   appProductSchema,
@@ -46,6 +58,7 @@ export {
 export { ApplicationService } from "./services/applicationService";
 export { VendorService } from "./services/vendorService";
 export { PartnerCertificationService } from "./services/partnerCertificationService";
+export { ERPExtensionService } from "./services/erpExtensionService";
 export { seedApplications } from "./services/seedApplications";
 
 // Hooks

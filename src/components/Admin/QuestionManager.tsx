@@ -1,6 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-export const QuestionManager = () => {
+interface QuestionManagerProps {
+  fieldKey: string;
+}
+
+export const QuestionManager = ({ fieldKey }: QuestionManagerProps) => {
   return (
     <Card>
       <CardHeader>

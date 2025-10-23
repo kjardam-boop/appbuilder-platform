@@ -165,7 +165,7 @@ const AdminQuestions = () => {
                           <h3 className="font-semibold">{cat.label}</h3>
                           <p className="text-sm text-muted-foreground">{cat.description}</p>
                         </div>
-                        <AIQuestionGenerator fieldKey={cat.key} onQuestionsGenerated={() => window.location.reload()} />
+                        <AIQuestionGenerator fieldKey={cat.key} mode="supplier" onQuestionsGenerated={() => window.location.reload()} />
                       </div>
                       <QuestionManager fieldKey={cat.key} />
                     </TabsContent>

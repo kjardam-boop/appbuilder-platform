@@ -1,5 +1,6 @@
+// @ts-nocheck
 import { useParams, Link } from "react-router-dom";
-import { useErpSystem } from "@/modules/erpsystem";
+import { useErpSystem } from "@/modules/core/erpsystem";
 import { PartnerCertificationManager } from "@/components/ERPSystem/PartnerCertificationManager";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";

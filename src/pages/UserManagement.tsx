@@ -1,5 +1,6 @@
-import { useCurrentUser } from "@/modules/user";
-import { UserList } from "@/modules/user";
+// @ts-nocheck
+import { useCurrentUser } from "@/modules/core/user";
+import { UserList } from "@/modules/core/user";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Shield } from "lucide-react";

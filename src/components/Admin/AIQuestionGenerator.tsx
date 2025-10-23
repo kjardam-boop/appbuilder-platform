@@ -1,6 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-export const AIQuestionGenerator = () => {
+interface AIQuestionGeneratorProps {
+  fieldKey: string;
+  mode: string;
+  onQuestionsGenerated: () => void;
+}
+
+export const AIQuestionGenerator = ({ fieldKey, mode, onQuestionsGenerated }: AIQuestionGeneratorProps) => {
   return (
     <Card>
       <CardHeader>

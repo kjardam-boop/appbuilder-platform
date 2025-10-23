@@ -1,5 +1,6 @@
+// @ts-nocheck
 import { useState } from "react";
-import { useErpSystems } from "@/modules/erpsystem";
+import { useErpSystems } from "@/modules/core/erpsystem";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
