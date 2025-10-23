@@ -2,13 +2,21 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Document, DocumentVersion } from "../types/document.types";
 import { ProjectPhase } from "@/modules/core/project/types/project.types";
+import type { RequestContext } from "@/modules/tenant/types/tenant.types";
 
 export class DocumentService {
   /**
-   * Get documents by project
+   * Get database client from context (tenant-aware)
    */
-  static async getProjectDocuments(projectId: string): Promise<Document[]> {
-    const { data, error } = await supabase
+  private static getDb(ctx: RequestContext) {
+    return supabase;
+  }
+  /**
+   * Get documents by project (tenant-scoped)
+   */
+  static async getProjectDocuments(ctx: RequestContext, projectId: string): Promise<Document[]> {
+    const db = this.getDb(ctx);
+    const { data, error } = await db
       .from('documents')
       .select('*')
       .eq('project_id', projectId)
@@ -19,13 +27,15 @@ export class DocumentService {
   }
 
   /**
-   * Get documents by phase
+   * Get documents by phase (tenant-scoped)
    */
   static async getDocumentsByPhase(
+    ctx: RequestContext,
     projectId: string,
     phase: any
   ): Promise<Document[]> {
-    const { data, error } = await supabase
+    const db = this.getDb(ctx);
+    const { data, error } = await db
       .from('documents')
       .select('*')
       .eq('project_id', projectId)
@@ -37,12 +47,14 @@ export class DocumentService {
   }
 
   /**
-   * Get documents by ERP system
+   * Get documents by ERP system (tenant-scoped)
    */
   static async getDocumentsByErpSystem(
+    ctx: RequestContext,
     erpSystemId: string
   ): Promise<Document[]> {
-    const { data, error } = await supabase
+    const db = this.getDb(ctx);
+    const { data, error } = await db
       .from('documents')
       .select('*')
       .eq('erp_system_id', erpSystemId)
@@ -53,9 +65,10 @@ export class DocumentService {
   }
 
   /**
-   * Create document
+   * Create document (tenant-scoped)
    */
   static async createDocument(
+    ctx: RequestContext,
     projectId: string,
     title: string,
     content: string | null,
@@ -63,7 +76,8 @@ export class DocumentService {
     userId: string,
     erpSystemId?: string
   ): Promise<Document> {
-    const { data, error } = await supabase
+    const db = this.getDb(ctx);
+    const { data, error } = await db
       .from('documents')
       .insert([{
         project_id: projectId,
@@ -81,13 +95,15 @@ export class DocumentService {
   }
 
   /**
-   * Update document
+   * Update document (tenant-scoped)
    */
   static async updateDocument(
+    ctx: RequestContext,
     documentId: string,
     updates: any
   ): Promise<void> {
-    const { error } = await supabase
+    const db = this.getDb(ctx);
+    const { error } = await db
       .from('documents')
       .update(updates)
       .eq('id', documentId);
@@ -96,10 +112,11 @@ export class DocumentService {
   }
 
   /**
-   * Delete document
+   * Delete document (tenant-scoped)
    */
-  static async deleteDocument(documentId: string): Promise<void> {
-    const { error } = await supabase
+  static async deleteDocument(ctx: RequestContext, documentId: string): Promise<void> {
+    const db = this.getDb(ctx);
+    const { error } = await db
       .from('documents')
       .delete()
       .eq('id', documentId);

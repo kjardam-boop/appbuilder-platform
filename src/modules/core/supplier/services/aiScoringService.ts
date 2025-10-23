@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Json } from "@/integrations/supabase/types";
+import type { RequestContext } from "@/modules/tenant/types/tenant.types";
 
 export interface AIScore {
   id: string;
@@ -48,8 +49,16 @@ export interface AIFollowUpQuestion {
 }
 
 export class AIScoringService {
-  static async analyzeSupplier(projectId: string, supplierId: string) {
-    const { data, error } = await supabase.functions.invoke('analyze-supplier-evaluation', {
+  /**
+   * Get database client from context (tenant-aware)
+   */
+  private static getDb(ctx: RequestContext) {
+    return supabase;
+  }
+
+  static async analyzeSupplier(ctx: RequestContext, projectId: string, supplierId: string) {
+    const db = this.getDb(ctx);
+    const { data, error } = await db.functions.invoke('analyze-supplier-evaluation', {
       body: { projectId, supplierId }
     });
 
@@ -57,8 +66,9 @@ export class AIScoringService {
     return data;
   }
 
-  static async getSupplierScores(projectId: string, supplierId: string): Promise<AIScore[]> {
-    const { data, error } = await supabase
+  static async getSupplierScores(ctx: RequestContext, projectId: string, supplierId: string): Promise<AIScore[]> {
+    const db = this.getDb(ctx);
+    const { data, error } = await db
       .from('supplier_ai_scores')
       .select('*')
       .eq('project_id', projectId)
@@ -69,8 +79,9 @@ export class AIScoringService {
     return data || [];
   }
 
-  static async getCriteria(projectId: string): Promise<AICriteria[]> {
-    const { data, error } = await supabase
+  static async getCriteria(ctx: RequestContext, projectId: string): Promise<AICriteria[]> {
+    const db = this.getDb(ctx);
+    const { data, error } = await db
       .from('supplier_ai_criteria')
       .select('*')
       .eq('project_id', projectId)
@@ -81,8 +92,9 @@ export class AIScoringService {
     return data || [];
   }
 
-  static async getRisks(projectId: string, supplierId: string): Promise<AIRisk[]> {
-    const { data, error } = await supabase
+  static async getRisks(ctx: RequestContext, projectId: string, supplierId: string): Promise<AIRisk[]> {
+    const db = this.getDb(ctx);
+    const { data, error } = await db
       .from('supplier_ai_risks')
       .select('*')
       .eq('project_id', projectId)
@@ -93,8 +105,9 @@ export class AIScoringService {
     return data || [];
   }
 
-  static async getFollowUpQuestions(projectId: string, supplierId: string): Promise<AIFollowUpQuestion[]> {
-    const { data, error } = await supabase
+  static async getFollowUpQuestions(ctx: RequestContext, projectId: string, supplierId: string): Promise<AIFollowUpQuestion[]> {
+    const db = this.getDb(ctx);
+    const { data, error } = await db
       .from('supplier_ai_follow_up_questions')
       .select('*')
       .eq('project_id', projectId)

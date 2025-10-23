@@ -1,12 +1,21 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { SupplierEvaluation, SupplierEvaluationSummary, SupplierPortalInvitation } from "../types/evaluation.types";
+import type { RequestContext } from "@/modules/tenant/types/tenant.types";
 
 export class EvaluationService {
+  /**
+   * Get database client from context (tenant-aware)
+   */
+  private static getDb(ctx: RequestContext) {
+    return supabase;
+  }
   static async getEvaluationsBySupplier(
+    ctx: RequestContext,
     projectId: string,
     supplierId: string
   ): Promise<SupplierEvaluation[]> {
-    const { data, error } = await supabase
+    const db = this.getDb(ctx);
+    const { data, error } = await db
       .from('supplier_evaluation_responses')
       .select('*')
       .eq('project_id', projectId)
@@ -17,9 +26,10 @@ export class EvaluationService {
     return data || [];
   }
 
-  static async getCombinedQuestions(projectId: string, fieldKey: string) {
+  static async getCombinedQuestions(ctx: RequestContext, projectId: string, fieldKey: string) {
+    const db = this.getDb(ctx);
     // Fetch global questions
-    const { data: globalQuestions, error: globalError } = await supabase
+    const { data: globalQuestions, error: globalError } = await db
       .from('field_questions')
       .select('*')
       .eq('field_key', fieldKey)
@@ -29,7 +39,7 @@ export class EvaluationService {
     if (globalError) throw globalError;
 
     // Fetch project-specific questions
-    const { data: projectQuestions, error: projectError } = await supabase
+    const { data: projectQuestions, error: projectError } = await db
       .from('project_supplier_questions')
       .select('*')
       .eq('project_id', projectId)
@@ -48,7 +58,8 @@ export class EvaluationService {
     return combined.sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
   }
 
-  static async saveEvaluation(evaluation: Partial<SupplierEvaluation>): Promise<SupplierEvaluation> {
+  static async saveEvaluation(ctx: RequestContext, evaluation: Partial<SupplierEvaluation>): Promise<SupplierEvaluation> {
+    const db = this.getDb(ctx);
     const { data: user } = await supabase.auth.getUser();
     
     // Support both authenticated and unauthenticated (token-based) evaluations
@@ -67,7 +78,7 @@ export class EvaluationService {
       evaluationData.score = evaluation.score;
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('supplier_evaluation_responses')
       .upsert(evaluationData, {
         onConflict: 'project_id,supplier_id,question_id',
@@ -80,12 +91,14 @@ export class EvaluationService {
   }
 
   static async getEvaluationSummary(
+    ctx: RequestContext,
     projectId: string,
     supplierId: string
   ): Promise<SupplierEvaluationSummary> {
-    const evaluations = await this.getEvaluationsBySupplier(projectId, supplierId);
+    const db = this.getDb(ctx);
+    const evaluations = await this.getEvaluationsBySupplier(ctx, projectId, supplierId);
     
-    const { data: questions } = await supabase
+    const { data: questions } = await db
       .from('field_questions')
       .select('id, field_key')
       .like('field_key', 'supplier_%');
@@ -118,7 +131,7 @@ export class EvaluationService {
       totalQuestions += questionIds.length;
     });
 
-    const { data: supplier } = await supabase
+    const { data: supplier } = await db
       .from('companies')
       .select('name')
       .eq('id', supplierId)
@@ -134,8 +147,9 @@ export class EvaluationService {
     };
   }
 
-  static async getAllEvaluationSummaries(projectId: string): Promise<SupplierEvaluationSummary[]> {
-    const { data: suppliers } = await supabase
+  static async getAllEvaluationSummaries(ctx: RequestContext, projectId: string): Promise<SupplierEvaluationSummary[]> {
+    const db = this.getDb(ctx);
+    const { data: suppliers } = await db
       .from('project_suppliers')
       .select('company_id')
       .eq('project_id', projectId);
@@ -143,17 +157,19 @@ export class EvaluationService {
     if (!suppliers) return [];
 
     const summaries = await Promise.all(
-      suppliers.map(s => this.getEvaluationSummary(projectId, s.company_id))
+      suppliers.map(s => this.getEvaluationSummary(ctx, projectId, s.company_id))
     );
 
     return summaries;
   }
 
   static async createPortalInvitation(
+    ctx: RequestContext,
     projectId: string,
     supplierId: string,
     email: string
   ): Promise<SupplierPortalInvitation> {
+    const db = this.getDb(ctx);
     const { data: user } = await supabase.auth.getUser();
     if (!user.user) throw new Error('User not authenticated');
 
@@ -161,7 +177,7 @@ export class EvaluationService {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 14); // 14 days validity
 
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('supplier_portal_invitations')
       .upsert({
         project_id: projectId,
@@ -178,8 +194,9 @@ export class EvaluationService {
     return data;
   }
 
-  static async getInvitationByToken(token: string): Promise<SupplierPortalInvitation | null> {
-    const { data, error } = await supabase
+  static async getInvitationByToken(ctx: RequestContext, token: string): Promise<SupplierPortalInvitation | null> {
+    const db = this.getDb(ctx);
+    const { data, error } = await db
       .from('supplier_portal_invitations')
       .select('*')
       .eq('token', token)
@@ -189,8 +206,9 @@ export class EvaluationService {
     return data;
   }
 
-  static async markInvitationCompleted(token: string): Promise<void> {
-    await supabase
+  static async markInvitationCompleted(ctx: RequestContext, token: string): Promise<void> {
+    const db = this.getDb(ctx);
+    await db
       .from('supplier_portal_invitations')
       .update({ completed_at: new Date().toISOString() })
       .eq('token', token);

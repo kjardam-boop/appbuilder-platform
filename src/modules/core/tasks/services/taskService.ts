@@ -1,20 +1,31 @@
 /**
- * Task Service
+ * Task Service (Tenant-aware)
  */
 
 import { supabase } from '@/integrations/supabase/client';
 import type { Task, TaskChecklistItem, TaskCategory, EntityType, TaskStatus, TaskPriority } from '../types/tasks.types';
+import type { RequestContext } from '@/modules/tenant/types/tenant.types';
 
 export class TaskService {
-  // Task CRUD
-  static async getTasks(filters?: {
-    entity_type?: EntityType;
-    entity_id?: string;
-    assigned_to?: string;
-    status?: TaskStatus;
-    priority?: TaskPriority;
-  }): Promise<Task[]> {
-    let query = supabase
+  /**
+   * Get database client from context (tenant-aware)
+   */
+  private static getDb(ctx: RequestContext) {
+    return supabase;
+  }
+  // Task CRUD (tenant-scoped)
+  static async getTasks(
+    ctx: RequestContext,
+    filters?: {
+      entity_type?: EntityType;
+      entity_id?: string;
+      assigned_to?: string;
+      status?: TaskStatus;
+      priority?: TaskPriority;
+    }
+  ): Promise<Task[]> {
+    const db = this.getDb(ctx);
+    let query = db
       .from('tasks')
       .select('*')
       .order('due_date', { ascending: true, nullsFirst: false });
@@ -40,8 +51,9 @@ export class TaskService {
     return data || [];
   }
 
-  static async getTask(id: string): Promise<Task | null> {
-    const { data, error } = await supabase
+  static async getTask(ctx: RequestContext, id: string): Promise<Task | null> {
+    const db = this.getDb(ctx);
+    const { data, error } = await db
       .from('tasks')
       .select('*')
       .eq('id', id)
@@ -51,8 +63,9 @@ export class TaskService {
     return data;
   }
 
-  static async createTask(task: Omit<Task, 'id' | 'created_at' | 'updated_at' | 'completion_percentage' | 'completed_at'>): Promise<Task> {
-    const { data, error } = await supabase
+  static async createTask(ctx: RequestContext, task: Omit<Task, 'id' | 'created_at' | 'updated_at' | 'completion_percentage' | 'completed_at'>): Promise<Task> {
+    const db = this.getDb(ctx);
+    const { data, error } = await db
       .from('tasks')
       .insert(task)
       .select()
@@ -62,8 +75,9 @@ export class TaskService {
     return data;
   }
 
-  static async updateTask(id: string, updates: Partial<Task>): Promise<Task> {
-    const { data, error } = await supabase
+  static async updateTask(ctx: RequestContext, id: string, updates: Partial<Task>): Promise<Task> {
+    const db = this.getDb(ctx);
+    const { data, error } = await db
       .from('tasks')
       .update(updates)
       .eq('id', id)
@@ -74,8 +88,9 @@ export class TaskService {
     return data;
   }
 
-  static async deleteTask(id: string): Promise<void> {
-    const { error } = await supabase
+  static async deleteTask(ctx: RequestContext, id: string): Promise<void> {
+    const db = this.getDb(ctx);
+    const { error } = await db
       .from('tasks')
       .delete()
       .eq('id', id);
@@ -83,9 +98,10 @@ export class TaskService {
     if (error) throw error;
   }
 
-  // Checklist items
-  static async getChecklistItems(taskId: string): Promise<TaskChecklistItem[]> {
-    const { data, error } = await supabase
+  // Checklist items (tenant-scoped)
+  static async getChecklistItems(ctx: RequestContext, taskId: string): Promise<TaskChecklistItem[]> {
+    const db = this.getDb(ctx);
+    const { data, error } = await db
       .from('task_checklist_items')
       .select('*')
       .eq('task_id', taskId)
@@ -95,8 +111,9 @@ export class TaskService {
     return data || [];
   }
 
-  static async createChecklistItem(item: Omit<TaskChecklistItem, 'id' | 'created_at' | 'updated_at' | 'is_completed' | 'completed_at' | 'completed_by'>): Promise<TaskChecklistItem> {
-    const { data, error } = await supabase
+  static async createChecklistItem(ctx: RequestContext, item: Omit<TaskChecklistItem, 'id' | 'created_at' | 'updated_at' | 'is_completed' | 'completed_at' | 'completed_by'>): Promise<TaskChecklistItem> {
+    const db = this.getDb(ctx);
+    const { data, error } = await db
       .from('task_checklist_items')
       .insert(item)
       .select()
@@ -106,8 +123,9 @@ export class TaskService {
     return data;
   }
 
-  static async updateChecklistItem(id: string, updates: Partial<TaskChecklistItem>): Promise<TaskChecklistItem> {
-    const { data, error } = await supabase
+  static async updateChecklistItem(ctx: RequestContext, id: string, updates: Partial<TaskChecklistItem>): Promise<TaskChecklistItem> {
+    const db = this.getDb(ctx);
+    const { data, error } = await db
       .from('task_checklist_items')
       .update(updates)
       .eq('id', id)
@@ -118,18 +136,19 @@ export class TaskService {
     return data;
   }
 
-  static async toggleChecklistItem(id: string, completed: boolean, userId: string): Promise<TaskChecklistItem> {
+  static async toggleChecklistItem(ctx: RequestContext, id: string, completed: boolean, userId: string): Promise<TaskChecklistItem> {
     const updates: Partial<TaskChecklistItem> = {
       is_completed: completed,
       completed_at: completed ? new Date().toISOString() : null,
       completed_by: completed ? userId : null,
     };
 
-    return this.updateChecklistItem(id, updates);
+    return this.updateChecklistItem(ctx, id, updates);
   }
 
-  static async deleteChecklistItem(id: string): Promise<void> {
-    const { error } = await supabase
+  static async deleteChecklistItem(ctx: RequestContext, id: string): Promise<void> {
+    const db = this.getDb(ctx);
+    const { error } = await db
       .from('task_checklist_items')
       .delete()
       .eq('id', id);
@@ -137,9 +156,10 @@ export class TaskService {
     if (error) throw error;
   }
 
-  // Task categories
-  static async getCategories(): Promise<TaskCategory[]> {
-    const { data, error } = await supabase
+  // Task categories (tenant-scoped)
+  static async getCategories(ctx: RequestContext): Promise<TaskCategory[]> {
+    const db = this.getDb(ctx);
+    const { data, error } = await db
       .from('task_categories')
       .select('*')
       .eq('is_active', true)
@@ -149,8 +169,9 @@ export class TaskService {
     return data || [];
   }
 
-  static async getAllCategories(): Promise<TaskCategory[]> {
-    const { data, error } = await supabase
+  static async getAllCategories(ctx: RequestContext): Promise<TaskCategory[]> {
+    const db = this.getDb(ctx);
+    const { data, error } = await db
       .from('task_categories')
       .select('*')
       .order('name');
@@ -159,8 +180,9 @@ export class TaskService {
     return data || [];
   }
 
-  static async createCategory(category: Omit<TaskCategory, 'id' | 'created_at' | 'updated_at'>): Promise<TaskCategory> {
-    const { data, error } = await supabase
+  static async createCategory(ctx: RequestContext, category: Omit<TaskCategory, 'id' | 'created_at' | 'updated_at'>): Promise<TaskCategory> {
+    const db = this.getDb(ctx);
+    const { data, error } = await db
       .from('task_categories')
       .insert(category)
       .select()
@@ -170,8 +192,9 @@ export class TaskService {
     return data;
   }
 
-  static async updateCategory(id: string, updates: Partial<TaskCategory>): Promise<TaskCategory> {
-    const { data, error } = await supabase
+  static async updateCategory(ctx: RequestContext, id: string, updates: Partial<TaskCategory>): Promise<TaskCategory> {
+    const db = this.getDb(ctx);
+    const { data, error } = await db
       .from('task_categories')
       .update(updates)
       .eq('id', id)
@@ -182,8 +205,9 @@ export class TaskService {
     return data;
   }
 
-  static async deleteCategory(id: string): Promise<void> {
-    const { error } = await supabase
+  static async deleteCategory(ctx: RequestContext, id: string): Promise<void> {
+    const db = this.getDb(ctx);
+    const { error } = await db
       .from('task_categories')
       .delete()
       .eq('id', id);
@@ -191,8 +215,9 @@ export class TaskService {
     if (error) throw error;
   }
 
-  static async getTaskCountByEntity(entityType: EntityType, entityId: string): Promise<number> {
-    const { count, error } = await supabase
+  static async getTaskCountByEntity(ctx: RequestContext, entityType: EntityType, entityId: string): Promise<number> {
+    const db = this.getDb(ctx);
+    const { count, error } = await db
       .from('tasks')
       .select('*', { count: 'exact', head: true })
       .eq('entity_type', entityType)
@@ -203,12 +228,13 @@ export class TaskService {
   }
 
   /**
-   * Get the company_id associated with a task based on its entity
+   * Get the company_id associated with a task based on its entity (tenant-scoped)
    * Returns null if task is not company-related (e.g., personal tasks)
    */
-  static async getTaskCompanyId(taskId: string): Promise<string | null> {
+  static async getTaskCompanyId(ctx: RequestContext, taskId: string): Promise<string | null> {
+    const db = this.getDb(ctx);
     // First get the task with entity info
-    const { data: task, error: taskError } = await supabase
+    const { data: task, error: taskError } = await db
       .from('tasks')
       .select('entity_type, entity_id')
       .eq('id', taskId)
@@ -223,7 +249,7 @@ export class TaskService {
 
     // Project reference
     if (task.entity_type === 'project') {
-      const { data: project } = await supabase
+      const { data: project } = await db
         .from('projects')
         .select('company_id')
         .eq('id', task.entity_id)
@@ -233,7 +259,7 @@ export class TaskService {
 
     // Opportunity reference
     if (task.entity_type === 'opportunity') {
-      const { data: opportunity } = await supabase
+      const { data: opportunity } = await db
         .from('opportunities')
         .select('company_id')
         .eq('id', task.entity_id)

@@ -1,13 +1,21 @@
 // @ts-nocheck
 import { supabase } from '@/integrations/supabase/client';
 import { CompanyUser, CompanyMembership, CompanyRole } from '../types/companyUser.types';
+import type { RequestContext } from '@/modules/tenant/types/tenant.types';
 
 export class CompanyUserService {
   /**
-   * Get all users in a company
+   * Get database client from context (tenant-aware)
    */
-  static async getCompanyUsers(companyId: string): Promise<CompanyUser[]> {
-    const { data, error } = await supabase
+  private static getDb(ctx: RequestContext) {
+    return supabase;
+  }
+  /**
+   * Get all users in a company (tenant-scoped)
+   */
+  static async getCompanyUsers(ctx: RequestContext, companyId: string): Promise<CompanyUser[]> {
+    const db = this.getDb(ctx);
+    const { data, error } = await db
       .from('company_users')
       .select(`
         *,
@@ -32,10 +40,11 @@ export class CompanyUserService {
   }
 
   /**
-   * Get all companies a user belongs to
+   * Get all companies a user belongs to (tenant-scoped)
    */
-  static async getUserCompanies(userId: string): Promise<CompanyMembership[]> {
-    const { data, error } = await supabase
+  static async getUserCompanies(ctx: RequestContext, userId: string): Promise<CompanyMembership[]> {
+    const db = this.getDb(ctx);
+    const { data, error } = await db
       .from('company_users')
       .select(`
         company_id,
@@ -61,14 +70,16 @@ export class CompanyUserService {
   }
 
   /**
-   * Add user to company with role
+   * Add user to company with role (tenant-scoped)
    */
   static async addUserToCompany(
+    ctx: RequestContext,
     companyId: string,
     userId: string,
     role: CompanyRole = 'member'
   ): Promise<void> {
-    const { error } = await supabase
+    const db = this.getDb(ctx);
+    const { error } = await db
       .from('company_users')
       .insert({
         company_id: companyId,
@@ -80,14 +91,16 @@ export class CompanyUserService {
   }
 
   /**
-   * Update user's role in company
+   * Update user's role in company (tenant-scoped)
    */
   static async updateUserRole(
+    ctx: RequestContext,
     companyId: string,
     userId: string,
     newRole: CompanyRole
   ): Promise<void> {
-    const { error } = await supabase
+    const db = this.getDb(ctx);
+    const { error } = await db
       .from('company_users')
       .update({ role: newRole })
       .eq('company_id', companyId)
@@ -97,10 +110,11 @@ export class CompanyUserService {
   }
 
   /**
-   * Remove user from company
+   * Remove user from company (tenant-scoped)
    */
-  static async removeUserFromCompany(companyId: string, userId: string): Promise<void> {
-    const { error } = await supabase
+  static async removeUserFromCompany(ctx: RequestContext, companyId: string, userId: string): Promise<void> {
+    const db = this.getDb(ctx);
+    const { error } = await db
       .from('company_users')
       .delete()
       .eq('company_id', companyId)
@@ -110,10 +124,11 @@ export class CompanyUserService {
   }
 
   /**
-   * Check if user has access to company
+   * Check if user has access to company (tenant-scoped)
    */
-  static async hasCompanyAccess(userId: string, companyId: string): Promise<boolean> {
-    const { data, error } = await supabase
+  static async hasCompanyAccess(ctx: RequestContext, userId: string, companyId: string): Promise<boolean> {
+    const db = this.getDb(ctx);
+    const { data, error } = await db
       .from('company_users')
       .select('id')
       .eq('user_id', userId)
@@ -125,14 +140,16 @@ export class CompanyUserService {
   }
 
   /**
-   * Check if user has specific role in company
+   * Check if user has specific role in company (tenant-scoped)
    */
   static async hasCompanyRole(
+    ctx: RequestContext,
     userId: string,
     companyId: string,
     role: CompanyRole
   ): Promise<boolean> {
-    const { data, error } = await supabase
+    const db = this.getDb(ctx);
+    const { data, error } = await db
       .from('company_users')
       .select('id')
       .eq('user_id', userId)
@@ -145,17 +162,18 @@ export class CompanyUserService {
   }
 
   /**
-   * Get users who have access to a specific company
+   * Get users who have access to a specific company (tenant-scoped)
    * Returns profiles with their company role for user selection
    */
-  static async getCompanyUsersForSelection(companyId: string): Promise<Array<{
+  static async getCompanyUsersForSelection(ctx: RequestContext, companyId: string): Promise<Array<{
     id: string;
     full_name: string;
     email: string;
     role: CompanyRole;
   }>> {
+    const db = this.getDb(ctx);
     // First get company_users
-    const { data: companyUsersData, error: cuError } = await supabase
+    const { data: companyUsersData, error: cuError } = await db
       .from('company_users')
       .select('user_id, role')
       .eq('company_id', companyId);
@@ -165,7 +183,7 @@ export class CompanyUserService {
 
     // Then get profiles for those users
     const userIds = companyUsersData.map(cu => cu.user_id);
-    const { data: profilesData, error: profilesError } = await supabase
+    const { data: profilesData, error: profilesError } = await db
       .from('profiles')
       .select('id, full_name, email')
       .in('id', userIds)

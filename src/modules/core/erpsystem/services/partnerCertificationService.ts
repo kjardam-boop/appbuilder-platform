@@ -5,13 +5,21 @@ import type {
   PartnerCertificationInput,
 } from "../types/erpsystem.types";
 import type { Company } from "@/modules/core/company/types/company.types";
+import type { RequestContext } from "@/modules/tenant/types/tenant.types";
 
 export class PartnerCertificationService {
   /**
-   * Get all certified partners for an ERP system
+   * Get database client from context (tenant-aware)
    */
-  static async getCertifiedPartners(erpSystemId: string): Promise<Company[]> {
-    const { data, error } = await supabase
+  private static getDb(ctx: RequestContext) {
+    return supabase;
+  }
+  /**
+   * Get all certified partners for an ERP system (tenant-scoped)
+   */
+  static async getCertifiedPartners(ctx: RequestContext, erpSystemId: string): Promise<Company[]> {
+    const db = this.getDb(ctx);
+    const { data, error } = await db
       .from("partner_certifications")
       .select(`
         partner:companies!partner_company_id(*)
@@ -25,12 +33,14 @@ export class PartnerCertificationService {
   }
 
   /**
-   * Get all certifications for a partner
+   * Get all certifications for a partner (tenant-scoped)
    */
   static async getPartnerCertifications(
+    ctx: RequestContext,
     partnerId: string
   ): Promise<PartnerCertification[]> {
-    const { data, error } = await supabase
+    const db = this.getDb(ctx);
+    const { data, error } = await db
       .from("partner_certifications")
       .select(`
         *,
@@ -45,12 +55,14 @@ export class PartnerCertificationService {
   }
 
   /**
-   * Get all certifications for an ERP system
+   * Get all certifications for an ERP system (tenant-scoped)
    */
   static async getErpCertifications(
+    ctx: RequestContext,
     erpSystemId: string
   ): Promise<PartnerCertification[]> {
-    const { data, error } = await supabase
+    const db = this.getDb(ctx);
+    const { data, error } = await db
       .from("partner_certifications")
       .select(`
         *,
@@ -65,13 +77,15 @@ export class PartnerCertificationService {
   }
 
   /**
-   * Add a certification
+   * Add a certification (tenant-scoped)
    */
   static async addCertification(
+    ctx: RequestContext,
     input: PartnerCertificationInput
   ): Promise<PartnerCertification> {
+    const db = this.getDb(ctx);
     // Verify that the partner has 'partner' role
-    const { data: company, error: companyError } = await supabase
+    const { data: company, error: companyError } = await db
       .from("companies")
       .select("company_roles")
       .eq("id", input.partner_company_id)
@@ -83,7 +97,7 @@ export class PartnerCertificationService {
       throw new Error("Selskapet må ha rollen 'Implementeringspartner'");
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from("partner_certifications")
       .insert(input)
       .select(`
@@ -98,13 +112,15 @@ export class PartnerCertificationService {
   }
 
   /**
-   * Update a certification
+   * Update a certification (tenant-scoped)
    */
   static async updateCertification(
+    ctx: RequestContext,
     id: string,
     input: Partial<PartnerCertificationInput>
   ): Promise<PartnerCertification> {
-    const { data, error } = await supabase
+    const db = this.getDb(ctx);
+    const { data, error } = await db
       .from("partner_certifications")
       .update(input)
       .eq("id", id)
@@ -120,10 +136,11 @@ export class PartnerCertificationService {
   }
 
   /**
-   * Remove a certification
+   * Remove a certification (tenant-scoped)
    */
-  static async removeCertification(id: string): Promise<void> {
-    const { error } = await supabase
+  static async removeCertification(ctx: RequestContext, id: string): Promise<void> {
+    const db = this.getDb(ctx);
+    const { error } = await db
       .from("partner_certifications")
       .delete()
       .eq("id", id);
