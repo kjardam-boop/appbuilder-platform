@@ -56,6 +56,90 @@ export type Database = {
         }
         Relationships: []
       }
+      companies: {
+        Row: {
+          company_roles: string[] | null
+          created_at: string
+          crm_status: string | null
+          customer_since: string | null
+          driftsinntekter: number | null
+          driftsresultat: number | null
+          egenkapital: number | null
+          employees: number | null
+          id: string
+          industry_code: string | null
+          industry_description: string | null
+          industry_keys: string[] | null
+          is_approved_supplier: boolean | null
+          last_fetched_at: string | null
+          last_interaction_date: string | null
+          name: string
+          org_form: string | null
+          org_number: string | null
+          segment: string | null
+          slug: string | null
+          source: string | null
+          supplier_certifications: string[] | null
+          totalkapital: number | null
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          company_roles?: string[] | null
+          created_at?: string
+          crm_status?: string | null
+          customer_since?: string | null
+          driftsinntekter?: number | null
+          driftsresultat?: number | null
+          egenkapital?: number | null
+          employees?: number | null
+          id?: string
+          industry_code?: string | null
+          industry_description?: string | null
+          industry_keys?: string[] | null
+          is_approved_supplier?: boolean | null
+          last_fetched_at?: string | null
+          last_interaction_date?: string | null
+          name: string
+          org_form?: string | null
+          org_number?: string | null
+          segment?: string | null
+          slug?: string | null
+          source?: string | null
+          supplier_certifications?: string[] | null
+          totalkapital?: number | null
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          company_roles?: string[] | null
+          created_at?: string
+          crm_status?: string | null
+          customer_since?: string | null
+          driftsinntekter?: number | null
+          driftsresultat?: number | null
+          egenkapital?: number | null
+          employees?: number | null
+          id?: string
+          industry_code?: string | null
+          industry_description?: string | null
+          industry_keys?: string[] | null
+          is_approved_supplier?: boolean | null
+          last_fetched_at?: string | null
+          last_interaction_date?: string | null
+          name?: string
+          org_form?: string | null
+          org_number?: string | null
+          segment?: string | null
+          slug?: string | null
+          source?: string | null
+          supplier_certifications?: string[] | null
+          totalkapital?: number | null
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
       data_subject_requests: {
         Row: {
           completed_at: string | null
@@ -184,6 +268,56 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      projects: {
+        Row: {
+          budget: number | null
+          company_id: string | null
+          created_at: string
+          description: string | null
+          end_date: string | null
+          id: string
+          name: string
+          owner_id: string | null
+          start_date: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          budget?: number | null
+          company_id?: string | null
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          name: string
+          owner_id?: string | null
+          start_date?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          budget?: number | null
+          company_id?: string | null
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          name?: string
+          owner_id?: string | null
+          start_date?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       retention_policies: {
         Row: {

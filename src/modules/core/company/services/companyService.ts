@@ -434,4 +434,66 @@ export class CompanyService {
     if (error) throw error;
     return (data || []) as Company[];
   }
+
+  /**
+   * Upsert company by org_number or slug (idempotent)
+   */
+  static async upsertByOrgOrSlug(companyData: {
+    name: string;
+    org_number: string | null;
+    slug: string;
+    website?: string | null;
+    company_roles?: string[];
+    source?: string;
+  }): Promise<Company> {
+    // Try to find by org_number first
+    let existing: Company | null = null;
+    if (companyData.org_number) {
+      existing = await this.findByOrgNumber(companyData.org_number);
+    }
+    
+    // If not found by org_number, try by slug
+    if (!existing) {
+      const { data } = await supabase
+        .from('companies')
+        .select('*')
+        .eq('slug', companyData.slug)
+        .maybeSingle();
+      existing = data as Company | null;
+    }
+
+    if (existing) {
+      // Update existing company
+      const { data, error } = await supabase
+        .from('companies')
+        .update({
+          name: companyData.name,
+          website: companyData.website,
+          company_roles: companyData.company_roles || existing.company_roles,
+        })
+        .eq('id', existing.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as Company;
+    } else {
+      // Create new company
+      const { data, error } = await supabase
+        .from('companies')
+        .insert({
+          name: companyData.name,
+          org_number: companyData.org_number,
+          slug: companyData.slug,
+          website: companyData.website,
+          company_roles: companyData.company_roles || ['supplier'],
+          source: companyData.source || 'manual',
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as Company;
+    }
+  }
 }

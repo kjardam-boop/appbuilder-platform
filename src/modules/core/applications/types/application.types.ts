@@ -41,6 +41,7 @@ export interface AppProduct extends BaseEntity {
 export interface SKU extends BaseEntity {
   app_product_id: string;
   edition_name: string;
+  code: string | null;
   notes: string | null;
 }
 
@@ -119,6 +120,7 @@ export const appProductSchema = z.object({
 
 export const skuSchema = z.object({
   edition_name: z.string().min(1, "Utgavenavn er påkrevd").max(100),
+  code: z.string().max(100).optional().or(z.literal("")),
   notes: z.string().max(500).optional().or(z.literal("")),
 });
 

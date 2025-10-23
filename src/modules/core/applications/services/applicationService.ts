@@ -286,4 +286,17 @@ export class ApplicationService {
       return this.createProduct(ctx, input);
     }
   }
+
+  static async listAllProducts(ctx: RequestContext): Promise<AppProduct[]> {
+    const { data, error } = await supabase
+      .from("app_products")
+      .select(`
+        *,
+        vendor:app_vendors!vendor_id(*)
+      `)
+      .order("name");
+
+    if (error) throw error;
+    return (data || []) as AppProduct[];
+  }
 }

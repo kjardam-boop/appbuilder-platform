@@ -2,16 +2,14 @@ import { RequestContext } from "@/modules/tenant/types/tenant.types";
 import { supabase } from "@/integrations/supabase/client";
 
 /**
- * Build RequestContext for client-side operations
+ * Build RequestContext for client-side operations (synchronous version)
  * In a full multi-tenant setup, this would fetch tenant info from routing/host
  * For now, we use a default tenant context
  */
-export async function buildClientContext(): Promise<RequestContext> {
-  const { data: { user } } = await supabase.auth.getUser();
-  
+export function buildClientContext(tenantId?: string): RequestContext {
   // For now, use a default tenant_id since we don't have tenant routing in place yet
   // In production, this would be determined by subdomain or custom domain
-  const tenant_id = 'default';
+  const tenant_id = tenantId || 'default';
   
   // In production, fetch actual tenant config from control DB
   const tenant = {
@@ -28,7 +26,7 @@ export async function buildClientContext(): Promise<RequestContext> {
   return {
     tenant_id,
     tenant,
-    user_id: user?.id,
+    user_id: undefined, // Will be set by services when needed
     user_role: undefined, // Will be fetched separately if needed
     request_id: crypto.randomUUID(),
     timestamp: new Date().toISOString(),

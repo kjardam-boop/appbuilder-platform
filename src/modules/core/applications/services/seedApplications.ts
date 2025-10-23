@@ -5,7 +5,7 @@ import { ApplicationService } from "./applicationService";
 import { buildClientContext } from "@/shared/lib/buildContext";
 import type { AppProductInput } from "../types/application.types";
 
-/** ---------- Datadefinisjoner (samme som du sendte inn) ---------- */
+/** ---------- Datadefinisjoner ---------- */
 
 type SeedSKU = { edition_name: string; code?: string; notes?: string };
 interface SeedData {
@@ -14,7 +14,48 @@ interface SeedData {
   skus?: SeedSKU[];
 }
 
-const SEED_PRODUCTS: SeedData[] = [/* ... hele listen din her, uendret ... */];
+const SEED_PRODUCTS: SeedData[] = [
+  // ERP Systems
+  {
+    vendor: { name: "Visma", slug: "visma", website: "https://www.visma.no", org_number: "932753700" },
+    product: {
+      name: "Visma.net ERP",
+      short_name: "Visma.net",
+      slug: "visma-net-erp",
+      vendorSlug: "visma",
+      app_type: "ERP",
+      deployment_models: ["SaaS"],
+      target_industries: ["Handel", "Service", "Bygg"],
+      market_segments: ["SMB", "Midmarket"],
+      localizations: ["Norge", "Sverige", "Danmark"],
+      status: "Active",
+      website: "https://www.visma.net",
+    },
+    skus: [
+      { edition_name: "Standard", code: "VISMA-NET-STD" },
+      { edition_name: "Professional", code: "VISMA-NET-PRO" },
+      { edition_name: "Enterprise", code: "VISMA-NET-ENT" },
+    ],
+  },
+  {
+    vendor: { name: "SAP", slug: "sap", website: "https://www.sap.com" },
+    product: {
+      name: "SAP S/4HANA Cloud",
+      short_name: "S/4HANA Cloud",
+      slug: "sap-s4hana-cloud",
+      vendorSlug: "sap",
+      app_type: "ERP",
+      deployment_models: ["SaaS"],
+      market_segments: ["Enterprise"],
+      status: "Active",
+      website: "https://www.sap.com/s4hana",
+    },
+    skus: [
+      { edition_name: "Public Cloud", code: "SAP-S4H-PUBLIC" },
+      { edition_name: "Private Cloud", code: "SAP-S4H-PRIVATE" },
+    ],
+  },
+];
 
 /** ---------- Hjelpere ---------- */
 
@@ -26,11 +67,11 @@ function genSkuCode(name: string): string {
 
 export async function seedApplications(tenantId?: string): Promise<void> {
   const ctx = buildClientContext(tenantId);
-  console.log(`[seed] applications start • tenant=${ctx.tenantId}`);
+  console.log(`[seed] applications start • tenant=${ctx.tenant_id}`);
 
   // Prefetch for fart (unngå N+1)
   const existingProducts = await ApplicationService.listAllProducts(ctx);
-  const productBySlug = new Map(existingProducts.map((p: any) => [p.slug, p]));
+  const productBySlug = new Map(existingProducts.map(p => [p.slug, p]));
 
   const limit = pLimit(3); // kontrollert parallellisering
 
@@ -39,33 +80,14 @@ export async function seedApplications(tenantId?: string): Promise<void> {
       const v = entry.vendor;
 
       // 1) Company (idempotent via orgnr/slug)
-      let company = null;
-      if (v.org_number) {
-        company = await CompanyService.findByOrgNumber(v.org_number);
-      }
-      if (!company) {
-        const candidates = await CompanyService.searchBrreg(v.name).catch(() => []);
-        const match = candidates?.find((c: any) => c.name.toLowerCase() === v.name.toLowerCase());
-        if (match) {
-          company = await CompanyService.upsertByOrgOrSlug({
-            name: match.name,
-            org_number: match.orgNumber,
-            slug: v.slug,
-            website: v.website || match.website,
-            company_roles: ["supplier"],
-            source: "brreg",
-          });
-        } else {
-          company = await CompanyService.upsertByOrgOrSlug({
-            name: v.name,
-            org_number: v.org_number ?? null,
-            slug: v.slug,
-            website: v.website ?? null,
-            company_roles: ["supplier"],
-            source: "manual",
-          });
-        }
-      }
+      const company = await CompanyService.upsertByOrgOrSlug({
+        name: v.name,
+        org_number: v.org_number ?? null,
+        slug: v.slug,
+        website: v.website ?? null,
+        company_roles: ["supplier"],
+        source: v.org_number ? "brreg" : "manual",
+      });
 
       // 2) Vendor (unik per company)
       let vendor = await VendorService.getVendorByCompanyId(ctx, company.id);
@@ -99,7 +121,7 @@ export async function seedApplications(tenantId?: string): Promise<void> {
       if (entry.skus?.length) {
         const existingSkus = await ApplicationService.getSkus(ctx, product.id) || [];
         for (const sku of entry.skus) {
-          const found = existingSkus.find((s: any) => s.edition_name === sku.edition_name);
+          const found = existingSkus.find(s => s.edition_name === sku.edition_name);
           if (!found) {
             await ApplicationService.createSku(ctx, product.id, {
               edition_name: sku.edition_name,
@@ -115,5 +137,5 @@ export async function seedApplications(tenantId?: string): Promise<void> {
     }))
   );
 
-  console.log(`[seed] applications done • tenant=${ctx.tenantId}`);
+  console.log(`[seed] applications done • tenant=${ctx.tenant_id}`);
 }
