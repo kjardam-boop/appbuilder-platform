@@ -1,5 +1,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TaskCategoryManager } from '@/modules/core/admin';
+import { IndustryManager } from '@/modules/core/industry/components/IndustryManager';
 import { useAdminRole } from '@/modules/core/user';
 import { Navigate } from 'react-router-dom';
 import { ERPSystemSeeder } from '@/components/Admin/ERPSystemSeeder';
@@ -31,6 +32,7 @@ export default function AdminSettings() {
       <Tabs defaultValue="task-categories" className="space-y-4">
         <TabsList>
           <TabsTrigger value="task-categories">Oppgavekategorier</TabsTrigger>
+          <TabsTrigger value="industries">Bransjer</TabsTrigger>
           <TabsTrigger value="erp-systems">ERP-systemer</TabsTrigger>
           <TabsTrigger value="products">Produkter</TabsTrigger>
           <TabsTrigger value="settings">Innstillinger</TabsTrigger>
@@ -38,6 +40,10 @@ export default function AdminSettings() {
 
         <TabsContent value="task-categories">
           <TaskCategoryManager />
+        </TabsContent>
+
+        <TabsContent value="industries">
+          <IndustryManager />
         </TabsContent>
 
         <TabsContent value="erp-systems">
