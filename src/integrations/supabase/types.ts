@@ -14,6 +14,159 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_integrations: {
+        Row: {
+          app_product_id: string
+          created_at: string
+          id: string
+          name: string
+          notes: string | null
+          spec_url: string | null
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          app_product_id: string
+          created_at?: string
+          id?: string
+          name: string
+          notes?: string | null
+          spec_url?: string | null
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          app_product_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          spec_url?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_integrations_app_product_id_fkey"
+            columns: ["app_product_id"]
+            isOneToOne: false
+            referencedRelation: "app_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      app_products: {
+        Row: {
+          app_type: string
+          compliances: string[] | null
+          created_at: string
+          deployment_models: string[]
+          description: string | null
+          id: string
+          localizations: string[] | null
+          market_segments: string[] | null
+          modules_supported: string[] | null
+          name: string
+          pricing_model: string | null
+          short_name: string | null
+          slug: string
+          status: string
+          target_industries: string[] | null
+          updated_at: string
+          vendor_id: string
+          website: string | null
+        }
+        Insert: {
+          app_type: string
+          compliances?: string[] | null
+          created_at?: string
+          deployment_models?: string[]
+          description?: string | null
+          id?: string
+          localizations?: string[] | null
+          market_segments?: string[] | null
+          modules_supported?: string[] | null
+          name: string
+          pricing_model?: string | null
+          short_name?: string | null
+          slug: string
+          status?: string
+          target_industries?: string[] | null
+          updated_at?: string
+          vendor_id: string
+          website?: string | null
+        }
+        Update: {
+          app_type?: string
+          compliances?: string[] | null
+          created_at?: string
+          deployment_models?: string[]
+          description?: string | null
+          id?: string
+          localizations?: string[] | null
+          market_segments?: string[] | null
+          modules_supported?: string[] | null
+          name?: string
+          pricing_model?: string | null
+          short_name?: string | null
+          slug?: string
+          status?: string
+          target_industries?: string[] | null
+          updated_at?: string
+          vendor_id?: string
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_products_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "app_vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      app_vendors: {
+        Row: {
+          company_id: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          org_number: string | null
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          org_number?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          org_number?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_vendors_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
@@ -140,6 +293,64 @@ export type Database = {
         }
         Relationships: []
       }
+      company_apps: {
+        Row: {
+          app_product_id: string
+          company_id: string
+          created_at: string
+          environment: string | null
+          id: string
+          notes: string | null
+          sku_id: string | null
+          updated_at: string
+          version: string | null
+        }
+        Insert: {
+          app_product_id: string
+          company_id: string
+          created_at?: string
+          environment?: string | null
+          id?: string
+          notes?: string | null
+          sku_id?: string | null
+          updated_at?: string
+          version?: string | null
+        }
+        Update: {
+          app_product_id?: string
+          company_id?: string
+          created_at?: string
+          environment?: string | null
+          id?: string
+          notes?: string | null
+          sku_id?: string | null
+          updated_at?: string
+          version?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_apps_app_product_id_fkey"
+            columns: ["app_product_id"]
+            isOneToOne: false
+            referencedRelation: "app_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_apps_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_apps_sku_id_fkey"
+            columns: ["sku_id"]
+            isOneToOne: false
+            referencedRelation: "skus"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       data_subject_requests: {
         Row: {
           completed_at: string | null
@@ -184,6 +395,56 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      erp_extensions: {
+        Row: {
+          app_product_id: string
+          certification_level: string | null
+          created_at: string
+          id: string
+          implementation_time_weeks: number | null
+          industries_served: string[]
+          localizations: string[]
+          modules: string[]
+          notes: string | null
+          partner_count: number
+          updated_at: string
+        }
+        Insert: {
+          app_product_id: string
+          certification_level?: string | null
+          created_at?: string
+          id?: string
+          implementation_time_weeks?: number | null
+          industries_served?: string[]
+          localizations?: string[]
+          modules?: string[]
+          notes?: string | null
+          partner_count?: number
+          updated_at?: string
+        }
+        Update: {
+          app_product_id?: string
+          certification_level?: string | null
+          created_at?: string
+          id?: string
+          implementation_time_weeks?: number | null
+          industries_served?: string[]
+          localizations?: string[]
+          modules?: string[]
+          notes?: string | null
+          partner_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "erp_extensions_app_product_id_fkey"
+            columns: ["app_product_id"]
+            isOneToOne: true
+            referencedRelation: "app_products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       industries: {
         Row: {
@@ -269,6 +530,109 @@ export type Database = {
         }
         Relationships: []
       }
+      partner_certifications: {
+        Row: {
+          app_product_id: string
+          certification_date: string | null
+          certification_level: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          partner_company_id: string
+          updated_at: string
+        }
+        Insert: {
+          app_product_id: string
+          certification_date?: string | null
+          certification_level?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          partner_company_id: string
+          updated_at?: string
+        }
+        Update: {
+          app_product_id?: string
+          certification_date?: string | null
+          certification_level?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          partner_company_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_certifications_app_product_id_fkey"
+            columns: ["app_product_id"]
+            isOneToOne: false
+            referencedRelation: "app_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_certifications_partner_company_id_fkey"
+            columns: ["partner_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_app_products: {
+        Row: {
+          app_product_id: string
+          created_at: string
+          id: string
+          partner_company_id: string | null
+          project_id: string
+          rationale: string | null
+          stage: string
+          updated_at: string
+        }
+        Insert: {
+          app_product_id: string
+          created_at?: string
+          id?: string
+          partner_company_id?: string | null
+          project_id: string
+          rationale?: string | null
+          stage: string
+          updated_at?: string
+        }
+        Update: {
+          app_product_id?: string
+          created_at?: string
+          id?: string
+          partner_company_id?: string | null
+          project_id?: string
+          rationale?: string | null
+          stage?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_app_products_app_product_id_fkey"
+            columns: ["app_product_id"]
+            isOneToOne: false
+            referencedRelation: "app_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_app_products_partner_company_id_fkey"
+            columns: ["partner_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_app_products_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           budget: number | null
@@ -351,6 +715,44 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      skus: {
+        Row: {
+          app_product_id: string
+          code: string | null
+          created_at: string
+          edition_name: string
+          id: string
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          app_product_id: string
+          code?: string | null
+          created_at?: string
+          edition_name: string
+          id?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          app_product_id?: string
+          code?: string | null
+          created_at?: string
+          edition_name?: string
+          id?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "skus_app_product_id_fkey"
+            columns: ["app_product_id"]
+            isOneToOne: false
+            referencedRelation: "app_products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tenant_integrations: {
         Row: {
