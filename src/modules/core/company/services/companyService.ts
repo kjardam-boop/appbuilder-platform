@@ -2,6 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Company, CompanyMetadata, BrregCompanySearchResult, EnhancedCompanyData, FinancialData, HierarchicalCompany, CustomerInteraction } from "../types/company.types";
 import { CompanyClassificationService } from "./companyClassificationService";
+import { classifyByNace } from "./companyClassificationHelpers";
 
 export class CompanyService {
   /**
@@ -153,29 +154,80 @@ export class CompanyService {
       updateData.totalkapital = financialData.data.totalkapital || null;
     }
 
-    // Auto-classify if industry code changed
-    if (data.company.industryCode) {
-      // Get current industry keys
-      const { data: currentCompany } = await supabase
-        .from('companies')
-        .select('industry_keys')
-        .eq('id', companyId)
-        .single();
-
-      const industryKeys = await CompanyClassificationService.classifyCompany(
-        companyId,
-        orgNumber,
-        data.company.industryCode,
-        currentCompany?.industry_keys || []
-      );
-
-      updateData.industry_keys = industryKeys;
-    }
-
+    // Update company data first
     await supabase
       .from('companies')
       .update(updateData)
       .eq('id', companyId);
+
+    // Classify by NACE code after update (with audit logging)
+    if (data.company.industryCode) {
+      const { data: { user } } = await supabase.auth.getUser();
+      await classifyByNace(
+        companyId,
+        orgNumber,
+        data.company.industryCode,
+        user?.id
+      );
+    }
+  }
+
+  /**
+   * Sync company from Brreg (used when company doesn't exist yet)
+   */
+  static async syncFromBrreg(orgNumber: string): Promise<Company> {
+    const { data, error } = await supabase.functions.invoke('brreg-company-details', {
+      body: { orgNumber },
+    });
+
+    if (error) throw error;
+
+    const companyData = data.company;
+
+    // Check if company exists
+    const existingCompany = await this.findByOrgNumber(orgNumber);
+
+    const insertData: any = {
+      org_number: orgNumber,
+      name: companyData.name,
+      org_form: companyData.orgForm,
+      industry_code: companyData.industryCode,
+      industry_description: companyData.industryDescription,
+      employees: companyData.employees,
+      website: companyData.website,
+      last_fetched_at: new Date().toISOString(),
+    };
+
+    let company: Company;
+
+    if (existingCompany) {
+      // Update existing
+      await this.refreshCompanyData(existingCompany.id, orgNumber);
+      company = (await this.getCompanyById(existingCompany.id))!;
+    } else {
+      // Create new
+      const { data: newCompany, error: insertError } = await supabase
+        .from('companies')
+        .insert(insertData)
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+      company = newCompany as Company;
+
+      // Classify after creation
+      if (companyData.industryCode) {
+        const { data: { user } } = await supabase.auth.getUser();
+        await classifyByNace(
+          company.id,
+          orgNumber,
+          companyData.industryCode,
+          user?.id
+        );
+      }
+    }
+
+    return company;
   }
 
   /**

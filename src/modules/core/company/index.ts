@@ -36,6 +36,7 @@ export {
 export { CompanyService } from './services/companyService';
 export { CompanyUserService } from './services/companyUserService';
 export { CompanyClassificationService } from './services/companyClassificationService';
+export { classifyByNace, syncFromBrregWithClassification } from './services/companyClassificationHelpers';
 
 // Module metadata
 export const COMPANY_MODULE = {

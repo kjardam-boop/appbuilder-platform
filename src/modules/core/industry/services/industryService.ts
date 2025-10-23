@@ -3,11 +3,21 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Industry, IndustryInput } from "../types/industry.types";
 import { STANDARD_INDUSTRIES } from "../types/industry.types";
 
+// In-memory cache for industries (5 min TTL)
+let industriesCache: Industry[] | null = null;
+let cacheExpiry: number = 0;
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
 export class IndustryService {
   /**
-   * Get all industries
+   * Get all industries (with in-memory cache)
    */
-  static async list(): Promise<Industry[]> {
+  static async list(useCache = true): Promise<Industry[]> {
+    // Return cached industries if valid
+    if (useCache && industriesCache && Date.now() < cacheExpiry) {
+      return industriesCache;
+    }
+
     const { data, error } = await supabase
       .from("industries")
       .select("*")
@@ -16,7 +26,22 @@ export class IndustryService {
       .order("name");
 
     if (error) throw error;
-    return (data || []) as Industry[];
+
+    const industries = (data || []) as Industry[];
+    
+    // Update cache
+    industriesCache = industries;
+    cacheExpiry = Date.now() + CACHE_TTL_MS;
+    
+    return industries;
+  }
+
+  /**
+   * Clear industries cache
+   */
+  static clearCache(): void {
+    industriesCache = null;
+    cacheExpiry = 0;
   }
 
   /**
@@ -34,7 +59,7 @@ export class IndustryService {
   }
 
   /**
-   * Create industry
+   * Create industry and clear cache
    */
   static async create(input: IndustryInput): Promise<Industry> {
     const { data, error } = await supabase
@@ -44,11 +69,15 @@ export class IndustryService {
       .single();
 
     if (error) throw error;
+    
+    // Clear cache to force refresh
+    this.clearCache();
+    
     return data as Industry;
   }
 
   /**
-   * Update industry
+   * Update industry and clear cache
    */
   static async update(id: string, input: Partial<IndustryInput>): Promise<Industry> {
     const { data, error } = await supabase
@@ -59,11 +88,15 @@ export class IndustryService {
       .single();
 
     if (error) throw error;
+    
+    // Clear cache to force refresh
+    this.clearCache();
+    
     return data as Industry;
   }
 
   /**
-   * Delete industry (soft delete)
+   * Delete industry (soft delete) and clear cache
    */
   static async delete(id: string): Promise<void> {
     const { error } = await supabase
@@ -72,6 +105,9 @@ export class IndustryService {
       .eq("id", id);
 
     if (error) throw error;
+    
+    // Clear cache to force refresh
+    this.clearCache();
   }
 
   /**
