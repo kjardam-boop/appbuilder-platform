@@ -9,9 +9,6 @@ export * from './admin';
 // AI
 export * from './ai';
 
-// Auth
-export * from './auth';
-
 // Company
 export * from './company';
 
@@ -30,11 +27,10 @@ export * from './opportunity';
 // Project
 export * from './project';
 
-// Supplier
-export * from './supplier';
-
 // Tasks
 export * from './tasks';
 
-// User
-export * from './user';
+// Export auth and user modules separately to avoid conflicts
+export { AUTH_MODULE } from './auth';
+export { USER_MODULE } from './user';
+export type { AuthUser, Profile, UserRole, UserRoleRecord } from './user';

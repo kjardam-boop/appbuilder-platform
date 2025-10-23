@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { ProjectService } from '../services/projectService';
 import { ProjectSupplier, SupplierStatus } from '../types/project.types';
 import { toast } from 'sonner';
+import { buildClientContext } from '@/shared/lib/buildContext';
 
 export const useProjectSuppliers = (projectId: string, userId: string) => {
   const [suppliers, setSuppliers] = useState<ProjectSupplier[]>([]);
@@ -12,7 +13,8 @@ export const useProjectSuppliers = (projectId: string, userId: string) => {
 
     setIsLoading(true);
     try {
-      const data = await ProjectService.getProjectSuppliers(projectId);
+      const ctx = await buildClientContext();
+      const data = await ProjectService.getProjectSuppliers(ctx, projectId);
       setSuppliers(data);
     } catch (error) {
       console.error('Error fetching suppliers:', error);
@@ -31,14 +33,15 @@ export const useProjectSuppliers = (projectId: string, userId: string) => {
     status: SupplierStatus = 'long_list'
   ) => {
     try {
+      const ctx = await buildClientContext();
       // Check if already exists
-      const exists = await ProjectService.isSupplierInProject(projectId, companyId);
+      const exists = await ProjectService.isSupplierInProject(ctx, projectId, companyId);
       if (exists) {
         toast.info('Denne leverandøren er allerede lagt til');
         return;
       }
 
-      await ProjectService.addSupplier(projectId, companyId, userId, status);
+      await ProjectService.addSupplier(ctx, projectId, companyId, userId, status);
       toast.success('Leverandør lagt til');
       await fetchSuppliers();
     } catch (error) {
@@ -52,7 +55,8 @@ export const useProjectSuppliers = (projectId: string, userId: string) => {
     updates: { status?: SupplierStatus; notes?: string }
   ) => {
     try {
-      await ProjectService.updateSupplier(supplierId, updates);
+      const ctx = await buildClientContext();
+      await ProjectService.updateSupplier(ctx, supplierId, updates);
       toast.success('Leverandør oppdatert');
       await fetchSuppliers();
     } catch (error) {
@@ -63,7 +67,8 @@ export const useProjectSuppliers = (projectId: string, userId: string) => {
 
   const removeSupplier = useCallback(async (supplierId: string) => {
     try {
-      await ProjectService.removeSupplier(supplierId);
+      const ctx = await buildClientContext();
+      await ProjectService.removeSupplier(ctx, supplierId);
       toast.success('Leverandør fjernet');
       await fetchSuppliers();
     } catch (error) {

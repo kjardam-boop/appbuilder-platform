@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { ProjectService } from '../services/projectService';
 import { Project } from '../types/project.types';
 import { toast } from 'sonner';
+import { buildClientContext } from '@/shared/lib/buildContext';
 
 export const useUserProjects = (userId: string) => {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -12,7 +13,8 @@ export const useUserProjects = (userId: string) => {
 
     setIsLoading(true);
     try {
-      const data = await ProjectService.getUserProjects(userId);
+      const ctx = await buildClientContext();
+      const data = await ProjectService.getUserProjects(ctx, userId);
       setProjects(data);
     } catch (error) {
       console.error('Error loading projects:', error);
@@ -32,7 +34,9 @@ export const useUserProjects = (userId: string) => {
     companyId: string | null
   ): Promise<Project | null> => {
     try {
+      const ctx = await buildClientContext();
       const newProject = await ProjectService.createProject(
+        ctx,
         title,
         description,
         companyId,
@@ -50,7 +54,8 @@ export const useUserProjects = (userId: string) => {
 
   const deleteProject = useCallback(async (projectId: string) => {
     try {
-      await ProjectService.deleteProject(projectId);
+      const ctx = await buildClientContext();
+      await ProjectService.deleteProject(ctx, projectId);
       await loadProjects();
       toast.success('Prosjekt slettet');
     } catch (error) {

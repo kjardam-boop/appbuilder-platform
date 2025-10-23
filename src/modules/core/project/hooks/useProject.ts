@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { ProjectService } from '../services/projectService';
 import { Project, ProjectPhase } from '../types/project.types';
 import { toast } from 'sonner';
+import { buildClientContext } from '@/shared/lib/buildContext';
 
 export const useProject = (projectId?: string) => {
   const [project, setProject] = useState<Project | null>(null);
@@ -12,7 +13,8 @@ export const useProject = (projectId?: string) => {
 
     setIsLoading(true);
     try {
-      const data = await ProjectService.getProjectById(projectId);
+      const ctx = await buildClientContext();
+      const data = await ProjectService.getProjectById(ctx, projectId);
       setProject(data);
     } catch (error) {
       console.error('Error loading project:', error);
@@ -32,7 +34,8 @@ export const useProject = (projectId?: string) => {
     if (!projectId) return;
 
     try {
-      await ProjectService.updateProject(projectId, updates);
+      const ctx = await buildClientContext();
+      await ProjectService.updateProject(ctx, projectId, updates);
       await loadProject();
       toast.success('Prosjekt oppdatert');
     } catch (error) {
@@ -45,7 +48,8 @@ export const useProject = (projectId?: string) => {
     if (!projectId) return;
 
     try {
-      await ProjectService.updatePhase(projectId, phase);
+      const ctx = await buildClientContext();
+      await ProjectService.updatePhase(ctx, projectId, phase);
       await loadProject();
       toast.success('Fase oppdatert');
     } catch (error) {
@@ -58,7 +62,8 @@ export const useProject = (projectId?: string) => {
     if (!projectId) return;
 
     try {
-      await ProjectService.updateProject(projectId, { owner_id: newOwnerId });
+      const ctx = await buildClientContext();
+      await ProjectService.updateProject(ctx, projectId, { owner_id: newOwnerId });
       await loadProject();
       toast.success('Prosjekteier endret');
     } catch (error) {
