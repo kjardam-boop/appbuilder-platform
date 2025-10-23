@@ -19,7 +19,6 @@ export function buildClientContext(tenantId?: string): RequestContext {
     host: window.location.hostname,
     enabled_modules: ['all'],
     custom_config: {},
-    is_active: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
