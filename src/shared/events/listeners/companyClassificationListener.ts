@@ -12,13 +12,13 @@ let isListenerActive = false;
 export function initCompanyClassificationListener() {
   if (isListenerActive) return;
 
-  eventBus.on(COMPANY_EVENTS.CLASSIFIED, handleCompanyClassified);
+  eventBus.on(COMPANY_EVENTS.CLASSIFIED, handleCompanyClassified as any);
   isListenerActive = true;
   console.log("[CompanyClassification] Listener initialized");
 }
 
 export function cleanupCompanyClassificationListener() {
-  eventBus.off(COMPANY_EVENTS.CLASSIFIED, handleCompanyClassified);
+  eventBus.off(COMPANY_EVENTS.CLASSIFIED);
   isListenerActive = false;
   console.log("[CompanyClassification] Listener cleaned up");
 }
@@ -50,3 +50,4 @@ async function handleCompanyClassified(event: CompanyClassifiedEvent) {
     console.error("[CompanyClassification] Error processing event:", error);
   }
 }
+

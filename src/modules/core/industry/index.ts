@@ -25,4 +25,5 @@ export const INDUSTRY_MODULE = {
   name: "industry",
   version: "1.0.0",
   description: "Industry/Bransje management with NACE classification",
+  enabled: true,
 } as const;

@@ -33,9 +33,9 @@ export {
   COMPANY_ROLE_DESCRIPTIONS,
 } from './types/companyUser.types';
 
-// Services
 export { CompanyService } from './services/companyService';
 export { CompanyUserService } from './services/companyUserService';
+export { CompanyClassificationService } from './services/companyClassificationService';
 
 // Module metadata
 export const COMPANY_MODULE = {

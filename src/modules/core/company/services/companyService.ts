@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { supabase } from "@/integrations/supabase/client";
 import { Company, CompanyMetadata, BrregCompanySearchResult, EnhancedCompanyData, FinancialData, HierarchicalCompany, CustomerInteraction } from "../types/company.types";
+import { CompanyClassificationService } from "./companyClassificationService";
 
 export class CompanyService {
   /**
@@ -121,7 +122,7 @@ export class CompanyService {
   }
 
   /**
-   * Update company data from Brreg
+   * Update company data from Brreg with auto-classification
    */
   static async refreshCompanyData(companyId: string, orgNumber: string): Promise<void> {
     const { data, error } = await supabase.functions.invoke('brreg-company-details', {
@@ -152,6 +153,25 @@ export class CompanyService {
       updateData.totalkapital = financialData.data.totalkapital || null;
     }
 
+    // Auto-classify if industry code changed
+    if (data.company.industryCode) {
+      // Get current industry keys
+      const { data: currentCompany } = await supabase
+        .from('companies')
+        .select('industry_keys')
+        .eq('id', companyId)
+        .single();
+
+      const industryKeys = await CompanyClassificationService.classifyCompany(
+        companyId,
+        orgNumber,
+        data.company.industryCode,
+        currentCompany?.industry_keys || []
+      );
+
+      updateData.industry_keys = industryKeys;
+    }
+
     await supabase
       .from('companies')
       .update(updateData)
@@ -172,7 +192,7 @@ export class CompanyService {
   }
 
   /**
-   * Create new company
+   * Create new company with auto-classification
    */
   static async createCompany(companyData: any): Promise<Company> {
     const { data, error } = await supabase
@@ -182,7 +202,29 @@ export class CompanyService {
       .single();
 
     if (error) throw error;
-    return data as Company;
+
+    const company = data as Company;
+
+    // Auto-classify by industry code if present
+    if (company.industry_code) {
+      const industryKeys = await CompanyClassificationService.classifyCompany(
+        company.id,
+        company.org_number,
+        company.industry_code
+      );
+
+      // Update company with industry keys
+      if (industryKeys.length > 0) {
+        await supabase
+          .from('companies')
+          .update({ industry_keys: industryKeys })
+          .eq('id', company.id);
+
+        company.industry_keys = industryKeys;
+      }
+    }
+
+    return company;
   }
 
   /**
