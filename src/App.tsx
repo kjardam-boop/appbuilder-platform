@@ -8,6 +8,9 @@ import Dashboard from "./pages/Dashboard";
 import Modules from "./pages/Modules";
 import Tenants from "./pages/Tenants";
 import IndustryAdmin from "./pages/IndustryAdmin";
+import ApplicationsPage from "./pages/ApplicationsPage";
+import AppProductDetails from "./pages/AppProductDetails";
+import AppVendorAdmin from "./pages/AppVendorAdmin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +27,9 @@ const App = () => (
           <Route path="/modules" element={<Modules />} />
           <Route path="/tenants" element={<Tenants />} />
           <Route path="/admin/industry" element={<IndustryAdmin />} />
+          <Route path="/applications" element={<ApplicationsPage />} />
+          <Route path="/applications/:id" element={<AppProductDetails />} />
+          <Route path="/admin/app-vendors" element={<AppVendorAdmin />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
