@@ -65,7 +65,20 @@ export class ProjectService {
       .single();
 
     if (error) throw error;
-    return data as Project;
+    
+    const project = data as Project;
+
+    // Emit project created event
+    const { eventBus, PROJECT_EVENTS } = await import("@/shared/events");
+    await eventBus.emit(PROJECT_EVENTS.CREATED, {
+      projectId: project.id,
+      projectName: project.title,
+      companyId: project.company_id || "",
+      createdBy: userId,
+      createdAt: project.created_at,
+    });
+
+    return project;
   }
 
   static async updateProject(
