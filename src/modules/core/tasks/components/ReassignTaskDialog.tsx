@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import type { Task } from '../types/tasks.types';
+import { buildClientContext } from '@/shared/lib/buildContext';
 
 interface Props {
   open: boolean;
@@ -35,11 +36,12 @@ export function ReassignTaskDialog({ open, onOpenChange, task, onReassigned }: P
       setFetching(true);
       
       // Get company ID associated with this task
-      const companyId = await TaskService.getTaskCompanyId(task.id);
+      const ctx = await buildClientContext();
+      const companyId = await TaskService.getTaskCompanyId(ctx, task.id);
       
       if (!companyId) {
         // No company restriction - get all users
-        const { data } = await supabase
+        const { data } = await (supabase as any)
           .from('profiles')
           .select('id, full_name, email')
           .order('full_name');
@@ -49,7 +51,7 @@ export function ReassignTaskDialog({ open, onOpenChange, task, onReassigned }: P
         setUsers(availableUsers);
       } else {
         // Restrict to company users
-        const companyUsers = await CompanyUserService.getCompanyUsersForSelection(companyId);
+        const companyUsers = await CompanyUserService.getCompanyUsersForSelection(ctx, companyId);
         const availableUsers = companyUsers.filter(u => u.id !== task.assigned_to);
         setUsers(availableUsers);
       }
@@ -77,7 +79,8 @@ export function ReassignTaskDialog({ open, onOpenChange, task, onReassigned }: P
 
     try {
       setLoading(true);
-      await TaskService.updateTask(task.id, { assigned_to: selectedUserId });
+      const ctx = await buildClientContext();
+      await TaskService.updateTask(ctx, task.id, { assigned_to: selectedUserId });
       
       toast({
         title: 'Suksess',

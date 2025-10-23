@@ -53,7 +53,7 @@ export class AIScoringService {
    * Get database client from context (tenant-aware)
    */
   private static getDb(ctx: RequestContext) {
-    return supabase;
+    return supabase as any;
   }
 
   static async analyzeSupplier(ctx: RequestContext, projectId: string, supplierId: string) {

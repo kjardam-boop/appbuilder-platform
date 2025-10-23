@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useCurrentUser } from "@/modules/user";
+import { useCurrentUser } from "@/modules/core/user";
 import Header from "@/components/Dashboard/Header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { QuestionManager } from "@/components/Admin/QuestionManager";
 import { AIQuestionGenerator } from "@/components/Admin/AIQuestionGenerator";
 import { Shield, ArrowLeft, Building2, Users } from "lucide-react";
-import { SUPPLIER_EVALUATION_CATEGORIES } from "@/modules/supplier";
+import { SUPPLIER_EVALUATION_CATEGORIES } from "@/modules/core/supplier";
 
 const AdminQuestions = () => {
   const navigate = useNavigate();
@@ -38,7 +38,8 @@ const AdminQuestions = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { data } = await supabase
+    const db = supabase as any;
+    const { data } = await db
       .from("profiles")
       .select("full_name, email")
       .eq("id", user.id)

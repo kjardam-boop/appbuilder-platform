@@ -7,7 +7,7 @@ export class EvaluationService {
    * Get database client from context (tenant-aware)
    */
   private static getDb(ctx: RequestContext) {
-    return supabase;
+    return supabase as any;
   }
   static async getEvaluationsBySupplier(
     ctx: RequestContext,
@@ -114,7 +114,7 @@ export class EvaluationService {
     let totalCompleted = 0;
     let totalQuestions = 0;
 
-    Object.entries(questionsByCategory).forEach(([key, questionIds]) => {
+    for (const [key, questionIds] of Object.entries(questionsByCategory) as [string, string[]][]) {
       const categoryEvals = evaluations.filter(e => questionIds.includes(e.question_id));
       const avgScore = categoryEvals.length > 0
         ? categoryEvals.reduce((sum, e) => sum + e.score, 0) / categoryEvals.length
@@ -129,7 +129,7 @@ export class EvaluationService {
       totalScore += avgScore * categoryEvals.length;
       totalCompleted += categoryEvals.length;
       totalQuestions += questionIds.length;
-    });
+    }
 
     const { data: supplier } = await db
       .from('companies')
@@ -139,7 +139,7 @@ export class EvaluationService {
 
     return {
       supplier_id: supplierId,
-      supplier_name: supplier?.name || 'Unknown',
+      supplier_name: (supplier?.name ?? 'Unknown'),
       categories,
       overallScore: totalCompleted > 0 ? totalScore / totalCompleted : 0,
       totalCompleted,

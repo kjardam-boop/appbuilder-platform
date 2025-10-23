@@ -1,6 +1,9 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { TaskCategoryManager } from '@/modules/admin';
-import { useAdminRole } from '@/modules/user';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { TaskCategoryManager } from '@/modules/core/admin';
+import { useAdminRole } from '@/modules/core/user';
+import { Navigate } from 'react-router-dom';
+import { ERPSystemSeeder } from '@/components/Admin/ERPSystemSeeder';
 import { Navigate } from 'react-router-dom';
 import { ERPSystemSeeder } from '@/components/Admin/ERPSystemSeeder';
 

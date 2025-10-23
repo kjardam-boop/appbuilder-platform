@@ -18,7 +18,7 @@ export { useSupplierPerformance } from './hooks/useSupplierPerformance';
 // Components
 export { SupplierCard } from './components/SupplierCard';
 export { SupplierStatusBadge } from './components/SupplierStatusBadge';
-export { ChangeOwnerDialog } from '../../components/Project/ChangeOwnerDialog';
+export { ChangeOwnerDialog } from '../../../components/Project/ChangeOwnerDialog';
 
 // Types
 export type {

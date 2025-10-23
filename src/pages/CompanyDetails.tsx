@@ -18,8 +18,8 @@ import { CompanyRoleEditor } from "@/components/Company/CompanyRoleEditor";
 import { ContactPersonsCard } from "@/components/Company/ContactPersonsCard";
 import { RoleBasedContent } from "@/components/Company/RoleBasedContent";
 import { PartnerCertificationManager } from "@/components/ERPSystem/PartnerCertificationManager";
-import type { Company } from "@/modules/company/types/company.types";
-import type { BrregCompanySearchResult } from "@/modules/company/types/company.types";
+import type { Company } from "@/modules/core/company/types/company.types";
+import type { BrregCompanySearchResult } from "@/modules/core/company/types/company.types";
 interface CompanyMetadata {
   sales_assessment_score: number | null;
   priority_level: string | null;

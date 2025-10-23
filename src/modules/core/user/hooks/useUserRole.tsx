@@ -16,7 +16,8 @@ export const useAdminRole = () => {
       }
 
       try {
-        const { data, error } = await supabase
+        const db = supabase as any;
+        const { data, error } = await db
           .from('user_roles')
           .select('role')
           .eq('user_id', session.user.id)

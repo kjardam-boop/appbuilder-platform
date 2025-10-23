@@ -18,6 +18,7 @@ import { useCurrentUser } from "@/modules/core/user/hooks/useCurrentUser";
 import { CompanyUserService } from "@/modules/core/company";
 import { supabase } from "@/integrations/supabase/client";
 import type { EntityType, TaskPriority, TaskStatus } from "../types/tasks.types";
+import { buildClientContext } from "@/shared/lib/buildContext";
 import { TASK_PRIORITY_LABELS } from "../types/tasks.types";
 
 interface TaskDialogProps {
@@ -75,14 +76,14 @@ export const TaskDialog = ({
       if (entityType === 'company') {
         companyId = entityId;
       } else if (entityType === 'project') {
-        const { data: project } = await supabase
+        const { data: project } = await (supabase as any)
           .from('projects')
           .select('company_id')
           .eq('id', entityId)
           .single();
         companyId = project?.company_id || null;
       } else if (entityType === 'opportunity') {
-        const { data: opportunity } = await supabase
+        const { data: opportunity } = await (supabase as any)
           .from('opportunities')
           .select('company_id')
           .eq('id', entityId)
@@ -92,7 +93,7 @@ export const TaskDialog = ({
       
       if (!companyId) {
         // No company restriction - get all users
-        const { data } = await supabase
+        const { data } = await (supabase as any)
           .from('profiles')
           .select('id, full_name, email')
           .order('full_name');
@@ -100,7 +101,8 @@ export const TaskDialog = ({
         setAvailableUsers(data || []);
       } else {
         // Restrict to company users
-        const companyUsers = await CompanyUserService.getCompanyUsersForSelection(companyId);
+        const ctx = await buildClientContext();
+        const companyUsers = await CompanyUserService.getCompanyUsersForSelection(ctx, companyId);
         setAvailableUsers(companyUsers);
       }
     } catch (error) {
@@ -143,7 +145,8 @@ export const TaskDialog = ({
         tags.push(contextTag);
       }
 
-      await TaskService.createTask({
+      const ctx = await buildClientContext();
+      await TaskService.createTask(ctx, {
         title,
         description: description || null,
         entity_type: entityType,
