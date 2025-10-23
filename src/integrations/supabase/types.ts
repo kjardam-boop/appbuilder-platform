@@ -14,7 +14,126 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      audit_logs: {
+        Row: {
+          action: string
+          after_state: Json | null
+          before_state: Json | null
+          created_at: string
+          id: string
+          ip_address: unknown
+          resource: string
+          tenant_id: string
+          timestamp: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          after_state?: Json | null
+          before_state?: Json | null
+          created_at?: string
+          id?: string
+          ip_address?: unknown
+          resource: string
+          tenant_id: string
+          timestamp?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          after_state?: Json | null
+          before_state?: Json | null
+          created_at?: string
+          id?: string
+          ip_address?: unknown
+          resource?: string
+          tenant_id?: string
+          timestamp?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      data_subject_requests: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          request_type: string
+          requested_at: string
+          requested_by: string | null
+          result_data: Json | null
+          status: string
+          subject_email: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          request_type: string
+          requested_at?: string
+          requested_by?: string | null
+          result_data?: Json | null
+          status?: string
+          subject_email: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          request_type?: string
+          requested_at?: string
+          requested_by?: string | null
+          result_data?: Json | null
+          status?: string
+          subject_email?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      retention_policies: {
+        Row: {
+          anonymize_before_delete: boolean | null
+          created_at: string
+          id: string
+          policy_config: Json | null
+          resource_type: string
+          retention_days: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          anonymize_before_delete?: boolean | null
+          created_at?: string
+          id?: string
+          policy_config?: Json | null
+          resource_type: string
+          retention_days: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          anonymize_before_delete?: boolean | null
+          created_at?: string
+          id?: string
+          policy_config?: Json | null
+          resource_type?: string
+          retention_days?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
