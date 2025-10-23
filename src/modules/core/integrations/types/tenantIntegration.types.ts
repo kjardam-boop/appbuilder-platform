@@ -1,5 +1,5 @@
 import type { BaseEntity } from "@/core/types/common.types";
-import type { AdapterConfig } from "../adapters/base/BaseAdapter";
+import type { AdapterConfig } from "../adapters/base/StandardAdapter";
 
 /**
  * Per-tenant integration configuration
