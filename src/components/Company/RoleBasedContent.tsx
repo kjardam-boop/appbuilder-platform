@@ -7,9 +7,9 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { SupplierERPSystems } from "./SupplierERPSystems";
 import { CustomerERPUsage } from "./CustomerERPUsage";
 import { PartnerCertificationManager } from "@/components/ERPSystem/PartnerCertificationManager";
-import { Company, CompanyMetadata, EnhancedCompanyData, FinancialData, COMPANY_ROLES } from "@/modules/company/types/company.types";
-import { useErpSystems } from "@/modules/erpsystem/hooks/useErpSystems";
-import { usePartnerCertifications } from "@/modules/erpsystem/hooks/usePartnerCertifications";
+import { Company, CompanyMetadata, EnhancedCompanyData, FinancialData, COMPANY_ROLES } from "@/modules/core/company/types/company.types";
+import { useErpSystems } from "@/modules/core/erpsystem/hooks/useErpSystems";
+import { usePartnerCertifications } from "@/modules/core/erpsystem/hooks/usePartnerCertifications";
 import { cn } from "@/lib/utils";
 
 interface RoleBasedContentProps {

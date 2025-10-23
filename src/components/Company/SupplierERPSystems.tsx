@@ -2,7 +2,7 @@ import { Building2, ExternalLink, Globe } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useErpSystems } from "@/modules/erpsystem/hooks/useErpSystems";
+import { useErpSystems } from "@/modules/core/erpsystem/hooks/useErpSystems";
 import { Link } from "react-router-dom";
 
 interface SupplierERPSystemsProps {

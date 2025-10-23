@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Brain, AlertTriangle, HelpCircle, Loader2 } from "lucide-react";
-import { AIScoringService } from "@/modules/supplier/services/aiScoringService";
+import { AIScoringService } from "@/modules/core/supplier/services/aiScoringService";
 import { toast } from "sonner";
 
 interface SupplierAIScoringProps {

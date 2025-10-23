@@ -1,15 +1,15 @@
-import { useTasks } from "@/modules/tasks";
-import { useCurrentUser } from "@/modules/user";
+import { useTasks } from "@/modules/core/tasks";
+import { useCurrentUser } from "@/modules/core/user";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Circle, Plus, Calendar, ArrowRight } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { TaskDialog, TaskEditDialog } from "@/modules/tasks";
+import { TaskDialog, TaskEditDialog } from "@/modules/core/tasks";
 import { format } from "date-fns";
 import { nb } from "date-fns/locale";
-import { TASK_PRIORITY_COLORS, TASK_STATUS_LABELS, Task } from "@/modules/tasks/types/tasks.types";
+import { TASK_PRIORITY_COLORS, TASK_STATUS_LABELS, Task } from "@/modules/core/tasks/types/tasks.types";
 
 export const TasksWidget = () => {
   const { currentUser } = useCurrentUser();

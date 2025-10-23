@@ -6,7 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Building2, Save } from "lucide-react";
 import { toast } from "sonner";
-import { CompanyService } from "@/modules/company";
+import { CompanyService } from "@/modules/core/company";
 
 interface CompanyRoleEditorProps {
   companyId: string;

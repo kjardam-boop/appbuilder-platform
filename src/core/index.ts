@@ -12,18 +12,18 @@ export { default as EventBus } from './eventBus';
 
 // Initialize modules
 import ModuleRegistry from './moduleRegistry';
-import { COMPANY_MODULE } from '@/modules/company';
-import { AI_MODULE } from '@/modules/ai';
-import { PROJECT_MODULE } from '@/modules/project';
-import { DOCUMENT_MODULE } from '@/modules/document';
-import { AUTH_MODULE } from '@/modules/auth';
-import { USER_MODULE } from '@/modules/user';
-import { TASKS_MODULE } from '@/modules/tasks';
-import { OPPORTUNITY_MODULE } from '@/modules/opportunity';
-import { ADMIN_MODULE } from '@/modules/admin';
-import { SUPPLIER_MODULE } from '@/modules/supplier';
-import { ERPSYSTEM_MODULE } from '@/modules/erpsystem';
-import { INTEGRATION_MODULE } from '@/modules/integrations';
+import { COMPANY_MODULE } from '@/modules/core/company';
+import { AI_MODULE } from '@/modules/core/ai';
+import { PROJECT_MODULE } from '@/modules/core/project';
+import { DOCUMENT_MODULE } from '@/modules/core/document';
+import { AUTH_MODULE } from '@/modules/core/auth';
+import { USER_MODULE } from '@/modules/core/user';
+import { TASKS_MODULE } from '@/modules/core/tasks';
+import { OPPORTUNITY_MODULE } from '@/modules/core/opportunity';
+import { ADMIN_MODULE } from '@/modules/core/admin';
+import { SUPPLIER_MODULE } from '@/modules/core/supplier';
+import { ERPSYSTEM_MODULE } from '@/modules/core/erpsystem';
+import { INTEGRATION_MODULE } from '@/modules/core/integrations';
 
 // Register all modules
 ModuleRegistry.register({ ...COMPANY_MODULE, enabled: true });

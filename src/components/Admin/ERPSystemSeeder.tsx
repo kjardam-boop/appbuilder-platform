@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Database, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
-import { seedErpSystems } from "@/modules/erpsystem";
+import { seedErpSystems } from "@/modules/core/erpsystem";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export function ERPSystemSeeder() {

@@ -1,12 +1,12 @@
-import { useOpportunities } from "@/modules/opportunity";
-import { useCurrentUser } from "@/modules/user";
+import { useOpportunities } from "@/modules/core/opportunity";
+import { useCurrentUser } from "@/modules/core/user";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, TrendingUp, DollarSign } from "lucide-react";
 import { useState } from "react";
-import { OpportunityDialog } from "@/modules/opportunity/components/OpportunityDialog";
-import { OPPORTUNITY_STAGE_LABELS, OPPORTUNITY_STAGE_COLORS, Opportunity } from "@/modules/opportunity/types/opportunity.types";
+import { OpportunityDialog } from "@/modules/core/opportunity/components/OpportunityDialog";
+import { OPPORTUNITY_STAGE_LABELS, OPPORTUNITY_STAGE_COLORS, Opportunity } from "@/modules/core/opportunity/types/opportunity.types";
 import { format } from "date-fns";
 import { nb } from "date-fns/locale";
 

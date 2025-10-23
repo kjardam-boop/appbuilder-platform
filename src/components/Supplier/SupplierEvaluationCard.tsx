@@ -16,8 +16,8 @@ import {
   ExternalLink,
   Sparkles,
 } from "lucide-react";
-import { SUPPLIER_EVALUATION_CATEGORIES } from "@/modules/supplier";
-import { useEvaluationSummary, useCreatePortalInvitation } from "@/modules/supplier";
+import { SUPPLIER_EVALUATION_CATEGORIES } from "@/modules/core/supplier";
+import { useEvaluationSummary, useCreatePortalInvitation } from "@/modules/core/supplier";
 import { SupplierQuestionnaireDialog } from "./SupplierQuestionnaireDialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

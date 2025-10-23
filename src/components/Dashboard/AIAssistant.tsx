@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sparkles } from "lucide-react";
-import { useAIChat } from "@/modules/ai";
-import { AIChatInterface } from "@/modules/ai";
+import { useAIChat } from "@/modules/core/ai";
+import { AIChatInterface } from "@/modules/core/ai";
 
 const AIAssistant = () => {
   const { messages, isLoading, sendMessage, setInitialMessage } = useAIChat({

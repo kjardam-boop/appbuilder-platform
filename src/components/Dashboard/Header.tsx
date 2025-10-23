@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { LogOut, User, Building2, Search, Bookmark, Settings, CheckSquare } from "lucide-react";
 import { toast } from "sonner";
-import { useCurrentUser } from "@/modules/user";
+import { useCurrentUser } from "@/modules/core/user";
 import {
   DropdownMenu,
   DropdownMenuContent,

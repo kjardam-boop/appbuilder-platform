@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { useAllEvaluationSummaries, SUPPLIER_EVALUATION_CATEGORIES } from "@/modules/supplier";
+import { useAllEvaluationSummaries, SUPPLIER_EVALUATION_CATEGORIES } from "@/modules/core/supplier";
 
 interface SupplierComparisonMatrixProps {
   projectId: string;
