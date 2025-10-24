@@ -10,10 +10,13 @@ import {
   ArrowRight,
   CheckCircle2
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@/modules/core/user/hooks/useAuth";
 import heroBg from "@/assets/hero-bg.jpg";
 
 const Index = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const features = [
     {
       icon: Building2,
@@ -75,11 +78,13 @@ const Index = () => {
               Standardize your process, accelerate delivery, and maintain full flexibility.
             </p>
             <div className="flex flex-wrap gap-4">
-              <Button variant="hero" size="lg" asChild>
-                <Link to="/dashboard">
-                  View Dashboard
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Link>
+              <Button 
+                variant="hero" 
+                size="lg" 
+                onClick={() => user ? navigate("/dashboard") : navigate("/auth")}
+              >
+                {user ? "View Dashboard" : "Get Started"}
+                <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
               <Button variant="outline" size="lg" asChild>
                 <Link to="/modules">
@@ -214,11 +219,13 @@ const Index = () => {
           <p className="text-xl text-muted-foreground mb-8">
             Get started with the platform and deliver tailored solutions faster than ever
           </p>
-          <Button variant="hero" size="lg" asChild>
-            <Link to="/dashboard">
-              Access Dashboard
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Link>
+          <Button 
+            variant="hero" 
+            size="lg" 
+            onClick={() => user ? navigate("/dashboard") : navigate("/auth")}
+          >
+            {user ? "Access Dashboard" : "Get Started"}
+            <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
         </div>
       </section>
