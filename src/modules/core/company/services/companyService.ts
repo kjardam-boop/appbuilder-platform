@@ -230,18 +230,6 @@ export class CompanyService {
     return company;
   }
 
-  /**
-   * Check if company exists by org number
-   */
-  static async findByOrgNumber(orgNumber: string): Promise<Company | null> {
-    const { data } = await supabase
-      .from('companies')
-      .select('*')
-      .eq('org_number', orgNumber)
-      .maybeSingle();
-
-    return data as Company | null;
-  }
 
   /**
    * Create new company with auto-classification

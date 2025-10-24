@@ -1,16 +1,16 @@
 // @ts-nocheck
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useOpportunities } from "@/modules/opportunity";
-import { useCurrentUser } from "@/modules/user";
+import { useOpportunities } from "@/modules/core/opportunity";
+import { useCurrentUser } from "@/modules/core/user";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, TrendingUp, DollarSign, Target } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { OpportunityCard } from "@/modules/opportunity";
-import { OpportunityDialog } from "@/modules/opportunity";
+import { OpportunityCard } from "@/modules/core/opportunity";
+import { OpportunityDialog } from "@/modules/core/opportunity";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { OpportunityStage } from "@/modules/opportunity";
+import type { OpportunityStage } from "@/modules/core/opportunity";
 
 export default function OpportunitiesPage() {
   const navigate = useNavigate();
