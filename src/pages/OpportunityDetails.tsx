@@ -1,14 +1,14 @@
 // @ts-nocheck
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { OpportunityService } from "@/modules/opportunity";
+import { OpportunityService } from "@/modules/core/opportunity";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Edit, Trash2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { OpportunityStageBadge } from "@/modules/opportunity";
-import { OpportunityDialog } from "@/modules/opportunity";
+import { OpportunityStageBadge } from "@/modules/core/opportunity";
+import { OpportunityDialog } from "@/modules/core/opportunity";
 import { useToast } from "@/hooks/use-toast";
 import type { OpportunityWithDetails } from "@/modules/opportunity";
 import {

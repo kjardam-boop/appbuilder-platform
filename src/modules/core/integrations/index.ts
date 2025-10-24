@@ -27,6 +27,18 @@ export type { BrregConfig, BrregCompanyData, BrregSearchResult } from './adapter
 // Services
 export { IntegrationService } from './services/IntegrationService';
 export { WebhookService } from './services/WebhookService';
+export { TenantIntegrationService } from './services/TenantIntegrationService';
+export { getTenantSecrets, setTenantSecrets } from './services/tenantSecrets';
+export { sendMail } from './services/mcpMailService';
+export type { SendMailParams, SendMailResult } from './services/mcpMailService';
+
+// MCP Client & Adapters
+export { McpClient } from './adapters/mcp/mcpClient';
+export { createN8nMcpAdapter } from './adapters/mcp/n8n-mcp';
+export type { N8nMcpConfig, N8nMcpAdapter } from './adapters/mcp/n8n-mcp';
+
+// Event Listeners
+export { registerProjectCreatedListener, unregisterProjectCreatedListener } from './listeners/onProjectCreated';
 
 // Webhook Handlers
 export { BrregWebhookHandler } from './webhooks/handlers/BrregWebhookHandler';

@@ -5,6 +5,7 @@ import { TaskAutoCreateListener } from "./taskAutoCreateListener";
 import { AIAnalysisListener } from "./aiAnalysisListener";
 import { ProjectStatusListener } from "./projectStatusListener";
 import { initCompanyClassificationListener, cleanupCompanyClassificationListener } from "./companyClassificationListener";
+import { registerProjectCreatedListener, unregisterProjectCreatedListener } from "@/modules/core/integrations";
 
 /**
  * Initialize all event listeners
@@ -17,6 +18,7 @@ export function initEventListeners() {
   AIAnalysisListener.init();
   ProjectStatusListener.init();
   initCompanyClassificationListener();
+  registerProjectCreatedListener();
   
   console.log("Event listeners initialized");
 }
@@ -32,6 +34,7 @@ export function cleanupEventListeners() {
   AIAnalysisListener.cleanup();
   ProjectStatusListener.cleanup();
   cleanupCompanyClassificationListener();
+  unregisterProjectCreatedListener();
   
   console.log("Event listeners cleaned up");
 }
