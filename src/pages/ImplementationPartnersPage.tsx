@@ -25,7 +25,7 @@ import {
   ArrowLeft
 } from "lucide-react";
 import { toast } from "sonner";
-import { CompanyService } from "@/modules/company/services/companyService";
+import { CompanyService } from "@/modules/core/company/services/companyService";
 
 interface ImplementationPartner {
   id: string;

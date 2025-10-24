@@ -34,8 +34,8 @@ import {
   FileText,
   ArrowLeft
 } from "lucide-react";
-import { COMPANY_ROLES } from "@/modules/company/types/company.types";
-import type { CompanyRole } from "@/modules/company/types/company.types";
+import { COMPANY_ROLES } from "@/modules/core/company/types/company.types";
+import type { CompanyRole } from "@/modules/core/company/types/company.types";
 
 interface Profile {
   full_name: string;

@@ -25,9 +25,9 @@ import {
   ArrowLeft
 } from "lucide-react";
 import { toast } from "sonner";
-import { CompanyService } from "@/modules/company/services/companyService";
-import { COMPANY_ROLES } from "@/modules/company/types/company.types";
-import type { CompanyRole } from "@/modules/company/types/company.types";
+import { CompanyService } from "@/modules/core/company/services/companyService";
+import { COMPANY_ROLES } from "@/modules/core/company/types/company.types";
+import type { CompanyRole } from "@/modules/core/company/types/company.types";
 
 interface Customer {
   id: string;
