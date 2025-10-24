@@ -8,6 +8,8 @@ import Dashboard from "./pages/Dashboard";
 import Modules from "./pages/Modules";
 import Tenants from "./pages/Tenants";
 import Auth from "./pages/Auth";
+import Admin from "./pages/Admin";
+import AdminDashboard from "./pages/admin/AdminDashboard";
 import UserManagement from "./pages/UserManagement";
 import AdminSettings from "./pages/AdminSettings";
 import AdminQuestions from "./pages/AdminQuestions";
@@ -46,15 +48,25 @@ const App = () => (
           <Route path="/auth" element={<Auth />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/modules" element={<Modules />} />
-          <Route path="/tenants" element={<Tenants />} />
           
-          {/* Admin routes */}
-          <Route path="/admin/users" element={<UserManagement />} />
-          <Route path="/admin/settings" element={<AdminSettings />} />
+          {/* Admin Panel with Sidebar */}
+          <Route path="/admin" element={<Admin />}>
+            <Route index element={<AdminDashboard />} />
+            <Route path="tenants" element={<Tenants />} />
+            <Route path="users" element={<UserManagement />} />
+            <Route path="settings" element={<AdminSettings />} />
+            <Route path="industries" element={<IndustryAdmin />} />
+            <Route path="applications" element={<ApplicationsPage />} />
+            <Route path="erp-systems" element={<ERPSystemsPage />} />
+            <Route path="database" element={<AdminSeed />} />
+            <Route path="integrations" element={<AdminSettings />} />
+            <Route path="security" element={<AdminSettings />} />
+          </Route>
+          
+          {/* Legacy admin routes - redirect to new structure */}
           <Route path="/admin/questions" element={<AdminQuestions />} />
-          <Route path="/admin/seed" element={<AdminSeed />} />
-          <Route path="/admin/industry" element={<IndustryAdmin />} />
           <Route path="/admin/app-vendors" element={<AppVendorAdmin />} />
+          <Route path="/tenants" element={<Tenants />} />
           
           {/* Applications & ERP Systems */}
           <Route path="/applications" element={<ApplicationsPage />} />
