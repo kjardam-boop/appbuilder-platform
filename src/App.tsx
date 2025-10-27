@@ -44,13 +44,11 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 function AdminShell({ children }: { children: React.ReactNode }) {
-  const { isPlatformAdmin, isLoading } = usePlatformAdmin();
-  if (isLoading) return <>{children}</>;
-  if (!isPlatformAdmin) return <>{children}</>;
+  const { isPlatformAdmin } = usePlatformAdmin();
   return (
     <SidebarProvider defaultOpen>
       <div className="flex w-full">
-        <AppAdminSidebar />
+        {isPlatformAdmin && <AppAdminSidebar />}
         <div className="flex-1">{children}</div>
       </div>
     </SidebarProvider>
