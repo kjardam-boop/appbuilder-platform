@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { LogOut, User, Building2, Search, Bookmark, Settings, CheckSquare } from "lucide-react";
 import { toast } from "sonner";
 import { useCurrentUser } from "@/modules/core/user";
+import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,6 +23,7 @@ interface HeaderProps {
 const Header = ({ userName, userEmail }: HeaderProps) => {
   const navigate = useNavigate();
   const { isAdmin } = useCurrentUser();
+  const { isPlatformAdmin } = usePlatformAdmin();
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -87,6 +89,15 @@ const Header = ({ userName, userEmail }: HeaderProps) => {
               <User className="mr-2 h-4 w-4" />
               <span>Profil</span>
             </DropdownMenuItem>
+            {isPlatformAdmin && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate("/admin")}>
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Admin Dashboard</span>
+                </DropdownMenuItem>
+              </>
+            )}
             {isAdmin && (
               <>
                 <DropdownMenuSeparator />
