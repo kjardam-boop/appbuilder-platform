@@ -16,6 +16,7 @@ import UserManagement from "./pages/UserManagement";
 import AdminSettings from "./pages/AdminSettings";
 import AdminQuestions from "./pages/AdminQuestions";
 import AdminSeed from "./pages/AdminSeed";
+import AdminCompanies from "./pages/admin/AdminCompanies";
 import IndustryAdmin from "./pages/IndustryAdmin";
 import ApplicationsPage from "./pages/ApplicationsPage";
 import AppProductDetails from "./pages/AppProductDetails";
@@ -57,6 +58,7 @@ const App = () => (
             <Route index element={<AdminDashboard />} />
             <Route path="tenants" element={<Tenants />} />
             <Route path="users" element={<UserManagement />} />
+            <Route path="companies" element={<AdminCompanies />} />
             <Route path="settings" element={<AdminSettings />} />
             <Route path="industries" element={<IndustryAdmin />} />
             <Route path="applications" element={<ApplicationsPage />} />
