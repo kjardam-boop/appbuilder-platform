@@ -50,6 +50,12 @@ const Header = ({ userName, userEmail }: HeaderProps) => {
             <p className="text-sm text-muted-foreground">Anskaffelsesstyring</p>
           </div>
         </div>
+        {isPlatformAdmin && (
+          <Button variant="outline" className="mr-2 hidden sm:inline-flex" onClick={() => navigate("/admin")}>
+            <Settings className="mr-2 h-4 w-4" />
+            Admin
+          </Button>
+        )}
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

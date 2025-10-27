@@ -3,10 +3,11 @@ import { Building2, Menu, LogOut } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/modules/core/user/hooks/useAuth";
 import { toast } from "sonner";
-
+import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
 export const Header = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const { isPlatformAdmin } = usePlatformAdmin();
 
   const handleAuth = () => {
     if (user) {
@@ -48,6 +49,11 @@ export const Header = () => {
               <Link to="/tenants" className="text-sm font-medium text-foreground/80 hover:text-foreground transition-smooth">
                 Tenants
               </Link>
+              {isPlatformAdmin && (
+                <Link to="/admin" className="text-sm font-medium text-foreground/80 hover:text-foreground transition-smooth">
+                  Admin
+                </Link>
+              )}
             </>
           )}
           
