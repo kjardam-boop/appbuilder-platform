@@ -1,16 +1,15 @@
 // @ts-nocheck
 import { useState, useEffect } from "react";
-import { Building2, Wrench, Users, Target, ChevronDown } from "lucide-react";
+import { Building2, Wrench, Users, Target, ChevronDown, Award } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { SupplierERPSystems } from "./SupplierERPSystems";
 import { CustomerERPUsage } from "./CustomerERPUsage";
-import { PartnerCertificationManager } from "@/components/ERPSystem/PartnerCertificationManager";
 import { Company, CompanyMetadata, EnhancedCompanyData, FinancialData, COMPANY_ROLES } from "@/modules/core/company/types/company.types";
-import { useErpSystems } from "@/modules/core/erpsystem/hooks/useErpSystems";
-import { usePartnerCertifications } from "@/modules/core/erpsystem/hooks/usePartnerCertifications";
+import { useAppProducts, usePartnerCertifications } from "@/modules/core/applications";
 import { cn } from "@/lib/utils";
+import { Link } from "react-router-dom";
 
 interface RoleBasedContentProps {
   company: Company;
@@ -28,7 +27,7 @@ export function RoleBasedContent({
   onUpdateMetadata 
 }: RoleBasedContentProps) {
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
-  const { data: erpSystemsData } = useErpSystems();
+  const { data: appProductsData } = useAppProducts();
   const { data: certifications } = usePartnerCertifications(company.id);
 
   // Auto-expand if only one role
@@ -59,7 +58,9 @@ export function RoleBasedContent({
     }));
   };
 
-  const supplierSystemsCount = erpSystemsData?.data?.filter(s => s.vendor_company_id === company.id).length || 0;
+  const supplierSystemsCount = appProductsData?.data?.filter(
+    product => product.vendor?.company_id === company.id
+  ).length || 0;
   const certificationsCount = certifications?.length || 0;
 
   const roleConfigs = {
@@ -76,11 +77,62 @@ export function RoleBasedContent({
       description: "Implementerer og tilpasser ERP-løsninger",
       badge: certificationsCount > 0 ? `${certificationsCount} sertifisering${certificationsCount !== 1 ? 'er' : ''}` : null,
       content: (
-        <PartnerCertificationManager
-          mode="partner"
-          entityId={company.id}
-          entityName={company.name}
-        />
+        <div className="space-y-3">
+          {certifications && certifications.length > 0 ? (
+            certifications.map((cert) => (
+              <Card key={cert.id}>
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                      <CardTitle className="text-base">
+                        <Link 
+                          to={`/applications/${cert.app_product?.id}`}
+                          className="hover:underline"
+                        >
+                          {cert.app_product?.name}
+                        </Link>
+                      </CardTitle>
+                      {cert.certification_level && (
+                        <Badge variant="secondary" className="text-xs">
+                          {cert.certification_level}
+                        </Badge>
+                      )}
+                    </div>
+                    <Award className="h-4 w-4 text-primary" />
+                  </div>
+                </CardHeader>
+                {(cert.certification_date || cert.notes) && (
+                  <CardContent className="pt-0">
+                    <div className="space-y-2">
+                      {cert.certification_date && (
+                        <p className="text-sm text-muted-foreground">
+                          <span className="font-medium">Sertifisert:</span>{" "}
+                          {new Date(cert.certification_date).toLocaleDateString('nb-NO')}
+                        </p>
+                      )}
+                      {cert.notes && (
+                        <p className="text-sm text-muted-foreground">
+                          {cert.notes}
+                        </p>
+                      )}
+                    </div>
+                  </CardContent>
+                )}
+              </Card>
+            ))
+          ) : (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center py-8">
+                  <Award className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                  <p className="text-sm text-muted-foreground">
+                    Ingen partnersertifiseringer registrert
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       )
     },
     customer: {
