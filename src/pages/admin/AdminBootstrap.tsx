@@ -26,76 +26,16 @@ const AdminBootstrap = () => {
     setError(null);
 
     try {
-      // 1. Get or create default tenant
-      let { data: tenant, error: tenantError } = await supabase
-        .from('tenants')
-        .select('id')
-        .eq('slug', 'default')
-        .maybeSingle();
+      const { data, error } = await supabase.functions.invoke('bootstrap-platform-owner', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
 
-      if (tenantError) throw tenantError;
+      if (error) throw error;
       
-      let tenantId: string;
-      
-      if (!tenant) {
-        // Create default tenant if it doesn't exist
-        const { data: newTenant, error: createError } = await supabase
-          .from('tenants')
-          .insert({
-            name: 'Default Platform',
-            slug: 'default',
-            status: 'active',
-            plan: 'enterprise',
-          })
-          .select('id')
-          .single();
-
-        if (createError) throw createError;
-        if (!newTenant) throw new Error("Kunne ikke opprette default tenant");
-        
-        tenantId = newTenant.id;
-        toast.success("Default tenant opprettet");
-      } else {
-        tenantId = tenant.id;
-      }
-
-      // 2. Check if user already has membership
-      const { data: existing, error: checkError } = await supabase
-        .from('tenant_users')
-        .select('id, roles, is_active')
-        .eq('user_id', session.user.id)
-        .eq('tenant_id', tenantId)
-        .maybeSingle();
-
-      if (checkError) throw checkError;
-
-      if (existing) {
-        // Update existing membership to include platform_owner
-        const updatedRoles = existing.roles.includes('platform_owner' as any)
-          ? existing.roles
-          : [...existing.roles, 'platform_owner' as any];
-
-        const { error: updateError } = await supabase
-          .from('tenant_users')
-          .update({
-            roles: updatedRoles,
-            is_active: true,
-          })
-          .eq('id', existing.id);
-
-        if (updateError) throw updateError;
-      } else {
-        // Insert new membership
-        const { error: insertError } = await supabase
-          .from('tenant_users')
-          .insert({
-            user_id: session.user.id,
-            tenant_id: tenantId,
-            roles: ['platform_owner' as any],
-            is_active: true,
-          });
-
-        if (insertError) throw insertError;
+      if (!data.success) {
+        throw new Error(data.error || "Bootstrap feilet");
       }
 
       setSuccess(true);
