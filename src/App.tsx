@@ -24,8 +24,6 @@ import IndustryAdmin from "./pages/IndustryAdmin";
 import ApplicationsPage from "./pages/ApplicationsPage";
 import AppProductDetails from "./pages/AppProductDetails";
 import AppVendorAdmin from "./pages/AppVendorAdmin";
-import ERPSystemsPage from "./pages/ERPSystemsPage";
-import ERPSystemDetails from "./pages/ERPSystemDetails";
 import SystemVendorsPage from "./pages/SystemVendorsPage";
 import CompaniesHub from "./pages/CompaniesHub";
 import CompanySearch from "./pages/CompanySearch";
@@ -78,7 +76,6 @@ const App = () => (
                 <Route path="settings" element={<AdminSettings />} />
                 <Route path="industries" element={<IndustryAdmin />} />
                 <Route path="applications" element={<ApplicationsPage />} />
-                <Route path="erp-systems" element={<ERPSystemsPage />} />
                 <Route path="database" element={<AdminSeed />} />
                 <Route path="integrations" element={<AdminSettings />} />
                 <Route path="security" element={<AdminSettings />} />
@@ -90,11 +87,9 @@ const App = () => (
               <Route path="/admin/app-vendors" element={<AppVendorAdmin />} />
               <Route path="/tenants" element={<Tenants />} />
               
-              {/* Applications & ERP Systems */}
+              {/* Applications */}
               <Route path="/applications" element={<ApplicationsPage />} />
               <Route path="/applications/:id" element={<AppProductDetails />} />
-              <Route path="/erp-systems" element={<ERPSystemsPage />} />
-              <Route path="/erp-systems/:id" element={<ERPSystemDetails />} />
               <Route path="/system-vendors" element={<SystemVendorsPage />} />
               
               {/* Companies */}

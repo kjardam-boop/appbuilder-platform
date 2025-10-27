@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Database, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
-import { seedErpSystems } from "@/modules/core/erpsystem";
+import { seedApplications } from "@/modules/core/applications";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export function ERPSystemSeeder() {
@@ -15,20 +15,20 @@ export function ERPSystemSeeder() {
       setIsSeeding(true);
       setSeedResult(null);
       
-      await seedErpSystems();
+      await seedApplications();
       
       setSeedResult({
         success: true,
-        message: "ERP-systemer og leverandører ble lastet inn!"
+        message: "Applikasjoner og leverandører ble lastet inn!"
       });
-      toast.success("ERP-systemer ble seeded");
+      toast.success("Applikasjoner ble seeded");
     } catch (error) {
       console.error("Seed error:", error);
       setSeedResult({
         success: false,
         message: `Feil under seeding: ${error instanceof Error ? error.message : 'Ukjent feil'}`
       });
-      toast.error("Kunne ikke seede ERP-systemer");
+      toast.error("Kunne ikke seede applikasjoner");
     } finally {
       setIsSeeding(false);
     }
@@ -39,12 +39,12 @@ export function ERPSystemSeeder() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Database className="h-5 w-5" />
-          ERP-systemer og Leverandører
+          Applikasjoner og Leverandører
         </CardTitle>
         <CardDescription>
-          Last inn standard ERP-systemer og deres leverandører i databasen.
+          Last inn standard applikasjoner (ERP, CRM, etc.) og deres leverandører i databasen.
           Dette vil opprette selskaper som Microsoft, SAP, Oracle, Visma, Unit4, IFS, med videre,
-          og knytte deres ERP-produkter til dem.
+          og knytte deres produkter til dem.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -73,7 +73,7 @@ export function ERPSystemSeeder() {
             ) : (
               <>
                 <Database className="mr-2 h-4 w-4" />
-                Last inn ERP-systemer
+                Last inn applikasjoner
               </>
             )}
           </Button>

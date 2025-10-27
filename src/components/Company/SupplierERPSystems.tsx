@@ -2,7 +2,7 @@ import { Building2, ExternalLink, Globe } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useErpSystems } from "@/modules/core/erpsystem/hooks/useErpSystems";
+import { useAppProducts } from "@/modules/core/applications";
 import { Link } from "react-router-dom";
 
 interface SupplierERPSystemsProps {
@@ -10,10 +10,11 @@ interface SupplierERPSystemsProps {
 }
 
 export function SupplierERPSystems({ companyId }: SupplierERPSystemsProps) {
-  const { data: erpSystemsData, isLoading } = useErpSystems();
+  const { data: appProductsData, isLoading } = useAppProducts();
   
-  const supplierSystems = erpSystemsData?.data?.filter(
-    system => system.vendor_company_id === companyId
+  // Filter products where the vendor's company_id matches this company
+  const supplierSystems = appProductsData?.data?.filter(
+    product => product.vendor?.company_id === companyId
   ) || [];
 
   if (isLoading) {
@@ -31,7 +32,7 @@ export function SupplierERPSystems({ companyId }: SupplierERPSystemsProps) {
           <div className="text-center py-8">
             <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
             <p className="text-sm text-muted-foreground">
-              Ingen ERP-systemer registrert som leverandør
+              Ingen applikasjoner registrert som leverandør
             </p>
           </div>
         </CardContent>
@@ -48,7 +49,7 @@ export function SupplierERPSystems({ companyId }: SupplierERPSystemsProps) {
               <div className="space-y-1">
                 <CardTitle className="text-base">
                   <Link 
-                    to={`/erp-systems/${system.slug}`}
+                    to={`/applications/${system.id}`}
                     className="hover:underline"
                   >
                     {system.name}
@@ -73,7 +74,7 @@ export function SupplierERPSystems({ companyId }: SupplierERPSystemsProps) {
             )}
             <div className="flex gap-2">
               <Button variant="outline" size="sm" asChild>
-                <Link to={`/erp-systems/${system.slug}`}>
+                <Link to={`/applications/${system.id}`}>
                   <ExternalLink className="h-3 w-3 mr-1" />
                   Detaljer
                 </Link>
