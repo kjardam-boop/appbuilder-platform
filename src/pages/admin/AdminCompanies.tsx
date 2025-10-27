@@ -298,7 +298,7 @@ export default function AdminCompanies() {
         .maybeSingle();
 
       if (existing) {
-        navigate(`/company/${existing.id}`);
+        navigate(`/companies/${existing.id}`);
       } else {
         // Save company to database
         const { data: newCompany, error } = await supabase
@@ -320,7 +320,7 @@ export default function AdminCompanies() {
 
         if (error) throw error;
 
-        navigate(`/company/${newCompany.id}`);
+        navigate(`/companies/${newCompany.id}`);
       }
     } catch (error) {
       console.error('Error:', error);
