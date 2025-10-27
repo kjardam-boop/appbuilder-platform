@@ -5,12 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { nb } from "date-fns/locale";
+import { ColumnDef } from "@/components/DataTable/types";
+import { SmartDataTable } from "@/components/DataTable/SmartDataTable";
 
 interface Company {
   orgNumber: string;
@@ -45,6 +46,181 @@ export default function AdminCompanies() {
   const [savedCompanies, setSavedCompanies] = useState<SavedCompany[]>([]);
   const [isLoadingSaved, setIsLoadingSaved] = useState(true);
   const [stats, setStats] = useState({ total: 0, customers: 0, suppliers: 0 });
+
+  // Column definitions for saved companies
+  const savedCompaniesColumns: ColumnDef<SavedCompany>[] = [
+    {
+      key: 'org_number',
+      label: 'Org.nr',
+      type: 'text',
+      sortable: true,
+      filterable: true,
+      width: 120,
+      render: (value) => <span className="font-mono text-xs">{value}</span>,
+    },
+    {
+      key: 'name',
+      label: 'Navn',
+      type: 'text',
+      sortable: true,
+      filterable: true,
+    },
+    {
+      key: 'org_form',
+      label: 'Org.form',
+      type: 'text',
+      sortable: true,
+      filterable: true,
+      render: (value) => value || '-',
+    },
+    {
+      key: 'industry_description',
+      label: 'Næring',
+      type: 'text',
+      sortable: true,
+      filterable: true,
+      render: (value) => <span className="text-sm">{value || '-'}</span>,
+    },
+    {
+      key: 'employees',
+      label: 'Ansatte',
+      type: 'number',
+      sortable: true,
+      filterable: true,
+      render: (value) => value || '-',
+    },
+    {
+      key: 'company_roles',
+      label: 'Roller',
+      type: 'custom',
+      render: (value) => {
+        if (!value || value.length === 0) return '-';
+        return (
+          <div className="flex gap-1 flex-wrap">
+            {value.map((role: string) => (
+              <Badge key={role} variant="secondary" className="text-xs">
+                {role}
+              </Badge>
+            ))}
+          </div>
+        );
+      },
+    },
+    {
+      key: 'crm_status',
+      label: 'Status',
+      type: 'select',
+      sortable: true,
+      filterable: true,
+      render: (value) => value ? <Badge variant="outline">{value}</Badge> : null,
+    },
+    {
+      key: 'created_at',
+      label: 'Lagt til',
+      type: 'date',
+      sortable: true,
+      filterable: true,
+      render: (value) => (
+        <span className="text-sm text-muted-foreground">
+          {format(new Date(value), "d. MMM yyyy", { locale: nb })}
+        </span>
+      ),
+    },
+    {
+      key: 'actions',
+      label: '',
+      type: 'action',
+      width: 60,
+      render: (_, row) => (
+        <Button 
+          size="sm" 
+          variant="ghost"
+          onClick={() => navigate(`/company/${row.id}`)}
+        >
+          <ExternalLink className="h-4 w-4" />
+        </Button>
+      ),
+    },
+  ];
+
+  // Column definitions for search results
+  const searchResultsColumns: ColumnDef<Company>[] = [
+    {
+      key: 'orgNumber',
+      label: 'Org.nr',
+      type: 'text',
+      sortable: true,
+      filterable: true,
+      width: 120,
+      render: (value) => <span className="font-mono text-xs">{value}</span>,
+    },
+    {
+      key: 'name',
+      label: 'Navn',
+      type: 'text',
+      sortable: true,
+      filterable: true,
+    },
+    {
+      key: 'isSaved',
+      label: 'Status',
+      type: 'custom',
+      sortable: true,
+      render: (value, row) => (
+        <div className="flex flex-col gap-1">
+          {value && (
+            <Badge variant="default" className="w-fit">Lagret</Badge>
+          )}
+          <Badge variant="secondary" className="w-fit bg-green-500/10 text-green-700 dark:text-green-400">
+            Brreg
+          </Badge>
+        </div>
+      ),
+    },
+    {
+      key: 'orgForm',
+      label: 'Org.form',
+      type: 'text',
+      sortable: true,
+      filterable: true,
+      render: (value) => value || '-',
+    },
+    {
+      key: 'industryCode',
+      label: 'Næringskode',
+      type: 'text',
+      sortable: true,
+      filterable: true,
+      render: (value) => value || '-',
+    },
+    {
+      key: 'employees',
+      label: 'Ansatte',
+      type: 'number',
+      sortable: true,
+      filterable: true,
+      render: (value) => value || '-',
+    },
+    {
+      key: 'foundingDate',
+      label: 'Stiftelsesdato',
+      type: 'date',
+      sortable: true,
+      filterable: true,
+      render: (value) => value ? format(new Date(value), "d. MMM yyyy", { locale: nb }) : '-',
+    },
+    {
+      key: 'actions',
+      label: 'Handlinger',
+      type: 'action',
+      width: 120,
+      render: (_, row) => (
+        <Button onClick={() => handleViewCompany(row)} size="sm">
+          Slå opp
+        </Button>
+      ),
+    },
+  ];
 
   useEffect(() => {
     loadSavedCompanies();
@@ -223,63 +399,12 @@ export default function AdminCompanies() {
             </Card>
           ) : savedCompanies.length > 0 ? (
             <Card>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Org.nr</TableHead>
-                      <TableHead>Navn</TableHead>
-                      <TableHead>Org.form</TableHead>
-                      <TableHead>Næring</TableHead>
-                      <TableHead>Ansatte</TableHead>
-                      <TableHead>Roller</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Lagt til</TableHead>
-                      <TableHead></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {savedCompanies.map((company) => (
-                      <TableRow key={company.id}>
-                        <TableCell className="font-mono text-xs">{company.org_number}</TableCell>
-                        <TableCell className="font-medium">{company.name}</TableCell>
-                        <TableCell>{company.org_form || "-"}</TableCell>
-                        <TableCell className="text-sm">{company.industry_description || "-"}</TableCell>
-                        <TableCell>{company.employees || "-"}</TableCell>
-                        <TableCell>
-                          {company.company_roles?.length > 0 ? (
-                            <div className="flex gap-1 flex-wrap">
-                              {company.company_roles.map((role) => (
-                                <Badge key={role} variant="secondary" className="text-xs">
-                                  {role}
-                                </Badge>
-                              ))}
-                            </div>
-                          ) : (
-                            "-"
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {company.crm_status && (
-                            <Badge variant="outline">{company.crm_status}</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {format(new Date(company.created_at), "d. MMM yyyy", { locale: nb })}
-                        </TableCell>
-                        <TableCell>
-                          <Button 
-                            size="sm" 
-                            variant="ghost"
-                            onClick={() => navigate(`/company/${company.id}`)}
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+              <CardContent className="pt-6">
+                <SmartDataTable
+                  columns={savedCompaniesColumns}
+                  data={savedCompanies}
+                  initialPageSize={20}
+                />
               </CardContent>
             </Card>
           ) : (
@@ -322,52 +447,12 @@ export default function AdminCompanies() {
 
           {searchResults.length > 0 && (
             <Card>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Org.nr</TableHead>
-                      <TableHead>Navn</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Org.form</TableHead>
-                      <TableHead>Næringskode</TableHead>
-                      <TableHead>Ansatte</TableHead>
-                      <TableHead>Stiftelsesdato</TableHead>
-                      <TableHead>Handlinger</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {searchResults.map((company) => (
-                      <TableRow key={company.orgNumber}>
-                        <TableCell className="font-mono text-xs">{company.orgNumber}</TableCell>
-                        <TableCell className="font-medium">{company.name}</TableCell>
-                        <TableCell>
-                          <div className="flex flex-col gap-1">
-                            {company.isSaved && (
-                              <Badge variant="default" className="w-fit">Lagret</Badge>
-                            )}
-                            <Badge variant="secondary" className="w-fit bg-green-500/10 text-green-700 dark:text-green-400">
-                              Brreg
-                            </Badge>
-                          </div>
-                        </TableCell>
-                        <TableCell>{company.orgForm || "-"}</TableCell>
-                        <TableCell>{company.industryCode || "-"}</TableCell>
-                        <TableCell>{company.employees || "-"}</TableCell>
-                        <TableCell>
-                          {company.foundingDate 
-                            ? format(new Date(company.foundingDate), "d. MMM yyyy", { locale: nb })
-                            : "-"}
-                        </TableCell>
-                        <TableCell>
-                          <Button onClick={() => handleViewCompany(company)} size="sm">
-                            Slå opp
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+              <CardContent className="pt-6">
+                <SmartDataTable
+                  columns={searchResultsColumns}
+                  data={searchResults}
+                  initialPageSize={20}
+                />
               </CardContent>
             </Card>
           )}
