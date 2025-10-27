@@ -1,5 +1,7 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
+import Header from "@/components/Dashboard/Header";
+import { useAuth } from "@/modules/core/user/hooks/useAuth";
 import {
   Sidebar,
   SidebarContent,
@@ -107,6 +109,7 @@ function AdminSidebar() {
 
 export default function Admin() {
   const { isPlatformAdmin, isLoading } = usePlatformAdmin();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -137,15 +140,21 @@ export default function Admin() {
   }
 
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full">
-        <AdminSidebar />
-        <main className="flex-1 overflow-auto">
-          <div className="container mx-auto p-6 space-y-6">
-            <Outlet />
-          </div>
-        </main>
-      </div>
-    </SidebarProvider>
+    <div className="min-h-screen">
+      <Header 
+        userName={user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'}
+        userEmail={user?.email}
+      />
+      <SidebarProvider>
+        <div className="flex w-full">
+          <AdminSidebar />
+          <main className="flex-1 overflow-auto">
+            <div className="container mx-auto p-6 space-y-6">
+              <Outlet />
+            </div>
+          </main>
+        </div>
+      </SidebarProvider>
+    </div>
   );
 }
