@@ -300,20 +300,7 @@ export default function AdminCompanies() {
       if (existing) {
         navigate(`/company/${existing.id}`);
       } else {
-        // Fetch enhanced data including contact person from Brreg
-        const { data: enhancedData, error: enhancedError } = await supabase.functions.invoke('brreg-enhanced-lookup', {
-          body: { orgNumber: company.orgNumber },
-        });
-
-        let contactPerson = null;
-        let contactPersonRole = null;
-
-        if (!enhancedError && enhancedData) {
-          contactPerson = enhancedData.kontaktperson || null;
-          contactPersonRole = enhancedData.kontaktpersonRolle || null;
-        }
-
-        // Save company to database first with contact person data
+        // Save company to database
         const { data: newCompany, error } = await supabase
           .from('companies')
           .insert({
@@ -326,8 +313,7 @@ export default function AdminCompanies() {
             founding_date: company.foundingDate,
             website: company.website,
             last_fetched_at: new Date().toISOString(),
-            contact_person: contactPerson,
-            contact_person_role: contactPersonRole,
+            source: 'brreg',
           })
           .select()
           .single();
