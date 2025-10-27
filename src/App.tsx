@@ -11,6 +11,7 @@ import Tenants from "./pages/Tenants";
 import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminBootstrap from "./pages/admin/AdminBootstrap";
 import UserManagement from "./pages/UserManagement";
 import AdminSettings from "./pages/AdminSettings";
 import AdminQuestions from "./pages/AdminQuestions";
@@ -66,6 +67,7 @@ const App = () => (
           </Route>
           
           {/* Legacy admin routes - redirect to new structure */}
+          <Route path="/admin/bootstrap" element={<AdminBootstrap />} />
           <Route path="/admin/questions" element={<AdminQuestions />} />
           <Route path="/admin/app-vendors" element={<AppVendorAdmin />} />
           <Route path="/tenants" element={<Tenants />} />

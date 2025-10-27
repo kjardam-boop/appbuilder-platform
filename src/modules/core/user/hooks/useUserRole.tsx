@@ -16,19 +16,24 @@ export const useAdminRole = () => {
       }
 
       try {
-        const db = supabase as any;
-        const { data, error } = await db
-          .from('user_roles')
-          .select('role')
+        const { data, error } = await supabase
+          .from('tenant_users')
+          .select('roles')
           .eq('user_id', session.user.id)
-          .eq('role', 'admin')
-          .maybeSingle();
+          .eq('is_active', true);
 
-        if (error && error.code !== 'PGRST116') {
+        if (error) {
           console.error('Error checking admin role:', error);
           setIsAdmin(false);
-        } else {
-          setIsAdmin(!!data);
+        } else if (data) {
+          // Check if user has admin-level roles (platform_owner or tenant_admin)
+          const hasAdminRole = data.some((record) => 
+            Array.isArray(record.roles) && (
+              record.roles.includes('platform_owner') || 
+              record.roles.includes('tenant_admin')
+            )
+          );
+          setIsAdmin(hasAdminRole);
         }
       } catch (error) {
         console.error('Error in checkAdminRole:', error);

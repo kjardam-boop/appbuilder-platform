@@ -40,12 +40,38 @@ export class AuthService {
    */
   static async getUserRoles(userId: string): Promise<UserRole[]> {
     const { data, error } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userId);
+      .from('tenant_users')
+      .select('roles')
+      .eq('user_id', userId)
+      .eq('is_active', true);
 
     if (error) throw error;
-    return (data || []).map(r => r.role as UserRole);
+    
+    // Map app_role to UserRole
+    const allRoles: string[] = [];
+    (data || []).forEach(record => {
+      if (Array.isArray(record.roles)) {
+        allRoles.push(...record.roles);
+      }
+    });
+
+    const mappedRoles = new Set<UserRole>();
+    allRoles.forEach(role => {
+      if (role === 'platform_owner' || role === 'tenant_admin') {
+        mappedRoles.add('admin');
+      } else if (
+        role === 'platform_support' || 
+        role === 'project_owner' || 
+        role === 'analyst' ||
+        role === 'security_admin'
+      ) {
+        mappedRoles.add('moderator');
+      } else {
+        mappedRoles.add('user');
+      }
+    });
+
+    return Array.from(mappedRoles).length > 0 ? Array.from(mappedRoles) : ['user'];
   }
 
   /**
