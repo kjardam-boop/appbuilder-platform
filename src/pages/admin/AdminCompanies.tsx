@@ -135,7 +135,7 @@ export default function AdminCompanies() {
         <Button 
           size="sm" 
           variant="ghost"
-          onClick={() => navigate(`/company/${row.id}`)}
+          onClick={() => navigate(`/companies/${row.id}`)}
         >
           <ExternalLink className="h-4 w-4" />
         </Button>
@@ -310,7 +310,6 @@ export default function AdminCompanies() {
             industry_code: company.industryCode,
             industry_description: company.industryDescription,
             employees: company.employees,
-            founding_date: company.foundingDate,
             website: company.website,
             last_fetched_at: new Date().toISOString(),
             source: 'brreg',
