@@ -12,8 +12,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
-  SidebarTrigger,
-  useSidebar,
 } from "@/components/ui/sidebar";
 import {
   LayoutDashboard,
@@ -64,21 +62,16 @@ const adminNavItems = [
 ];
 
 function AdminSidebar() {
-  const { state } = useSidebar();
-
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="none">
       <div className="flex items-center justify-between p-4 border-b">
-        {state === "expanded" && <h2 className="text-lg font-semibold">Admin Panel</h2>}
-        <SidebarTrigger className="ml-auto" />
+        <h2 className="text-lg font-semibold">Admin Panel</h2>
       </div>
 
       <SidebarContent>
         {adminNavItems.map((section) => (
           <SidebarGroup key={section.title}>
-            {state === "expanded" && (
-              <SidebarGroupLabel>{section.title}</SidebarGroupLabel>
-            )}
+            <SidebarGroupLabel>{section.title}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {section.items.map((item) => (
@@ -94,7 +87,7 @@ function AdminSidebar() {
                         }
                       >
                         <item.icon className="h-4 w-4" />
-                        {state === "expanded" && <span>{item.title}</span>}
+                        <span>{item.title}</span>
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -146,7 +139,7 @@ export default function Admin() {
         userName={user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'}
         userEmail={user?.email}
       />
-      <SidebarProvider>
+      <SidebarProvider defaultOpen={true}>
         <div className="flex w-full">
           <AdminSidebar />
           <main className="flex-1 overflow-auto">
