@@ -195,7 +195,7 @@ const SEED_PRODUCTS: SeedData[] = [
       short_name: "CatalystOne",
       slug: "catalystone-hr",
       vendorSlug: "catalystone",
-      app_type: "HRM",
+      app_type: "HRPayroll",
       deployment_models: ["SaaS"],
       market_segments: ["Midmarket", "Enterprise"],
       status: "Active",
@@ -209,7 +209,7 @@ const SEED_PRODUCTS: SeedData[] = [
       short_name: "Sympa",
       slug: "sympa-hr",
       vendorSlug: "sympa",
-      app_type: "HRM",
+      app_type: "HRPayroll",
       deployment_models: ["SaaS"],
       market_segments: ["SMB", "Midmarket"],
       status: "Active",
@@ -225,9 +225,10 @@ const SEED_PRODUCTS: SeedData[] = [
       short_name: "Moment",
       slug: "moment-prosjektstyring",
       vendorSlug: "moment",
-      app_type: "Project",
+      app_type: "ProjectMgmt",
       deployment_models: ["SaaS"],
-      market_segments: ["Byrå", "Konsulent"],
+      target_industries: ["Byrå", "Konsulent"],
+      market_segments: ["SMB", "Midmarket"],
       status: "Active",
       website: "https://www.moment.team",
     },
@@ -239,9 +240,10 @@ const SEED_PRODUCTS: SeedData[] = [
       short_name: "Jira",
       slug: "jira-software",
       vendorSlug: "atlassian",
-      app_type: "Project",
+      app_type: "ProjectMgmt",
       deployment_models: ["SaaS"],
-      market_segments: ["IT", "Konsulent"],
+      target_industries: ["IT", "Konsulent"],
+      market_segments: ["SMB", "Midmarket", "Enterprise"],
       status: "Active",
       website: "https://www.atlassian.com/software/jira",
     },
@@ -257,7 +259,7 @@ const SEED_PRODUCTS: SeedData[] = [
       vendorSlug: "microsoft",
       app_type: "BI",
       deployment_models: ["SaaS"],
-      market_segments: ["Alle"],
+      market_segments: ["SMB", "Midmarket", "Enterprise"],
       status: "Active",
       website: "https://powerbi.microsoft.com",
     },
@@ -285,9 +287,10 @@ const SEED_PRODUCTS: SeedData[] = [
       short_name: "Signicat",
       slug: "signicat-idp",
       vendorSlug: "signicat",
-      app_type: "Identity",
+      app_type: "IAM",
       deployment_models: ["SaaS"],
-      market_segments: ["Bank", "Finans", "Offentlig"],
+      target_industries: ["Bank", "Finans", "Offentlig"],
+      market_segments: ["Midmarket", "Enterprise"],
       status: "Active",
       website: "https://www.signicat.com",
     },
@@ -299,14 +302,14 @@ const SEED_PRODUCTS: SeedData[] = [
       short_name: "DocuSign",
       slug: "docusign-esignature",
       vendorSlug: "docusign",
-      app_type: "Sign",
+      app_type: "IAM",
       deployment_models: ["SaaS"],
-      market_segments: ["Alle"],
+      market_segments: ["SMB", "Midmarket", "Enterprise"],
       status: "Active",
       website: "https://www.docusign.com",
     },
   },
-
+];
 
 /** ---------- Hjelpere ---------- */
 
@@ -351,7 +354,7 @@ export async function seedApplications(tenantId?: string): Promise<void> {
         });
       }
 
-      // 3) Product (upsert by slug)
+      // 3) Product (upsert by slug) - always upsert to update existing products
       const { vendorSlug, ...productData } = entry.product;
       const normalized: AppProductInput = {
         ...productData,
@@ -362,10 +365,7 @@ export async function seedApplications(tenantId?: string): Promise<void> {
         vendor_id: vendor.id,
       };
 
-      const product =
-        productBySlug.get(productData.slug) ||
-        await ApplicationService.upsertBySlug(ctx, productData.slug, normalized);
-
+      const product = await ApplicationService.upsertBySlug(ctx, productData.slug, normalized);
       productBySlug.set(product.slug, product);
 
       // 4) SKUs (unik på (product, edition_name))
