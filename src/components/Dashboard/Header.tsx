@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 
 interface HeaderProps {
   userName?: string;
@@ -42,6 +43,8 @@ const Header = ({ userName, userEmail }: HeaderProps) => {
     <header className="border-b bg-card">
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
+          {/* Global sidebar trigger shown only for platform admins */}
+          {isPlatformAdmin && <SidebarTrigger className="mr-1" />}
           <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
             <Building2 className="h-6 w-6 text-primary-foreground" />
           </div>

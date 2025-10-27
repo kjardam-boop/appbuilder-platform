@@ -25,12 +25,25 @@ export function CompanyRoleEditor({ companyId, currentRoles, onUpdate }: Company
   const [selectedRoles, setSelectedRoles] = useState<string[]>(currentRoles || []);
   const [isSaving, setIsSaving] = useState(false);
 
-  const handleToggleRole = (role: string) => {
-    setSelectedRoles(prev => 
-      prev.includes(role) 
-        ? prev.filter(r => r !== role)
-        : [...prev, role]
-    );
+  const handleToggleRole = async (role: string) => {
+    // compute next roles
+    const next = selectedRoles.includes(role)
+      ? selectedRoles.filter((r) => r !== role)
+      : [...selectedRoles, role];
+    setSelectedRoles(next);
+
+    // Auto-save immediately
+    try {
+      setIsSaving(true);
+      await CompanyService.updateCompanyRoles(companyId, next);
+      onUpdate(next);
+      toast.success("Endringer lagret");
+    } catch (error) {
+      console.error("Error updating roles:", error);
+      toast.error("Kunne ikke oppdatere roller");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleSave = async () => {
@@ -64,9 +77,10 @@ export function CompanyRoleEditor({ companyId, currentRoles, onUpdate }: Company
         <div className="space-y-3">
           {AVAILABLE_ROLES.map((role) => (
             <div key={role.value} className="flex items-start space-x-3 p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
-              <Checkbox
+               <Checkbox
                 id={`role-${role.value}`}
                 checked={selectedRoles.includes(role.value)}
+                disabled={isSaving}
                 onCheckedChange={() => handleToggleRole(role.value)}
               />
               <div className="flex-1 space-y-1">
@@ -87,14 +101,11 @@ export function CompanyRoleEditor({ companyId, currentRoles, onUpdate }: Company
           ))}
         </div>
 
-        {hasChanges && (
-          <Button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="w-full"
-          >
+        {/* Auto-save enabled: remove manual save button */}
+        {isSaving && (
+          <Button disabled className="w-full" variant="outline">
             <Save className="mr-2 h-4 w-4" />
-            {isSaving ? "Lagrer..." : "Lagre endringer"}
+            Lagrer...
           </Button>
         )}
       </CardContent>
