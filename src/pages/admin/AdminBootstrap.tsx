@@ -26,8 +26,8 @@ const AdminBootstrap = () => {
     setError(null);
 
     try {
-      // 1. Get default tenant
-      const { data: tenant, error: tenantError } = await supabase
+      // 1. Get or create default tenant
+      let { data: tenant, error: tenantError } = await supabase
         .from('tenants')
         .select('id')
         .eq('slug', 'default')
@@ -35,11 +35,29 @@ const AdminBootstrap = () => {
 
       if (tenantError) throw tenantError;
       
+      let tenantId: string;
+      
       if (!tenant) {
-        throw new Error("Default tenant ikke funnet. Kontakt support.");
-      }
+        // Create default tenant if it doesn't exist
+        const { data: newTenant, error: createError } = await supabase
+          .from('tenants')
+          .insert({
+            name: 'Default Platform',
+            slug: 'default',
+            status: 'active',
+            plan: 'enterprise',
+          })
+          .select('id')
+          .single();
 
-      const tenantId = tenant.id;
+        if (createError) throw createError;
+        if (!newTenant) throw new Error("Kunne ikke opprette default tenant");
+        
+        tenantId = newTenant.id;
+        toast.success("Default tenant opprettet");
+      } else {
+        tenantId = tenant.id;
+      }
 
       // 2. Check if user already has membership
       const { data: existing, error: checkError } = await supabase
