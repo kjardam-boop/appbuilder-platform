@@ -1,4 +1,4 @@
-import { Header } from "@/components/layout/Header";
+import Header from "@/components/Dashboard/Header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Building2, Database, AlertCircle } from "lucide-react";
@@ -15,9 +15,13 @@ const Dashboard = () => {
       navigate("/auth");
     }
   }, [user, loading, navigate]);
+  
   return (
     <div className="min-h-screen bg-gradient-hero">
-      <Header />
+      <Header 
+        userName={user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'}
+        userEmail={user?.email}
+      />
       
       <main className="container py-8 space-y-8">
         <div className="flex items-center justify-between">
