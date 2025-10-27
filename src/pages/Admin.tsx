@@ -12,6 +12,8 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
+  SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import {
   LayoutDashboard,
@@ -62,16 +64,21 @@ const adminNavItems = [
 ];
 
 function AdminSidebar() {
+  const { state } = useSidebar();
+
   return (
-    <Sidebar collapsible="none">
+    <Sidebar collapsible="icon">
       <div className="flex items-center justify-between p-4 border-b">
-        <h2 className="text-lg font-semibold">Admin Panel</h2>
+        {state === "expanded" && <h2 className="text-lg font-semibold">Admin Panel</h2>}
+        <SidebarTrigger className="ml-auto" />
       </div>
 
       <SidebarContent>
         {adminNavItems.map((section) => (
           <SidebarGroup key={section.title}>
-            <SidebarGroupLabel>{section.title}</SidebarGroupLabel>
+            {state === "expanded" && (
+              <SidebarGroupLabel>{section.title}</SidebarGroupLabel>
+            )}
             <SidebarGroupContent>
               <SidebarMenu>
                 {section.items.map((item) => (
@@ -87,7 +94,7 @@ function AdminSidebar() {
                         }
                       >
                         <item.icon className="h-4 w-4" />
-                        <span>{item.title}</span>
+                        {state === "expanded" && <span>{item.title}</span>}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
