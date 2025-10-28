@@ -1,9 +1,12 @@
 // @ts-nocheck
+// @ts-nocheck
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Building2, Copy, RefreshCw, Globe, ExternalLink, Phone, Users, ChevronRight, ChevronDown } from "lucide-react";
+import { ArrowLeft, Building2, Copy, RefreshCw, Globe, ExternalLink, Phone, Users, ChevronRight, ChevronDown, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -18,7 +21,6 @@ import { AppBreadcrumbs } from "@/components/ui/app-breadcrumbs";
 import { CompanyRoleEditor } from "@/components/Company/CompanyRoleEditor";
 import { ContactPersonsCard } from "@/components/Company/ContactPersonsCard";
 import { RoleBasedContent } from "@/components/Company/RoleBasedContent";
-import { PartnerCertificationManager } from "@/components/ERPSystem/PartnerCertificationManager";
 import type { Company } from "@/modules/core/company/types/company.types";
 import type { BrregCompanySearchResult } from "@/modules/core/company/types/company.types";
 interface CompanyMetadata {
@@ -106,6 +108,9 @@ const CompanyDetails = () => {
   const [isFetchingHierarchy, setIsFetchingHierarchy] = useState(false);
   const [showCompanySelector, setShowCompanySelector] = useState(false);
   const [searchResults, setSearchResults] = useState<BrregCompanySearchResult[]>([]);
+  const [websiteInput, setWebsiteInput] = useState("");
+  const [notesInput, setNotesInput] = useState("");
+  const [isSavingWebsite, setIsSavingWebsite] = useState(false);
   useEffect(() => {
     if (id) {
       fetchCompanyDetails();
@@ -122,14 +127,16 @@ const CompanyDetails = () => {
       const {
         data: metadataData
       } = await supabase.from('company_metadata').select('*').eq('company_id', id).maybeSingle();
-      setMetadata(metadataData || {
+      const defaultMetadata = {
         sales_assessment_score: null,
         priority_level: null,
         notes: null,
         in_crm: false,
         for_followup: false,
         has_potential: true
-      });
+      };
+      setMetadata(metadataData || defaultMetadata);
+      setNotesInput(metadataData?.notes || "");
     } catch (error) {
       console.error('Error fetching company:', error);
       toast.error("Kunne ikke laste bedriftsdata");
@@ -544,6 +551,39 @@ const CompanyDetails = () => {
       toast.error("Kunne ikke oppdatere");
     }
   };
+
+  const handleSaveWebsite = async () => {
+    if (!company || !websiteInput.trim()) return;
+    
+    setIsSavingWebsite(true);
+    try {
+      const { error } = await supabase
+        .from('companies')
+        .update({ website: websiteInput.trim() })
+        .eq('id', company.id);
+      
+      if (error) throw error;
+      
+      setCompany({ ...company, website: websiteInput.trim() });
+      toast.success("Hjemmeside lagret");
+    } catch (error) {
+      console.error('Error saving website:', error);
+      toast.error("Kunne ikke lagre hjemmeside");
+    } finally {
+      setIsSavingWebsite(false);
+    }
+  };
+
+  const handleSaveNotes = async () => {
+    if (!company) return;
+    
+    try {
+      await updateMetadata({ notes: notesInput.trim() || null });
+    } catch (error) {
+      console.error('Error saving notes:', error);
+    }
+  };
+
   if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -620,7 +660,8 @@ const CompanyDetails = () => {
               <CardDescription>Lagre hjemmeside og søk i eksterne kilder</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {company.website ? <div className="space-y-2">
+              {company.website ? (
+                <div className="space-y-2">
                   <div className="text-sm text-muted-foreground">Hjemmeside</div>
                   <div className="flex items-center gap-2">
                     <Input value={company.website} readOnly className="flex-1" />
@@ -632,7 +673,47 @@ const CompanyDetails = () => {
                     <Globe className="mr-2 h-4 w-4" />
                     Åpne hjemmeside
                   </Button>
-                </div> : <p className="text-sm text-muted-foreground">Ingen hjemmeside registrert</p>}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="website-input">Legg inn hjemmeside</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="website-input"
+                      type="url"
+                      placeholder="https://www.example.com"
+                      value={websiteInput}
+                      onChange={(e) => setWebsiteInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleSaveWebsite();
+                        }
+                      }}
+                    />
+                    <Button 
+                      onClick={handleSaveWebsite} 
+                      disabled={!websiteInput.trim() || isSavingWebsite}
+                      size="icon"
+                    >
+                      <Save className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Ingen hjemmeside registrert i Brønnøysundregistrene</p>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="notes-input">Egne notater</Label>
+                <Textarea
+                  id="notes-input"
+                  placeholder="Skriv notater om selskapet her..."
+                  value={notesInput}
+                  onChange={(e) => setNotesInput(e.target.value)}
+                  onBlur={handleSaveNotes}
+                  rows={3}
+                  className="resize-none"
+                />
+              </div>
 
               <div className="pt-4 border-t">
                 <div className="text-sm text-muted-foreground mb-3">Andre kilder</div>
