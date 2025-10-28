@@ -125,11 +125,12 @@ export class CompanyService {
    * Update company data from Brreg with auto-classification
    */
   static async refreshCompanyData(companyId: string, orgNumber: string): Promise<void> {
-    const { data, error } = await supabase.functions.invoke('brreg-company-details', {
+    // Use enhanced lookup to get contact person data
+    const { data: enhancedData, error: enhancedError } = await supabase.functions.invoke('brreg-enhanced-lookup', {
       body: { orgNumber },
     });
 
-    if (error) throw error;
+    if (enhancedError) throw enhancedError;
 
     // Fetch financial data
     const { data: financialData } = await supabase.functions.invoke('brreg-regnskaplookup', {
@@ -137,12 +138,10 @@ export class CompanyService {
     });
 
     const updateData: any = {
-      name: data.company.name,
-      org_form: data.company.orgForm,
-      industry_code: data.company.industryCode,
-      industry_description: data.company.industryDescription,
-      employees: data.company.employees,
-      website: data.company.website,
+      name: enhancedData.navn,
+      industry_code: enhancedData.naeringskode1?.kode,
+      industry_description: enhancedData.naeringskode1?.beskrivelse,
+      website: enhancedData.hjemmeside,
       last_fetched_at: new Date().toISOString(),
     };
 
@@ -159,13 +158,36 @@ export class CompanyService {
       .update(updateData)
       .eq('id', companyId);
 
+    // Update contact persons in metadata
+    if (enhancedData.kontaktperson) {
+      const contactPersons = [{
+        full_name: enhancedData.kontaktperson,
+        title: enhancedData.kontaktpersonRolle || null,
+        phone: enhancedData.kontaktpersonTelefon || null,
+        email: null,
+        department: null,
+        notes: enhancedData.telefonnummerKilde ? `Telefonnummer hentet fra ${enhancedData.telefonnummerKilde}` : null,
+        is_primary: true,
+      }];
+
+      await supabase
+        .from('company_metadata')
+        .upsert({
+          company_id: companyId,
+          contact_persons: contactPersons,
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'company_id',
+        });
+    }
+
     // Classify by NACE code after update (with audit logging)
-    if (data.company.industryCode) {
+    if (enhancedData.naeringskode1?.kode) {
       const { data: { user } } = await supabase.auth.getUser();
       await classifyByNace(
         companyId,
         orgNumber,
-        data.company.industryCode,
+        enhancedData.naeringskode1.kode,
         user?.id
       );
     }
