@@ -568,6 +568,13 @@ const CompanyDetails = () => {
     navigator.clipboard.writeText(text);
     toast.success("Kopiert til utklippstavle");
   };
+
+  const openWebsite = (url: string) => {
+    if (!url) return;
+    // Add https:// if no protocol is present
+    const formattedUrl = url.match(/^https?:\/\//i) ? url : `https://${url}`;
+    window.open(formattedUrl, '_blank');
+  };
   const updateMetadata = async (updates: Partial<CompanyMetadata>) => {
     try {
       const {
@@ -721,7 +728,7 @@ const CompanyDetails = () => {
                       <Button size="icon" variant="outline" onClick={() => copyToClipboard(websiteInput)}>
                         <Copy className="h-4 w-4" />
                       </Button>
-                      <Button size="icon" variant="outline" onClick={() => window.open(websiteInput, '_blank')}>
+                      <Button size="icon" variant="outline" onClick={() => openWebsite(websiteInput)}>
                         <ExternalLink className="h-4 w-4" />
                       </Button>
                     </>
