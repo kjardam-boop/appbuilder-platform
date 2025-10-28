@@ -702,19 +702,6 @@ const CompanyDetails = () => {
                 </div>
               )}
 
-              <div className="space-y-2">
-                <Label htmlFor="notes-input">Egne notater</Label>
-                <Textarea
-                  id="notes-input"
-                  placeholder="Skriv notater om selskapet her..."
-                  value={notesInput}
-                  onChange={(e) => setNotesInput(e.target.value)}
-                  onBlur={handleSaveNotes}
-                  rows={3}
-                  className="resize-none"
-                />
-              </div>
-
               <div className="pt-4 border-t">
                 <div className="text-sm text-muted-foreground mb-3">Andre kilder</div>
                 <div className="grid grid-cols-2 gap-2">
@@ -741,6 +728,24 @@ const CompanyDetails = () => {
             };
           });
         }} />
+
+          {/* Egne notater - egen blokk */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Egne notater</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                id="notes-input"
+                placeholder="Skriv notater om selskapet her..."
+                value={notesInput}
+                onChange={(e) => setNotesInput(e.target.value)}
+                onBlur={handleSaveNotes}
+                rows={6}
+                className="resize-none"
+              />
+            </CardContent>
+          </Card>
 
           {/* Role-based Content */}
           {company.company_roles && company.company_roles.length > 0 && <div className="lg:col-span-2">
