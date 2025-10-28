@@ -465,24 +465,24 @@ const CompanyDetails = () => {
         return;
       }
 
-      // No existing company found, proceed with normal update
+      // No existing company found, proceed with normal update using enhanced lookup
       const {
-        data,
-        error
-      } = await supabase.functions.invoke('brreg-company-details', {
+        data: enhancedData,
+        error: enhancedError
+      } = await supabase.functions.invoke('brreg-enhanced-lookup', {
         body: {
           orgNumber
         }
       });
-      console.log('Company details response:', {
-        data,
-        error
+      console.log('Enhanced data response:', {
+        enhancedData,
+        enhancedError
       });
-      if (error) {
-        console.error('Error fetching company details:', error);
-        throw error;
+      if (enhancedError) {
+        console.error('Error fetching enhanced data:', enhancedError);
+        throw enhancedError;
       }
-      if (!data?.company) {
+      if (!enhancedData?.navn) {
         throw new Error('Ingen selskapsdata returnert fra Brreg');
       }
 
@@ -501,12 +501,10 @@ const CompanyDetails = () => {
       });
       const updateData: any = {
         org_number: orgNumber,
-        name: data.company.name,
-        org_form: data.company.orgForm,
-        industry_code: data.company.industryCode,
-        industry_description: data.company.industryDescription,
-        employees: data.company.employees,
-        website: data.company.website,
+        name: enhancedData.navn,
+        industry_code: enhancedData.naeringskode1?.kode,
+        industry_description: enhancedData.naeringskode1?.beskrivelse,
+        website: enhancedData.hjemmeside,
         last_fetched_at: new Date().toISOString()
       };
 
@@ -524,6 +522,34 @@ const CompanyDetails = () => {
       if (updateError) {
         console.error('Database update error:', updateError);
         throw updateError;
+      }
+
+      // Update contact persons in metadata if available
+      if (enhancedData.kontaktperson) {
+        console.log('Saving contact person:', enhancedData.kontaktperson);
+        const contactPersons = [{
+          full_name: enhancedData.kontaktperson,
+          title: enhancedData.kontaktpersonRolle || null,
+          phone: enhancedData.kontaktpersonTelefon || null,
+          email: null,
+          department: null,
+          notes: enhancedData.telefonnummerKilde ? `Telefonnummer hentet fra ${enhancedData.telefonnummerKilde}` : null,
+          is_primary: true,
+        }];
+
+        const { error: metadataError } = await supabase
+          .from('company_metadata')
+          .upsert({
+            company_id: id,
+            contact_persons: contactPersons,
+            updated_at: new Date().toISOString(),
+          }, {
+            onConflict: 'company_id',
+          });
+
+        if (metadataError) {
+          console.error('Error saving contact person:', metadataError);
+        }
       }
       toast.success("Data oppdatert");
       await fetchCompanyDetails();
