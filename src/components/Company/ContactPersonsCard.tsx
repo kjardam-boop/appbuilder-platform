@@ -17,11 +17,14 @@ interface ContactPersonsCardProps {
 export function ContactPersonsCard({
   companyId,
   companyName,
-  contacts,
+  contacts = [],
   onUpdate
 }: ContactPersonsCardProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<ContactPerson | null>(null);
+  
+  // Ensure contacts is always an array
+  const safeContacts = Array.isArray(contacts) ? contacts : [];
 
   const handleAddContact = () => {
     setEditingContact(null);
@@ -35,7 +38,7 @@ export function ContactPersonsCard({
 
   const handleDeleteContact = async (index: number) => {
     try {
-      const updatedContacts = contacts.filter((_, i) => i !== index);
+      const updatedContacts = safeContacts.filter((_, i) => i !== index);
       await onUpdate(updatedContacts);
       toast.success("Kontaktperson slettet");
     } catch (error) {
@@ -49,15 +52,15 @@ export function ContactPersonsCard({
       
       if (editingContact) {
         // Update existing contact
-        const index = contacts.findIndex(c => 
+        const index = safeContacts.findIndex(c => 
           c.full_name === editingContact.full_name && 
           c.title === editingContact.title
         );
-        updatedContacts = [...contacts];
+        updatedContacts = [...safeContacts];
         updatedContacts[index] = contact;
       } else {
         // Add new contact
-        updatedContacts = [...contacts, contact];
+        updatedContacts = [...safeContacts, contact];
       }
 
       await onUpdate(updatedContacts);
@@ -89,7 +92,7 @@ export function ContactPersonsCard({
           </div>
         </CardHeader>
         <CardContent>
-          {contacts.length === 0 ? (
+          {safeContacts.length === 0 ? (
             <div className="text-center py-6">
               <p className="text-sm text-muted-foreground">
                 Ingen kontaktpersoner registrert ennå
@@ -97,7 +100,7 @@ export function ContactPersonsCard({
             </div>
           ) : (
             <div className="space-y-3">
-              {contacts.map((contact, index) => (
+              {safeContacts.map((contact, index) => (
                 <div 
                   key={index} 
                   className="p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors group"
