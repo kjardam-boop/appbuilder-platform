@@ -553,28 +553,35 @@ const CompanyDetails = () => {
         }
       } = await supabase.auth.getUser();
       if (!user) {
-        toast.error("Du må være logget inn");
-        return;
+        throw new Error("Du må være logget inn");
       }
       const {
-        data: existing
+        data: existing,
+        error: checkError
       } = await supabase.from('company_metadata').select('id').eq('company_id', id).maybeSingle();
+      
+      if (checkError) throw checkError;
+
       if (existing) {
-        await supabase.from('company_metadata').update(updates).eq('company_id', id);
+        const { error } = await supabase.from('company_metadata').update(updates).eq('company_id', id);
+        if (error) throw error;
       } else {
-        await supabase.from('company_metadata').insert({
+        const { error } = await supabase.from('company_metadata').insert({
           company_id: id,
           user_id: user.id,
           ...updates
         });
+        if (error) throw error;
       }
+      
       setMetadata({
         ...metadata!,
         ...updates
       });
     } catch (error) {
       console.error('Error updating metadata:', error);
-      toast.error("Kunne ikke oppdatere");
+      toast.error("Kunne ikke lagre endringer");
+      throw error; // Re-throw so useAutoSave can handle it
     }
   };
 
