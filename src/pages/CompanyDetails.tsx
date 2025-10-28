@@ -2,7 +2,7 @@
 // @ts-nocheck
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Building2, Copy, RefreshCw, Globe, ExternalLink, Phone, Users, ChevronRight, ChevronDown, Save } from "lucide-react";
+import { ArrowLeft, Building2, Copy, RefreshCw, Globe, ExternalLink, Phone, Users, ChevronRight, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -149,6 +149,7 @@ const CompanyDetails = () => {
       } = await supabase.from('companies').select('*').eq('id', id).single();
       if (companyError) throw companyError;
       setCompany(companyData as Company);
+      setWebsiteInput(companyData.website || "");
       const {
         data: metadataData
       } = await supabase.from('company_metadata').select('*').eq('company_id', id).maybeSingle();
@@ -654,23 +655,9 @@ const CompanyDetails = () => {
               <CardDescription>Lagre hjemmeside og søk i eksterne kilder</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {company.website ? (
-                <div className="space-y-2">
-                  <div className="text-sm text-muted-foreground">Hjemmeside</div>
-                  <div className="flex items-center gap-2">
-                    <Input value={company.website} readOnly className="flex-1" />
-                    <Button size="icon" variant="outline" onClick={() => copyToClipboard(company.website)}>
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <Button variant="outline" className="w-full" onClick={() => window.open(company.website, '_blank')}>
-                    <Globe className="mr-2 h-4 w-4" />
-                    Åpne hjemmeside
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <Label htmlFor="website-input">Hjemmeside</Label>
+              <div className="space-y-2">
+                <Label htmlFor="website-input">Hjemmeside</Label>
+                <div className="flex items-center gap-2">
                   <Input
                     id="website-input"
                     type="url"
@@ -681,14 +668,27 @@ const CompanyDetails = () => {
                       triggerWebsiteSave(e.target.value);
                     }}
                     className={cn(
+                      "flex-1",
                       websiteStatus === 'saving' && 'border-yellow-500',
                       websiteStatus === 'saved' && 'border-green-500',
                       websiteStatus === 'error' && 'border-red-500'
                     )}
                   />
-                  <p className="text-xs text-muted-foreground">Ingen hjemmeside registrert i Brønnøysundregistrene</p>
+                  {websiteInput && (
+                    <>
+                      <Button size="icon" variant="outline" onClick={() => copyToClipboard(websiteInput)}>
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                      <Button size="icon" variant="outline" onClick={() => window.open(websiteInput, '_blank')}>
+                        <ExternalLink className="h-4 w-4" />
+                      </Button>
+                    </>
+                  )}
                 </div>
-              )}
+                {!company.website && (
+                  <p className="text-xs text-muted-foreground">Ingen hjemmeside registrert i Brønnøysundregistrene</p>
+                )}
+              </div>
 
               <div className="pt-4 border-t">
                 <div className="text-sm text-muted-foreground mb-3">Andre kilder</div>
