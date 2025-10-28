@@ -37,6 +37,9 @@ export interface BrregCompanyData {
 export interface BrregEnhancedData extends BrregCompanyData {
   kontaktperson?: string;
   kontaktpersonRolle?: string;
+  kontaktpersonTelefon?: string;
+  telefonnummerKilde?: string;
+  telefonnummerAlternativer?: Array<{ telefon: string; adresse: string }>;
 }
 
 export interface BrregSearchResult {

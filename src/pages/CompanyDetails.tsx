@@ -655,9 +655,10 @@ const CompanyDetails = () => {
           {/* Contact Persons Card */}
           <ContactPersonsCard 
             companyId={company.id}
-            contactPersons={metadata?.contact_persons || []}
-            onUpdate={async (updatedContactPersons) => {
-              await updateMetadata({ contact_persons: updatedContactPersons });
+            companyName={company.name}
+            contacts={metadata?.contact_persons || []}
+            onUpdate={async (updatedContacts) => {
+              await updateMetadata({ contact_persons: updatedContacts });
             }}
           />
 

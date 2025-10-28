@@ -101,7 +101,7 @@ export class BrregAdapter extends BaseAdapter<BrregConfig, BrregCompanyData> {
    * Sync Brreg data to database
    * Only called for companies that are explicitly saved
    */
-  async syncToDatabase(data: BrregCompanyData): Promise<void> {
+  async syncToDatabase(data: BrregCompanyData | BrregEnhancedData): Promise<void> {
     try {
       const orgNumber = data.organisasjonsnummer;
 
@@ -143,6 +143,37 @@ export class BrregAdapter extends BaseAdapter<BrregConfig, BrregCompanyData> {
       if (error) {
         this.log('error', 'Error updating company', error);
         throw error;
+      }
+
+      // Update contact person in company_metadata if available
+      const enhancedData = data as BrregEnhancedData;
+      if (enhancedData.kontaktperson && enhancedData.kontaktpersonRolle) {
+        const contactPerson = {
+          full_name: enhancedData.kontaktperson,
+          title: enhancedData.kontaktpersonRolle,
+          phone: enhancedData.kontaktpersonTelefon || null,
+          email: null,
+          department: null,
+          is_primary: true,
+          notes: enhancedData.telefonnummerKilde ? `Hentet fra ${enhancedData.telefonnummerKilde}` : null
+        };
+
+        // Upsert company_metadata with contact person
+        const { error: metadataError } = await supabase
+          .from('company_metadata')
+          .upsert({
+            company_id: existingCompany.id,
+            contact_persons: [contactPerson],
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'company_id'
+          });
+
+        if (metadataError) {
+          this.log('error', 'Error updating company metadata', metadataError);
+        } else {
+          this.log('info', 'Successfully updated contact person');
+        }
       }
 
       // Update sync status
