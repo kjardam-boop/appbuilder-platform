@@ -150,19 +150,29 @@ const CompanyDetails = () => {
       if (companyError) throw companyError;
       setCompany(companyData as Company);
       setWebsiteInput(companyData.website || "");
+      
+      // Get current user to fetch their metadata
       const {
-        data: metadataData
-      } = await supabase.from('company_metadata').select('*').eq('company_id', id).maybeSingle();
-      const defaultMetadata = {
-        sales_assessment_score: null,
-        priority_level: null,
-        notes: null,
-        in_crm: false,
-        for_followup: false,
-        has_potential: true
-      };
-      setMetadata(metadataData || defaultMetadata);
-      setNotesInput(metadataData?.notes || "");
+        data: {
+          user
+        }
+      } = await supabase.auth.getUser();
+      
+      if (user) {
+        const {
+          data: metadataData
+        } = await supabase.from('company_metadata').select('*').eq('company_id', id).eq('user_id', user.id).maybeSingle();
+        const defaultMetadata = {
+          sales_assessment_score: null,
+          priority_level: null,
+          notes: null,
+          in_crm: false,
+          for_followup: false,
+          has_potential: true
+        };
+        setMetadata(metadataData || defaultMetadata);
+        setNotesInput(metadataData?.notes || "");
+      }
     } catch (error) {
       console.error('Error fetching company:', error);
       toast.error("Kunne ikke laste bedriftsdata");
@@ -558,12 +568,12 @@ const CompanyDetails = () => {
       const {
         data: existing,
         error: checkError
-      } = await supabase.from('company_metadata').select('id').eq('company_id', id).maybeSingle();
+      } = await supabase.from('company_metadata').select('id').eq('company_id', id).eq('user_id', user.id).maybeSingle();
       
       if (checkError) throw checkError;
 
       if (existing) {
-        const { error } = await supabase.from('company_metadata').update(updates).eq('company_id', id);
+        const { error } = await supabase.from('company_metadata').update(updates).eq('company_id', id).eq('user_id', user.id);
         if (error) throw error;
       } else {
         const { error } = await supabase.from('company_metadata').insert({
