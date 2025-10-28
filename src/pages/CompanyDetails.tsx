@@ -733,7 +733,7 @@ const CompanyDetails = () => {
                 value={notesInput}
                 onChange={(e) => setNotesInput(e.target.value)}
                 onBlur={handleSaveNotes}
-                className="resize-none h-full min-h-[150px]"
+                className="min-h-[150px] max-h-[300px] resize-none"
               />
             </CardContent>
           </Card>
