@@ -5,7 +5,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Building2, Copy, RefreshCw, Globe, ExternalLink, Phone, Users, ChevronRight, ChevronDown, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +20,9 @@ import { AppBreadcrumbs } from "@/components/ui/app-breadcrumbs";
 import { CompanyRoleEditor } from "@/components/Company/CompanyRoleEditor";
 import { ContactPersonsCard } from "@/components/Company/ContactPersonsCard";
 import { RoleBasedContent } from "@/components/Company/RoleBasedContent";
+import { useAutoSave } from "@/hooks/useAutoSave";
+import { MarkdownTextarea } from "@/components/ui/markdown-textarea";
+import { cn } from "@/lib/utils";
 import type { Company } from "@/modules/core/company/types/company.types";
 import type { BrregCompanySearchResult } from "@/modules/core/company/types/company.types";
 interface CompanyMetadata {
@@ -110,7 +112,30 @@ const CompanyDetails = () => {
   const [searchResults, setSearchResults] = useState<BrregCompanySearchResult[]>([]);
   const [websiteInput, setWebsiteInput] = useState("");
   const [notesInput, setNotesInput] = useState("");
-  const [isSavingWebsite, setIsSavingWebsite] = useState(false);
+
+  // Auto-save for notes
+  const { status: notesStatus, trigger: triggerNotesSave } = useAutoSave({
+    onSave: async () => {
+      await updateMetadata({ notes: notesInput.trim() || null });
+    },
+    delay: 1500,
+    enabled: !!company
+  });
+
+  // Auto-save for website
+  const { status: websiteStatus, trigger: triggerWebsiteSave } = useAutoSave({
+    onSave: async () => {
+      if (!company || !websiteInput.trim()) return;
+      const { error } = await supabase
+        .from('companies')
+        .update({ website: websiteInput.trim() })
+        .eq('id', company.id);
+      if (error) throw error;
+      setCompany({ ...company, website: websiteInput.trim() });
+    },
+    delay: 1500,
+    enabled: !!company && !!websiteInput.trim()
+  });
   useEffect(() => {
     if (id) {
       fetchCompanyDetails();
@@ -552,39 +577,6 @@ const CompanyDetails = () => {
     }
   };
 
-  const handleSaveWebsite = async () => {
-    if (!company || !websiteInput.trim()) return;
-    
-    setIsSavingWebsite(true);
-    try {
-      const { error } = await supabase
-        .from('companies')
-        .update({ website: websiteInput.trim() })
-        .eq('id', company.id);
-      
-      if (error) throw error;
-      
-      setCompany({ ...company, website: websiteInput.trim() });
-      toast.success("Hjemmeside lagret");
-    } catch (error) {
-      console.error('Error saving website:', error);
-      toast.error("Kunne ikke lagre hjemmeside");
-    } finally {
-      setIsSavingWebsite(false);
-    }
-  };
-
-  const handleSaveNotes = async () => {
-    if (!company) return;
-    
-    try {
-      await updateMetadata({ notes: notesInput.trim() || null });
-      toast.success("Notater lagret");
-    } catch (error) {
-      console.error('Error saving notes:', error);
-      toast.error("Kunne ikke lagre notater");
-    }
-  };
 
   if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center">
@@ -684,13 +676,15 @@ const CompanyDetails = () => {
                     type="url"
                     placeholder="https://www.example.com"
                     value={websiteInput}
-                    onChange={(e) => setWebsiteInput(e.target.value)}
-                    onBlur={handleSaveWebsite}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.currentTarget.blur();
-                      }
+                    onChange={(e) => {
+                      setWebsiteInput(e.target.value);
+                      triggerWebsiteSave(e.target.value);
                     }}
+                    className={cn(
+                      websiteStatus === 'saving' && 'border-yellow-500',
+                      websiteStatus === 'saved' && 'border-green-500',
+                      websiteStatus === 'error' && 'border-red-500'
+                    )}
                   />
                   <p className="text-xs text-muted-foreground">Ingen hjemmeside registrert i Brønnøysundregistrene</p>
                 </div>
@@ -729,13 +723,17 @@ const CompanyDetails = () => {
               <CardTitle>Egne notater</CardTitle>
             </CardHeader>
             <CardContent className="h-full">
-              <Textarea
-                id="notes-input"
-                placeholder="Skriv notater om selskapet her..."
+              <MarkdownTextarea
                 value={notesInput}
-                onChange={(e) => setNotesInput(e.target.value)}
-                onBlur={handleSaveNotes}
-                className="min-h-[300px] max-h-[600px] resize-none"
+                onChange={(e) => {
+                  setNotesInput(e.target.value);
+                  triggerNotesSave(e.target.value);
+                }}
+                autoSaveStatus={notesStatus}
+                maxLength={5000}
+                currentLength={notesInput.length}
+                placeholder="Skriv notater om selskapet her..."
+                autoResize={true}
               />
             </CardContent>
           </Card>
