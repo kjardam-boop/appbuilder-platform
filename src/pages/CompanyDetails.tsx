@@ -579,8 +579,10 @@ const CompanyDetails = () => {
     
     try {
       await updateMetadata({ notes: notesInput.trim() || null });
+      toast.success("Notater lagret");
     } catch (error) {
       console.error('Error saving notes:', error);
+      toast.error("Kunne ikke lagre notater");
     }
   };
 
