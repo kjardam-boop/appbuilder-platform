@@ -676,28 +676,20 @@ const CompanyDetails = () => {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <Label htmlFor="website-input">Legg inn hjemmeside</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="website-input"
-                      type="url"
-                      placeholder="https://www.example.com"
-                      value={websiteInput}
-                      onChange={(e) => setWebsiteInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          handleSaveWebsite();
-                        }
-                      }}
-                    />
-                    <Button 
-                      onClick={handleSaveWebsite} 
-                      disabled={!websiteInput.trim() || isSavingWebsite}
-                      size="icon"
-                    >
-                      <Save className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  <Label htmlFor="website-input">Hjemmeside</Label>
+                  <Input
+                    id="website-input"
+                    type="url"
+                    placeholder="https://www.example.com"
+                    value={websiteInput}
+                    onChange={(e) => setWebsiteInput(e.target.value)}
+                    onBlur={handleSaveWebsite}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.currentTarget.blur();
+                      }
+                    }}
+                  />
                   <p className="text-xs text-muted-foreground">Ingen hjemmeside registrert i Brønnøysundregistrene</p>
                 </div>
               )}
