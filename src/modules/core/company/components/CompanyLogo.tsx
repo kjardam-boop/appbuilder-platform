@@ -1,20 +1,28 @@
 import { useState, useEffect } from 'react';
 import { Building } from 'lucide-react';
 import { fetchCompanyLogo } from '@/utils/logoFetcher';
+import { supabase } from '@/integrations/supabase/client';
 
 interface CompanyLogoProps {
   websiteUrl?: string;
   companyName: string;
   className?: string;
-  onLogoFetched?: (logoUrl: string) => void;
+  companyId?: string;
+  existingLogoUrl?: string | null;
 }
 
-const CompanyLogo = ({ websiteUrl, companyName, className = '', onLogoFetched }: CompanyLogoProps) => {
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+const CompanyLogo = ({ websiteUrl, companyName, className = '', companyId, existingLogoUrl }: CompanyLogoProps) => {
+  const [logoUrl, setLogoUrl] = useState<string | null>(existingLogoUrl || null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
 
   useEffect(() => {
+    // If we already have a logo URL, use it
+    if (existingLogoUrl) {
+      setLogoUrl(existingLogoUrl);
+      return;
+    }
+
     if (!websiteUrl) {
       setLogoUrl(null);
       return;
@@ -27,7 +35,23 @@ const CompanyLogo = ({ websiteUrl, companyName, className = '', onLogoFetched }:
         const url = await fetchCompanyLogo(websiteUrl);
         if (url) {
           setLogoUrl(url);
-          onLogoFetched?.(url);
+          
+          // Save logo URL to company_metadata if companyId is provided
+          if (companyId) {
+            const { error: updateError } = await supabase
+              .from('company_metadata')
+              .upsert({
+                company_id: companyId,
+                logo_url: url,
+                updated_at: new Date().toISOString()
+              }, {
+                onConflict: 'company_id'
+              });
+            
+            if (updateError) {
+              console.error('Error saving logo URL:', updateError);
+            }
+          }
         } else {
           setError(true);
         }
@@ -40,7 +64,7 @@ const CompanyLogo = ({ websiteUrl, companyName, className = '', onLogoFetched }:
     };
 
     loadLogo();
-  }, [websiteUrl, onLogoFetched]);
+  }, [websiteUrl, companyId, existingLogoUrl]);
 
   if (loading) {
     return (

@@ -20,6 +20,7 @@ import { AppBreadcrumbs } from "@/components/ui/app-breadcrumbs";
 import { CompanyRoleEditor } from "@/components/Company/CompanyRoleEditor";
 import { ContactPersonsCard } from "@/components/Company/ContactPersonsCard";
 import { RoleBasedContent } from "@/components/Company/RoleBasedContent";
+import CompanyLogo from "@/modules/core/company/components/CompanyLogo";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { MarkdownTextarea } from "@/components/ui/markdown-textarea";
 import { cn } from "@/lib/utils";
@@ -610,10 +611,16 @@ const CompanyDetails = () => {
           Tilbake til søkeresultat
         </Button>
 
-        <div className="mb-8">
+          <div className="mb-8">
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center gap-3">
-              <Building2 className="h-10 w-10 text-primary" />
+              <CompanyLogo 
+                websiteUrl={company.website || undefined}
+                companyName={company.name}
+                companyId={company.id}
+                existingLogoUrl={metadata?.logo_url}
+                className="h-16 w-16"
+              />
               <h1 className="text-4xl font-bold">{company.name}</h1>
               <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => copyToClipboard(company.org_number)}>
                 <Copy className="h-4 w-4" />
