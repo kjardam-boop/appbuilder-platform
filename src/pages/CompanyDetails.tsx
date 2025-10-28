@@ -23,16 +23,8 @@ import { RoleBasedContent } from "@/components/Company/RoleBasedContent";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { MarkdownTextarea } from "@/components/ui/markdown-textarea";
 import { cn } from "@/lib/utils";
-import type { Company } from "@/modules/core/company/types/company.types";
+import type { Company, CompanyMetadata, ContactPerson } from "@/modules/core/company/types/company.types";
 import type { BrregCompanySearchResult } from "@/modules/core/company/types/company.types";
-interface CompanyMetadata {
-  sales_assessment_score: number | null;
-  priority_level: string | null;
-  notes: string | null;
-  in_crm: boolean;
-  for_followup: boolean;
-  has_potential: boolean;
-}
 interface FinancialData {
   organisasjonsnummer: string;
   driftsinntekter: Array<{
@@ -151,28 +143,22 @@ const CompanyDetails = () => {
       setCompany(companyData as Company);
       setWebsiteInput(companyData.website || "");
       
-      // Get current user to fetch their metadata
+      // Fetch company-global metadata (no user_id)
       const {
-        data: {
-          user
-        }
-      } = await supabase.auth.getUser();
-      
-      if (user) {
-        const {
-          data: metadataData
-        } = await supabase.from('company_metadata').select('*').eq('company_id', id).eq('user_id', user.id).maybeSingle();
-        const defaultMetadata = {
-          sales_assessment_score: null,
-          priority_level: null,
-          notes: null,
-          in_crm: false,
-          for_followup: false,
-          has_potential: true
-        };
-        setMetadata(metadataData || defaultMetadata);
-        setNotesInput(metadataData?.notes || "");
-      }
+        data: metadataData
+      } = await supabase.from('company_metadata').select('*').eq('company_id', id).maybeSingle();
+      const defaultMetadata = {
+        sales_assessment_score: null,
+        priority_level: null,
+        notes: null,
+        in_crm: false,
+        for_followup: false,
+        has_potential: true,
+        logo_url: null,
+        contact_persons: []
+      };
+      setMetadata(metadataData || defaultMetadata);
+      setNotesInput(metadataData?.notes || "");
     } catch (error) {
       console.error('Error fetching company:', error);
       toast.error("Kunne ikke laste bedriftsdata");
@@ -568,17 +554,16 @@ const CompanyDetails = () => {
       const {
         data: existing,
         error: checkError
-      } = await supabase.from('company_metadata').select('id').eq('company_id', id).eq('user_id', user.id).maybeSingle();
+      } = await supabase.from('company_metadata').select('id').eq('company_id', id).maybeSingle();
       
       if (checkError) throw checkError;
 
       if (existing) {
-        const { error } = await supabase.from('company_metadata').update(updates).eq('company_id', id).eq('user_id', user.id);
+        const { error } = await supabase.from('company_metadata').update(updates).eq('company_id', id);
         if (error) throw error;
       } else {
         const { error } = await supabase.from('company_metadata').insert({
           company_id: id,
-          user_id: user.id,
           ...updates
         });
         if (error) throw error;
@@ -661,7 +646,13 @@ const CompanyDetails = () => {
 
         <div className="grid lg:grid-cols-2 gap-6">
           {/* Contact Persons Card */}
-          <ContactPersonsCard companyId={company.id} companyName={company.name} />
+          <ContactPersonsCard 
+            companyId={company.id}
+            contactPersons={metadata?.contact_persons || []}
+            onUpdate={async (updatedContactPersons) => {
+              await updateMetadata({ contact_persons: updatedContactPersons });
+            }}
+          />
 
           <Card>
             <CardHeader>

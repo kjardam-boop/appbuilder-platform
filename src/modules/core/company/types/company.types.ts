@@ -32,9 +32,18 @@ export interface Company extends BaseEntity {
   supplier_certifications: string[] | null;
 }
 
+export interface ContactPerson {
+  full_name: string;
+  title?: string;
+  email?: string;
+  phone?: string;
+  department?: string;
+  is_primary?: boolean;
+  notes?: string;
+}
+
 export interface CompanyMetadata extends BaseEntity {
   company_id: string;
-  user_id: string;
   sales_assessment_score: number | null;
   priority_level: 'low' | 'medium' | 'high' | null;
   notes: string | null;
@@ -43,6 +52,8 @@ export interface CompanyMetadata extends BaseEntity {
   has_potential: boolean;
   score: number | null;
   last_viewed_at: string | null;
+  logo_url: string | null;
+  contact_persons: ContactPerson[];
 }
 
 export interface BrregCompanySearchResult {

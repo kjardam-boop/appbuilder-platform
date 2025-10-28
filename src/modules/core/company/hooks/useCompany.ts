@@ -91,13 +91,7 @@ export const useCompany = (companyId?: string) => {
     if (!companyId || !metadata) return;
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error('Du må være logget inn');
-        return;
-      }
-
-      await CompanyService.updateMetadata(companyId, user.id, updates);
+      await CompanyService.updateMetadata(companyId, updates);
       setMetadata({ ...metadata, ...updates });
     } catch (error) {
       console.error('Error updating metadata:', error);

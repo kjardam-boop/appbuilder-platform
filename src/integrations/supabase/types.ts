@@ -408,48 +408,51 @@ export type Database = {
       company_metadata: {
         Row: {
           company_id: string
+          contact_persons: Json | null
           created_at: string | null
           for_followup: boolean | null
           has_potential: boolean | null
           id: string
           in_crm: boolean | null
+          logo_url: string | null
           notes: string | null
           priority_level: string | null
           sales_assessment_score: number | null
           updated_at: string | null
-          user_id: string
         }
         Insert: {
           company_id: string
+          contact_persons?: Json | null
           created_at?: string | null
           for_followup?: boolean | null
           has_potential?: boolean | null
           id?: string
           in_crm?: boolean | null
+          logo_url?: string | null
           notes?: string | null
           priority_level?: string | null
           sales_assessment_score?: number | null
           updated_at?: string | null
-          user_id: string
         }
         Update: {
           company_id?: string
+          contact_persons?: Json | null
           created_at?: string | null
           for_followup?: boolean | null
           has_potential?: boolean | null
           id?: string
           in_crm?: boolean | null
+          logo_url?: string | null
           notes?: string | null
           priority_level?: string | null
           sales_assessment_score?: number | null
           updated_at?: string | null
-          user_id?: string
         }
         Relationships: [
           {
             foreignKeyName: "company_metadata_company_id_fkey"
             columns: ["company_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
@@ -1443,6 +1446,54 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_company_access: {
+        Row: {
+          access_type: string
+          company_id: string
+          created_at: string
+          granted_at: string
+          granted_by: string | null
+          id: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          access_type?: string
+          company_id: string
+          created_at?: string
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          access_type?: string
+          company_id?: string
+          created_at?: string
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_company_access_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_company_access_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]

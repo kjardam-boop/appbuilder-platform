@@ -20,6 +20,7 @@ export { default as CompanySelector } from './components/CompanySelector';
 export type {
   Company,
   CompanyMetadata,
+  ContactPerson,
 } from './types/company.types';
 
 export type {
@@ -28,13 +29,21 @@ export type {
   CompanyRole,
 } from './types/companyUser.types';
 
+export type {
+  TenantCompanyAccess,
+  TenantCompanyAccessType,
+} from './types/tenantCompanyAccess.types';
+
 export {
   COMPANY_ROLES,
   COMPANY_ROLE_DESCRIPTIONS,
 } from './types/companyUser.types';
 
+export { ACCESS_TYPE_LABELS } from './types/tenantCompanyAccess.types';
+
 export { CompanyService } from './services/companyService';
 export { CompanyUserService } from './services/companyUserService';
+export { TenantCompanyAccessService } from './services/tenantCompanyAccessService';
 export { CompanyClassificationService } from './services/companyClassificationService';
 export { classifyByNace, syncFromBrregWithClassification } from './services/companyClassificationHelpers';
 

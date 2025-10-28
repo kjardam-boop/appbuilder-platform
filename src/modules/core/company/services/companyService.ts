@@ -33,9 +33,9 @@ export class CompanyService {
   }
 
   /**
-   * Update or create company metadata
+   * Update or create company metadata (company-global, no user_id)
    */
-  static async updateMetadata(companyId: string, userId: string, updates: Partial<CompanyMetadata>): Promise<void> {
+  static async updateMetadata(companyId: string, updates: Partial<CompanyMetadata>): Promise<void> {
     const { data: existing } = await supabase
       .from('company_metadata')
       .select('id')
@@ -51,8 +51,7 @@ export class CompanyService {
       await supabase
         .from('company_metadata')
         .insert({ 
-          company_id: companyId, 
-          user_id: userId,
+          company_id: companyId,
           ...updates 
         });
     }
