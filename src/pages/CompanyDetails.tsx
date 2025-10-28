@@ -726,15 +726,14 @@ const CompanyDetails = () => {
             <CardHeader>
               <CardTitle>Egne notater</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="h-full">
               <Textarea
                 id="notes-input"
                 placeholder="Skriv notater om selskapet her..."
                 value={notesInput}
                 onChange={(e) => setNotesInput(e.target.value)}
                 onBlur={handleSaveNotes}
-                rows={6}
-                className="resize-none"
+                className="resize-none h-full min-h-[200px]"
               />
             </CardContent>
           </Card>
