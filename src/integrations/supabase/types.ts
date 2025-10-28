@@ -405,6 +405,56 @@ export type Database = {
           },
         ]
       }
+      company_metadata: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          for_followup: boolean | null
+          has_potential: boolean | null
+          id: string
+          in_crm: boolean | null
+          notes: string | null
+          priority_level: string | null
+          sales_assessment_score: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          for_followup?: boolean | null
+          has_potential?: boolean | null
+          id?: string
+          in_crm?: boolean | null
+          notes?: string | null
+          priority_level?: string | null
+          sales_assessment_score?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          for_followup?: boolean | null
+          has_potential?: boolean | null
+          id?: string
+          in_crm?: boolean | null
+          notes?: string | null
+          priority_level?: string | null
+          sales_assessment_score?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_metadata_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contact_persons: {
         Row: {
           company_id: string
