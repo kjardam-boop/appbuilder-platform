@@ -67,7 +67,7 @@ serve(async (req) => {
     }
 
     const prompt = websiteFetched
-      ? `Analyser følgende nettside og ekstraher informasjon om applikasjonen/systemet:\n\n${websiteContent}\n\nNettside-URL: ${normalizedUrl}\n\nEkstraher følgende informasjon:\n- Leverandør (vendor): Bedriftens navn\n- Produktnavn (product name): Navnet på applikasjonen/systemet\n- Kort navn (short name): En kortversjon av produktnavnet (maks 20 tegn)\n- App-type: Beskriv applikasjonens type. Bruk helst én av disse kategoriene hvis den passer: ERP, CRM, EmailSuite, HRPayroll, BI, iPaaS, CMS, eCommerce, WMS, TMS, PLM, MES, ITSM, IAM, RPA, ProjectMgmt, ServiceMgmt. Hvis ingen passer perfekt, oppgi en beskrivende type.\n- Foreslåtte kjente typer: Hvilke av de standardiserte typene (ERP, CRM, etc.) er nærmest? Oppgi 1-3 forslag.\n- Deployment modeller: Velg fra SaaS, OnPrem, Hybrid (kan være flere)\n- Markedssegmenter: Velg fra SMB, Midmarket, Enterprise (kan være flere)\n- Beskrivelse: En kort, profesjonell beskrivelse av systemet (2-3 setninger)\n- Moduler: Liste over hovedmodulene/funksjonene systemet tilbyr\n- Lokaliseringer: Land/regioner systemet støtter (f.eks. Norge, Sverige, Danmark)\n- Bransjer: Hvilke industrier/bransjer systemet er målrettet mot`
+      ? `Analyser følgende nettside og ekstraher informasjon om applikasjonen/systemet:\n\n${websiteContent}\n\nNettside-URL: ${normalizedUrl}\n\nEkstraher følgende informasjon:\n- Leverandør (vendor): Bedriftens navn\n- Produktnavn (product name): Navnet på applikasjonen/systemet\n- Kort navn (short name): En kortversjon av produktnavnet (maks 20 tegn)\n- App-typer (VIKTIG: Velg ALLE som passer): Applikasjonen kan ha flere typer samtidig. Velg fra disse: ERP, CRM, EmailSuite, HRPayroll, BI, iPaaS, CMS, eCommerce, WMS, TMS, PLM, MES, ITSM, IAM, RPA, ProjectMgmt, ServiceMgmt. For eksempel kan en app være både CRM og ProjectMgmt, eller ERP og WMS. Velg alle relevante typer.\n- Foreslåtte kjente typer: Hvis du er usikker, list 1-3 alternative standardiserte typer\n- Deployment modeller: Velg fra SaaS, OnPrem, Hybrid (kan være flere)\n- Markedssegmenter: Velg fra SMB, Midmarket, Enterprise (kan være flere)\n- Beskrivelse: En kort, profesjonell beskrivelse av systemet (2-3 setninger)\n- Moduler: Liste over hovedmodulene/funksjonene systemet tilbyr\n- Lokaliseringer: Land/regioner systemet støtter (f.eks. Norge, Sverige, Danmark)\n- Bransjer: Hvilke industrier/bransjer systemet er målrettet mot`
       : `Jeg har kun URL-en: ${normalizedUrl}
       
 Gjør ditt beste for å ekstrahere informasjon basert på domenenavnet og dine kunnskaper.
@@ -109,7 +109,7 @@ Ekstraher samme informasjon som over.`;
                       type: 'string',
                       enum: ['ERP', 'CRM', 'EmailSuite', 'HRPayroll', 'BI', 'iPaaS', 'CMS', 'eCommerce', 'WMS', 'TMS', 'PLM', 'MES', 'ITSM', 'IAM', 'RPA', 'ProjectMgmt', 'ServiceMgmt']
                     },
-                    description: 'Applikasjonstyper - velg én eller flere som passer'
+                    description: 'Alle relevante applikasjonstyper - VELG FLERE hvis systemet dekker flere kategorier. En app kan være både ERP og WMS, eller CRM og ProjectMgmt osv.'
                   },
                   suggested_known_types: {
                     type: 'array',
