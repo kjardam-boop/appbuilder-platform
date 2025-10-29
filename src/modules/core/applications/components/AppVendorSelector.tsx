@@ -36,11 +36,17 @@ export const AppVendorSelector = ({
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>
-        {vendors.map((vendor) => (
-          <SelectItem key={vendor.id} value={vendor.id}>
-            {vendor.name}
+        {vendors.length === 0 ? (
+          <SelectItem value="__empty" disabled>
+            Ingen leverandører
           </SelectItem>
-        ))}
+        ) : (
+          vendors.map((vendor) => (
+            <SelectItem key={vendor.id} value={vendor.id}>
+              {vendor.name}
+            </SelectItem>
+          ))
+        )}
       </SelectContent>
     </Select>
   );

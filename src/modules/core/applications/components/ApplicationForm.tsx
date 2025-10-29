@@ -105,7 +105,7 @@ export function ApplicationForm({ initialData, onSubmit, isLoading }: Applicatio
     populateFormFields(generated);
   };
 
-  const populateFormFields = (generated: any) => {
+  const populateFormFields = async (generated: any) => {
     if (generated.product_name) setValue("name", generated.product_name);
     if (generated.short_name) setValue("short_name", generated.short_name);
     
@@ -132,19 +132,39 @@ export function ApplicationForm({ initialData, onSubmit, isLoading }: Applicatio
       setValue("slug", slug);
     }
 
-    // Auto-match vendor by name (fuzzy match)
-    if (generated.vendor_name && vendors.length > 0) {
-      const vendorName = generated.vendor_name.toLowerCase().trim();
-      const matchedVendor = vendors.find(v => 
-        v.name.toLowerCase().includes(vendorName) || 
-        vendorName.includes(v.name.toLowerCase())
-      );
-      
-      if (matchedVendor) {
-        setValue("vendor_id", matchedVendor.id);
-        toast.success(`Leverandør automatisk valgt: ${matchedVendor.name}`);
+    // Auto-match or create vendor
+    if (generated.vendor_name) {
+      const vendorName = String(generated.vendor_name).toLowerCase().trim();
+      // Ensure we have vendors loaded before matching
+      let vendorList = vendors;
+      if (!vendorList || vendorList.length === 0) {
+        try {
+          const refetched = await refetchVendors();
+          // TanStack v5 refetch returns { data }
+          vendorList = (refetched as any)?.data || vendors || [];
+        } catch (e) {
+          // ignore and fallback to existing list
+          vendorList = vendors || [];
+        }
+      }
+
+      if (vendorList.length > 0) {
+        const matchedVendor = vendorList.find((v: any) => {
+          const vn = v.name?.toLowerCase().trim();
+          return vn && (vn.includes(vendorName) || vendorName.includes(vn));
+        });
+
+        if (matchedVendor) {
+          setValue("vendor_id", matchedVendor.id);
+          toast.success(`Leverandør automatisk valgt: ${matchedVendor.name}`);
+        } else {
+          setCreateVendorDialog({
+            isOpen: true,
+            suggestedName: generated.vendor_name,
+          });
+        }
       } else {
-        // Offer to create vendor
+        // No vendors available after refetch – offer creation directly
         setCreateVendorDialog({
           isOpen: true,
           suggestedName: generated.vendor_name,
@@ -154,7 +174,6 @@ export function ApplicationForm({ initialData, onSubmit, isLoading }: Applicatio
 
     toast.success("Applikasjonsinformasjon hentet med AI");
   };
-
   const handleTypeResolved = (selectedTypes: AppType[]) => {
     if (unknownTypeDialog && selectedTypes.length > 0) {
       const generated = unknownTypeDialog.generatedData;
@@ -275,6 +294,19 @@ export function ApplicationForm({ initialData, onSubmit, isLoading }: Applicatio
               value={watch("vendor_id")}
               onValueChange={(value) => setValue("vendor_id", value)}
             />
+            {vendors.length === 0 && (
+              <div className="text-sm text-muted-foreground mt-2">
+                Ingen leverandører funnet.
+                <Button
+                  type="button"
+                  variant="link"
+                  className="px-1"
+                  onClick={() => setCreateVendorDialog({ isOpen: true, suggestedName: watch("name") || "" })}
+                >
+                  Opprett ny leverandør
+                </Button>
+              </div>
+            )}
             {errors.vendor_id && (
               <p className="text-sm text-destructive mt-1">{errors.vendor_id.message}</p>
             )}
