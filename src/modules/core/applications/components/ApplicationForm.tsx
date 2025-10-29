@@ -13,10 +13,11 @@ import { AppVendorSelector } from "./AppVendorSelector";
 import { APP_TYPES, DEPLOYMENT_MODELS, MARKET_SEGMENTS } from "../types/application.types";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { Badge } from "@/components/ui/badge";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { UnknownTypeDialog } from "./UnknownTypeDialog";
 import type { AppType } from "../types/application.types";
 import { toast } from "sonner";
+import { useAppVendors } from "../hooks/useApplications";
 
 const applicationFormSchema = z.object({
   website: z.string().url("Ugyldig URL").optional().or(z.literal("")),
@@ -51,6 +52,8 @@ export function ApplicationForm({ initialData, onSubmit, isLoading }: Applicatio
     generatedData: any;
   } | null>(null);
   const { generate, isGenerating } = useApplicationGeneration();
+  const { data: vendors = [] } = useAppVendors();
+  const [pendingVendorName, setPendingVendorName] = useState<string | null>(null);
   
   const form = useForm<ApplicationFormData>({
     resolver: zodResolver(applicationFormSchema),
