@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import Modules from "./pages/Modules";
 import Tenants from "./pages/Tenants";
 import CompanyRegistration from "./pages/onboarding/CompanyRegistration";
+import ProjectCreation from "./pages/onboarding/ProjectCreation";
 import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -70,6 +71,7 @@ const App = () => (
             
             {/* Onboarding Routes */}
             <Route path="/onboarding/company" element={<CompanyRegistration />} />
+            <Route path="/onboarding/project" element={<ProjectCreation />} />
               <Route path="/modules" element={<Modules />} />
               
               {/* Admin Panel (content only; sidebar is global now) */}
