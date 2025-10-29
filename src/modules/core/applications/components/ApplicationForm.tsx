@@ -212,9 +212,9 @@ export function ApplicationForm({ initialData, onSubmit, isLoading }: Applicatio
   };
 
   const handleVendorCreated = async (vendorId: string, vendorName: string) => {
-    setValue("vendor_id", vendorId);
     setCreateVendorDialog(null);
     await refetchVendors();
+    setValue("vendor_id", vendorId);
     toast.success(`Leverandør "${vendorName}" opprettet og valgt`);
   };
 
