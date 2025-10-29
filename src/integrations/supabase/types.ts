@@ -978,10 +978,13 @@ export type Database = {
         Row: {
           avatar_url: string | null
           bio: string | null
+          company_id: string | null
           created_at: string
           email: string | null
           full_name: string | null
           id: string
+          onboarding_completed_at: string | null
+          onboarding_step: string | null
           phone: string | null
           title: string | null
           updated_at: string
@@ -990,10 +993,13 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           bio?: string | null
+          company_id?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
           id?: string
+          onboarding_completed_at?: string | null
+          onboarding_step?: string | null
           phone?: string | null
           title?: string | null
           updated_at?: string
@@ -1002,16 +1008,27 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           bio?: string | null
+          company_id?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
           id?: string
+          onboarding_completed_at?: string | null
+          onboarding_step?: string | null
           phone?: string | null
           title?: string | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       project_app_products: {
         Row: {
@@ -1073,6 +1090,9 @@ export type Database = {
           budget: number | null
           company_id: string | null
           created_at: string
+          current_phase:
+            | Database["public"]["Enums"]["project_phase_enum"]
+            | null
           description: string | null
           end_date: string | null
           id: string
@@ -1086,6 +1106,9 @@ export type Database = {
           budget?: number | null
           company_id?: string | null
           created_at?: string
+          current_phase?:
+            | Database["public"]["Enums"]["project_phase_enum"]
+            | null
           description?: string | null
           end_date?: string | null
           id?: string
@@ -1099,6 +1122,9 @@ export type Database = {
           budget?: number | null
           company_id?: string | null
           created_at?: string
+          current_phase?:
+            | Database["public"]["Enums"]["project_phase_enum"]
+            | null
           description?: string | null
           end_date?: string | null
           id?: string
@@ -1651,6 +1677,12 @@ export type Database = {
         | "analyst"
         | "contributor"
         | "viewer"
+      project_phase_enum:
+        | "as_is"
+        | "to_be"
+        | "evaluation"
+        | "execution"
+        | "closure"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1789,6 +1821,13 @@ export const Constants = {
         "analyst",
         "contributor",
         "viewer",
+      ],
+      project_phase_enum: [
+        "as_is",
+        "to_be",
+        "evaluation",
+        "execution",
+        "closure",
       ],
     },
   },

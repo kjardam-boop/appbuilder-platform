@@ -51,11 +51,13 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
-      const { error } = await supabase.auth.signUp({
+      const redirectUrl = `${window.location.origin}/`;
+      
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/`,
+          emailRedirectTo: redirectUrl,
           data: {
             full_name: fullName,
           },
@@ -64,8 +66,20 @@ const Auth = () => {
 
       if (error) throw error;
 
-      toast.success("Konto opprettet! Du er nå logget inn.");
-      navigate("/dashboard");
+      // Update profile with initial onboarding step
+      if (data.user) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({ onboarding_step: 'company_registration' })
+          .eq('user_id', data.user.id);
+
+        if (profileError) {
+          console.error('Error updating profile:', profileError);
+        }
+      }
+
+      toast.success("Konto opprettet! La oss registrere din bedrift.");
+      navigate("/onboarding/company");
     } catch (error: any) {
       toast.error(error.message || "Registrering feilet");
     } finally {

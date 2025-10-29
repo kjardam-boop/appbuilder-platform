@@ -1,6 +1,6 @@
 import { BaseEntity } from "@/core/types/common.types";
 
-export type ProjectPhase = 'malbilde' | 'anskaffelse' | 'kontraktsforhandlinger' | 'gjennomforing' | 'evaluering';
+export type ProjectPhase = 'as_is' | 'to_be' | 'evaluation' | 'execution' | 'closure';
 
 export interface Project extends BaseEntity {
   title: string;
@@ -50,19 +50,19 @@ export interface ProjectEvaluation extends BaseEntity {
 }
 
 export const PROJECT_PHASES: Record<ProjectPhase, string> = {
-  malbilde: "Målbilde",
-  anskaffelse: "Anskaffelse",
-  kontraktsforhandlinger: "Kontraktsforhandlinger",
-  gjennomforing: "Gjennomføring",
-  evaluering: "Evaluering",
+  as_is: "Nåsituasjon / AS-IS",
+  to_be: "Målbilde / TO-BE",
+  evaluation: "Evaluering / Scoring",
+  execution: "Gjennomføre prosjekt",
+  closure: "Avslutt og fakturere",
 };
 
 export const PROJECT_PHASE_ORDER: ProjectPhase[] = [
-  'malbilde',
-  'anskaffelse',
-  'kontraktsforhandlinger',
-  'gjennomforing',
-  'evaluering',
+  'as_is',
+  'to_be',
+  'evaluation',
+  'execution',
+  'closure',
 ];
 
 // Supplier types (moved from supplier module)

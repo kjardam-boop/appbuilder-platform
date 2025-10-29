@@ -25,9 +25,9 @@ export interface DocumentVersion extends BaseEntity {
 }
 
 export const DOCUMENT_PHASES: Record<ProjectPhase, string> = {
-  malbilde: "Målbilde",
-  anskaffelse: "Anskaffelse",
-  kontraktsforhandlinger: "Kontraktsforhandlinger",
-  gjennomforing: "Gjennomføring",
-  evaluering: "Evaluering",
+  as_is: "Nåsituasjon / AS-IS",
+  to_be: "Målbilde / TO-BE",
+  evaluation: "Evaluering",
+  execution: "Gjennomføring",
+  closure: "Avslutt",
 };

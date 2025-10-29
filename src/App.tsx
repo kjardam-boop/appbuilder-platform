@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Modules from "./pages/Modules";
 import Tenants from "./pages/Tenants";
+import CompanyRegistration from "./pages/onboarding/CompanyRegistration";
 import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -64,8 +65,11 @@ const App = () => (
           <AdminShell>
             <Routes>
               <Route path="/" element={<Index />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/supplier/:token" element={<SupplierAuth />} />
+            
+            {/* Onboarding Routes */}
+            <Route path="/onboarding/company" element={<CompanyRegistration />} />
               <Route path="/modules" element={<Modules />} />
               
               {/* Admin Panel (content only; sidebar is global now) */}

@@ -4,29 +4,29 @@ import { CheckCircle2, Circle } from "lucide-react";
 
 const phases = [
   {
-    id: "malbilde",
-    title: "Målbilde, Virksomhetsprosesser & Behov",
-    description: "Definere prosjektmandat, målbilde og virksomhetsprosesser",
+    id: "as_is",
+    title: "Nåsituasjon / AS-IS",
+    description: "Kartlegg eksisterende systemer, prosesser og utfordringer",
   },
   {
-    id: "markedsdialog",
-    title: "Markedsdialog, IItD & Nedvalg",
-    description: "Utarbeide invitasjon til dialog og evaluere leverandører",
+    id: "to_be",
+    title: "Målbilde / TO-BE / Architecture",
+    description: "Definere fremtidig tilstand, arkitektur og kravspesifikasjon",
   },
   {
-    id: "invitasjon",
-    title: "Invitasjon til kontrakt (IIK)",
-    description: "Beskrive kontraktmodell og utvikle tildelingskriterier",
+    id: "evaluation",
+    title: "Evaluering / Scoring / Analyse og valg",
+    description: "Vurdere leverandører, score tilbud og ta beslutning",
   },
   {
-    id: "leverandor",
-    title: "Leverandøroppfølging & forberende evaluering",
-    description: "Dialog med leverandører og forberede evalueringsteamet",
+    id: "execution",
+    title: "Gjennomføre prosjekt",
+    description: "Implementering, testing og utrulling av løsningen",
   },
   {
-    id: "evaluering",
-    title: "Evaluering & Kontraktsforhandling",
-    description: "Gjennomgå og evaluere leverandørsøknader",
+    id: "closure",
+    title: "Avslutt og fakturere prosjekt",
+    description: "Prosjektavslutning, dokumentasjon og fakturering",
   },
 ];
 
@@ -34,7 +34,7 @@ interface ProcessFlowProps {
   currentPhase?: string;
 }
 
-const ProcessFlow = ({ currentPhase = "malbilde" }: ProcessFlowProps) => {
+const ProcessFlow = ({ currentPhase = "as_is" }: ProcessFlowProps) => {
   const currentIndex = phases.findIndex((p) => p.id === currentPhase);
 
   return (
