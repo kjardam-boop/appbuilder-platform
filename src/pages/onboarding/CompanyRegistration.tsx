@@ -25,10 +25,11 @@ export default function CompanyRegistration() {
   });
 
   const handleBrregSearch = async () => {
-    if (!formData.org_number || formData.org_number.length !== 9) {
+    const searchValue = formData.org_number?.trim();
+    if (!searchValue) {
       toast({
-        title: "Ugyldig organisasjonsnummer",
-        description: "Organisasjonsnummer må være 9 siffer",
+        title: "Søkefelt er tomt",
+        description: "Skriv inn organisasjonsnummer eller selskapsnavn",
         variant: "destructive",
       });
       return;
@@ -36,28 +37,37 @@ export default function CompanyRegistration() {
 
     setIsBrregSearching(true);
     try {
-      const { data, error } = await supabase.functions.invoke('brreg-enhanced-lookup', {
-        body: { orgNumber: formData.org_number },
+      // Use brreg-lookup which accepts both org number and company name
+      const { data, error } = await supabase.functions.invoke('brreg-lookup', {
+        body: { query: searchValue },
       });
 
       if (error) throw error;
 
-      if (data) {
+      if (data?.companies && data.companies.length > 0) {
+        const firstResult = data.companies[0];
         setFormData({
           ...formData,
-          name: data.navn || formData.name,
-          website: data.hjemmeside || formData.website,
-          description: data.naeringskode1?.beskrivelse || formData.description,
+          org_number: firstResult.orgNumber || formData.org_number,
+          name: firstResult.name || formData.name,
+          website: firstResult.website || formData.website,
+          description: firstResult.industryDescription || formData.description,
         });
         toast({
           title: "Bedrift funnet",
-          description: "Informasjon hentet fra Brønnøysundregistrene",
+          description: `${firstResult.name} - ${firstResult.orgNumber}`,
+        });
+      } else {
+        toast({
+          title: "Ingen treff",
+          description: "Prøv med et annet søk eller fyll inn manuelt",
+          variant: "destructive",
         });
       }
     } catch (error) {
       console.error('Brreg search error:', error);
       toast({
-        title: "Kunne ikke hente bedriftsinformasjon",
+        title: "Kunne ikke søke i Brønnøysundregistrene",
         description: "Fortsett med manuell registrering",
         variant: "destructive",
       });
@@ -171,14 +181,13 @@ export default function CompanyRegistration() {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Org Number with Brreg Search */}
             <div className="space-y-2">
-              <Label htmlFor="org_number">Organisasjonsnummer (valgfritt)</Label>
+              <Label htmlFor="org_number">Organisasjonsnummer eller selskapsnavn</Label>
               <div className="flex gap-2">
                 <Input
                   id="org_number"
-                  placeholder="123456789"
+                  placeholder="123456789 eller Acme AS"
                   value={formData.org_number}
                   onChange={(e) => setFormData({ ...formData, org_number: e.target.value })}
-                  maxLength={9}
                 />
                 <Button
                   type="button"
