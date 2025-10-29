@@ -46,12 +46,16 @@ export const Header = () => {
               <Link to="/projects" className="text-sm font-medium text-foreground/80 hover:text-foreground transition-smooth">
                 Prosjekter
               </Link>
-              <Link to="/modules" className="text-sm font-medium text-foreground/80 hover:text-foreground transition-smooth">
-                Modules
-              </Link>
-              <Link to="/tenants" className="text-sm font-medium text-foreground/80 hover:text-foreground transition-smooth">
-                Tenants
-              </Link>
+              {isPlatformAdmin && (
+                <>
+                  <Link to="/modules" className="text-sm font-medium text-foreground/80 hover:text-foreground transition-smooth">
+                    Modules
+                  </Link>
+                  <Link to="/tenants" className="text-sm font-medium text-foreground/80 hover:text-foreground transition-smooth">
+                    Tenants
+                  </Link>
+                </>
+              )}
               {isPlatformAdmin && (
                 <Link to="/admin" className="text-sm font-medium text-foreground/80 hover:text-foreground transition-smooth">
                   Admin
