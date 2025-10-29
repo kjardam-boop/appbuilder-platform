@@ -8,7 +8,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Lightbulb, AlertCircle } from "lucide-react";
@@ -18,7 +19,7 @@ interface UnknownTypeDialogProps {
   open: boolean;
   unknownType: string;
   suggestedKnownTypes?: string[];
-  onMapToExisting: (existingType: AppType) => void;
+  onMapToExisting: (existingTypes: AppType[]) => void;
   onCancel: () => void;
 }
 
@@ -29,11 +30,21 @@ export function UnknownTypeDialog({
   onMapToExisting,
   onCancel,
 }: UnknownTypeDialogProps) {
-  const [selectedType, setSelectedType] = useState<AppType | "">("");
+  const [selectedTypes, setSelectedTypes] = useState<Set<AppType>>(new Set());
+
+  const handleToggleType = (type: AppType) => {
+    const newSelected = new Set(selectedTypes);
+    if (newSelected.has(type)) {
+      newSelected.delete(type);
+    } else {
+      newSelected.add(type);
+    }
+    setSelectedTypes(newSelected);
+  };
 
   const handleConfirm = () => {
-    if (selectedType) {
-      onMapToExisting(selectedType as AppType);
+    if (selectedTypes.size > 0) {
+      onMapToExisting(Array.from(selectedTypes));
     }
   };
 
@@ -64,47 +75,62 @@ export function UnknownTypeDialog({
             </AlertDescription>
           </Alert>
 
-          {/* Show AI's suggested matches */}
+          {/* Show AI's suggested matches with checkboxes */}
           {suggestedKnownTypes.length > 0 && (
             <div className="space-y-2">
-              <Label className="text-sm text-muted-foreground">
-                AI foreslår disse eksisterende typene:
+              <Label className="text-sm font-medium">
+                AI foreslår disse typene (velg én eller flere):
               </Label>
-              <div className="flex flex-wrap gap-2">
-                {suggestedKnownTypes.map((type) => (
-                  <Badge
-                    key={type}
-                    variant={selectedType === type ? "default" : "outline"}
-                    className="cursor-pointer"
-                    onClick={() => setSelectedType(type as AppType)}
-                  >
-                    {APP_TYPES[type as AppType]}
-                  </Badge>
-                ))}
+              <div className="space-y-2">
+                {suggestedKnownTypes.map((type) => {
+                  const appType = type as AppType;
+                  return (
+                    <div key={type} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`suggested-${type}`}
+                        checked={selectedTypes.has(appType)}
+                        onCheckedChange={() => handleToggleType(appType)}
+                      />
+                      <Label
+                        htmlFor={`suggested-${type}`}
+                        className="text-sm font-normal cursor-pointer"
+                      >
+                        {APP_TYPES[appType] || type}
+                      </Label>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
 
-          {/* Full dropdown for all types */}
+          {/* Full list with checkboxes for all types */}
           <div className="space-y-2">
-            <Label htmlFor="type-select">
-              Eller velg fra alle tilgjengelige typer:
-            </Label>
-            <Select
-              value={selectedType}
-              onValueChange={(value) => setSelectedType(value as AppType)}
-            >
-              <SelectTrigger id="type-select">
-                <SelectValue placeholder="Velg applikasjonstype" />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(APP_TYPES).map(([key, label]) => (
-                  <SelectItem key={key} value={key}>
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label>Eller velg andre typer:</Label>
+            <ScrollArea className="h-[200px] rounded-md border p-4">
+              <div className="space-y-2">
+                {Object.entries(APP_TYPES)
+                  .filter(([key]) => !suggestedKnownTypes.includes(key))
+                  .map(([key, label]) => {
+                    const appType = key as AppType;
+                    return (
+                      <div key={key} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`other-${key}`}
+                          checked={selectedTypes.has(appType)}
+                          onCheckedChange={() => handleToggleType(appType)}
+                        />
+                        <Label
+                          htmlFor={`other-${key}`}
+                          className="text-sm font-normal cursor-pointer"
+                        >
+                          {label}
+                        </Label>
+                      </div>
+                    );
+                  })}
+              </div>
+            </ScrollArea>
           </div>
 
           {/* Action buttons */}
@@ -112,8 +138,8 @@ export function UnknownTypeDialog({
             <Button variant="outline" onClick={onCancel}>
               Avbryt
             </Button>
-            <Button onClick={handleConfirm} disabled={!selectedType}>
-              Bruk valgt type
+            <Button onClick={handleConfirm} disabled={selectedTypes.size === 0}>
+              Bruk valgte typer ({selectedTypes.size})
             </Button>
           </div>
         </div>

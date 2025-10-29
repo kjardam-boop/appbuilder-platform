@@ -113,17 +113,28 @@ export function ApplicationForm({ initialData, onSubmit, isLoading }: Applicatio
       .replace(/^-|-$/g, "");
     setValue("slug", slug);
 
+    // Show vendor name as info
+    if (generated.vendor_name) {
+      toast.info(`Leverandør: ${generated.vendor_name}. Vennligst velg leverandør fra listen.`);
+    }
+
     toast.success("Applikasjonsinformasjon hentet med AI");
   };
 
-  const handleTypeResolved = (selectedType: AppType) => {
-    if (unknownTypeDialog) {
-      // Use the selected type and populate rest of fields
+  const handleTypeResolved = (selectedTypes: AppType[]) => {
+    if (unknownTypeDialog && selectedTypes.length > 0) {
+      // Use the first selected type as primary
       const generated = unknownTypeDialog.generatedData;
-      generated.app_type = selectedType;
+      generated.app_type = selectedTypes[0];
       populateFormFields(generated);
       setUnknownTypeDialog(null);
-      toast.success(`Applikasjonstype satt til: ${APP_TYPES[selectedType]}`);
+      
+      if (selectedTypes.length === 1) {
+        toast.success(`Applikasjonstype satt til: ${APP_TYPES[selectedTypes[0]]}`);
+      } else {
+        const typeNames = selectedTypes.map(t => APP_TYPES[t]).join(", ");
+        toast.success(`Applikasjonstyper valgt: ${typeNames}. Primærtype: ${APP_TYPES[selectedTypes[0]]}`);
+      }
     }
   };
 
