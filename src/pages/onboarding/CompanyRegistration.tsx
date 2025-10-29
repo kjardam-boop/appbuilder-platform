@@ -36,17 +36,18 @@ export default function CompanyRegistration() {
 
     setIsBrregSearching(true);
     try {
-      const { data, error } = await supabase.functions.invoke('brreg-lookup', {
+      const { data, error } = await supabase.functions.invoke('brreg-enhanced-lookup', {
         body: { orgNumber: formData.org_number },
       });
 
       if (error) throw error;
 
-      if (data?.success && data?.data) {
+      if (data) {
         setFormData({
           ...formData,
-          name: data.data.navn || formData.name,
-          website: data.data.hjemmeside || formData.website,
+          name: data.navn || formData.name,
+          website: data.hjemmeside || formData.website,
+          description: data.naeringskode1?.beskrivelse || formData.description,
         });
         toast({
           title: "Bedrift funnet",
