@@ -15,6 +15,7 @@ import { useAutoSave } from "@/hooks/useAutoSave";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
 import { UnknownTypeDialog } from "./UnknownTypeDialog";
+import { CreateVendorDialog } from "./CreateVendorDialog";
 import type { AppType } from "../types/application.types";
 import { toast } from "sonner";
 import { useAppVendors } from "../hooks/useApplications";
@@ -52,9 +53,13 @@ export function ApplicationForm({ initialData, onSubmit, isLoading }: Applicatio
     suggestedTypes: string[];
     generatedData: any;
   } | null>(null);
+  const [createVendorDialog, setCreateVendorDialog] = useState<{
+    isOpen: boolean;
+    suggestedName: string;
+  } | null>(null);
+  const [customTypeInput, setCustomTypeInput] = useState("");
   const { generate, isGenerating } = useApplicationGeneration();
-  const { data: vendors = [] } = useAppVendors();
-  const [pendingVendorName, setPendingVendorName] = useState<string | null>(null);
+  const { data: vendors = [], refetch: refetchVendors } = useAppVendors();
   
   const form = useForm<ApplicationFormData>({
     resolver: zodResolver(applicationFormSchema),
@@ -139,8 +144,11 @@ export function ApplicationForm({ initialData, onSubmit, isLoading }: Applicatio
         setValue("vendor_id", matchedVendor.id);
         toast.success(`Leverandør automatisk valgt: ${matchedVendor.name}`);
       } else {
-        setPendingVendorName(generated.vendor_name);
-        toast.info(`Leverandør: ${generated.vendor_name}. Vennligst velg leverandør fra listen.`);
+        // Offer to create vendor
+        setCreateVendorDialog({
+          isOpen: true,
+          suggestedName: generated.vendor_name,
+        });
       }
     }
 
@@ -176,6 +184,21 @@ export function ApplicationForm({ initialData, onSubmit, isLoading }: Applicatio
     setValue(field, current.filter(v => v !== value) as any);
   };
 
+  const handleAddCustomType = () => {
+    if (customTypeInput.trim()) {
+      addArrayItem("app_types", customTypeInput.trim());
+      setCustomTypeInput("");
+      toast.success(`Applikasjonstype "${customTypeInput.trim()}" lagt til`);
+    }
+  };
+
+  const handleVendorCreated = async (vendorId: string, vendorName: string) => {
+    setValue("vendor_id", vendorId);
+    setCreateVendorDialog(null);
+    await refetchVendors();
+    toast.success(`Leverandør "${vendorName}" opprettet og valgt`);
+  };
+
   return (
     <>
       {unknownTypeDialog && (
@@ -185,6 +208,15 @@ export function ApplicationForm({ initialData, onSubmit, isLoading }: Applicatio
           suggestedKnownTypes={unknownTypeDialog.suggestedTypes}
           onMapToExisting={handleTypeResolved}
           onCancel={() => setUnknownTypeDialog(null)}
+        />
+      )}
+
+      {createVendorDialog && (
+        <CreateVendorDialog
+          open={createVendorDialog.isOpen}
+          suggestedName={createVendorDialog.suggestedName}
+          onCreated={handleVendorCreated}
+          onCancel={() => setCreateVendorDialog(null)}
         />
       )}
 
@@ -293,6 +325,43 @@ export function ApplicationForm({ initialData, onSubmit, isLoading }: Applicatio
                 </Badge>
               ))}
             </div>
+            
+            {/* Selected custom types */}
+            {(watch("app_types") || []).filter(type => !APP_TYPES[type as AppType]).length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {(watch("app_types") || [])
+                  .filter(type => !APP_TYPES[type as AppType])
+                  .map((type) => (
+                    <Badge
+                      key={type}
+                      variant="default"
+                      className="cursor-pointer"
+                      onClick={() => removeArrayItem("app_types", type)}
+                    >
+                      {type} ✕
+                    </Badge>
+                  ))}
+              </div>
+            )}
+
+            {/* Custom type input */}
+            <div className="flex gap-2 mt-2">
+              <Input
+                placeholder="Skriv egen type og trykk Enter..."
+                value={customTypeInput}
+                onChange={(e) => setCustomTypeInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddCustomType();
+                  }
+                }}
+              />
+              <Button type="button" onClick={handleAddCustomType} variant="outline" size="sm">
+                Legg til
+              </Button>
+            </div>
+
             {errors.app_types && (
               <p className="text-sm text-destructive mt-1">{errors.app_types.message}</p>
             )}
