@@ -7,6 +7,7 @@ export interface GeneratedApplicationData {
   product_name: string;
   short_name?: string;
   app_type: string;
+  suggested_known_types?: string[];
   deployment_models?: string[];
   market_segments?: string[];
   description?: string;
@@ -17,6 +18,7 @@ export interface GeneratedApplicationData {
 
 interface GenerationResponse {
   data: GeneratedApplicationData;
+  unknownTypes?: string[];
   websiteFetched: boolean;
   websiteUrl: string;
 }
@@ -30,7 +32,7 @@ export const useApplicationGeneration = (options: UseApplicationGenerationOption
   const [isGenerating, setIsGenerating] = useState(false);
   const [lastGenerated, setLastGenerated] = useState<GeneratedApplicationData | null>(null);
 
-  const generate = useCallback(async (websiteUrl: string): Promise<GeneratedApplicationData | null> => {
+  const generate = useCallback(async (websiteUrl: string): Promise<GenerationResponse | null> => {
     if (!websiteUrl.trim() || isGenerating) return null;
 
     setIsGenerating(true);
@@ -59,13 +61,9 @@ export const useApplicationGeneration = (options: UseApplicationGenerationOption
         options.onSuccess(data.data);
       }
 
-      toast.success(
-        data.websiteFetched 
-          ? 'Applikasjonsinformasjon hentet fra nettside'
-          : 'Applikasjonsinformasjon generert basert på URL'
-      );
-
-      return data.data;
+      // Don't show toast here - let the caller handle it based on unknownTypes
+      
+      return data;
     } catch (error) {
       console.error('Application generation error:', error);
       

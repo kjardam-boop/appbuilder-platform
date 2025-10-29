@@ -56,7 +56,8 @@ serve(async (req) => {
       }
     } catch (error) {
       console.error('Website fetch error:', error);
-      websiteContent = `Kunne ikke hente innhold fra ${normalizedUrl}. Feil: ${error.message}`;
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      websiteContent = `Kunne ikke hente innhold fra ${normalizedUrl}. Feil: ${errorMsg}`;
     }
 
     // Call Lovable AI Gateway
@@ -66,7 +67,7 @@ serve(async (req) => {
     }
 
     const prompt = websiteFetched
-      ? `Analyser følgende nettside og ekstraher informasjon om applikasjonen/systemet:\n\n${websiteContent}\n\nNettside-URL: ${normalizedUrl}\n\nEkstraher følgende informasjon:\n- Leverandør (vendor): Bedriftens navn\n- Produktnavn (product name): Navnet på applikasjonen/systemet\n- Kort navn (short name): En kortversjon av produktnavnet (maks 20 tegn)\n- App-type: Velg én av følgende: ERP, CRM, EmailSuite, HRPayroll, BI, iPaaS, CMS, eCommerce, WMS, TMS, PLM, MES, ITSM, IAM, RPA, ProjectMgmt, ServiceMgmt\n- Deployment modeller: Velg fra SaaS, OnPrem, Hybrid (kan være flere)\n- Markedssegmenter: Velg fra SMB, Midmarket, Enterprise (kan være flere)\n- Beskrivelse: En kort, profesjonell beskrivelse av systemet (2-3 setninger)\n- Moduler: Liste over hovedmodulene/funksjonene systemet tilbyr\n- Lokaliseringer: Land/regioner systemet støtter (f.eks. Norge, Sverige, Danmark)\n- Bransjer: Hvilke industrier/bransjer systemet er målrettet mot`
+      ? `Analyser følgende nettside og ekstraher informasjon om applikasjonen/systemet:\n\n${websiteContent}\n\nNettside-URL: ${normalizedUrl}\n\nEkstraher følgende informasjon:\n- Leverandør (vendor): Bedriftens navn\n- Produktnavn (product name): Navnet på applikasjonen/systemet\n- Kort navn (short name): En kortversjon av produktnavnet (maks 20 tegn)\n- App-type: Beskriv applikasjonens type. Bruk helst én av disse kategoriene hvis den passer: ERP, CRM, EmailSuite, HRPayroll, BI, iPaaS, CMS, eCommerce, WMS, TMS, PLM, MES, ITSM, IAM, RPA, ProjectMgmt, ServiceMgmt. Hvis ingen passer perfekt, oppgi en beskrivende type.\n- Foreslåtte kjente typer: Hvilke av de standardiserte typene (ERP, CRM, etc.) er nærmest? Oppgi 1-3 forslag.\n- Deployment modeller: Velg fra SaaS, OnPrem, Hybrid (kan være flere)\n- Markedssegmenter: Velg fra SMB, Midmarket, Enterprise (kan være flere)\n- Beskrivelse: En kort, profesjonell beskrivelse av systemet (2-3 setninger)\n- Moduler: Liste over hovedmodulene/funksjonene systemet tilbyr\n- Lokaliseringer: Land/regioner systemet støtter (f.eks. Norge, Sverige, Danmark)\n- Bransjer: Hvilke industrier/bransjer systemet er målrettet mot`
       : `Jeg har kun URL-en: ${normalizedUrl}
       
 Gjør ditt beste for å ekstrahere informasjon basert på domenenavnet og dine kunnskaper.
@@ -104,8 +105,12 @@ Ekstraher samme informasjon som over.`;
                   short_name: { type: 'string', description: 'Kort produktnavn (maks 20 tegn)' },
                   app_type: { 
                     type: 'string', 
-                    enum: ['ERP', 'CRM', 'EmailSuite', 'HRPayroll', 'BI', 'iPaaS', 'CMS', 'eCommerce', 'WMS', 'TMS', 'PLM', 'MES', 'ITSM', 'IAM', 'RPA', 'ProjectMgmt', 'ServiceMgmt'],
-                    description: 'Type applikasjon'
+                    description: 'Type applikasjon. Bruk standardiserte typer hvis mulig: ERP, CRM, EmailSuite, HRPayroll, BI, iPaaS, CMS, eCommerce, WMS, TMS, PLM, MES, ITSM, IAM, RPA, ProjectMgmt, ServiceMgmt. Hvis ingen passer, bruk en beskrivende tekst.'
+                  },
+                  suggested_known_types: {
+                    type: 'array',
+                    items: { type: 'string', enum: ['ERP', 'CRM', 'EmailSuite', 'HRPayroll', 'BI', 'iPaaS', 'CMS', 'eCommerce', 'WMS', 'TMS', 'PLM', 'MES', 'ITSM', 'IAM', 'RPA', 'ProjectMgmt', 'ServiceMgmt'] },
+                    description: 'Liste over 1-3 standardiserte typer som ligner mest på app_type'
                   },
                   deployment_models: {
                     type: 'array',
@@ -162,9 +167,19 @@ Ekstraher samme informasjon som over.`;
     const extractedData = JSON.parse(toolCall.function.arguments);
     console.log('Extracted data:', extractedData);
 
+    // Check if app_type is unknown
+    const knownTypes = ['ERP', 'CRM', 'EmailSuite', 'HRPayroll', 'BI', 'iPaaS', 'CMS', 'eCommerce', 'WMS', 'TMS', 'PLM', 'MES', 'ITSM', 'IAM', 'RPA', 'ProjectMgmt', 'ServiceMgmt'];
+    const unknownTypes: string[] = [];
+    
+    if (extractedData.app_type && !knownTypes.includes(extractedData.app_type)) {
+      unknownTypes.push(extractedData.app_type);
+      console.log('Unknown app_type detected:', extractedData.app_type);
+    }
+
     return new Response(
       JSON.stringify({
         data: extractedData,
+        unknownTypes,
         websiteFetched,
         websiteUrl: normalizedUrl
       }),

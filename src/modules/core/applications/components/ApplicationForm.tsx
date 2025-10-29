@@ -14,6 +14,9 @@ import { APP_TYPES, DEPLOYMENT_MODELS, MARKET_SEGMENTS } from "../types/applicat
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
+import { UnknownTypeDialog } from "./UnknownTypeDialog";
+import type { AppType } from "../types/application.types";
+import { toast } from "sonner";
 
 const applicationFormSchema = z.object({
   website: z.string().url("Ugyldig URL").optional().or(z.literal("")),
@@ -41,6 +44,12 @@ interface ApplicationFormProps {
 
 export function ApplicationForm({ initialData, onSubmit, isLoading }: ApplicationFormProps) {
   const [websiteUrl, setWebsiteUrl] = useState(initialData?.website || "");
+  const [unknownTypeDialog, setUnknownTypeDialog] = useState<{
+    isOpen: boolean;
+    unknownType: string;
+    suggestedTypes: string[];
+    generatedData: any;
+  } | null>(null);
   const { generate, isGenerating } = useApplicationGeneration();
   
   const form = useForm<ApplicationFormData>({
@@ -63,25 +72,58 @@ export function ApplicationForm({ initialData, onSubmit, isLoading }: Applicatio
       return;
     }
 
-    const generated = await generate(websiteUrl);
-    if (generated) {
-      // Populate form with AI-generated data
-      if (generated.product_name) setValue("name", generated.product_name);
-      if (generated.short_name) setValue("short_name", generated.short_name);
-      if (generated.app_type) setValue("app_type", generated.app_type);
-      if (generated.deployment_models?.length) setValue("deployment_models", generated.deployment_models);
-      if (generated.market_segments?.length) setValue("market_segments", generated.market_segments);
-      if (generated.description) setValue("description", generated.description);
-      if (generated.modules_supported?.length) setValue("modules_supported", generated.modules_supported);
-      if (generated.localizations?.length) setValue("localizations", generated.localizations);
-      if (generated.target_industries?.length) setValue("target_industries", generated.target_industries);
-      
-      // Auto-generate slug from name
-      const slug = generated.product_name
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-|-$/g, "");
-      setValue("slug", slug);
+    const result = await generate(websiteUrl);
+    if (!result) return;
+
+    // Check for generated response structure
+    const response = result as any;
+    const generated = response.data || result;
+    const unknownTypes = response.unknownTypes || [];
+
+    // If unknown types detected, show dialog
+    if (unknownTypes.length > 0) {
+      setUnknownTypeDialog({
+        isOpen: true,
+        unknownType: unknownTypes[0],
+        suggestedTypes: generated.suggested_known_types || [],
+        generatedData: generated,
+      });
+      return;
+    }
+
+    // No unknown types, populate directly
+    populateFormFields(generated);
+  };
+
+  const populateFormFields = (generated: any) => {
+    if (generated.product_name) setValue("name", generated.product_name);
+    if (generated.short_name) setValue("short_name", generated.short_name);
+    if (generated.app_type) setValue("app_type", generated.app_type);
+    if (generated.deployment_models?.length) setValue("deployment_models", generated.deployment_models);
+    if (generated.market_segments?.length) setValue("market_segments", generated.market_segments);
+    if (generated.description) setValue("description", generated.description);
+    if (generated.modules_supported?.length) setValue("modules_supported", generated.modules_supported);
+    if (generated.localizations?.length) setValue("localizations", generated.localizations);
+    if (generated.target_industries?.length) setValue("target_industries", generated.target_industries);
+    
+    // Auto-generate slug from name
+    const slug = generated.product_name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+    setValue("slug", slug);
+
+    toast.success("Applikasjonsinformasjon hentet med AI");
+  };
+
+  const handleTypeResolved = (selectedType: AppType) => {
+    if (unknownTypeDialog) {
+      // Use the selected type and populate rest of fields
+      const generated = unknownTypeDialog.generatedData;
+      generated.app_type = selectedType;
+      populateFormFields(generated);
+      setUnknownTypeDialog(null);
+      toast.success(`Applikasjonstype satt til: ${APP_TYPES[selectedType]}`);
     }
   };
 
@@ -98,7 +140,18 @@ export function ApplicationForm({ initialData, onSubmit, isLoading }: Applicatio
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <>
+      {unknownTypeDialog && (
+        <UnknownTypeDialog
+          open={unknownTypeDialog.isOpen}
+          unknownType={unknownTypeDialog.unknownType}
+          suggestedKnownTypes={unknownTypeDialog.suggestedTypes}
+          onMapToExisting={handleTypeResolved}
+          onCancel={() => setUnknownTypeDialog(null)}
+        />
+      )}
+
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       {/* Website URL + AI Generation */}
       <Card>
         <CardHeader>
@@ -296,6 +349,7 @@ export function ApplicationForm({ initialData, onSubmit, isLoading }: Applicatio
           )}
         </Button>
       </div>
-    </form>
+      </form>
+    </>
   );
 }

@@ -85,6 +85,7 @@ export { AppVendorSelector } from "./components/AppVendorSelector";
 export { SKUManager } from "./components/SKUManager";
 export { CompanyAppsList } from "./components/CompanyAppsList";
 export { ApplicationForm } from "./components/ApplicationForm";
+export { UnknownTypeDialog } from "./components/UnknownTypeDialog";
 
 // Module metadata
 export const APPLICATIONS_MODULE = {
