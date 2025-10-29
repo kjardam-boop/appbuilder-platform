@@ -77,12 +77,14 @@ export {
 
 export { useSKUs, useCreateSKU, useDeleteSKU } from "./hooks/useSKUs";
 export { useCompanyApps, useCreateCompanyApp, useDeleteCompanyApp } from "./hooks/useCompanyApps";
+export { useApplicationGeneration } from "./hooks/useApplicationGeneration";
 
 // Components
 export { AppProductCard } from "./components/AppProductCard";
 export { AppVendorSelector } from "./components/AppVendorSelector";
 export { SKUManager } from "./components/SKUManager";
 export { CompanyAppsList } from "./components/CompanyAppsList";
+export { ApplicationForm } from "./components/ApplicationForm";
 
 // Module metadata
 export const APPLICATIONS_MODULE = {

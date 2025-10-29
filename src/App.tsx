@@ -15,6 +15,7 @@ import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
 import AppAdminSidebar from "@/components/admin/AppAdminSidebar";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminBootstrap from "./pages/admin/AdminBootstrap";
+import ApplicationCreate from "./pages/admin/ApplicationCreate";
 import UserManagement from "./pages/UserManagement";
 import AdminSettings from "./pages/AdminSettings";
 import AdminQuestions from "./pages/AdminQuestions";
@@ -76,6 +77,7 @@ const App = () => (
                 <Route path="settings" element={<AdminSettings />} />
                 <Route path="industries" element={<IndustryAdmin />} />
                 <Route path="applications" element={<ApplicationsPage />} />
+                <Route path="applications/new" element={<ApplicationCreate />} />
                 <Route path="database" element={<AdminSeed />} />
                 <Route path="integrations" element={<AdminSettings />} />
                 <Route path="security" element={<AdminSettings />} />

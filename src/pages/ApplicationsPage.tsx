@@ -2,9 +2,10 @@ import { useState } from "react";
 import { useAppProducts, APP_TYPES } from "@/modules/core/applications";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
-import { Database, Search, Server, Building2 } from "lucide-react";
+import { Database, Search, Server, Building2, Plus } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -36,6 +37,12 @@ export default function ApplicationsPage() {
             Oversikt over forretningssystemer og applikasjoner
           </p>
         </div>
+        <Button asChild>
+          <Link to="/admin/applications/new">
+            <Plus className="mr-2 h-4 w-4" />
+            Legg til ny applikasjon
+          </Link>
+        </Button>
       </div>
 
       <Card>
