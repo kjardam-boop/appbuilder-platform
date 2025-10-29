@@ -116,7 +116,7 @@ export default function ApplicationsPage() {
                     <div className="flex flex-wrap gap-1">
                       {product.app_types.map((type) => (
                         <Badge key={type} variant="outline" className="text-xs">
-                          {APP_TYPES[type]}
+                          {APP_TYPES[type as any] || type}
                         </Badge>
                       ))}
                     </div>

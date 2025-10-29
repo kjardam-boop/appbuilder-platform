@@ -22,7 +22,7 @@ export interface AppProduct extends BaseEntity {
   short_name: string | null;
   slug: string;
   vendor_id: string;
-  app_types: AppType[];
+  app_types: string[];
   deployment_models: DeploymentModel[];
   target_industries: string[] | null;
   market_segments: MarketSegment[] | null;

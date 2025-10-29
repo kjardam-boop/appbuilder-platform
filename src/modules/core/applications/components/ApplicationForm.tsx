@@ -18,6 +18,7 @@ import { UnknownTypeDialog } from "./UnknownTypeDialog";
 import type { AppType } from "../types/application.types";
 import { toast } from "sonner";
 import { useAppVendors } from "../hooks/useApplications";
+import { supabase } from "@/integrations/supabase/client";
 
 const applicationFormSchema = z.object({
   website: z.string().url("Ugyldig URL").optional().or(z.literal("")),

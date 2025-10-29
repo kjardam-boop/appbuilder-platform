@@ -44,7 +44,7 @@ export class ApplicationService {
     }
 
     if (filters?.appType) {
-      query = query.eq("app_type", filters.appType);
+      query = query.contains("app_types", [filters.appType]);
     }
 
     if (filters?.status) {
