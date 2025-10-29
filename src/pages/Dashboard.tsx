@@ -1,7 +1,7 @@
 import Header from "@/components/Dashboard/Header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Building2, Database, AlertCircle } from "lucide-react";
+import { Building2, Database, AlertCircle, Briefcase } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { useAuth } from "@/modules/core/user/hooks/useAuth";
@@ -44,6 +44,23 @@ const Dashboard = () => {
         </Card>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <Card className="shadow-card">
+            <CardHeader>
+              <div className="h-12 w-12 rounded-lg bg-gradient-primary flex items-center justify-center mb-4">
+                <Briefcase className="h-6 w-6 text-primary-foreground" />
+              </div>
+              <CardTitle>Prosjekter</CardTitle>
+              <CardDescription>
+                Oversikt over alle dine anskaffelsesprosjekter
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button variant="outline" className="w-full" asChild>
+                <Link to="/projects">Gå til prosjekter</Link>
+              </Button>
+            </CardContent>
+          </Card>
+
           <Card className="shadow-card">
             <CardHeader>
               <div className="h-12 w-12 rounded-lg bg-gradient-primary flex items-center justify-center mb-4">
