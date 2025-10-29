@@ -231,7 +231,7 @@ export default function AppProductDetails() {
               </CardHeader>
               <CardContent>
                 <Link 
-                  to={`/company/${product.vendor.company_id}`}
+                  to={`/companies/${product.vendor.company_id}`}
                   className="text-lg font-medium hover:underline"
                 >
                   {product.vendor.name}
