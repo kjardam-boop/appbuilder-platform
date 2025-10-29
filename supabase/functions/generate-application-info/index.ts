@@ -103,14 +103,18 @@ Ekstraher samme informasjon som over.`;
                   vendor_name: { type: 'string', description: 'Leverandørens navn' },
                   product_name: { type: 'string', description: 'Produktets fulle navn' },
                   short_name: { type: 'string', description: 'Kort produktnavn (maks 20 tegn)' },
-                  app_type: { 
-                    type: 'string', 
-                    description: 'Type applikasjon. Bruk standardiserte typer hvis mulig: ERP, CRM, EmailSuite, HRPayroll, BI, iPaaS, CMS, eCommerce, WMS, TMS, PLM, MES, ITSM, IAM, RPA, ProjectMgmt, ServiceMgmt. Hvis ingen passer, bruk en beskrivende tekst.'
+                  app_types: { 
+                    type: 'array',
+                    items: {
+                      type: 'string',
+                      enum: ['ERP', 'CRM', 'EmailSuite', 'HRPayroll', 'BI', 'iPaaS', 'CMS', 'eCommerce', 'WMS', 'TMS', 'PLM', 'MES', 'ITSM', 'IAM', 'RPA', 'ProjectMgmt', 'ServiceMgmt']
+                    },
+                    description: 'Applikasjonstyper - velg én eller flere som passer'
                   },
                   suggested_known_types: {
                     type: 'array',
                     items: { type: 'string', enum: ['ERP', 'CRM', 'EmailSuite', 'HRPayroll', 'BI', 'iPaaS', 'CMS', 'eCommerce', 'WMS', 'TMS', 'PLM', 'MES', 'ITSM', 'IAM', 'RPA', 'ProjectMgmt', 'ServiceMgmt'] },
-                    description: 'Liste over 1-3 standardiserte typer som ligner mest på app_type'
+                    description: 'Hvis du er usikker, list 1-3 alternative standardiserte typer'
                   },
                   deployment_models: {
                     type: 'array',
@@ -139,7 +143,7 @@ Ekstraher samme informasjon som over.`;
                     description: 'Målrettede bransjer'
                   }
                 },
-                required: ['vendor_name', 'product_name', 'app_type'],
+                required: ['vendor_name', 'product_name', 'app_types'],
                 additionalProperties: false
               }
             }
@@ -167,13 +171,15 @@ Ekstraher samme informasjon som over.`;
     const extractedData = JSON.parse(toolCall.function.arguments);
     console.log('Extracted data:', extractedData);
 
-    // Check if app_type is unknown
+    // Check if app_types are unknown
     const knownTypes = ['ERP', 'CRM', 'EmailSuite', 'HRPayroll', 'BI', 'iPaaS', 'CMS', 'eCommerce', 'WMS', 'TMS', 'PLM', 'MES', 'ITSM', 'IAM', 'RPA', 'ProjectMgmt', 'ServiceMgmt'];
     const unknownTypes: string[] = [];
+    const appTypes = extractedData.app_types || [];
     
-    if (extractedData.app_type && !knownTypes.includes(extractedData.app_type)) {
-      unknownTypes.push(extractedData.app_type);
-      console.log('Unknown app_type detected:', extractedData.app_type);
+    for (const type of appTypes) {
+      if (!knownTypes.includes(type)) {
+        unknownTypes.push(type);
+      }
     }
 
     return new Response(

@@ -25,7 +25,7 @@ const applicationFormSchema = z.object({
   name: z.string().min(2, "Navn må være minst 2 tegn").max(255),
   short_name: z.string().max(50, "Kort navn kan ikke være lengre enn 50 tegn").optional(),
   slug: z.string().min(2).max(255),
-  app_type: z.string().min(1, "Velg applikasjonstype"),
+  app_types: z.array(z.string()).min(1, "Velg minst én applikasjonstype"),
   deployment_models: z.array(z.string()).min(1, "Velg minst én deployment modell"),
   market_segments: z.array(z.string()).optional(),
   target_industries: z.array(z.string()).optional(),
@@ -59,6 +59,7 @@ export function ApplicationForm({ initialData, onSubmit, isLoading }: Applicatio
     resolver: zodResolver(applicationFormSchema),
     defaultValues: {
       status: "Active",
+      app_types: [],
       deployment_models: [],
       market_segments: [],
       target_industries: [],
@@ -101,7 +102,14 @@ export function ApplicationForm({ initialData, onSubmit, isLoading }: Applicatio
   const populateFormFields = (generated: any) => {
     if (generated.product_name) setValue("name", generated.product_name);
     if (generated.short_name) setValue("short_name", generated.short_name);
-    if (generated.app_type) setValue("app_type", generated.app_type);
+    
+    // Handle app_types as array
+    if (generated.app_type) {
+      setValue("app_types", [generated.app_type]);
+    } else if (generated.app_types?.length) {
+      setValue("app_types", generated.app_types);
+    }
+    
     if (generated.deployment_models?.length) setValue("deployment_models", generated.deployment_models);
     if (generated.market_segments?.length) setValue("market_segments", generated.market_segments);
     if (generated.description) setValue("description", generated.description);
@@ -110,15 +118,29 @@ export function ApplicationForm({ initialData, onSubmit, isLoading }: Applicatio
     if (generated.target_industries?.length) setValue("target_industries", generated.target_industries);
     
     // Auto-generate slug from name
-    const slug = generated.product_name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "");
-    setValue("slug", slug);
+    if (generated.product_name) {
+      const slug = generated.product_name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "");
+      setValue("slug", slug);
+    }
 
-    // Show vendor name as info
-    if (generated.vendor_name) {
-      toast.info(`Leverandør: ${generated.vendor_name}. Vennligst velg leverandør fra listen.`);
+    // Auto-match vendor by name (fuzzy match)
+    if (generated.vendor_name && vendors.length > 0) {
+      const vendorName = generated.vendor_name.toLowerCase().trim();
+      const matchedVendor = vendors.find(v => 
+        v.name.toLowerCase().includes(vendorName) || 
+        vendorName.includes(v.name.toLowerCase())
+      );
+      
+      if (matchedVendor) {
+        setValue("vendor_id", matchedVendor.id);
+        toast.success(`Leverandør automatisk valgt: ${matchedVendor.name}`);
+      } else {
+        setPendingVendorName(generated.vendor_name);
+        toast.info(`Leverandør: ${generated.vendor_name}. Vennligst velg leverandør fra listen.`);
+      }
     }
 
     toast.success("Applikasjonsinformasjon hentet med AI");
@@ -126,9 +148,9 @@ export function ApplicationForm({ initialData, onSubmit, isLoading }: Applicatio
 
   const handleTypeResolved = (selectedTypes: AppType[]) => {
     if (unknownTypeDialog && selectedTypes.length > 0) {
-      // Use the first selected type as primary
       const generated = unknownTypeDialog.generatedData;
-      generated.app_type = selectedTypes[0];
+      // Set all selected types
+      generated.app_types = selectedTypes;
       populateFormFields(generated);
       setUnknownTypeDialog(null);
       
@@ -136,7 +158,7 @@ export function ApplicationForm({ initialData, onSubmit, isLoading }: Applicatio
         toast.success(`Applikasjonstype satt til: ${APP_TYPES[selectedTypes[0]]}`);
       } else {
         const typeNames = selectedTypes.map(t => APP_TYPES[t]).join(", ");
-        toast.success(`Applikasjonstyper valgt: ${typeNames}. Primærtype: ${APP_TYPES[selectedTypes[0]]}`);
+        toast.success(`Applikasjonstyper valgt: ${typeNames}`);
       }
     }
   };
@@ -250,21 +272,28 @@ export function ApplicationForm({ initialData, onSubmit, isLoading }: Applicatio
           </div>
 
           <div>
-            <Label htmlFor="app_type">Applikasjonstype *</Label>
-            <Select value={watch("app_type")} onValueChange={(value) => setValue("app_type", value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Velg type" />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(APP_TYPES).map(([key, label]) => (
-                  <SelectItem key={key} value={key}>
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.app_type && (
-              <p className="text-sm text-destructive mt-1">{errors.app_type.message}</p>
+            <Label>Applikasjonstyper * (velg én eller flere)</Label>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {Object.entries(APP_TYPES).map(([key, label]) => (
+                <Badge
+                  key={key}
+                  variant={(watch("app_types") || []).includes(key) ? "default" : "outline"}
+                  className="cursor-pointer"
+                  onClick={() => {
+                    const current = watch("app_types") || [];
+                    if (current.includes(key)) {
+                      removeArrayItem("app_types", key);
+                    } else {
+                      addArrayItem("app_types", key);
+                    }
+                  }}
+                >
+                  {label}
+                </Badge>
+              ))}
+            </div>
+            {errors.app_types && (
+              <p className="text-sm text-destructive mt-1">{errors.app_types.message}</p>
             )}
           </div>
 

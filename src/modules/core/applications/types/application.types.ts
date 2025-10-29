@@ -22,7 +22,7 @@ export interface AppProduct extends BaseEntity {
   short_name: string | null;
   slug: string;
   vendor_id: string;
-  app_type: AppType;
+  app_types: AppType[];
   deployment_models: DeploymentModel[];
   target_industries: string[] | null;
   market_segments: MarketSegment[] | null;
@@ -105,7 +105,7 @@ export const appProductSchema = z.object({
   short_name: z.string().max(50).optional().or(z.literal("")),
   slug: z.string().min(1, "Slug er påkrevd").regex(/^[a-z0-9-]+$/, "Slug må være kebab-case"),
   vendor_id: z.string().uuid("Ugyldig leverandør-ID"),
-  app_type: z.enum(["ERP", "CRM", "EmailSuite", "HRPayroll", "BI", "iPaaS", "CMS", "eCommerce", "WMS", "TMS", "PLM", "MES", "ITSM", "IAM", "RPA", "ProjectMgmt", "ServiceMgmt"]),
+  app_types: z.array(z.enum(["ERP", "CRM", "EmailSuite", "HRPayroll", "BI", "iPaaS", "CMS", "eCommerce", "WMS", "TMS", "PLM", "MES", "ITSM", "IAM", "RPA", "ProjectMgmt", "ServiceMgmt"])).min(1, "Minst én applikasjonstype er påkrevd"),
   deployment_models: z.array(z.enum(["SaaS", "Hosted", "On-premises", "Hybrid"])).min(1, "Minst én deployment-modell er påkrevd"),
   target_industries: z.array(z.string()).optional(),
   market_segments: z.array(z.enum(["SMB", "Midmarket", "Enterprise"])).optional(),

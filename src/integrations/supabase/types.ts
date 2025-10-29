@@ -57,7 +57,7 @@ export type Database = {
       }
       app_products: {
         Row: {
-          app_type: string
+          app_types: string[] | null
           compliances: string[] | null
           created_at: string
           deployment_models: string[]
@@ -77,7 +77,7 @@ export type Database = {
           website: string | null
         }
         Insert: {
-          app_type: string
+          app_types?: string[] | null
           compliances?: string[] | null
           created_at?: string
           deployment_models?: string[]
@@ -97,7 +97,7 @@ export type Database = {
           website?: string | null
         }
         Update: {
-          app_type?: string
+          app_types?: string[] | null
           compliances?: string[] | null
           created_at?: string
           deployment_models?: string[]

@@ -32,9 +32,15 @@ export const AppProductCard = ({ product }: AppProductCardProps) => {
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
-          <Badge variant="outline" className="text-xs">
-            {APP_TYPES[product.app_type]}
-          </Badge>
+          {product.app_types && product.app_types.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {product.app_types.map((type) => (
+                <Badge key={type} variant="outline" className="text-xs">
+                  {APP_TYPES[type]}
+                </Badge>
+              ))}
+            </div>
+          )}
           
           {product.vendor && (
             <div className="flex items-center gap-2 text-sm">
