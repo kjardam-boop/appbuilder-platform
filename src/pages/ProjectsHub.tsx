@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Briefcase, CheckSquare, Clock } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Header } from "@/components/layout/Header";
 
 export default function ProjectsHub() {
   const navigate = useNavigate();
@@ -18,17 +19,22 @@ export default function ProjectsHub() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6 space-y-6">
-        <Skeleton className="h-12 w-64" />
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3].map(i => <Skeleton key={i} className="h-48" />)}
+      <>
+        <Header />
+        <div className="container mx-auto p-6 space-y-6">
+          <Skeleton className="h-12 w-64" />
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3].map(i => <Skeleton key={i} className="h-48" />)}
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <>
+      <Header />
+      <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Prosjekter</h1>
@@ -102,7 +108,7 @@ export default function ProjectsHub() {
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="space-y-1">
-                      <CardTitle className="text-lg">{project.title}</CardTitle>
+                      <CardTitle className="text-lg">{project.name}</CardTitle>
                       <CardDescription className="line-clamp-2">
                         {project.description || "Ingen beskrivelse"}
                       </CardDescription>
@@ -121,5 +127,6 @@ export default function ProjectsHub() {
         )}
       </div>
     </div>
+    </>
   );
 }

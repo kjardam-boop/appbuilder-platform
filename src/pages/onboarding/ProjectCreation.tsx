@@ -80,8 +80,8 @@ export default function ProjectCreation() {
         description: "Velkommen til din plattform. Du er nå klar til å starte.",
       });
 
-      // Redirect to project details or dashboard
-      navigate(`/projects/${project.id}`);
+      // Redirect to projects overview
+      navigate('/projects');
     } catch (error) {
       console.error('Project creation error:', error);
       toast({

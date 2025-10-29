@@ -36,7 +36,7 @@ export class ProjectService {
     const { data, error } = await db
       .from('projects')
       .select('*')
-      .eq('created_by', userId)
+      .eq('owner_id', userId)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -54,12 +54,12 @@ export class ProjectService {
     const { data, error } = await db
       .from('projects')
       .insert({
-        title,
+        name: title,
         description,
         company_id: companyId,
-        created_by: userId,
         owner_id: userId,
-        current_phase: 'malbilde',
+        current_phase: 'as_is',
+        status: 'active',
       })
       .select()
       .single();
@@ -72,7 +72,7 @@ export class ProjectService {
     const { eventBus, PROJECT_EVENTS } = await import("@/shared/events");
     await eventBus.emit(PROJECT_EVENTS.CREATED, {
       projectId: project.id,
-      projectName: project.title,
+      projectName: project.name,
       companyId: project.company_id || "",
       createdBy: userId,
       createdAt: project.created_at,
