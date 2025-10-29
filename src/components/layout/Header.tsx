@@ -77,7 +77,7 @@ export const Header = () => {
                   Sign Out
                 </>
               ) : (
-                "Get Started"
+                "Log inn/registrer"
               )}
             </Button>
           </div>
