@@ -79,7 +79,7 @@ export class UserService {
       const userRoles = rolesByUser.get(userId)!;
       
       (record.roles || []).forEach((role: string) => {
-        if (role === 'platform_owner' || role === 'tenant_admin') {
+        if (role === 'platform_owner' || role === 'tenant_admin' || role === 'tenant_owner') {
           userRoles.add('admin');
         } else if (
           role === 'platform_support' || 
@@ -129,7 +129,7 @@ export class UserService {
     const mappedRoles = new Set<UserRole>();
     
     allRoles.forEach(role => {
-      if (role === 'platform_owner' || role === 'tenant_admin') {
+      if (role === 'platform_owner' || role === 'tenant_admin' || role === 'tenant_owner') {
         mappedRoles.add('admin');
       } else if (
         role === 'platform_support' || 
@@ -168,7 +168,7 @@ export class UserService {
   }
 
   /**
-   * Add role to user on default tenant (admin only)
+   * Add role to user on current admin's tenant
    * Maps UserRole to app_role and updates tenant_users
    */
   static async addRole(userId: string, role: UserRole): Promise<void> {
@@ -182,22 +182,48 @@ export class UserService {
       appRoles.push('contributor');
     }
 
-    // Get default tenant
-    const { data: tenant, error: tenantError } = await supabase
-      .from('tenants')
-      .select('id')
-      .eq('slug', 'default')
-      .maybeSingle();
+    // Determine acting admin's tenant_id
+    const { data: authData } = await supabase.auth.getUser();
+    const actingUserId = authData.user?.id;
+    if (!actingUserId) throw new Error('Not authenticated');
 
-    if (tenantError) throw tenantError;
-    if (!tenant) throw new Error('Default tenant not found');
+    const { data: myMemberships, error: membershipsError } = await supabase
+      .from('tenant_users')
+      .select('tenant_id, roles')
+      .eq('user_id', actingUserId)
+      .eq('is_active', true);
 
-    // Check existing membership
+    if (membershipsError) throw membershipsError;
+    let adminMembership = (myMemberships || []).find(m => (m.roles || []).some((r: string) => r === 'tenant_admin' || r === 'tenant_owner'))
+      || (myMemberships || [])[0];
+
+    // If no membership found, try default tenant, then any tenant
+    let tenantId: string | undefined = adminMembership?.tenant_id;
+    if (!tenantId) {
+      const { data: defaultTenant } = await supabase
+        .from('tenants')
+        .select('id')
+        .eq('slug', 'default')
+        .maybeSingle();
+      tenantId = defaultTenant?.id;
+    }
+    if (!tenantId) {
+      const { data: anyTenant } = await supabase
+        .from('tenants')
+        .select('id')
+        .limit(1)
+        .maybeSingle();
+      tenantId = anyTenant?.id;
+    }
+
+    if (!tenantId) throw new Error('Ingen tenant funnet å legge rolle på');
+
+    // Check existing membership for target user in this tenant
     const { data: existing, error: checkError } = await supabase
       .from('tenant_users')
       .select('id, roles')
       .eq('user_id', userId)
-      .eq('tenant_id', tenant.id)
+      .eq('tenant_id', tenantId as any)
       .maybeSingle();
 
     if (checkError) throw checkError;
@@ -206,12 +232,10 @@ export class UserService {
       // Update existing - add new roles
       const currentRoles = existing.roles || [];
       const updatedRoles = [...new Set([...currentRoles, ...appRoles])];
-      
       const { error } = await supabase
         .from('tenant_users')
         .update({ roles: updatedRoles as any })
         .eq('id', existing.id);
-
       if (error) throw error;
     } else {
       // Insert new membership
@@ -219,11 +243,10 @@ export class UserService {
         .from('tenant_users')
         .insert({
           user_id: userId,
-          tenant_id: tenant.id,
+          tenant_id: tenantId,
           roles: appRoles as any,
           is_active: true,
         });
-
       if (error) throw error;
     }
   }
