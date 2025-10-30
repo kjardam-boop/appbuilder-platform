@@ -9,6 +9,7 @@ import { Plus, X, Building2 } from 'lucide-react';
 import { CompanyUserService } from '@/modules/core/company/services/companyUserService';
 import { CompanyMembership, CompanyRole, COMPANY_ROLES } from '@/modules/core/company/types/companyUser.types';
 import { supabase } from '@/integrations/supabase/client';
+import { buildClientContext } from '@/shared/lib/buildContext';
 
 interface CompanyAccessManagerProps {
   userId: string;
@@ -26,6 +27,7 @@ export function CompanyAccessManager({ userId }: CompanyAccessManagerProps) {
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>('');
   const [selectedRole, setSelectedRole] = useState<CompanyRole>('member');
   const [loading, setLoading] = useState(false);
+  const ctx = buildClientContext();
 
   useEffect(() => {
     loadMemberships();
@@ -34,7 +36,7 @@ export function CompanyAccessManager({ userId }: CompanyAccessManagerProps) {
 
   const loadMemberships = async () => {
     try {
-      const data = await CompanyUserService.getUserCompanies(userId);
+      const data = await CompanyUserService.getUserCompanies(ctx, userId);
       setMemberships(data);
     } catch (error) {
       console.error('Error loading memberships:', error);
@@ -64,7 +66,7 @@ export function CompanyAccessManager({ userId }: CompanyAccessManagerProps) {
 
     setLoading(true);
     try {
-      await CompanyUserService.addUserToCompany(selectedCompanyId, userId, selectedRole);
+      await CompanyUserService.addUserToCompany(ctx, selectedCompanyId, userId, selectedRole);
       toast.success('Bruker lagt til i selskap');
       setSelectedCompanyId('');
       setSelectedRole('member');
@@ -84,7 +86,7 @@ export function CompanyAccessManager({ userId }: CompanyAccessManagerProps) {
   const handleRemoveCompany = async (companyId: string) => {
     setLoading(true);
     try {
-      await CompanyUserService.removeUserFromCompany(companyId, userId);
+      await CompanyUserService.removeUserFromCompany(ctx, companyId, userId);
       toast.success('Bruker fjernet fra selskap');
       await loadMemberships();
     } catch (error) {
