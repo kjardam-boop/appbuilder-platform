@@ -50,33 +50,49 @@ export class RoleService {
 
   /**
    * Get all roles for a user (optionally filtered by scope)
+   * Uses RPC to avoid RLS issues when called by admins
    */
   static async getUserRoles(
     userId: string,
     scopeType?: RoleScope,
     scopeId?: string
   ): Promise<UserRoleRecord[]> {
-    let query = supabase
-      .from('user_roles')
-      .select('*')
-      .eq('user_id', userId);
+    // Check if current user is platform admin to determine access method
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (user) {
+      const { data: isAdmin } = await supabase.rpc('admin_has_platform_role', {
+        check_user_id: user.id
+      });
 
-    if (scopeType) {
-      query = query.eq('scope_type', scopeType);
-    }
+      // If admin or querying own roles, use direct query
+      if (isAdmin || user.id === userId) {
+        let query = supabase
+          .from('user_roles')
+          .select('*')
+          .eq('user_id', userId);
 
-    if (scopeId !== undefined) {
-      if (scopeId) {
-        query = query.eq('scope_id', scopeId);
-      } else {
-        query = query.is('scope_id', null);
+        if (scopeType) {
+          query = query.eq('scope_type', scopeType);
+        }
+
+        if (scopeId !== undefined) {
+          if (scopeId) {
+            query = query.eq('scope_id', scopeId);
+          } else {
+            query = query.is('scope_id', null);
+          }
+        }
+
+        const { data, error } = await query.order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return data as UserRoleRecord[];
       }
     }
 
-    const { data, error } = await query.order('created_at', { ascending: false });
-
-    if (error) throw error;
-    return data as UserRoleRecord[];
+    // Non-admin users can only view their own roles
+    throw new Error('Access denied');
   }
 
   /**
