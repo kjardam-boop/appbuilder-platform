@@ -253,18 +253,27 @@ export class CompanyService {
 
 
   /**
-   * Create new company with auto-classification
+   * Create new company with auto-classification (ALWAYS sets tenant_id)
    */
-  static async createCompany(companyData: any): Promise<Company> {
+  static async createCompany(companyData: any, tenantId: string, userId?: string): Promise<Company> {
     const { data, error } = await supabase
       .from('companies')
-      .insert([companyData])
+      .insert([{
+        ...companyData,
+        tenant_id: tenantId, // CRITICAL: always set tenant_id
+      }])
       .select()
       .single();
 
     if (error) throw error;
 
     const company = data as Company;
+
+    // Grant access automatically
+    if (userId) {
+      const { TenantCompanyAccessService } = await import('./tenantCompanyAccessService');
+      await TenantCompanyAccessService.grantAccess(tenantId, company.id, 'owner', userId);
+    }
 
     // Auto-classify by industry code if present
     if (company.industry_code) {
@@ -289,13 +298,100 @@ export class CompanyService {
   }
 
   /**
-   * Get all saved companies
+   * Get current user's role (helper)
+   */
+  private static async getUserRole(userId: string): Promise<string | null> {
+    const { data } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId)
+      .order('role')
+      .limit(1)
+      .maybeSingle();
+
+    return data?.role || null;
+  }
+
+  /**
+   * Delete company (role-aware: hard delete vs revoke access)
+   */
+  static async deleteCompany(companyId: string, tenantId: string, userId: string): Promise<void> {
+    const { data: isPlatformAdmin } = await supabase.rpc('is_platform_admin', { _user_id: userId });
+
+    if (isPlatformAdmin) {
+      // Hard delete (actual deletion from DB)
+      const { error } = await supabase
+        .from('companies')
+        .delete()
+        .eq('id', companyId);
+      
+      if (error) throw error;
+    } else {
+      // Soft delete: revoke tenant access
+      const { TenantCompanyAccessService } = await import('./tenantCompanyAccessService');
+      await TenantCompanyAccessService.revokeAccess(tenantId, companyId);
+    }
+  }
+
+  /**
+   * Archive company (platform owner only)
+   */
+  static async archiveCompany(companyId: string, userId: string): Promise<void> {
+    const { data: isPlatformAdmin } = await supabase.rpc('is_platform_admin', { _user_id: userId });
+    
+    if (!isPlatformAdmin) {
+      throw new Error('Only platform owner can archive companies');
+    }
+
+    const { error } = await supabase
+      .from('companies')
+      .update({ archived_at: new Date().toISOString() })
+      .eq('id', companyId);
+
+    if (error) throw error;
+  }
+
+  /**
+   * Restore archived company (platform owner only)
+   */
+  static async restoreCompany(companyId: string, userId: string): Promise<void> {
+    const { data: isPlatformAdmin } = await supabase.rpc('is_platform_admin', { _user_id: userId });
+    
+    if (!isPlatformAdmin) {
+      throw new Error('Only platform owner can restore companies');
+    }
+
+    const { error } = await supabase
+      .from('companies')
+      .update({ archived_at: null })
+      .eq('id', companyId);
+
+    if (error) throw error;
+  }
+
+  /**
+   * Get all saved companies (filtered by tenant via RLS)
    */
   static async getSavedCompanies(): Promise<Company[]> {
     const { data, error } = await supabase
       .from('companies')
       .select('*')
+      .is('archived_at', null)
       .order('name');
+
+    if (error) throw error;
+    return (data || []) as Company[];
+  }
+
+  /**
+   * Get archived companies (platform owner only)
+   */
+  static async getArchivedCompanies(): Promise<Company[]> {
+    const { data, error } = await supabase
+      .from('companies')
+      .select('*')
+      .not('archived_at', 'is', null)
+      .order('archived_at', { ascending: false });
 
     if (error) throw error;
     return (data || []) as Company[];

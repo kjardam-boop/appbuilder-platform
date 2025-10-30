@@ -1,10 +1,21 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Search, Bookmark, TrendingUp, Building, Package, Users } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Search, Bookmark, TrendingUp, Building, Package, Users, Plus } from "lucide-react";
+import { useAuth } from "@/modules/core/user/hooks/useAuth";
+import { useTenantContext } from "@/hooks/useTenantContext";
+import { TenantCompanyAccessService } from "@/modules/core/company/services/tenantCompanyAccessService";
+import { useToast } from "@/hooks/use-toast";
+// Removed CompanySearch import - not needed
 
 export default function CompaniesHub() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const context = useTenantContext();
+  const { toast } = useToast();
+  const [showAddExisting, setShowAddExisting] = useState(false);
 
   const quickActions = [
     {
@@ -39,6 +50,35 @@ export default function CompaniesHub() {
             Administrer bedrifter, kundeforhold og salgsmuligheter
           </p>
         </div>
+        
+        <Dialog open={showAddExisting} onOpenChange={setShowAddExisting}>
+          <DialogTrigger asChild>
+            <Button variant="outline">
+              <Plus className="mr-2 h-4 w-4" />
+              Legg til eksisterende selskap
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Velg selskap å legge til i tenant</DialogTitle>
+            </DialogHeader>
+            <div className="max-h-[60vh] overflow-y-auto">
+              {/* Add company search/selection here */}
+              <p className="text-sm text-muted-foreground p-4">
+                Søk etter selskaper i Brønnøysundregistrene for å legge dem til i din tenant
+              </p>
+              <Button 
+                onClick={() => {
+                  setShowAddExisting(false);
+                  navigate('/company-search');
+                }}
+                className="w-full"
+              >
+                Gå til søk
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Statistics */}

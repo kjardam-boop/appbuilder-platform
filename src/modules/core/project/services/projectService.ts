@@ -60,6 +60,7 @@ export class ProjectService {
         owner_id: userId,
         current_phase: 'as_is',
         status: 'active',
+        tenant_id: ctx.tenant_id, // CRITICAL: always set tenant_id
       })
       .select()
       .single();
@@ -81,6 +82,42 @@ export class ProjectService {
     return project;
   }
 
+  static async archiveProject(ctx: RequestContext, projectId: string): Promise<void> {
+    const { data: isPlatformAdmin } = await supabase.rpc('is_platform_admin', { 
+      _user_id: ctx.user_id 
+    });
+    
+    if (!isPlatformAdmin) {
+      throw new Error('Only platform owner can archive projects');
+    }
+
+    const db = this.getDb(ctx);
+    const { error } = await db
+      .from('projects')
+      .update({ archived_at: new Date().toISOString() })
+      .eq('id', projectId);
+
+    if (error) throw error;
+  }
+
+  static async restoreProject(ctx: RequestContext, projectId: string): Promise<void> {
+    const { data: isPlatformAdmin } = await supabase.rpc('is_platform_admin', { 
+      _user_id: ctx.user_id 
+    });
+    
+    if (!isPlatformAdmin) {
+      throw new Error('Only platform owner can restore projects');
+    }
+
+    const db = this.getDb(ctx);
+    const { error } = await db
+      .from('projects')
+      .update({ archived_at: null })
+      .eq('id', projectId);
+
+    if (error) throw error;
+  }
+
   static async updateProject(
     ctx: RequestContext,
     projectId: string,
@@ -96,6 +133,15 @@ export class ProjectService {
   }
 
   static async deleteProject(ctx: RequestContext, projectId: string): Promise<void> {
+    // Only platform owner can hard delete
+    const { data: isPlatformAdmin } = await supabase.rpc('is_platform_admin', { 
+      _user_id: ctx.user_id 
+    });
+    
+    if (!isPlatformAdmin) {
+      throw new Error('Only platform owner can hard delete projects');
+    }
+
     const db = this.getDb(ctx);
     const { error } = await db
       .from('projects')
