@@ -21,6 +21,15 @@ const RoleConfiguration = () => {
   const { data: permissionMatrix, updatePermissions, isUpdating } = useRolePermissions(selectedRole);
   const { exportPermissions, importPermissions, isExporting, isImporting } = usePermissionImportExport();
 
+  console.log('RoleConfiguration Debug:', {
+    selectedRole,
+    resourcesLoading: resources.isLoading,
+    resourcesData: resources.data,
+    actionsLoading: actions.isLoading,
+    actionsData: actions.data,
+    permissionMatrix,
+  });
+
   const handleTogglePermission = (resourceKey: string, actionKey: string, currentValue: boolean) => {
     const currentActions = permissionMatrix?.permissions[resourceKey] || [];
     const newActions = currentValue
