@@ -33,11 +33,13 @@ describe("UserService", () => {
         data: mockProfile,
         error: null,
       });
+      const mockOrder = vi.fn().mockResolvedValue({ data: [], error: null });
 
       vi.mocked(supabase.from).mockReturnValue({
         select: mockSelect,
         eq: mockEq,
         maybeSingle: mockMaybeSingle,
+        order: mockOrder,
       } as any);
 
       const result = await UserService.getCurrentUser();
@@ -64,14 +66,20 @@ describe("UserService", () => {
 
   describe("isAdmin", () => {
     it("should return true for admin users", async () => {
-      const mockData = [{ role: "platform_owner" }];
-      const mockSelect = vi.fn().mockReturnThis();
-      const mockEq = vi.fn().mockResolvedValue({ data: mockData, error: null });
-
-      vi.mocked(supabase.from).mockReturnValue({
-        select: mockSelect,
-        eq: mockEq,
+      // Current user equals the userId being checked
+      vi.mocked(supabase.auth.getUser).mockResolvedValue({
+        data: { user: { id: "user-123" } },
+        error: null,
       } as any);
+
+      const mockSelect = vi.fn().mockReturnThis();
+      const mockEq = vi.fn().mockReturnThis();
+      const mockOrder = vi.fn().mockResolvedValue({
+        data: [{ role: "platform_owner", scope_type: "platform" }],
+        error: null,
+      });
+
+      vi.mocked(supabase.from).mockReturnValue({ select: mockSelect, eq: mockEq, order: mockOrder } as any);
 
       const result = await UserService.isAdmin("user-123");
 
@@ -79,14 +87,17 @@ describe("UserService", () => {
     });
 
     it("should return false for non-admin users", async () => {
-      const mockData = [{ role: "user" }];
-      const mockSelect = vi.fn().mockReturnThis();
-      const mockEq = vi.fn().mockResolvedValue({ data: mockData, error: null });
-
-      vi.mocked(supabase.from).mockReturnValue({
-        select: mockSelect,
-        eq: mockEq,
+      // Current user equals the userId being checked
+      vi.mocked(supabase.auth.getUser).mockResolvedValue({
+        data: { user: { id: "user-123" } },
+        error: null,
       } as any);
+
+      const mockSelect = vi.fn().mockReturnThis();
+      const mockEq = vi.fn().mockReturnThis();
+      const mockOrder = vi.fn().mockResolvedValue({ data: [], error: null });
+
+      vi.mocked(supabase.from).mockReturnValue({ select: mockSelect, eq: mockEq, order: mockOrder } as any);
 
       const result = await UserService.isAdmin("user-123");
 

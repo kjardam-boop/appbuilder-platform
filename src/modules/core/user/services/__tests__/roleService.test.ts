@@ -100,15 +100,16 @@ describe("RoleService", () => {
 
   describe("isPlatformAdmin", () => {
     it("should return true for platform_owner", async () => {
-      const mockData = [{ role: "platform_owner" }];
       const mockSelect = vi.fn().mockReturnThis();
       const mockEq = vi.fn().mockReturnThis();
-      const mockIn = vi.fn().mockResolvedValue({ data: mockData, error: null });
+      const mockIs = vi.fn().mockReturnThis();
+      const mockMaybeSingle = vi.fn().mockResolvedValue({ data: { id: '1' }, error: null });
 
       vi.mocked(supabase.from).mockReturnValue({
         select: mockSelect,
         eq: mockEq,
-        in: mockIn,
+        is: mockIs,
+        maybeSingle: mockMaybeSingle,
       } as any);
 
       const result = await RoleService.isPlatformAdmin("user-123");
@@ -119,12 +120,14 @@ describe("RoleService", () => {
     it("should return false for non-admin users", async () => {
       const mockSelect = vi.fn().mockReturnThis();
       const mockEq = vi.fn().mockReturnThis();
-      const mockIn = vi.fn().mockResolvedValue({ data: [], error: null });
+      const mockIs = vi.fn().mockReturnThis();
+      const mockMaybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
 
       vi.mocked(supabase.from).mockReturnValue({
         select: mockSelect,
         eq: mockEq,
-        in: mockIn,
+        is: mockIs,
+        maybeSingle: mockMaybeSingle,
       } as any);
 
       const result = await RoleService.isPlatformAdmin("user-123");
@@ -135,15 +138,25 @@ describe("RoleService", () => {
 
   describe("isTenantAdmin", () => {
     it("should return true for tenant_owner", async () => {
-      const mockData = [{ role: "tenant_owner", scope_id: "tenant-123" }];
+      // Current user matches the queried user so direct select is allowed
+      vi.mocked(supabase.auth.getUser).mockResolvedValue({
+        data: { user: { id: "user-123" } },
+        error: null,
+      } as any);
+
       const mockSelect = vi.fn().mockReturnThis();
       const mockEq = vi.fn().mockReturnThis();
-      const mockIn = vi.fn().mockResolvedValue({ data: mockData, error: null });
+      const mockOrder = vi.fn().mockResolvedValue({
+        data: [
+          { role: "tenant_owner", scope_type: "tenant", scope_id: "tenant-123" },
+        ],
+        error: null,
+      });
 
       vi.mocked(supabase.from).mockReturnValue({
         select: mockSelect,
         eq: mockEq,
-        in: mockIn,
+        order: mockOrder,
       } as any);
 
       const result = await RoleService.isTenantAdmin("user-123", "tenant-123");
@@ -154,18 +167,19 @@ describe("RoleService", () => {
 
   describe("revokeRole", () => {
     it("should revoke a role from a user", async () => {
-      const mockDelete = vi.fn().mockReturnThis();
-      const mockEq = vi.fn().mockResolvedValue({ data: null, error: null });
+      // Build a chainable and awaitable query builder
+      const builder: any = {};
+      builder.delete = vi.fn().mockReturnValue(builder);
+      builder.eq = vi.fn().mockReturnValue(builder);
+      builder.then = (resolve: any) => resolve({ data: null, error: null });
 
-      vi.mocked(supabase.from).mockReturnValue({
-        delete: mockDelete,
-        eq: mockEq,
-      } as any);
+      vi.mocked(supabase.from).mockReturnValue(builder);
 
       await RoleService.revokeRole("user-123", "tenant_owner", "tenant", "tenant-123");
 
       expect(supabase.from).toHaveBeenCalledWith("user_roles");
-      expect(mockDelete).toHaveBeenCalled();
+      expect(builder.delete).toHaveBeenCalled();
+      expect(builder.eq).toHaveBeenCalled();
     });
   });
 });
