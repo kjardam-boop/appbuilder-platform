@@ -1583,6 +1583,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_has_platform_role: {
+        Args: { check_user_id: string }
+        Returns: boolean
+      }
       get_user_roles: {
         Args: { _tenant_id: string; _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"][]
