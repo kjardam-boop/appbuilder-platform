@@ -51,29 +51,68 @@ export class UserService {
 
   /**
    * Get all users with their profiles and roles (admin only)
+   * This method assumes it's called by an admin - no additional checks needed
    */
   static async getAllUsers(): Promise<AuthUser[]> {
+    // Get profiles for all users (admins can see all via RLS)
     const { data: profiles, error: profilesError } = await supabase
       .from('profiles')
       .select('*')
       .order('full_name');
 
-    if (profilesError) throw profilesError;
-
-    // Get roles for all users
-    const rolesByUser = new Map<string, Set<UserRole>>();
-    
-    for (const profile of profiles || []) {
-      const userRoles = await this.getUserRoles(profile.id);
-      rolesByUser.set(profile.id, new Set(userRoles));
+    if (profilesError) {
+      console.error('Error fetching profiles:', profilesError);
+      throw profilesError;
     }
 
-    return (profiles || []).map(profile => ({
-      id: profile.id,
-      email: profile.email,
-      profile,
-      roles: Array.from(rolesByUser.get(profile.id) || new Set(['user'])),
-    }));
+    // Get all user roles directly (we're in admin context, RLS allows admin to see all)
+    const { data: allRoles, error: rolesError } = await supabase
+      .from('user_roles')
+      .select('*');
+
+    if (rolesError) {
+      console.error('Error fetching roles:', rolesError);
+    }
+
+    // Group roles by user_id (not profile id)
+    const rolesByUser = new Map<string, Set<UserRole>>();
+    
+    (allRoles || []).forEach(record => {
+      const role = record.role;
+      const userId = record.user_id;
+      
+      if (!rolesByUser.has(userId)) {
+        rolesByUser.set(userId, new Set());
+      }
+      
+      // Map app_role to UserRole
+      if (role === 'platform_owner' || role === 'tenant_admin' || role === 'tenant_owner') {
+        rolesByUser.get(userId)?.add('admin');
+      } else if (
+        role === 'platform_support' || 
+        role === 'project_owner' || 
+        role === 'analyst' ||
+        role === 'security_admin' ||
+        role === 'data_protection'
+      ) {
+        rolesByUser.get(userId)?.add('moderator');
+      } else {
+        rolesByUser.get(userId)?.add('user');
+      }
+    });
+
+    return (profiles || []).map(profile => {
+      // Use user_id from profile to match with roles
+      const userId = profile.user_id || profile.id;
+      const roles = Array.from(rolesByUser.get(userId) || new Set(['user']));
+      
+      return {
+        id: userId,
+        email: profile.email || '',
+        profile,
+        roles,
+      };
+    });
   }
 
   /**
