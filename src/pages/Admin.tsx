@@ -1,10 +1,10 @@
-import { Outlet, NavLink, useNavigate } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
 import Header from "@/components/Dashboard/Header";
 import { useAuth } from "@/modules/core/user/hooks/useAuth";
 import { Shield } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useEffect } from "react";
+
 
 // admin navigation items moved to AppAdminSidebar component
 
@@ -13,13 +13,6 @@ import { useEffect } from "react";
 export default function Admin() {
   const { isPlatformAdmin, isLoading } = usePlatformAdmin();
   const { user } = useAuth();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!isLoading && !isPlatformAdmin) {
-      navigate("/dashboard");
-    }
-  }, [isPlatformAdmin, isLoading, navigate]);
 
   if (isLoading) {
     return (
