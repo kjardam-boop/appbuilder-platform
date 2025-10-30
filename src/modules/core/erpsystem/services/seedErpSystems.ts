@@ -247,7 +247,7 @@ export async function seedErpSystems(): Promise<void> {
             website: entry.vendor.website || match.website,
             company_roles: entry.vendor.roles || ["supplier"],
             is_saved: false,
-          });
+          }, 'default');
         } else {
           // Create placeholder company
           vendor = await CompanyService.createCompany({
@@ -256,7 +256,7 @@ export async function seedErpSystems(): Promise<void> {
             website: entry.vendor.website || null,
             company_roles: entry.vendor.roles || ["supplier"],
             is_saved: false,
-          });
+          }, 'default');
         }
       } else {
         // Ensure vendor has supplier role

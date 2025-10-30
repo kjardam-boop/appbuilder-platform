@@ -1,17 +1,39 @@
 import { RequestContext, TenantConfig } from "@/modules/tenant/types/tenant.types";
 import { supabase } from "@/integrations/supabase/client";
+import { resolveTenantByHost } from "@/modules/tenant/services/tenantResolver";
 
 /**
- * Build RequestContext for client-side operations (synchronous version)
- * In a full multi-tenant setup, this would fetch tenant info from routing/host
- * For now, we use a default tenant context
+ * Build RequestContext for client-side operations (asynchronous)
+ * Resolves tenant from hostname
  */
-export function buildClientContext(tenantId?: string): RequestContext {
-  // For now, use a default tenant_id since we don't have tenant routing in place yet
-  // In production, this would be determined by subdomain or custom domain
+export async function buildClientContext(): Promise<RequestContext> {
+  const host = window.location.hostname;
+  const tenant = await resolveTenantByHost(host);
+
+  if (!tenant) {
+    console.warn(`[buildContext] No tenant found for host: ${host}, using default`);
+    return buildClientContextSync('default');
+  }
+
+  const { data: { user } } = await supabase.auth.getUser();
+
+  return {
+    tenant_id: tenant.tenant_id,
+    tenant,
+    user_id: user?.id,
+    user_role: undefined, // Fetched separately if needed
+    request_id: crypto.randomUUID(),
+    timestamp: new Date().toISOString(),
+  };
+}
+
+/**
+ * Build RequestContext synchronously (fallback/seeding)
+ * Use only when tenant is already known
+ */
+export function buildClientContextSync(tenantId?: string): RequestContext {
   const tenant_id = tenantId || 'default';
   
-  // In production, fetch actual tenant config from control DB
   const tenant: TenantConfig = {
     id: crypto.randomUUID(),
     tenant_id,
@@ -26,8 +48,8 @@ export function buildClientContext(tenantId?: string): RequestContext {
   return {
     tenant_id,
     tenant,
-    user_id: undefined, // Will be set by services when needed
-    user_role: undefined, // Will be fetched separately if needed
+    user_id: undefined,
+    user_role: undefined,
     request_id: crypto.randomUUID(),
     timestamp: new Date().toISOString(),
   };

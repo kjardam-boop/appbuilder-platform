@@ -2,7 +2,7 @@ import pLimit from "p-limit";
 import { CompanyService } from "@/modules/core/company";
 import { VendorService } from "./vendorService";
 import { ApplicationService } from "./applicationService";
-import { buildClientContext } from "@/shared/lib/buildContext";
+import { buildClientContext, buildClientContextSync } from "@/shared/lib/buildContext";
 import type { AppProductInput } from "../types/application.types";
 
 /** ---------- Datadefinisjoner ---------- */
@@ -320,7 +320,7 @@ function genSkuCode(name: string): string {
 /** ---------- SEED ---------- */
 
 export async function seedApplications(tenantId?: string): Promise<void> {
-  const ctx = buildClientContext(tenantId);
+  const ctx = buildClientContextSync(tenantId);
   console.log(`[seed] applications start • tenant=${ctx.tenant_id}`);
 
   // Prefetch for fart (unngå N+1)

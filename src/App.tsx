@@ -42,6 +42,7 @@ import OpportunitiesPage from "./pages/OpportunitiesPage";
 import OpportunityDetails from "./pages/OpportunityDetails";
 import SupplierAuth from "./pages/SupplierAuth";
 import SupplierScoringPage from "./pages/SupplierScoringPage";
+import ArchivedResources from "./pages/ArchivedResources";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -84,6 +85,7 @@ const App = () => (
               <Route path="roles" element={<RoleManagement />} />
               <Route path="roles/config" element={<RoleConfiguration />} />
               <Route path="companies" element={<AdminCompanies />} />
+              <Route path="archived" element={<ArchivedResources />} />
               <Route path="settings" element={<AdminSettings />} />
               <Route path="industries" element={<IndustryAdmin />} />
               <Route path="applications" element={<ApplicationsPage />} />

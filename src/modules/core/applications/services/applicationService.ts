@@ -24,6 +24,7 @@ export class ApplicationService {
       status?: string;
       page?: number;
       limit?: number;
+      includeArchived?: boolean;
     }
   ): Promise<{ data: AppProduct[]; count: number }> {
     let query = supabase
@@ -32,6 +33,11 @@ export class ApplicationService {
         *,
         vendor:app_vendors!vendor_id(*)
       `, { count: "exact" });
+
+    // Filter out archived unless explicitly requested
+    if (!filters?.includeArchived) {
+      query = query.is('archived_at', null);
+    }
 
     if (filters?.query) {
       query = query.or(
@@ -120,9 +126,30 @@ export class ApplicationService {
   }
 
   static async deleteProduct(ctx: RequestContext, id: string): Promise<void> {
+    // Platform owner only: hard delete
     const { error } = await supabase
       .from("app_products")
-      .update({ status: "Legacy" })
+      .delete()
+      .eq("id", id);
+
+    if (error) throw error;
+  }
+
+  static async archiveProduct(ctx: RequestContext, id: string): Promise<void> {
+    // Platform owner only: soft delete (archive)
+    const { error } = await supabase
+      .from("app_products")
+      .update({ archived_at: new Date().toISOString() })
+      .eq("id", id);
+
+    if (error) throw error;
+  }
+
+  static async restoreProduct(ctx: RequestContext, id: string): Promise<void> {
+    // Platform owner only: restore archived product
+    const { error } = await supabase
+      .from("app_products")
+      .update({ archived_at: null })
       .eq("id", id);
 
     if (error) throw error;

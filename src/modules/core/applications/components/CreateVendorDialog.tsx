@@ -41,7 +41,7 @@ export function CreateVendorDialog({ open, suggestedName, onCreated, onCancel }:
   const onSubmit = async (data: CreateVendorData) => {
     setIsCreating(true);
     try {
-      const ctx = buildClientContext();
+      const ctx = await buildClientContext();
       
       // First create a company placeholder for the vendor
       const { supabase } = await import("@/integrations/supabase/client");

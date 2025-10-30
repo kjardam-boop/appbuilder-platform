@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ApplicationService } from "../services/applicationService";
 import { VendorService } from "../services/vendorService";
 import { PartnerCertificationService } from "../services/partnerCertificationService";
-import { buildClientContext } from "@/shared/lib/buildContext";
+import { buildClientContext, buildClientContextSync } from "@/shared/lib/buildContext";
 import type { AppProductInput, ProjectAppProductInput, PartnerCertificationInput } from "../types/application.types";
 import { toast } from "sonner";
 
@@ -16,8 +16,8 @@ export function useAppProducts(filters?: {
 }) {
   return useQuery({
     queryKey: ["app-products", filters],
-    queryFn: () => {
-      const ctx = buildClientContext();
+    queryFn: async () => {
+      const ctx = await buildClientContext();
       return ApplicationService.listProducts(ctx, filters);
     },
   });
@@ -26,8 +26,8 @@ export function useAppProducts(filters?: {
 export function useAppProduct(id: string) {
   return useQuery({
     queryKey: ["app-product", id],
-    queryFn: () => {
-      const ctx = buildClientContext();
+    queryFn: async () => {
+      const ctx = await buildClientContext();
       return ApplicationService.getProductById(ctx, id);
     },
     enabled: !!id,
@@ -38,8 +38,8 @@ export function useCreateAppProduct() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (input: AppProductInput) => {
-      const ctx = buildClientContext();
+    mutationFn: async (input: AppProductInput) => {
+      const ctx = await buildClientContext();
       return ApplicationService.createProduct(ctx, input);
     },
     onSuccess: () => {
@@ -56,8 +56,8 @@ export function useUpdateAppProduct() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, input }: { id: string; input: Partial<AppProductInput> }) => {
-      const ctx = buildClientContext();
+    mutationFn: async ({ id, input }: { id: string; input: Partial<AppProductInput> }) => {
+      const ctx = await buildClientContext();
       return ApplicationService.updateProduct(ctx, id, input);
     },
     onSuccess: (_, { id }) => {
@@ -74,8 +74,8 @@ export function useUpdateAppProduct() {
 export function useProjectAppProducts(projectId: string) {
   return useQuery({
     queryKey: ["project-app-products", projectId],
-    queryFn: () => {
-      const ctx = buildClientContext();
+    queryFn: async () => {
+      const ctx = await buildClientContext();
       return ApplicationService.getProjectApps(ctx, projectId);
     },
     enabled: !!projectId,
@@ -86,7 +86,7 @@ export function useAttachAppToProject() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
+    mutationFn: async ({
       projectId,
       appProductId,
       input,
@@ -95,7 +95,7 @@ export function useAttachAppToProject() {
       appProductId: string;
       input: ProjectAppProductInput;
     }) => {
-      const ctx = buildClientContext();
+      const ctx = await buildClientContext();
       return ApplicationService.attachToProject(ctx, projectId, appProductId, input);
     },
     onSuccess: (_, { projectId }) => {
@@ -111,8 +111,8 @@ export function useAttachAppToProject() {
 export function useAppVendors() {
   return useQuery({
     queryKey: ["app-vendors"],
-    queryFn: () => {
-      const ctx = buildClientContext();
+    queryFn: async () => {
+      const ctx = await buildClientContext();
       return VendorService.listVendors(ctx);
     },
   });
@@ -121,8 +121,8 @@ export function useAppVendors() {
 export function useCertifiedPartners(appProductId: string) {
   return useQuery({
     queryKey: ["certified-partners", appProductId],
-    queryFn: () => {
-      const ctx = buildClientContext();
+    queryFn: async () => {
+      const ctx = await buildClientContext();
       return PartnerCertificationService.getCertifiedPartners(ctx, appProductId);
     },
     enabled: !!appProductId,
@@ -132,8 +132,8 @@ export function useCertifiedPartners(appProductId: string) {
 export function usePartnerCertifications(partnerCompanyId: string) {
   return useQuery({
     queryKey: ["partner-certifications", partnerCompanyId],
-    queryFn: () => {
-      const ctx = buildClientContext();
+    queryFn: async () => {
+      const ctx = await buildClientContext();
       return PartnerCertificationService.getPartnerCertifications(ctx, partnerCompanyId);
     },
     enabled: !!partnerCompanyId,
@@ -144,8 +144,8 @@ export function useAddCertification() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (input: PartnerCertificationInput) => {
-      const ctx = buildClientContext();
+    mutationFn: async (input: PartnerCertificationInput) => {
+      const ctx = await buildClientContext();
       return PartnerCertificationService.addCertification(ctx, input);
     },
     onSuccess: () => {

@@ -44,7 +44,7 @@ async function handleProjectCreated(event: ProjectCreatedEvent): Promise<void> {
     });
 
     // Build context (in production, tenantId should come from event)
-    const ctx = buildClientContext();
+    const ctx = await buildClientContext();
 
     // Check feature flag
     if (!isFeatureEnabled(ctx.tenant_id)) {

@@ -1,4 +1,4 @@
-import { buildClientContext } from "@/shared/lib/buildContext";
+import { buildClientContext, buildClientContextSync } from "@/shared/lib/buildContext";
 import { IndustryService } from "./industryService";
 
 type IndustrySeed = {
@@ -73,7 +73,7 @@ const INDUSTRY_SEED: IndustrySeed[] = [
  * - Normaliserer NACE-format
  */
 export async function seedIndustries(tenantId?: string) {
-  const ctx = buildClientContext(tenantId);
+  const ctx = buildClientContextSync(tenantId);
   console.log(`[seed] industries start • tenant=${ctx.tenant_id}`);
 
   for (const item of INDUSTRY_SEED) {

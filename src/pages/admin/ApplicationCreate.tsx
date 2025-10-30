@@ -15,7 +15,7 @@ export default function ApplicationCreate() {
   const handleSubmit = async (data: any) => {
     setIsLoading(true);
     try {
-      const ctx = buildClientContext();
+      const ctx = await buildClientContext();
       
       // Create the product
       const product = await ApplicationService.createProduct(ctx, {
