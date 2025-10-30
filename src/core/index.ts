@@ -24,6 +24,7 @@ import { ADMIN_MODULE } from '@/modules/core/admin';
 import { SUPPLIER_MODULE } from '@/modules/core/supplier';
 import { ERPSYSTEM_MODULE } from '@/modules/core/erpsystem';
 import { INTEGRATION_MODULE } from '@/modules/core/integrations';
+import { PERMISSIONS_MODULE } from '@/modules/core/permissions';
 
 // Register all modules
 ModuleRegistry.register({ ...COMPANY_MODULE, enabled: true });
@@ -38,5 +39,6 @@ ModuleRegistry.register({ ...ADMIN_MODULE, enabled: true }); // Admin tools
 ModuleRegistry.register({ ...SUPPLIER_MODULE, enabled: true }); // Supplier evaluation
 ModuleRegistry.register({ ...ERPSYSTEM_MODULE, enabled: true }); // ERP systems
 ModuleRegistry.register({ ...INTEGRATION_MODULE, enabled: true }); // Third-party integrations
+ModuleRegistry.register({ ...PERMISSIONS_MODULE, enabled: true }); // Role permissions
 
 console.log('[Core] Modules registered:', ModuleRegistry.getEnabled().map(m => m.name));

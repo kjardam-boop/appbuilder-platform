@@ -1,28 +1,42 @@
 import { useEffect, useState } from "react";
-import { UserService } from "../services/userService";
-import { AuthUser, UserRole, USER_ROLES } from "../types/user.types";
-import { UserRoleBadge } from "./UserRoleBadge";
-import { CompanyAccessManager } from "./CompanyAccessManager";
+import { RoleService } from "../services/roleService";
+import { AppRole, RoleScope, ROLE_LABELS, SCOPE_LABELS } from "../types/role.types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Mail, Plus, X, Shield, Building2 } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Mail, Plus, X, Shield, Building2, Users, FolderKanban } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { TenantSelector } from "@/components/Admin/TenantSelector";
+import { CompanySelector } from "@/components/Admin/CompanySelector";
+import { ProjectSelector } from "@/components/Admin/ProjectSelector";
+import { supabase } from "@/integrations/supabase/client";
+
+interface UserProfile {
+  id: string;
+  email: string;
+  full_name: string;
+}
+
+const ROLES_BY_SCOPE: Record<RoleScope, AppRole[]> = {
+  platform: ['platform_owner', 'platform_support', 'platform_auditor'],
+  tenant: ['tenant_owner', 'tenant_admin', 'security_admin', 'data_protection'],
+  company: ['integration_service', 'supplier_user'],
+  project: ['project_owner', 'analyst', 'contributor', 'approver', 'viewer', 'external_reviewer'],
+};
 
 export function UserList() {
-  const [users, setUsers] = useState<AuthUser[]>([]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedRole, setSelectedRole] = useState<UserRole | "">("");
+  const [userRoles, setUserRoles] = useState<Record<string, Record<RoleScope, any[]>>>({});
+  
+  // State for adding roles
   const [selectedUserId, setSelectedUserId] = useState<string>("");
+  const [selectedScope, setSelectedScope] = useState<RoleScope>("platform");
+  const [selectedRole, setSelectedRole] = useState<AppRole | "">("");
+  const [selectedScopeId, setSelectedScopeId] = useState<string>("");
 
   useEffect(() => {
     loadUsers();
@@ -31,8 +45,24 @@ export function UserList() {
   const loadUsers = async () => {
     try {
       setLoading(true);
-      const data = await UserService.getAllUsers();
-      setUsers(data);
+      
+      // Get all profiles
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, email, full_name')
+        .order('full_name');
+
+      if (profilesError) throw profilesError;
+
+      setUsers(profiles || []);
+
+      // Load roles for each user
+      const rolesMap: Record<string, Record<RoleScope, any[]>> = {};
+      for (const profile of profiles || []) {
+        const rolesByScope = await RoleService.getUserRolesByScope(profile.id);
+        rolesMap[profile.id] = rolesByScope;
+      }
+      setUserRoles(rolesMap);
     } catch (error) {
       console.error('Error loading users:', error);
       toast.error('Kunne ikke laste brukere');
@@ -41,26 +71,48 @@ export function UserList() {
     }
   };
 
-  const handleAddRole = async (userId: string, role: UserRole) => {
+  const handleAddRole = async (userId: string, role: AppRole, scope: RoleScope, scopeId?: string) => {
     try {
-      await UserService.addRole(userId, role);
+      await RoleService.grantRole({
+        userId,
+        role,
+        scopeType: scope,
+        scopeId,
+      });
       toast.success('Rolle lagt til');
       await loadUsers();
-    } catch (error) {
+      
+      // Reset selection
+      setSelectedRole("");
+      setSelectedScopeId("");
+    } catch (error: any) {
       console.error('Error adding role:', error);
-      toast.error('Kunne ikke legge til rolle');
+      toast.error(error.message || 'Kunne ikke legge til rolle');
     }
   };
 
-  const handleRemoveRole = async (userId: string, role: UserRole) => {
+  const handleRemoveRole = async (userId: string, role: AppRole, scope: RoleScope, scopeId?: string) => {
     try {
-      await UserService.removeRole(userId, role);
+      await RoleService.revokeRole(userId, role, scope, scopeId);
       toast.success('Rolle fjernet');
       await loadUsers();
     } catch (error) {
       console.error('Error removing role:', error);
       toast.error('Kunne ikke fjerne rolle');
     }
+  };
+
+  const getRoleBadgeVariant = (role: AppRole) => {
+    if (role.includes('owner')) return 'default';
+    if (role.includes('admin')) return 'secondary';
+    return 'outline';
+  };
+
+  const canAddRole = (userId: string, scope: RoleScope) => {
+    if (selectedUserId !== userId) return false;
+    if (!selectedRole) return false;
+    if (scope === 'platform') return true; // Platform doesn't need scope ID
+    return !!selectedScopeId; // Other scopes need a scope ID
   };
 
   if (loading) {
@@ -89,104 +141,169 @@ export function UserList() {
       </div>
 
       <div className="space-y-3">
-        {users.map((user) => (
-          <Card key={user.id}>
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                  <CardTitle className="flex items-center gap-2">
-                    <Shield className="h-5 w-5 text-primary" />
-                    {user.profile?.full_name || 'Ukjent navn'}
-                  </CardTitle>
-                  <CardDescription className="flex items-center gap-2">
-                    <Mail className="h-3 w-3" />
-                    {user.email}
-                  </CardDescription>
+        {users.map((user) => {
+          const roles = userRoles[user.id] || { platform: [], tenant: [], company: [], project: [] };
+          
+          return (
+            <Card key={user.id}>
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1">
+                    <CardTitle className="flex items-center gap-2">
+                      <Shield className="h-5 w-5 text-primary" />
+                      {user.full_name || 'Ukjent navn'}
+                    </CardTitle>
+                    <CardDescription className="flex items-center gap-2">
+                      <Mail className="h-3 w-3" />
+                      {user.email}
+                    </CardDescription>
+                  </div>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Tabs defaultValue="roles" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="roles">
-                    <Shield className="h-4 w-4 mr-2" />
-                    Globale roller
-                  </TabsTrigger>
-                  <TabsTrigger value="companies">
-                    <Building2 className="h-4 w-4 mr-2" />
-                    Selskapstilgang
-                  </TabsTrigger>
-                </TabsList>
+              </CardHeader>
+              <CardContent>
+                <Tabs defaultValue="platform" className="w-full">
+                  <TabsList className="grid w-full grid-cols-4">
+                    <TabsTrigger value="platform">
+                      <Shield className="h-4 w-4 mr-2" />
+                      Platform
+                    </TabsTrigger>
+                    <TabsTrigger value="tenant">
+                      <Users className="h-4 w-4 mr-2" />
+                      Tenant
+                    </TabsTrigger>
+                    <TabsTrigger value="company">
+                      <Building2 className="h-4 w-4 mr-2" />
+                      Selskap
+                    </TabsTrigger>
+                    <TabsTrigger value="project">
+                      <FolderKanban className="h-4 w-4 mr-2" />
+                      Prosjekt
+                    </TabsTrigger>
+                  </TabsList>
 
-                <TabsContent value="roles" className="space-y-4 mt-4">
-                  {/* Current Roles */}
-                  <div>
-                    <h3 className="text-sm font-medium mb-2">Tildelte roller</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {user.roles.length === 0 ? (
-                        <Badge variant="outline">Ingen roller</Badge>
-                      ) : (
-                        user.roles.map((role) => (
-                          <div key={role} className="flex items-center gap-1">
-                            <UserRoleBadge role={role} size="sm" />
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-6 w-6"
-                              onClick={() => handleRemoveRole(user.id, role)}
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
+                  {(['platform', 'tenant', 'company', 'project'] as RoleScope[]).map((scope) => (
+                    <TabsContent key={scope} value={scope} className="space-y-4 mt-4">
+                      {/* Current Roles */}
+                      <div>
+                        <h3 className="text-sm font-medium mb-2">Tildelte {SCOPE_LABELS[scope].toLowerCase()}-roller</h3>
+                        <div className="flex flex-wrap gap-2">
+                          {roles[scope].length === 0 ? (
+                            <Badge variant="outline">Ingen roller</Badge>
+                          ) : (
+                            roles[scope].map((roleRecord: any) => (
+                              <div key={roleRecord.id} className="flex items-center gap-1 border rounded-md p-2">
+                                <div className="flex flex-col gap-1">
+                                  <Badge variant={getRoleBadgeVariant(roleRecord.role)}>
+                                    {ROLE_LABELS[roleRecord.role]}
+                                  </Badge>
+                                  {roleRecord.scope_id && (
+                                    <span className="text-xs text-muted-foreground">
+                                      ID: {roleRecord.scope_id.substring(0, 8)}...
+                                    </span>
+                                  )}
+                                </div>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-6 w-6 ml-2"
+                                  onClick={() => handleRemoveRole(user.id, roleRecord.role, scope, roleRecord.scope_id)}
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Add New Role */}
+                      <div className="space-y-3 border-t pt-4">
+                        <h3 className="text-sm font-medium">Legg til ny rolle</h3>
+                        
+                        {scope !== 'platform' && (
+                          <div>
+                            <label className="text-sm text-muted-foreground mb-1 block">
+                              Velg {SCOPE_LABELS[scope].toLowerCase()}
+                            </label>
+                            {scope === 'tenant' && (
+                              <TenantSelector
+                                value={selectedUserId === user.id ? selectedScopeId : ""}
+                                onValueChange={(value) => {
+                                  setSelectedUserId(user.id);
+                                  setSelectedScope(scope);
+                                  setSelectedScopeId(value);
+                                }}
+                              />
+                            )}
+                            {scope === 'company' && (
+                              <CompanySelector
+                                value={selectedUserId === user.id ? selectedScopeId : ""}
+                                onValueChange={(value) => {
+                                  setSelectedUserId(user.id);
+                                  setSelectedScope(scope);
+                                  setSelectedScopeId(value);
+                                }}
+                              />
+                            )}
+                            {scope === 'project' && (
+                              <ProjectSelector
+                                value={selectedUserId === user.id ? selectedScopeId : ""}
+                                onValueChange={(value) => {
+                                  setSelectedUserId(user.id);
+                                  setSelectedScope(scope);
+                                  setSelectedScopeId(value);
+                                }}
+                              />
+                            )}
                           </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
+                        )}
 
-                  {/* Add New Role */}
-                  <div className="flex items-center gap-2">
-                    <Select
-                      value={selectedUserId === user.id ? selectedRole : ""}
-                      onValueChange={(value) => {
-                        setSelectedUserId(user.id);
-                        setSelectedRole(value as UserRole);
-                      }}
-                    >
-                      <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Velg rolle..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(USER_ROLES).map(([value, label]) => (
-                          <SelectItem key={value} value={value}>
-                            {label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        if (selectedRole && selectedUserId === user.id) {
-                          handleAddRole(user.id, selectedRole);
-                          setSelectedRole("");
-                          setSelectedUserId("");
-                        }
-                      }}
-                      disabled={!selectedRole || selectedUserId !== user.id}
-                    >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Legg til rolle
-                    </Button>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="companies" className="mt-4">
-                  <CompanyAccessManager userId={user.id} />
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
-        ))}
+                        <div className="flex items-center gap-2">
+                          <Select
+                            value={selectedUserId === user.id && selectedScope === scope ? selectedRole : ""}
+                            onValueChange={(value) => {
+                              setSelectedUserId(user.id);
+                              setSelectedScope(scope);
+                              setSelectedRole(value as AppRole);
+                            }}
+                          >
+                            <SelectTrigger className="w-[200px]">
+                              <SelectValue placeholder="Velg rolle..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {ROLES_BY_SCOPE[scope].map((role) => (
+                                <SelectItem key={role} value={role}>
+                                  {ROLE_LABELS[role]}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              if (selectedRole && selectedUserId === user.id && selectedScope === scope) {
+                                handleAddRole(
+                                  user.id, 
+                                  selectedRole, 
+                                  scope, 
+                                  scope === 'platform' ? undefined : selectedScopeId
+                                );
+                              }
+                            }}
+                            disabled={!canAddRole(user.id, scope) || selectedScope !== scope}
+                          >
+                            <Plus className="h-4 w-4 mr-1" />
+                            Legg til rolle
+                          </Button>
+                        </div>
+                      </div>
+                    </TabsContent>
+                  ))}
+                </Tabs>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
     </div>
   );
