@@ -44,7 +44,7 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-function AdminShell({ children }: { children: React.ReactNode }) {
+function AdminLayout({ children }: { children: React.ReactNode }) {
   const { isPlatformAdmin } = usePlatformAdmin();
   return (
     <SidebarProvider defaultOpen>
@@ -63,67 +63,66 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <AdminShell>
-            <Routes>
-              <Route path="/" element={<Index />} />
+          <Routes>
+            <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/supplier/:token" element={<SupplierAuth />} />
             
             {/* Onboarding Routes */}
             <Route path="/onboarding/company" element={<CompanyRegistration />} />
             <Route path="/onboarding/project" element={<ProjectCreation />} />
-              <Route path="/modules" element={<Modules />} />
-              
-              {/* Admin Panel (content only; sidebar is global now) */}
-              <Route path="/admin" element={<Admin />}>
-                <Route index element={<AdminDashboard />} />
-                <Route path="tenants" element={<Tenants />} />
-                <Route path="users" element={<UserManagement />} />
-                <Route path="companies" element={<AdminCompanies />} />
-                <Route path="settings" element={<AdminSettings />} />
-                <Route path="industries" element={<IndustryAdmin />} />
-                <Route path="applications" element={<ApplicationsPage />} />
-                <Route path="applications/new" element={<ApplicationCreate />} />
-                <Route path="database" element={<AdminSeed />} />
-                <Route path="integrations" element={<AdminSettings />} />
-                <Route path="security" element={<AdminSettings />} />
-              </Route>
-              
-              {/* Legacy admin routes - redirect to new structure */}
-              <Route path="/admin/bootstrap" element={<AdminBootstrap />} />
-              <Route path="/admin/questions" element={<AdminQuestions />} />
-              <Route path="/admin/app-vendors" element={<AppVendorAdmin />} />
-              <Route path="/tenants" element={<Tenants />} />
-              
-              {/* Applications */}
-              <Route path="/applications" element={<ApplicationsPage />} />
-              <Route path="/applications/:id" element={<AppProductDetails />} />
-              <Route path="/system-vendors" element={<SystemVendorsPage />} />
-              
-              {/* Companies */}
-              <Route path="/companies" element={<CompaniesHub />} />
-              <Route path="/companies/search" element={<CompanySearch />} />
-              <Route path="/companies/:id" element={<CompanyDetails />} />
-              <Route path="/saved-companies" element={<SavedCompanies />} />
-              <Route path="/customers" element={<CustomersPage />} />
-              <Route path="/implementation-partners" element={<ImplementationPartnersPage />} />
-              
-              {/* Projects */}
-              <Route path="/projects" element={<ProjectsHub />} />
-              <Route path="/projects/:id" element={<ProjectDetails />} />
-              
-              {/* Opportunities */}
-              <Route path="/opportunities" element={<OpportunitiesPage />} />
-              <Route path="/opportunities/:id" element={<OpportunityDetails />} />
-              
-              {/* Supplier routes */}
-              <Route path="/supplier/auth" element={<SupplierAuth />} />
-              <Route path="/supplier/scoring/:projectId/:supplierId" element={<SupplierScoringPage />} />
-              
-              {/* Catch-all 404 route - MUST BE LAST */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </AdminShell>
+            <Route path="/modules" element={<Modules />} />
+            
+            {/* Admin Panel with sidebar */}
+            <Route path="/admin" element={<AdminLayout><Admin /></AdminLayout>}>
+              <Route index element={<AdminDashboard />} />
+              <Route path="tenants" element={<Tenants />} />
+              <Route path="users" element={<UserManagement />} />
+              <Route path="companies" element={<AdminCompanies />} />
+              <Route path="settings" element={<AdminSettings />} />
+              <Route path="industries" element={<IndustryAdmin />} />
+              <Route path="applications" element={<ApplicationsPage />} />
+              <Route path="applications/new" element={<ApplicationCreate />} />
+              <Route path="database" element={<AdminSeed />} />
+              <Route path="integrations" element={<AdminSettings />} />
+              <Route path="security" element={<AdminSettings />} />
+            </Route>
+            
+            {/* Legacy admin routes - redirect to new structure */}
+            <Route path="/admin/bootstrap" element={<AdminLayout><AdminBootstrap /></AdminLayout>} />
+            <Route path="/admin/questions" element={<AdminLayout><AdminQuestions /></AdminLayout>} />
+            <Route path="/admin/app-vendors" element={<AdminLayout><AppVendorAdmin /></AdminLayout>} />
+            <Route path="/tenants" element={<Tenants />} />
+            
+            {/* Applications */}
+            <Route path="/applications" element={<ApplicationsPage />} />
+            <Route path="/applications/:id" element={<AppProductDetails />} />
+            <Route path="/system-vendors" element={<SystemVendorsPage />} />
+            
+            {/* Companies */}
+            <Route path="/companies" element={<CompaniesHub />} />
+            <Route path="/companies/search" element={<CompanySearch />} />
+            <Route path="/companies/:id" element={<CompanyDetails />} />
+            <Route path="/saved-companies" element={<SavedCompanies />} />
+            <Route path="/customers" element={<CustomersPage />} />
+            <Route path="/implementation-partners" element={<ImplementationPartnersPage />} />
+            
+            {/* Projects */}
+            <Route path="/projects" element={<ProjectsHub />} />
+            <Route path="/projects/:id" element={<ProjectDetails />} />
+            
+            {/* Opportunities */}
+            <Route path="/opportunities" element={<OpportunitiesPage />} />
+            <Route path="/opportunities/:id" element={<OpportunityDetails />} />
+            
+            {/* Supplier routes */}
+            <Route path="/supplier/auth" element={<SupplierAuth />} />
+            <Route path="/supplier/scoring/:projectId/:supplierId" element={<SupplierScoringPage />} />
+            
+            {/* Catch-all 404 route - MUST BE LAST */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>
