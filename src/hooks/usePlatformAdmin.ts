@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/modules/core/user";
+import { RoleService } from "@/modules/core/user/services/roleService";
 
 /**
  * Hook to check if current user is a platform admin
- * Platform admins have platform_owner or platform_support roles
+ * Platform admins have platform_owner or platform_support roles in platform scope
  */
 export const usePlatformAdmin = () => {
   const { session } = useAuth();
@@ -20,23 +20,8 @@ export const usePlatformAdmin = () => {
       }
 
       try {
-        const { data, error } = await supabase
-          .from('tenant_users')
-          .select('roles')
-          .eq('user_id', session.user.id)
-          .eq('is_active', true);
-
-        if (error) {
-          console.error('Error checking platform admin role:', error);
-          setIsPlatformAdmin(false);
-        } else if (data) {
-          // Check if user has platform_owner or platform_support role
-          const hasPlatformRole = data.some((record) => 
-            record.roles.includes('platform_owner') || 
-            record.roles.includes('platform_support')
-          );
-          setIsPlatformAdmin(hasPlatformRole);
-        }
+        const isAdmin = await RoleService.isPlatformAdmin(session.user.id);
+        setIsPlatformAdmin(isAdmin);
       } catch (error) {
         console.error('Error in checkPlatformAdmin:', error);
         setIsPlatformAdmin(false);

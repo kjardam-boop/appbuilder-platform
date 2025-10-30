@@ -451,41 +451,6 @@ export type Database = {
           },
         ]
       }
-      company_users: {
-        Row: {
-          company_id: string
-          created_at: string
-          id: string
-          role: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          company_id: string
-          created_at?: string
-          id?: string
-          role: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          company_id?: string
-          created_at?: string
-          id?: string
-          role?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "company_users_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       data_subject_requests: {
         Row: {
           completed_at: string | null
@@ -1538,45 +1503,6 @@ export type Database = {
           rate_limit?: Json | null
           tenant_id?: string
           updated_at?: string
-        }
-        Relationships: []
-      }
-      tenant_users: {
-        Row: {
-          accepted_at: string | null
-          created_at: string
-          id: string
-          invited_at: string
-          invited_by: string | null
-          is_active: boolean
-          roles: Database["public"]["Enums"]["app_role"][]
-          tenant_id: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          accepted_at?: string | null
-          created_at?: string
-          id?: string
-          invited_at?: string
-          invited_by?: string | null
-          is_active?: boolean
-          roles?: Database["public"]["Enums"]["app_role"][]
-          tenant_id: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          accepted_at?: string | null
-          created_at?: string
-          id?: string
-          invited_at?: string
-          invited_by?: string | null
-          is_active?: boolean
-          roles?: Database["public"]["Enums"]["app_role"][]
-          tenant_id?: string
-          updated_at?: string
-          user_id?: string
         }
         Relationships: []
       }

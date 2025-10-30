@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
+import { UserService } from "../services/userService";
 
 export const useAdminRole = () => {
   const { session } = useAuth();
@@ -16,25 +16,8 @@ export const useAdminRole = () => {
       }
 
       try {
-        const { data, error } = await supabase
-          .from('tenant_users')
-          .select('roles')
-          .eq('user_id', session.user.id)
-          .eq('is_active', true);
-
-        if (error) {
-          console.error('Error checking admin role:', error);
-          setIsAdmin(false);
-        } else if (data) {
-          // Check if user has admin-level roles (platform_owner or tenant_admin)
-          const hasAdminRole = data.some((record) => 
-            Array.isArray(record.roles) && (
-              record.roles.includes('platform_owner') || 
-              record.roles.includes('tenant_admin')
-            )
-          );
-          setIsAdmin(hasAdminRole);
-        }
+        const hasAdminRole = await UserService.isAdmin(session.user.id);
+        setIsAdmin(hasAdminRole);
       } catch (error) {
         console.error('Error in checkAdminRole:', error);
         setIsAdmin(false);

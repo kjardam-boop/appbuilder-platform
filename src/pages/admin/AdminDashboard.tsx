@@ -16,8 +16,8 @@ export default function AdminDashboard() {
         { count: projectCount },
         { count: appProductCount },
       ] = await Promise.all([
-        supabase.from('tenant_users').select('tenant_id', { count: 'exact', head: true }),
-        supabase.from('tenant_users').select('user_id', { count: 'exact', head: true }),
+        supabase.from('tenants').select('id', { count: 'exact', head: true }),
+        supabase.from('profiles').select('id', { count: 'exact', head: true }),
         supabase.from('companies').select('id', { count: 'exact', head: true }),
         supabase.from('projects').select('id', { count: 'exact', head: true }),
         supabase.from('app_products').select('id', { count: 'exact', head: true }),
