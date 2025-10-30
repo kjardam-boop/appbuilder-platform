@@ -14,6 +14,8 @@ export default function Admin() {
   const { isPlatformAdmin, isLoading } = usePlatformAdmin();
   const { user } = useAuth();
 
+  console.log('Admin page - isPlatformAdmin:', isPlatformAdmin, 'isLoading:', isLoading, 'user:', user?.id);
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
