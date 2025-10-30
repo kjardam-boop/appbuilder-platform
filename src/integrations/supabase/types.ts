@@ -1587,6 +1587,14 @@ export type Database = {
         Args: { check_user_id: string }
         Returns: boolean
       }
+      can_manage_roles_in_scope: {
+        Args: {
+          _scope_id: string
+          _scope_type: Database["public"]["Enums"]["role_scope"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       get_user_roles: {
         Args: { _tenant_id: string; _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"][]
