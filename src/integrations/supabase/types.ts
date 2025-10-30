@@ -396,13 +396,6 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "company_interactions_contact_person_id_fkey"
-            columns: ["contact_person_id"]
-            isOneToOne: false
-            referencedRelation: "contact_persons"
-            referencedColumns: ["id"]
-          },
         ]
       }
       company_metadata: {
@@ -486,56 +479,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "company_users_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      contact_persons: {
-        Row: {
-          company_id: string
-          created_at: string
-          department: string | null
-          email: string | null
-          full_name: string
-          id: string
-          is_primary: boolean | null
-          notes: string | null
-          phone: string | null
-          title: string | null
-          updated_at: string
-        }
-        Insert: {
-          company_id: string
-          created_at?: string
-          department?: string | null
-          email?: string | null
-          full_name: string
-          id?: string
-          is_primary?: boolean | null
-          notes?: string | null
-          phone?: string | null
-          title?: string | null
-          updated_at?: string
-        }
-        Update: {
-          company_id?: string
-          created_at?: string
-          department?: string | null
-          email?: string | null
-          full_name?: string
-          id?: string
-          is_primary?: boolean | null
-          notes?: string | null
-          phone?: string | null
-          title?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "contact_persons_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -1673,6 +1616,42 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          granted_at: string
+          granted_by: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          scope_id: string | null
+          scope_type: Database["public"]["Enums"]["role_scope"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          scope_id?: string | null
+          scope_type: Database["public"]["Enums"]["role_scope"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          scope_id?: string | null
+          scope_type?: Database["public"]["Enums"]["role_scope"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -1681,6 +1660,27 @@ export type Database = {
       get_user_roles: {
         Args: { _tenant_id: string; _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"][]
+      }
+      get_user_roles_for_scope: {
+        Args: {
+          _scope_id?: string
+          _scope_type: Database["public"]["Enums"]["role_scope"]
+          _user_id: string
+        }
+        Returns: Database["public"]["Enums"]["app_role"][]
+      }
+      has_any_role_in_company: {
+        Args: { _company_id: string; _user_id: string }
+        Returns: boolean
+      }
+      has_role_in_scope: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _scope_id?: string
+          _scope_type: Database["public"]["Enums"]["role_scope"]
+          _user_id: string
+        }
+        Returns: boolean
       }
       is_company_admin: {
         Args: { _company_id: string; _user_id: string }
@@ -1727,6 +1727,7 @@ export type Database = {
         | "evaluation"
         | "execution"
         | "closure"
+      role_scope: "platform" | "tenant" | "company" | "project"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1873,6 +1874,7 @@ export const Constants = {
         "execution",
         "closure",
       ],
+      role_scope: ["platform", "tenant", "company", "project"],
     },
   },
 } as const

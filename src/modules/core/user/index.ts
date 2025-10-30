@@ -30,8 +30,23 @@ export {
   ROLE_DESCRIPTIONS,
 } from './types/user.types';
 
+export type {
+  UserRoleRecord as ConsolidatedRoleRecord,
+  RoleScope,
+  AppRole,
+  RoleGrant,
+} from './types/role.types';
+
+export {
+  ROLE_LABELS,
+  SCOPE_LABELS,
+  COMPANY_ROLE_MAPPING,
+  APP_TO_COMPANY_ROLE,
+} from './types/role.types';
+
 // Services
 export { UserService } from './services/userService';
+export { RoleService } from './services/roleService';
 
 // Module metadata
 export const USER_MODULE = {
