@@ -58,12 +58,14 @@ export class RoleService {
     scopeId?: string
   ): Promise<UserRoleRecord[]> {
     // Check if current user is platform admin to determine access method
-    const { data: { user } } = await supabase.auth.getUser();
+    const authRes = await supabase.auth.getUser();
+    const user = authRes?.data?.user ?? null;
     
     if (user) {
-      const { data: isAdmin } = await supabase.rpc('admin_has_platform_role', {
+      const rpcRes = await supabase.rpc('admin_has_platform_role', {
         check_user_id: user.id
       });
+      const isAdmin = rpcRes?.data === true;
 
       // If admin or querying own roles, use direct query
       if (isAdmin || user.id === userId) {
@@ -177,13 +179,14 @@ export class RoleService {
     await this.revokeRole(userId, oldRole, scopeType, scopeId);
     
     // Add new role
-    const { data: { user } } = await supabase.auth.getUser();
+    const authRes2 = await supabase.auth.getUser();
+    const currentUserId = authRes2?.data?.user?.id;
     await this.grantRole({
       userId,
       role: newRole,
       scopeType,
       scopeId,
-      grantedBy: user?.id,
+      grantedBy: currentUserId,
     });
   }
 

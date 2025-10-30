@@ -2,13 +2,25 @@ import "@testing-library/jest-dom";
 import { beforeAll, afterEach, afterAll, vi } from "vitest";
 
 // Mock Supabase client
-vi.mock("@/integrations/supabase/client", () => ({
-  supabase: {
+vi.mock("@/integrations/supabase/client", () => {
+  const createQueryBuilder = () => {
+    const builder: any = {};
+    builder.select = vi.fn().mockReturnValue(builder);
+    builder.insert = vi.fn().mockReturnValue(builder);
+    builder.update = vi.fn().mockReturnValue(builder);
+    builder.delete = vi.fn().mockReturnValue(builder);
+    builder.eq = vi.fn().mockReturnValue(builder);
+    builder.is = vi.fn().mockReturnValue(builder);
+    builder.order = vi.fn().mockResolvedValue({ data: [], error: null });
+    builder.single = vi.fn().mockResolvedValue({ data: null, error: null });
+    builder.maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
+    return builder;
+  };
+
+  const supabase = {
     auth: {
-      getUser: vi.fn().mockResolvedValue({ 
-        data: { user: null },
-        error: null 
-      }),
+      getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: null }),
+      getSession: vi.fn().mockResolvedValue({ data: { session: null }, error: null }),
       signOut: vi.fn(),
       signInWithPassword: vi.fn(),
       signUp: vi.fn(),
@@ -16,19 +28,12 @@ vi.mock("@/integrations/supabase/client", () => ({
         data: { subscription: { unsubscribe: vi.fn() } },
       })),
     },
-    from: vi.fn(() => ({
-      select: vi.fn().mockReturnThis(),
-      insert: vi.fn().mockReturnThis(),
-      update: vi.fn().mockReturnThis(),
-      delete: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      is: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({ data: null, error: null }),
-      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
-    })),
+    from: vi.fn(() => createQueryBuilder()),
     rpc: vi.fn().mockResolvedValue({ data: null, error: null }),
-  },
-}));
+  } as any;
+
+  return { supabase };
+});
 
 // Mock window.matchMedia
 Object.defineProperty(window, "matchMedia", {

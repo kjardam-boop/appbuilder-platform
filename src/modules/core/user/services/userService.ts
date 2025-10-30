@@ -9,7 +9,8 @@ export class UserService {
    * Get current authenticated user
    */
   static async getCurrentUser(): Promise<AuthUser | null> {
-    const { data: { user } } = await supabase.auth.getUser();
+    const authRes = await supabase.auth.getUser();
+    const user = authRes?.data?.user ?? null;
     if (!user) return null;
 
     const profile = await this.getProfile(user.id);
