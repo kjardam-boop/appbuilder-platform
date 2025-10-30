@@ -29,6 +29,7 @@ describe("RoleService", () => {
         role: "tenant_owner",
         scope_type: "tenant",
         scope_id: "tenant-123",
+        granted_by: null,
       });
     });
 

@@ -5,7 +5,10 @@ import { beforeAll, afterEach, afterAll, vi } from "vitest";
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     auth: {
-      getUser: vi.fn(),
+      getUser: vi.fn().mockResolvedValue({ 
+        data: { user: null },
+        error: null 
+      }),
       signOut: vi.fn(),
       signInWithPassword: vi.fn(),
       signUp: vi.fn(),
@@ -19,10 +22,11 @@ vi.mock("@/integrations/supabase/client", () => ({
       update: vi.fn().mockReturnThis(),
       delete: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      single: vi.fn(),
-      maybeSingle: vi.fn(),
+      is: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: null, error: null }),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
     })),
-    rpc: vi.fn(),
+    rpc: vi.fn().mockResolvedValue({ data: null, error: null }),
   },
 }));
 

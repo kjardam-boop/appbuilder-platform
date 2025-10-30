@@ -128,7 +128,6 @@ describe("UserService", () => {
       expect(supabase.from).toHaveBeenCalledWith("profiles");
       expect(mockUpdate).toHaveBeenCalledWith({
         full_name: "Updated Name",
-        updated_at: expect.any(String),
       });
     });
   });
