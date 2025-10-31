@@ -77,19 +77,12 @@ serve(async (req) => {
       throw new Error('Failed to create invitation');
     }
 
-    // Get email service credentials from tenant_integrations
-    const { data: emailConfig } = await supabaseClient
-      .from('tenant_integrations')
-      .select('credentials')
-      .eq('adapter_id', 'email-service')
-      .eq('is_active', true)
-      .single();
-
-    const resendApiKey = emailConfig?.credentials?.RESEND_API_KEY;
-    const fromEmail = emailConfig?.credentials?.FROM_EMAIL || 'noreply@yourdomain.com';
+    // Get API key from Secrets
+    const resendApiKey = Deno.env.get('RESEND_API_KEY');
+    const fromEmail = Deno.env.get('FROM_EMAIL') || 'noreply@yourdomain.com';
 
     if (!resendApiKey) {
-      console.log('No email service configured, returning invitation token');
+      console.log('No RESEND_API_KEY configured in Secrets, returning invitation token');
       const inviteUrl = `${req.headers.get('origin')}/auth?token=${token}`;
       return new Response(
         JSON.stringify({ 
@@ -97,7 +90,7 @@ serve(async (req) => {
           token,
           inviteUrl,
           message: 'Invitasjon opprettet! Email-sending er ikke konfigurert. Del lenken manuelt med kontaktpersonen.',
-          warning: 'Konfigurer Resend API-nøkkel i tenant_integrations for automatisk utsending.'
+          warning: 'Legg til RESEND_API_KEY i Secrets for automatisk utsending.'
         }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 

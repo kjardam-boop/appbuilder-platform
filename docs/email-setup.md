@@ -26,34 +26,13 @@ For å sende invitasjons-emails automatisk, må du konfigurere Resend:
 3. Gi den et navn (f.eks. "Production")
 4. Kopier API-nøkkelen (vises kun én gang!)
 
-### 4. Konfigurer i databasen
+### 4. Konfigurer i Lovable Cloud Secrets
 
-Kjør følgende SQL i Supabase SQL Editor eller via migration:
-
-```sql
--- Sett inn email-service konfigurasjon
-INSERT INTO public.tenant_integrations (
-  tenant_id,
-  adapter_id,
-  config,
-  credentials,
-  is_active
-) VALUES (
-  'YOUR_TENANT_ID', -- Erstatt med din tenant ID
-  'email-service',
-  '{"enabled": true}'::jsonb,
-  '{
-    "RESEND_API_KEY": "re_xxxxxxxxxxxxx",
-    "FROM_EMAIL": "noreply@yourdomain.com"
-  }'::jsonb,
-  true
-)
-ON CONFLICT (tenant_id, adapter_id) 
-DO UPDATE SET
-  credentials = EXCLUDED.credentials,
-  is_active = true,
-  updated_at = now();
-```
+1. Gå til Lovable Cloud → Secrets
+2. Du har allerede lagt til `RESEND_API_KEY` (ser jeg!)
+3. (Valgfritt) Legg til `FROM_EMAIL` Secret:
+   - Name: `FROM_EMAIL`
+   - Value: `noreply@yourdomain.com` (må være fra ditt verifiserte domene)
 
 ### 5. Test invitasjon
 1. Gå til en bedriftsside med kontaktpersoner
