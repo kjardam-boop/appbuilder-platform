@@ -2,10 +2,11 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Mail, Phone, User, Pencil, Trash2 } from "lucide-react";
+import { Plus, Mail, Phone, User, Pencil, Trash2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import type { ContactPerson } from "@/modules/core/company/types/company.types";
 import { ContactPersonDialog } from "./ContactPersonDialog";
+import { InviteContactDialog } from "./InviteContactDialog";
 interface ContactPersonsCardProps {
   companyId: string;
   companyName: string;
@@ -20,6 +21,8 @@ export function ContactPersonsCard({
 }: ContactPersonsCardProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<ContactPerson | null>(null);
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [invitingContact, setInvitingContact] = useState<ContactPerson | null>(null);
   const handleAddContact = () => {
     setEditingContact(null);
     setIsDialogOpen(true);
@@ -55,6 +58,11 @@ export function ContactPersonsCard({
     } catch (error) {
       toast.error("Kunne ikke lagre kontaktperson");
     }
+  };
+
+  const handleInviteContact = (contact: ContactPerson) => {
+    setInvitingContact(contact);
+    setInviteDialogOpen(true);
   };
   return <>
       <Card>
@@ -92,6 +100,17 @@ export function ContactPersonsCard({
                       {contact.department && <p className="text-xs text-muted-foreground">{contact.department}</p>}
                     </div>
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {contact.email && (
+                        <Button 
+                          size="icon" 
+                          variant="ghost" 
+                          className="h-7 w-7" 
+                          onClick={() => handleInviteContact(contact)}
+                          title="Inviter som bruker"
+                        >
+                          <UserPlus className="h-3 w-3" />
+                        </Button>
+                      )}
                       <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleEditContact(contact)}>
                         <Pencil className="h-3 w-3" />
                       </Button>
@@ -118,6 +137,21 @@ export function ContactPersonsCard({
         </CardContent>
       </Card>
 
-      <ContactPersonDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} contact={editingContact} onSave={handleSaveContact} />
+      <ContactPersonDialog 
+        open={isDialogOpen} 
+        onOpenChange={setIsDialogOpen} 
+        contact={editingContact} 
+        onSave={handleSaveContact} 
+      />
+      
+      {invitingContact && (
+        <InviteContactDialog
+          open={inviteDialogOpen}
+          onOpenChange={setInviteDialogOpen}
+          contact={invitingContact}
+          companyId={companyId}
+          companyName={companyName}
+        />
+      )}
     </>;
 }
