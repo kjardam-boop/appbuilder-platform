@@ -50,12 +50,10 @@ const queryClient = new QueryClient();
 function AdminLayout({ children }: { children: React.ReactNode }) {
   const { isPlatformAdmin } = usePlatformAdmin();
   return (
-    <SidebarProvider defaultOpen>
-      <div className="flex w-full">
-        {isPlatformAdmin && <AppAdminSidebar />}
-        <div className="flex-1">{children}</div>
-      </div>
-    </SidebarProvider>
+    <div className="flex w-full min-h-screen">
+      {isPlatformAdmin && <AppAdminSidebar />}
+      <div className="flex-1">{children}</div>
+    </div>
   );
 }
 
@@ -65,8 +63,9 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
-          <Routes>
+        <SidebarProvider defaultOpen>
+          <BrowserRouter>
+            <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<Dashboard />} />
@@ -128,8 +127,9 @@ const App = () => (
             
             {/* Catch-all 404 route - MUST BE LAST */}
             <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+            </Routes>
+          </BrowserRouter>
+        </SidebarProvider>
       </TooltipProvider>
     </AuthProvider>
   </QueryClientProvider>
