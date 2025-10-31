@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,19 +11,55 @@ import { Eye, EyeOff, Building2 } from "lucide-react";
 
 const Auth = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [invitationToken, setInvitationToken] = useState<string | null>(null);
+  const [companyId, setCompanyId] = useState<string | null>(null);
+  const [defaultTab, setDefaultTab] = useState<"login" | "signup">("login");
 
   useEffect(() => {
+    // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         navigate("/dashboard");
       }
     });
-  }, [navigate]);
+
+    // Check for invitation token in URL
+    const token = searchParams.get("token");
+    if (token) {
+      setInvitationToken(token);
+      setDefaultTab("signup");
+      
+      // Fetch invitation details
+      supabase
+        .from('invitations')
+        .select('email, contact_person_name, company_id, expires_at')
+        .eq('token', token)
+        .single()
+        .then(({ data, error }) => {
+          if (error || !data) {
+            toast.error("Ugyldig eller utløpt invitasjon");
+            return;
+          }
+
+          // Check if expired
+          if (new Date(data.expires_at) < new Date()) {
+            toast.error("Denne invitasjonen har utløpt");
+            return;
+          }
+
+          // Pre-fill form fields
+          setEmail(data.email);
+          setFullName(data.contact_person_name || "");
+          setCompanyId(data.company_id);
+        });
+    }
+  }, [navigate, searchParams]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,20 +102,45 @@ const Auth = () => {
 
       if (error) throw error;
 
-      // Update profile with initial onboarding step
-      if (data.user) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({ onboarding_step: 'company_registration' })
-          .eq('user_id', data.user.id);
+      // If this is from an invitation
+      if (invitationToken && companyId && data.user) {
+        // Mark invitation as accepted
+        await supabase
+          .from('invitations')
+          .update({ 
+            accepted_at: new Date().toISOString(),
+            status: 'accepted'
+          })
+          .eq('token', invitationToken);
 
-        if (profileError) {
-          console.error('Error updating profile:', profileError);
+        // Add user role for the company
+        await supabase
+          .from('user_roles')
+          .insert({
+            user_id: data.user.id,
+            role: 'contributor',
+            scope_type: 'company',
+            scope_id: companyId,
+          });
+
+        toast.success("Konto opprettet! Du har nå tilgang til bedriften.");
+        navigate("/dashboard");
+      } else {
+        // Regular signup - continue with onboarding
+        if (data.user) {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .update({ onboarding_step: 'company_registration' })
+            .eq('user_id', data.user.id);
+
+          if (profileError) {
+            console.error('Error updating profile:', profileError);
+          }
         }
-      }
 
-      toast.success("Konto opprettet! La oss registrere din bedrift.");
-      navigate("/onboarding/company");
+        toast.success("Konto opprettet! La oss registrere din bedrift.");
+        navigate("/onboarding/company");
+      }
     } catch (error: any) {
       toast.error(error.message || "Registrering feilet");
     } finally {
@@ -100,7 +161,7 @@ const Auth = () => {
           <CardDescription>Bedriftsintern anskaffelsesstyring</CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="login" className="space-y-4">
+          <Tabs value={defaultTab} onValueChange={(v) => setDefaultTab(v as "login" | "signup")} className="space-y-4">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="login">Logg inn</TabsTrigger>
               <TabsTrigger value="signup">Registrer</TabsTrigger>
@@ -155,6 +216,7 @@ const Auth = () => {
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     required
+                    disabled={!!invitationToken}
                   />
                 </div>
                 <div className="space-y-2">
@@ -166,6 +228,7 @@ const Auth = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
+                    disabled={!!invitationToken}
                   />
                 </div>
                 <div className="space-y-2">
