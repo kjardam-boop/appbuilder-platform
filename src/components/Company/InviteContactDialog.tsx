@@ -53,7 +53,23 @@ export function InviteContactDialog({
       if (data?.error) {
         toast.error(data.error);
       } else {
-        toast.success(data.message || 'Invitasjon sendt!');
+        if (data.warning) {
+          toast.warning(data.message, {
+            description: data.warning,
+            duration: 8000,
+          });
+          
+          // Show invite URL if email wasn't sent
+          if (data.inviteUrl) {
+            console.log('Invitasjonslenke:', data.inviteUrl);
+            toast.info('Invitasjonslenke kopiert til konsollen', {
+              description: 'Åpne utviklerkonsollen for å se lenken',
+              duration: 5000,
+            });
+          }
+        } else {
+          toast.success(data.message || 'Invitasjon sendt!');
+        }
         onOpenChange(false);
       }
     } catch (error) {

@@ -86,13 +86,18 @@ serve(async (req) => {
       .single();
 
     const resendApiKey = emailConfig?.credentials?.RESEND_API_KEY;
+    const fromEmail = emailConfig?.credentials?.FROM_EMAIL || 'noreply@yourdomain.com';
 
     if (!resendApiKey) {
-      console.log('No email service configured, skipping email send');
+      console.log('No email service configured, returning invitation token');
+      const inviteUrl = `${req.headers.get('origin')}/auth?token=${token}`;
       return new Response(
         JSON.stringify({ 
           success: true, 
-          message: 'Invitasjon opprettet. Konfigurer email-tjeneste for å sende invitasjoner automatisk.' 
+          token,
+          inviteUrl,
+          message: 'Invitasjon opprettet! Email-sending er ikke konfigurert. Del lenken manuelt med kontaktpersonen.',
+          warning: 'Konfigurer Resend API-nøkkel i tenant_integrations for automatisk utsending.'
         }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -110,7 +115,7 @@ serve(async (req) => {
         Authorization: `Bearer ${resendApiKey}`,
       },
       body: JSON.stringify({
-        from: 'noreply@yourdomain.com', // Configure this
+        from: fromEmail,
         to: email,
         subject: `Invitasjon til plattformen${companyName ? ` - ${companyName}` : ''}`,
         html: `
