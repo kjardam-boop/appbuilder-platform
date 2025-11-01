@@ -14,24 +14,33 @@ export const usePlatformAdmin = () => {
 
   useEffect(() => {
     const checkPlatformAdmin = async () => {
+      console.log('[usePlatformAdmin] Starting check, session user id:', session?.user?.id);
+      
       if (!session?.user?.id) {
+        console.log('[usePlatformAdmin] No session user ID, setting false');
         setIsPlatformAdmin(false);
         setIsLoading(false);
         return;
       }
 
       try {
+        console.log('[usePlatformAdmin] Calling RPC with user_id:', session.user.id);
+        
         // Call the SECURITY DEFINER function directly via RPC
         // This bypasses RLS and avoids circular policy issues
         const { data, error } = await supabase.rpc('admin_has_platform_role', {
           check_user_id: session.user.id
         });
 
+        console.log('[usePlatformAdmin] RPC result - data:', data, 'error:', error);
+
         if (error) {
           console.error('Error calling admin_has_platform_role:', error);
           setIsPlatformAdmin(false);
         } else {
-          setIsPlatformAdmin(data === true);
+          const isPlatform = data === true;
+          console.log('[usePlatformAdmin] Setting isPlatformAdmin to:', isPlatform);
+          setIsPlatformAdmin(isPlatform);
         }
       } catch (error) {
         console.error('Error in checkPlatformAdmin:', error);
