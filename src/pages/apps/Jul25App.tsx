@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { Calendar as CalendarIcon, Users, Sparkles, Gift, Star, CheckSquare, Plus } from "lucide-react";
+import { Calendar as CalendarIcon, Users, Sparkles, Gift, Star, CheckSquare, Plus, ArrowUpDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -86,6 +86,7 @@ export default function Jul25App() {
     { id: "2", text: "Planlegge aktiviteter", done: false, deadline: "2025-12-22" },
     { id: "3", text: "Sende ut invitasjoner", done: true },
   ]);
+  const [taskSortBy, setTaskSortBy] = useState<"name" | "date">("name");
   
   const [mockToday] = useState(15);
 
@@ -226,6 +227,20 @@ export default function Jul25App() {
     return people;
   };
 
+  const getSortedTasks = () => {
+    const sorted = [...tasks];
+    if (taskSortBy === "name") {
+      return sorted.sort((a, b) => a.text.localeCompare(b.text));
+    } else {
+      return sorted.sort((a, b) => {
+        if (!a.deadline && !b.deadline) return 0;
+        if (!a.deadline) return 1;
+        if (!b.deadline) return -1;
+        return a.deadline.localeCompare(b.deadline);
+      });
+    }
+  };
+
   const eventDates = Array.from({ length: 13 }, (_, i) => i + 19); // 19-31
 
   return (
@@ -337,7 +352,7 @@ export default function Jul25App() {
 
                       {/* Expanded Members */}
                       {family.expanded && (
-                        <div className="pl-0 sm:pl-36 md:pl-44 space-y-2 sm:space-y-1">
+                        <div className="ml-4 sm:ml-0 sm:pl-36 md:pl-44 space-y-2 sm:space-y-1 mt-2">
                           {family.members.map((member, idx) => {
                             const memberStartOffset = (member.arrivalDate - 19) * 32;
                             const memberDuration = (member.departureDate - member.arrivalDate + 1) * 32;
@@ -347,7 +362,7 @@ export default function Jul25App() {
                                               member.departureTime !== family.departureTime;
                             
                             return (
-                              <div key={idx} className="flex flex-col sm:flex-row gap-1 items-start text-xs bg-accent/30 p-2 sm:p-0 sm:bg-transparent rounded">
+                              <div key={idx} className="flex flex-col sm:flex-row gap-1 items-start text-xs bg-accent/30 sm:bg-transparent p-2 sm:p-0 rounded">
                                 <span className="w-full sm:w-28 md:w-32 text-muted-foreground truncate flex items-center gap-1">
                                   {member.name} {isDifferent && <span className="text-orange-500">⚠️</span>}
                                 </span>
@@ -398,14 +413,25 @@ export default function Jul25App() {
           {/* Tasks Widget */}
           <Card className="border-blue-200 dark:border-blue-900">
             <CardHeader>
-              <CardTitle className="text-base sm:text-lg flex items-center gap-2">
-                <CheckSquare className="w-5 h-5 text-blue-600" />
-                Oppgaveliste
-              </CardTitle>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                  <CheckSquare className="w-5 h-5 text-blue-600" />
+                  Oppgaveliste
+                </CardTitle>
+                <Select value={taskSortBy} onValueChange={(v) => setTaskSortBy(v as "name" | "date")}>
+                  <SelectTrigger className="w-full sm:w-32 h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="name">Sorter: Navn</SelectItem>
+                    <SelectItem value="date">Sorter: Dato</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {tasks.map(task => {
+                {getSortedTasks().map(task => {
                   const people = getAllRegisteredPeople();
                   
                   return (
@@ -545,7 +571,7 @@ export default function Jul25App() {
               </DialogTitle>
             </DialogHeader>
             <div className="py-8 text-center">
-              <div className="text-4xl font-bold text-green-600 mb-4">
+              <div className="text-3xl sm:text-4xl font-bold text-green-600 mb-4">
                 {selectedWord?.word}
               </div>
               <Sparkles className="w-12 h-12 mx-auto text-green-500 animate-pulse" />
