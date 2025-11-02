@@ -96,6 +96,7 @@ export default function Jul25App() {
   const [mockToday] = useState(15);
   const [showInvitationDialog, setShowInvitationDialog] = useState(false);
   const [invitationEmail, setInvitationEmail] = useState("");
+  const [hideCompletedTasks, setHideCompletedTasks] = useState(false);
 
   useEffect(() => {
     // Initialize Christmas words for days 1-24
@@ -408,7 +409,13 @@ export default function Jul25App() {
   };
 
   const getSortedTasks = () => {
-    const sorted = [...tasks];
+    let sorted = [...tasks];
+    
+    // Filter out completed tasks if hideCompletedTasks is true
+    if (hideCompletedTasks) {
+      sorted = sorted.filter(task => !task.done);
+    }
+    
     if (taskSortBy === "name") {
       return sorted.sort((a, b) => a.text.localeCompare(b.text));
     } else {
@@ -694,15 +701,25 @@ export default function Jul25App() {
                   <CheckSquare className="w-5 h-5 text-amber-600" />
                   Oppgaveliste
                 </CardTitle>
-                <Select value={taskSortBy} onValueChange={(v) => setTaskSortBy(v as "name" | "date")}>
-                  <SelectTrigger className="w-full sm:w-32 h-8 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="name">Sorter: Navn</SelectItem>
-                    <SelectItem value="date">Sorter: Dato</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex gap-2 w-full sm:w-auto">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setHideCompletedTasks(!hideCompletedTasks)}
+                    className="h-8 text-xs flex-1 sm:flex-none"
+                  >
+                    {hideCompletedTasks ? "Vis fullførte" : "Skjul fullførte"}
+                  </Button>
+                  <Select value={taskSortBy} onValueChange={(v) => setTaskSortBy(v as "name" | "date")}>
+                    <SelectTrigger className="w-full sm:w-32 h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="name">Sorter: Navn</SelectItem>
+                      <SelectItem value="date">Sorter: Dato</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
