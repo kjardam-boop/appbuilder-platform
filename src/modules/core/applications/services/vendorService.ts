@@ -5,15 +5,10 @@ import type { AppVendor, AppVendorInput } from "../types/application.types";
 
 export class VendorService {
   static async listVendors(ctx: RequestContext, includeArchived: boolean = false): Promise<AppVendor[]> {
-    let query = supabase
+    const { data, error } = await supabase
       .from("app_vendors")
-      .select("*");
-
-    if (!includeArchived) {
-      query = query.is('archived_at', null);
-    }
-
-    const { data, error } = await query.order("name");
+      .select("*")
+      .order("name");
 
     if (error) throw error;
     return (data || []) as AppVendor[];
@@ -87,12 +82,9 @@ export class VendorService {
       throw new Error('Only platform owner can archive vendors');
     }
 
-    const { error } = await supabase
-      .from("app_vendors")
-      .update({ archived_at: new Date().toISOString() })
-      .eq("id", id);
-
-    if (error) throw error;
+    // Note: archived_at column doesn't exist in schema
+    // This is a placeholder for future implementation
+    throw new Error("Archive functionality not yet implemented");
   }
 
   static async restoreVendor(ctx: RequestContext, id: string): Promise<void> {
@@ -104,11 +96,8 @@ export class VendorService {
       throw new Error('Only platform owner can restore vendors');
     }
 
-    const { error } = await supabase
-      .from("app_vendors")
-      .update({ archived_at: null })
-      .eq("id", id);
-
-    if (error) throw error;
+    // Note: archived_at column doesn't exist in schema
+    // This is a placeholder for future implementation
+    throw new Error("Restore functionality not yet implemented");
   }
 }
