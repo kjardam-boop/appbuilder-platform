@@ -385,10 +385,10 @@ export default function Jul25App() {
                         {task.text}
                       </span>
                       <Select
-                        value={task.assignedTo || ""}
+                        value={task.assignedTo || "none"}
                         onValueChange={(value) => {
                           setTasks(prev => prev.map(t => 
-                            t.id === task.id ? { ...t, assignedTo: value || undefined } : t
+                            t.id === task.id ? { ...t, assignedTo: value === "none" ? undefined : value } : t
                           ));
                         }}
                       >
@@ -396,7 +396,7 @@ export default function Jul25App() {
                           <SelectValue placeholder="Tilordne" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Ingen</SelectItem>
+                          <SelectItem value="none">Ingen</SelectItem>
                           {people.map(person => (
                             <SelectItem key={person.id} value={person.id}>
                               {person.label}
