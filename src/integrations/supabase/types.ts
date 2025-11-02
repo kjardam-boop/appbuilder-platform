@@ -951,6 +951,154 @@ export type Database = {
           },
         ]
       }
+      jul25_christmas_words: {
+        Row: {
+          day: number
+          generated_at: string
+          id: string
+          word: string
+        }
+        Insert: {
+          day: number
+          generated_at?: string
+          id?: string
+          word: string
+        }
+        Update: {
+          day?: number
+          generated_at?: string
+          id?: string
+          word?: string
+        }
+        Relationships: []
+      }
+      jul25_families: {
+        Row: {
+          arrival_date: number
+          arrival_time: string
+          created_at: string
+          departure_date: number
+          departure_time: string
+          id: string
+          name: string
+          number_of_people: number
+          updated_at: string
+        }
+        Insert: {
+          arrival_date: number
+          arrival_time?: string
+          created_at?: string
+          departure_date: number
+          departure_time?: string
+          id?: string
+          name: string
+          number_of_people?: number
+          updated_at?: string
+        }
+        Update: {
+          arrival_date?: number
+          arrival_time?: string
+          created_at?: string
+          departure_date?: number
+          departure_time?: string
+          id?: string
+          name?: string
+          number_of_people?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      jul25_family_members: {
+        Row: {
+          arrival_date: number | null
+          arrival_time: string | null
+          created_at: string
+          departure_date: number | null
+          departure_time: string | null
+          family_id: string
+          id: string
+          is_admin: boolean | null
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          arrival_date?: number | null
+          arrival_time?: string | null
+          created_at?: string
+          departure_date?: number | null
+          departure_time?: string | null
+          family_id: string
+          id?: string
+          is_admin?: boolean | null
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          arrival_date?: number | null
+          arrival_time?: string | null
+          created_at?: string
+          departure_date?: number | null
+          departure_time?: string | null
+          family_id?: string
+          id?: string
+          is_admin?: boolean | null
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jul25_family_members_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "jul25_families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jul25_tasks: {
+        Row: {
+          assigned_family_id: string | null
+          created_at: string
+          created_by: string | null
+          deadline: string | null
+          done: boolean | null
+          id: string
+          text: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_family_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deadline?: string | null
+          done?: boolean | null
+          id?: string
+          text: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_family_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deadline?: string | null
+          done?: boolean | null
+          id?: string
+          text?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jul25_tasks_assigned_family_id_fkey"
+            columns: ["assigned_family_id"]
+            isOneToOne: false
+            referencedRelation: "jul25_families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       opportunities: {
         Row: {
           actual_close_date: string | null
