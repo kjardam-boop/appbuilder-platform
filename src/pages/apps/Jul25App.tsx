@@ -490,7 +490,7 @@ export default function Jul25App() {
                             }}
                             title={`${family.familyName}: ${family.arrivalDate}. ${family.arrivalTime} - ${family.departureDate}. ${family.departureTime}`}
                           >
-                            {family.members.length > 0 ? `${family.members.length + 1}` : '1'}
+                            {family.members.length > 0 ? family.members.length : family.numberOfPeople}
                           </div>
                         </div>
                       </div>
@@ -756,6 +756,9 @@ export default function Jul25App() {
                 <Users className="w-5 h-5 text-green-600" />
                 {editingFamily ? "Rediger familie" : "Legg til familie"}
               </DialogTitle>
+              <DialogDescription>
+                Fyll inn familiens informasjon. Du kan legge til individuelle medlemmer senere.
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
@@ -859,8 +862,8 @@ export default function Jul25App() {
                 <Users className="w-5 h-5 text-green-600" />
                 Legg til familiemedlem
               </DialogTitle>
-              <DialogDescription className="text-xs">
-                Standard datoer er hentet fra familien, men kan endres
+              <DialogDescription>
+                Legg til et enkeltmedlem med egne ankomst/avreise datoer.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
@@ -950,6 +953,9 @@ export default function Jul25App() {
                 <CheckSquare className="w-5 h-5 text-amber-600" />
                 {editingTask ? "Rediger oppgave" : "Ny oppgave"}
               </DialogTitle>
+              <DialogDescription>
+                Skriv inn oppgaveteksten.
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
