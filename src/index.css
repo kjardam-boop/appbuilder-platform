@@ -9,25 +9,25 @@ All colors MUST be HSL.
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 150 98% 10%;
+    --foreground: 151 88% 15%;
 
     --card: 0 0% 100%;
-    --card-foreground: 150 98% 10%;
+    --card-foreground: 151 88% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 150 98% 10%;
+    --popover-foreground: 151 88% 15%;
 
-    --primary: 150 98% 10%;
+    --primary: 151 88% 15%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 150 98% 20%;
+    --primary-glow: 145 57% 54%;
 
-    --secondary: 45 69% 53%;
-    --secondary-foreground: 150 98% 10%;
+    --secondary: 51 100% 50%;
+    --secondary-foreground: 151 88% 15%;
 
-    --muted: 60 100% 97%;
-    --muted-foreground: 150 50% 30%;
+    --muted: 0 0% 97%;
+    --muted-foreground: 0 0% 45%;
 
-    --accent: 280 60% 50%;
+    --accent: 145 57% 54%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
@@ -35,78 +35,82 @@ All colors MUST be HSL.
 
     --border: 0 0% 85%;
     --input: 0 0% 85%;
-    --ring: 150 98% 10%;
+    --ring: 151 88% 15%;
 
     --radius: 0.75rem;
 
-    /* Custom Christmas design tokens - Pine Green, Gold, Silver, Purple */
-    --christmas-green: 150 98% 10%;
-    --christmas-gold: 45 69% 53%;
+    /* Custom Christmas design tokens - Forest/Emerald Green, Warm/Muted Gold, Silver */
+    --christmas-forest: 151 88% 15%;
+    --christmas-emerald: 145 57% 54%;
+    --christmas-gold-warm: 51 100% 50%;
+    --christmas-gold-muted: 38 100% 43%;
     --christmas-silver: 0 0% 75%;
     --christmas-purple: 280 60% 50%;
-    --gradient-primary: linear-gradient(135deg, hsl(150 98% 10%), hsl(45 69% 53%));
-    --gradient-hero: linear-gradient(180deg, hsl(60 100% 97%), hsl(0 0% 100%));
-    --shadow-card: 0 4px 6px -1px hsl(150 98% 10% / 0.1), 0 2px 4px -2px hsl(150 98% 10% / 0.1);
-    --shadow-elevated: 0 20px 25px -5px hsl(150 98% 10% / 0.1), 0 8px 10px -6px hsl(150 98% 10% / 0.1);
+    --gradient-primary: linear-gradient(135deg, hsl(151 88% 15%), hsl(51 100% 50%));
+    --gradient-hero: linear-gradient(180deg, hsl(0 0% 100%), hsl(145 57% 95%));
+    --shadow-card: 0 4px 6px -1px hsl(151 88% 15% / 0.1), 0 2px 4px -2px hsl(151 88% 15% / 0.1);
+    --shadow-elevated: 0 20px 25px -5px hsl(151 88% 15% / 0.1), 0 8px 10px -6px hsl(151 88% 15% / 0.1);
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
-    --sidebar-background: 150 98% 10%;
-    --sidebar-foreground: 60 100% 97%;
-    --sidebar-primary: 45 69% 53%;
-    --sidebar-primary-foreground: 150 98% 10%;
-    --sidebar-accent: 150 98% 15%;
-    --sidebar-accent-foreground: 60 100% 97%;
-    --sidebar-border: 150 98% 15%;
-    --sidebar-ring: 45 69% 53%;
+    --sidebar-background: 151 88% 15%;
+    --sidebar-foreground: 0 0% 97%;
+    --sidebar-primary: 51 100% 50%;
+    --sidebar-primary-foreground: 151 88% 15%;
+    --sidebar-accent: 145 57% 54%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 151 88% 20%;
+    --sidebar-ring: 51 100% 50%;
   }
 
   .dark {
-    --background: 150 98% 8%;
-    --foreground: 60 100% 97%;
+    --background: 151 88% 8%;
+    --foreground: 0 0% 97%;
 
-    --card: 150 98% 12%;
-    --card-foreground: 60 100% 97%;
+    --card: 151 88% 12%;
+    --card-foreground: 0 0% 97%;
 
-    --popover: 150 98% 12%;
-    --popover-foreground: 60 100% 97%;
+    --popover: 151 88% 12%;
+    --popover-foreground: 0 0% 97%;
 
-    --primary: 150 98% 20%;
+    --primary: 151 88% 25%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 150 98% 30%;
+    --primary-glow: 145 57% 54%;
 
-    --secondary: 50 51% 55%;
-    --secondary-foreground: 150 98% 10%;
+    --secondary: 51 100% 50%;
+    --secondary-foreground: 151 88% 15%;
 
-    --muted: 150 50% 20%;
-    --muted-foreground: 0 0% 66%;
+    --muted: 151 50% 20%;
+    --muted-foreground: 0 0% 75%;
 
-    --accent: 280 60% 50%;
+    --accent: 145 57% 54%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 63% 31%;
-    --destructive-foreground: 60 100% 97%;
+    --destructive-foreground: 0 0% 97%;
 
-    --border: 150 50% 20%;
-    --input: 150 50% 20%;
-    --ring: 150 98% 20%;
+    --border: 151 50% 20%;
+    --input: 151 50% 20%;
+    --ring: 145 57% 54%;
 
-    --christmas-green: 150 98% 20%;
-    --christmas-gold: 50 51% 55%;
-    --christmas-silver: 0 0% 66%;
+    --christmas-forest: 151 88% 25%;
+    --christmas-emerald: 145 57% 54%;
+    --christmas-gold-warm: 51 100% 50%;
+    --christmas-gold-muted: 38 100% 43%;
+    --christmas-silver: 0 0% 75%;
     --christmas-purple: 280 60% 50%;
-    --gradient-primary: linear-gradient(135deg, hsl(150 98% 20%), hsl(50 51% 55%));
-    --gradient-hero: linear-gradient(180deg, hsl(150 98% 8%), hsl(150 98% 12%));
+    --gradient-primary: linear-gradient(135deg, hsl(151 88% 25%), hsl(51 100% 50%));
+    --gradient-hero: linear-gradient(180deg, hsl(151 88% 8%), hsl(151 88% 12%));
     --shadow-card: 0 4px 6px -1px hsl(0 0% 0% / 0.3), 0 2px 4px -2px hsl(0 0% 0% / 0.3);
     --shadow-elevated: 0 20px 25px -5px hsl(0 0% 0% / 0.3), 0 8px 10px -6px hsl(0 0% 0% / 0.3);
 
-    --sidebar-background: 150 98% 8%;
-    --sidebar-foreground: 60 100% 97%;
-    --sidebar-primary: 150 98% 20%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 150 98% 12%;
-    --sidebar-accent-foreground: 60 100% 97%;
-    --sidebar-border: 150 98% 12%;
-    --sidebar-ring: 150 98% 20%;
+    --sidebar-background: 151 88% 8%;
+    --sidebar-foreground: 0 0% 97%;
+    --sidebar-primary: 51 100% 50%;
+    --sidebar-primary-foreground: 151 88% 15%;
+    --sidebar-accent: 145 57% 54%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 151 88% 12%;
+    --sidebar-ring: 51 100% 50%;
   }
 }
 
