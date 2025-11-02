@@ -9,113 +9,118 @@
  */
 
 import { useState, useEffect } from "react";
-import { Calendar as CalendarIcon, Users, Sparkles, Gift, Star } from "lucide-react";
+import { Calendar as CalendarIcon, Users, Sparkles, Gift, Star, CheckSquare, Plus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { format, isSameDay } from "date-fns";
+import { format } from "date-fns";
 import { nb } from "date-fns/locale";
 
-interface Attendance {
+interface FamilyRegistration {
   id: string;
-  name: string;
-  email: string;
-  arrival_date: string;
-  departure_date: string;
-  notes: string | null;
-  created_at: string;
+  familyName: string;
+  members: { name: string; dates: number[] }[];
+}
+
+interface ChristmasWord {
+  date: number;
+  word: string;
+  generated: boolean;
 }
 
 export default function Jul25App() {
-  const [attendances, setAttendances] = useState<Attendance[]>([]);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
-  
-  // Form state
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [arrivalDate, setArrivalDate] = useState<Date | undefined>(undefined);
-  const [departureDate, setDepartureDate] = useState<Date | undefined>(undefined);
-  const [notes, setNotes] = useState("");
+  const [families, setFamilies] = useState<FamilyRegistration[]>([]);
+  const [christmasWords, setChristmasWords] = useState<ChristmasWord[]>([]);
+  const [selectedChristmasDate, setSelectedChristmasDate] = useState<number | null>(null);
+  const [isAddingFamily, setIsAddingFamily] = useState(false);
+  const [newFamilyName, setNewFamilyName] = useState("");
+  const [tasks, setTasks] = useState<{ id: string; text: string; done: boolean }[]>([
+    { id: "1", text: "Bestille mat", done: false },
+    { id: "2", text: "Planlegge aktiviteter", done: false },
+    { id: "3", text: "Sende ut invitasjoner", done: true },
+  ]);
 
   useEffect(() => {
-    loadAttendances();
+    // Initialize Christmas words for days 1-24
+    const words: ChristmasWord[] = [];
+    for (let i = 1; i <= 24; i++) {
+      words.push({ date: i, word: "", generated: false });
+    }
+    setChristmasWords(words);
   }, []);
 
-  const loadAttendances = async () => {
+  const generateWordForDay = async (day: number) => {
+    const prompt = `Generer et positivt, julete norsk ord eller uttrykk for dag ${day} i julekalenderen. Bare ett ord eller kort uttrykk, ingen forklaring.`;
+    
     try {
-      // For POC, we'll create a simple table later
-      // For now, mock data
-      setAttendances([]);
+      const { data, error } = await supabase.functions.invoke('generate-text', {
+        body: { prompt, maxLength: 30 }
+      });
+
+      if (error) throw error;
+
+      setChristmasWords(prev => prev.map(w => 
+        w.date === day ? { ...w, word: data.text, generated: true } : w
+      ));
+      
+      toast.success(`Ord for dag ${day} generert! 🎄`);
     } catch (error) {
-      console.error('Error loading attendances:', error);
-    } finally {
-      setIsLoading(false);
+      console.error('Error generating word:', error);
+      toast.error('Kunne ikke generere ord');
     }
   };
 
-  const handleSubmit = async () => {
-    if (!name || !email || !arrivalDate || !departureDate) {
-      toast.error("Vennligst fyll ut alle felter");
+  const addFamily = () => {
+    if (!newFamilyName.trim()) {
+      toast.error("Vennligst skriv inn familienavn");
       return;
     }
-
-    if (departureDate < arrivalDate) {
-      toast.error("Avreisedato må være etter ankomstdato");
-      return;
-    }
-
-    // For POC - would save to database
-    const newAttendance: Attendance = {
+    
+    const newFamily: FamilyRegistration = {
       id: crypto.randomUUID(),
-      name,
-      email,
-      arrival_date: arrivalDate.toISOString(),
-      departure_date: departureDate.toISOString(),
-      notes,
-      created_at: new Date().toISOString()
+      familyName: newFamilyName,
+      members: []
     };
-
-    setAttendances([...attendances, newAttendance]);
-    toast.success(`Påmeldt! Velkommen ${name} 🎄`);
     
-    // Reset form
-    setName("");
-    setEmail("");
-    setArrivalDate(undefined);
-    setDepartureDate(undefined);
-    setNotes("");
-    setIsDialogOpen(false);
+    setFamilies([...families, newFamily]);
+    setNewFamilyName("");
+    setIsAddingFamily(false);
+    toast.success(`Familie ${newFamilyName} lagt til! 🎄`);
   };
 
-  const getAttendeesForDate = (date: Date) => {
-    return attendances.filter(att => {
-      const arrival = new Date(att.arrival_date);
-      const departure = new Date(att.departure_date);
-      return date >= arrival && date <= departure;
-    });
+  const addMemberToFamily = (familyId: string, memberName: string) => {
+    setFamilies(prev => prev.map(fam => 
+      fam.id === familyId 
+        ? { ...fam, members: [...fam.members, { name: memberName, dates: [] }] }
+        : fam
+    ));
   };
 
-  const getDatesInRange = () => {
-    const start = new Date(2025, 11, 1); // December 1, 2025
-    const end = new Date(2025, 11, 24); // December 24, 2025
-    const dates: Date[] = [];
-    
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      dates.push(new Date(d));
-    }
-    
-    return dates;
+  const toggleDateForMember = (familyId: string, memberIndex: number, date: number) => {
+    setFamilies(prev => prev.map(fam => {
+      if (fam.id !== familyId) return fam;
+      
+      const newMembers = [...fam.members];
+      const member = newMembers[memberIndex];
+      
+      if (member.dates.includes(date)) {
+        member.dates = member.dates.filter(d => d !== date);
+      } else {
+        member.dates = [...member.dates, date].sort((a, b) => a - b);
+      }
+      
+      return { ...fam, members: newMembers };
+    }));
   };
+
+  const eventDates = Array.from({ length: 13 }, (_, i) => i + 19); // 19-31
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-red-50 via-green-50 to-white dark:from-red-950/20 dark:via-green-950/20 dark:to-background">
@@ -145,265 +150,240 @@ export default function Jul25App() {
           </p>
         </div>
 
-        {/* Stats */}
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card className="border-red-200 dark:border-red-900">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Påmeldte</CardTitle>
-              <Users className="h-4 w-4 text-red-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">{attendances.length}</div>
-              <p className="text-xs text-muted-foreground">Deltakere totalt</p>
-            </CardContent>
-          </Card>
+        {/* Main Calendar - Family Registration */}
+        <Card className="border-2 border-red-200 dark:border-red-900">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-xl flex items-center gap-2">
+                <CalendarIcon className="w-5 h-5 text-red-600" />
+                Familiejul Kalender
+              </CardTitle>
+              <Button 
+                onClick={() => setIsAddingFamily(true)}
+                size="sm"
+                className="bg-gradient-to-r from-red-600 to-green-600"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Legg til familie
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Date Header */}
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              <div className="w-40 flex-shrink-0" /> {/* Spacer for family names */}
+              {eventDates.map(date => (
+                <div key={date} className="w-12 flex-shrink-0 text-center font-medium text-sm">
+                  {date}
+                </div>
+              ))}
+            </div>
 
-          <Card className="border-green-200 dark:border-green-900">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Dager til jul</CardTitle>
-              <CalendarIcon className="h-4 w-4 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">
-                {Math.max(0, Math.ceil((new Date(2025, 11, 24).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))}
+            {/* Family Rows */}
+            {families.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Users className="w-12 h-12 mx-auto mb-2 opacity-20" />
+                <p>Ingen familier lagt til ennå</p>
+                <p className="text-sm">Klikk "Legg til familie" for å komme i gang</p>
               </div>
-              <p className="text-xs text-muted-foreground">Dager igjen</p>
+            ) : (
+              <div className="space-y-4">
+                {families.map((family) => (
+                  <div key={family.id} className="space-y-2">
+                    <div className="flex gap-2 items-start">
+                      {/* Family Name */}
+                      <div className="w-40 flex-shrink-0">
+                        <Select
+                          value={family.familyName}
+                          onValueChange={(value) => {
+                            setFamilies(prev => prev.map(f => 
+                              f.id === family.id ? { ...f, familyName: value } : f
+                            ));
+                          }}
+                        >
+                          <SelectTrigger className="bg-red-600 text-white border-0 h-8 text-sm">
+                            <SelectValue placeholder="<Familienavn>" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={family.familyName}>{family.familyName}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Date Grid for this family */}
+                      <div className="flex gap-2 overflow-x-auto">
+                        {eventDates.map(date => {
+                          const membersOnDate = family.members.filter(m => m.dates.includes(date));
+                          return (
+                            <div key={date} className="w-12 h-8 flex-shrink-0 text-center text-xs">
+                              {membersOnDate.length > 0 && (
+                                <Badge variant="secondary" className="w-full h-full flex items-center justify-center">
+                                  {membersOnDate.length}
+                                </Badge>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Member Buttons */}
+                    <div className="flex gap-2 items-center pl-40">
+                      {family.members.map((member, idx) => (
+                        <Button
+                          key={idx}
+                          variant="outline"
+                          size="sm"
+                          className="bg-red-100 dark:bg-red-950/30 border-red-300 dark:border-red-900 text-xs h-7"
+                          onClick={() => {
+                            toast.info(`Redigerer datoer for ${member.name}`);
+                          }}
+                        >
+                          {member.name}
+                        </Button>
+                      ))}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs h-7"
+                        onClick={() => {
+                          const name = prompt("Navn på nytt familiemedlem:");
+                          if (name) addMemberToFamily(family.id, name);
+                        }}
+                      >
+                        + Navn
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Tasks Widget */}
+          <Card className="border-blue-200 dark:border-blue-900">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <CheckSquare className="w-5 h-5 text-blue-600" />
+                Oppgaveliste
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {tasks.map(task => (
+                  <div key={task.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent">
+                    <input
+                      type="checkbox"
+                      checked={task.done}
+                      onChange={() => {
+                        setTasks(prev => prev.map(t => 
+                          t.id === task.id ? { ...t, done: !t.done } : t
+                        ));
+                      }}
+                      className="w-4 h-4"
+                    />
+                    <span className={cn("text-sm", task.done && "line-through text-muted-foreground")}>
+                      {task.text}
+                    </span>
+                  </div>
+                ))}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full text-xs mt-2"
+                  onClick={() => {
+                    const text = prompt("Ny oppgave:");
+                    if (text) {
+                      setTasks(prev => [...prev, { id: crypto.randomUUID(), text, done: false }]);
+                    }
+                  }}
+                >
+                  <Plus className="w-3 h-3 mr-1" />
+                  Legg til oppgave
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
-          <Card className="border-yellow-200 dark:border-yellow-900">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Julestatus</CardTitle>
-              <Sparkles className="h-4 w-4 text-yellow-600" />
+          {/* Christmas Calendar - AI Word of the Day */}
+          <Card className="border-2 border-green-200 dark:border-green-900">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Gift className="w-5 h-5 text-green-600" />
+                Julekalender - Ord for dagen
+              </CardTitle>
+              <CardDescription>
+                Klikk på en luke for å generere dagens juleord med AI! 🎄
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">🎉</div>
-              <p className="text-xs text-muted-foreground">Klar for fest!</p>
+              <div className="grid grid-cols-4 md:grid-cols-6 gap-2">
+                {christmasWords.map((item) => {
+                  const isOpened = item.generated;
+                  
+                  return (
+                    <button
+                      key={item.date}
+                      onClick={() => !isOpened && generateWordForDay(item.date)}
+                      disabled={isOpened}
+                      className={cn(
+                        "relative aspect-square rounded-lg border-2 p-2",
+                        "transition-all hover:scale-105 hover:shadow-lg",
+                        isOpened 
+                          ? "bg-green-100 dark:bg-green-950/30 border-green-300 dark:border-green-900" 
+                          : "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900 hover:bg-red-100 dark:hover:bg-red-950/40"
+                      )}
+                    >
+                      <div className="absolute top-1 left-1 text-xs font-bold text-red-600">
+                        {item.date}
+                      </div>
+                      <div className="flex items-center justify-center h-full text-center">
+                        {isOpened ? (
+                          <div className="text-xs font-medium px-1 text-green-700 dark:text-green-300">
+                            {item.word}
+                          </div>
+                        ) : (
+                          <Gift className="w-6 h-6 text-red-400 opacity-50" />
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Calendar Grid */}
-        <Card className="border-2 border-red-200 dark:border-red-900">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-2xl flex items-center gap-2">
-                  <CalendarIcon className="w-6 h-6 text-red-600" />
-                  Julekalender
-                </CardTitle>
-                <CardDescription>
-                  Klikk på en dato for å se hvem som kommer
-                </CardDescription>
-              </div>
-              <Button 
-                onClick={() => setIsDialogOpen(true)}
-                className="bg-gradient-to-r from-red-600 to-green-600 hover:from-red-700 hover:to-green-700"
-              >
-                <Users className="mr-2 h-4 w-4" />
-                Meld deg på
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
-              {getDatesInRange().map((date, idx) => {
-                const attendeesOnDate = getAttendeesForDate(date);
-                const dayNum = idx + 1;
-                const isToday = isSameDay(date, new Date());
-                
-                return (
-                  <button
-                    key={date.toISOString()}
-                    onClick={() => setSelectedDate(date)}
-                    className={`
-                      relative aspect-square rounded-lg border-2 p-2
-                      transition-all hover:scale-105 hover:shadow-lg
-                      ${isToday 
-                        ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20' 
-                        : 'border-red-200 dark:border-red-900 bg-white dark:bg-card'
-                      }
-                      ${attendeesOnDate.length > 0 
-                        ? 'ring-2 ring-green-500 ring-offset-2' 
-                        : ''
-                      }
-                    `}
-                  >
-                    <div className="absolute top-1 left-1 text-xs font-bold text-red-600">
-                      {dayNum}
-                    </div>
-                    <div className="flex items-center justify-center h-full">
-                      {attendeesOnDate.length > 0 ? (
-                        <div className="text-center">
-                          <Gift className="w-6 h-6 text-green-600 mx-auto mb-1" />
-                          <Badge variant="secondary" className="text-xs">
-                            {attendeesOnDate.length}
-                          </Badge>
-                        </div>
-                      ) : (
-                        <div className="text-2xl opacity-20">
-                          {dayNum <= 24 ? '🎄' : ''}
-                        </div>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Selected Date Details */}
-        {selectedDate && (
-          <Card className="border-green-200 dark:border-green-900">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CalendarIcon className="w-5 h-5 text-green-600" />
-                {format(selectedDate, "EEEE d. MMMM", { locale: nb })}
-              </CardTitle>
-              <CardDescription>
-                Hvem kommer denne dagen?
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {getAttendeesForDate(selectedDate).length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">
-                  Ingen påmeldt for denne dagen ennå 🎅
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {getAttendeesForDate(selectedDate).map((att) => (
-                    <div 
-                      key={att.id}
-                      className="flex items-center justify-between p-3 rounded-lg border bg-card"
-                    >
-                      <div>
-                        <div className="font-semibold">{att.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          Ankomst: {format(new Date(att.arrival_date), "d. MMM", { locale: nb })} • 
-                          Avreise: {format(new Date(att.departure_date), "d. MMM", { locale: nb })}
-                        </div>
-                      </div>
-                      <Gift className="w-5 h-5 text-green-600" />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Registration Dialog */}
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        {/* Add Family Dialog */}
+        <Dialog open={isAddingFamily} onOpenChange={setIsAddingFamily}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <Gift className="w-5 h-5 text-red-600" />
-                Meld deg på familiejulen
+                <Users className="w-5 h-5 text-red-600" />
+                Legg til familie
               </DialogTitle>
-              <DialogDescription>
-                Fortell oss når du kommer, så holder vi oversikten! 🎄
-              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Navn *</Label>
+                <Label htmlFor="familyName">Familienavn *</Label>
                 <Input
-                  id="name"
-                  placeholder="Ola Nordmann"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">E-post *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="ola@agj.no"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Ankomst *</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !arrivalDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {arrivalDate ? format(arrivalDate, "d. MMM", { locale: nb }) : "Velg dato"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={arrivalDate}
-                        onSelect={setArrivalDate}
-                        disabled={(date) => date < new Date(2025, 11, 1) || date > new Date(2025, 11, 24)}
-                        initialFocus
-                        className="pointer-events-auto"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                <div className="space-y-2">
-                  <Label>Avreise *</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !departureDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {departureDate ? format(departureDate, "d. MMM", { locale: nb }) : "Velg dato"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={departureDate}
-                        onSelect={setDepartureDate}
-                        disabled={(date) => date < new Date(2025, 11, 1) || date > new Date(2025, 11, 24)}
-                        initialFocus
-                        className="pointer-events-auto"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="notes">Kommentar</Label>
-                <Input
-                  id="notes"
-                  placeholder="Mat-preferanser, allergier etc."
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
+                  id="familyName"
+                  placeholder="f.eks. Familie Hansen"
+                  value={newFamilyName}
+                  onChange={(e) => setNewFamilyName(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && addFamily()}
                 />
               </div>
             </div>
             <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setIsDialogOpen(false)}
-              >
+              <Button variant="outline" onClick={() => setIsAddingFamily(false)}>
                 Avbryt
               </Button>
-              <Button
-                onClick={handleSubmit}
-                className="bg-gradient-to-r from-red-600 to-green-600"
-              >
-                <Gift className="mr-2 h-4 w-4" />
-                Meld meg på!
+              <Button onClick={addFamily} className="bg-gradient-to-r from-red-600 to-green-600">
+                <Plus className="mr-2 h-4 w-4" />
+                Legg til
               </Button>
             </div>
           </DialogContent>
