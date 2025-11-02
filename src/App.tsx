@@ -23,6 +23,7 @@ import AdminSettings from "./pages/AdminSettings";
 import AdminQuestions from "./pages/AdminQuestions";
 import AdminSeed from "./pages/AdminSeed";
 import AdminCompanies from "./pages/admin/AdminCompanies";
+import CapabilityCatalog from "./pages/CapabilityCatalog";
 import IndustryAdmin from "./pages/IndustryAdmin";
 import ApplicationsPage from "./pages/ApplicationsPage";
 import AppProductDetails from "./pages/AppProductDetails";
@@ -89,6 +90,7 @@ const App = () => (
               <Route path="industries" element={<IndustryAdmin />} />
               <Route path="applications" element={<ApplicationsPage />} />
               <Route path="applications/new" element={<ApplicationCreate />} />
+              <Route path="capabilities" element={<CapabilityCatalog />} />
               <Route path="database" element={<AdminSeed />} />
               <Route path="integrations" element={<AdminSettings />} />
               <Route path="security" element={<AdminSettings />} />
@@ -104,6 +106,7 @@ const App = () => (
             <Route path="/applications" element={<ApplicationsPage />} />
             <Route path="/applications/:id" element={<AppProductDetails />} />
             <Route path="/system-vendors" element={<SystemVendorsPage />} />
+            <Route path="/capabilities" element={<CapabilityCatalog />} />
             
             {/* Companies */}
             <Route path="/companies" element={<CompaniesHub />} />

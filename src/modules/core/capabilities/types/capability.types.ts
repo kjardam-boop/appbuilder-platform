@@ -1,0 +1,142 @@
+/**
+ * Capability Types
+ * Defines reusable functions, services, and integrations
+ */
+
+export type CapabilityCategory = 
+  | "AI" 
+  | "Integration" 
+  | "UI Component" 
+  | "Business Logic"
+  | "Authentication"
+  | "Data Management";
+
+export interface Capability {
+  id: string;
+  key: string; // e.g., "ai-text-generation"
+  name: string;
+  description: string | null;
+  category: CapabilityCategory;
+  
+  // Versioning
+  current_version: string;
+  is_active: boolean;
+  
+  // Metadata
+  estimated_dev_hours: number | null;
+  price_per_month: number | null;
+  dependencies: string[]; // Array of capability keys
+  
+  // Demo
+  demo_url: string | null;
+  documentation_url: string | null;
+  icon_name: string | null;
+  
+  // Tags for search
+  tags: string[];
+  
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CapabilityVersion {
+  id: string;
+  capability_id: string;
+  version: string;
+  
+  // What changed
+  changelog: string | null;
+  breaking_changes: boolean;
+  
+  // Implementation details
+  code_reference: string | null;
+  edge_functions: string[];
+  database_migrations: string[];
+  
+  released_at: string;
+  deprecated_at: string | null;
+  end_of_life_at: string | null;
+}
+
+export interface TenantCapability {
+  id: string;
+  tenant_id: string;
+  capability_id: string;
+  
+  // Version management
+  version_locked: string | null;
+  auto_update: boolean;
+  version_locked_until: string | null;
+  
+  // Configuration
+  is_enabled: boolean;
+  config: Record<string, any>;
+  
+  // Audit
+  activated_at: string;
+  activated_by: string | null;
+  last_used_at: string | null;
+  
+  // Populated
+  capability?: Capability;
+}
+
+export interface CustomerAppProject {
+  id: string;
+  tenant_id: string;
+  
+  name: string;
+  description: string | null;
+  
+  // App configuration
+  subdomain: string | null;
+  
+  // Status
+  status: 'planning' | 'building' | 'preview' | 'approved' | 'production';
+  
+  // Selected capabilities
+  selected_capabilities: Array<{
+    capability_id: string;
+    version: string;
+  }>;
+  
+  // Estimates
+  estimated_hours: number | null;
+  estimated_cost: number | null;
+  
+  // Workflow
+  approved_at: string | null;
+  approved_by: string | null;
+  deployed_to_preview_at: string | null;
+  deployed_to_production_at: string | null;
+  
+  // Theme/branding
+  branding: Record<string, any> | null;
+  
+  created_at: string;
+  created_by: string | null;
+  updated_at: string;
+}
+
+export interface CapabilityFilters {
+  category?: CapabilityCategory;
+  query?: string;
+  tags?: string[];
+  isActive?: boolean;
+}
+
+export interface CapabilityInput {
+  key: string;
+  name: string;
+  description?: string;
+  category: CapabilityCategory;
+  current_version?: string;
+  estimated_dev_hours?: number;
+  price_per_month?: number;
+  dependencies?: string[];
+  demo_url?: string;
+  documentation_url?: string;
+  icon_name?: string;
+  tags?: string[];
+  code_reference?: string;
+}
