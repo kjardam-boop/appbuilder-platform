@@ -17,6 +17,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format, isSameDay } from "date-fns";
@@ -131,12 +133,12 @@ export default function Jul25App() {
           <div className="flex items-center justify-center gap-3">
             <Gift className="w-12 h-12 text-red-600 animate-bounce" />
             <h1 className="text-5xl font-bold bg-gradient-to-r from-red-600 via-green-600 to-red-600 bg-clip-text text-transparent">
-              Jul25 Julebord
+              Jul25 Familiejul
             </h1>
             <Gift className="w-12 h-12 text-red-600 animate-bounce" />
           </div>
           <p className="text-xl text-muted-foreground">
-            AG Jacobsen Consulting - Julebord 2025
+            AG Jacobsen Consulting - Familiejul 2025
           </p>
           <p className="text-sm text-muted-foreground">
             🎄 Meld deg på og fortell oss når du kommer! 🎅
@@ -297,7 +299,7 @@ export default function Jul25App() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Gift className="w-5 h-5 text-red-600" />
-                Meld deg på julebordet
+                Meld deg på familiejulen
               </DialogTitle>
               <DialogDescription>
                 Fortell oss når du kommer, så holder vi oversikten! 🎄
@@ -326,42 +328,58 @@ export default function Jul25App() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Ankomst *</Label>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start"
-                    onClick={() => document.getElementById('arrival-cal')?.click()}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {arrivalDate ? format(arrivalDate, "d. MMM", { locale: nb }) : "Velg dato"}
-                  </Button>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !arrivalDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {arrivalDate ? format(arrivalDate, "d. MMM", { locale: nb }) : "Velg dato"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={arrivalDate}
+                        onSelect={setArrivalDate}
+                        disabled={(date) => date < new Date(2025, 11, 1) || date > new Date(2025, 11, 24)}
+                        initialFocus
+                        className="pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <div className="space-y-2">
                   <Label>Avreise *</Label>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start"
-                    onClick={() => document.getElementById('departure-cal')?.click()}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {departureDate ? format(departureDate, "d. MMM", { locale: nb }) : "Velg dato"}
-                  </Button>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !departureDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {departureDate ? format(departureDate, "d. MMM", { locale: nb }) : "Velg dato"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={departureDate}
+                        onSelect={setDepartureDate}
+                        disabled={(date) => date < new Date(2025, 11, 1) || date > new Date(2025, 11, 24)}
+                        initialFocus
+                        className="pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
-              </div>
-              <div className="hidden">
-                <Calendar
-                  id="arrival-cal"
-                  mode="single"
-                  selected={arrivalDate}
-                  onSelect={setArrivalDate}
-                  disabled={(date) => date < new Date(2025, 11, 1) || date > new Date(2025, 11, 24)}
-                />
-                <Calendar
-                  id="departure-cal"
-                  mode="single"
-                  selected={departureDate}
-                  onSelect={setDepartureDate}
-                  disabled={(date) => date < new Date(2025, 11, 1) || date > new Date(2025, 11, 24)}
-                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="notes">Kommentar</Label>
