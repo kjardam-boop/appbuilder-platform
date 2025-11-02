@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { Calendar as CalendarIcon, Users, Sparkles, Star, CheckSquare, Plus, ArrowUpDown, Baby, Church, Heart, Edit2, Trash2, X } from "lucide-react";
+import { Calendar as CalendarIcon, Users, Sparkles, Star, CheckSquare, Plus, ArrowUpDown, Baby, Church, Heart, Edit2, Trash2, X, Mail } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -94,6 +94,8 @@ export default function Jul25App() {
   const [editingTaskText, setEditingTaskText] = useState("");
   
   const [mockToday] = useState(15);
+  const [showInvitationDialog, setShowInvitationDialog] = useState(false);
+  const [invitationEmail, setInvitationEmail] = useState("");
 
   useEffect(() => {
     // Initialize Christmas words for days 1-24
@@ -202,6 +204,34 @@ export default function Jul25App() {
     }
   };
 
+  const specifyDays = (familyId: string) => {
+    const family = families.find(f => f.id === familyId);
+    if (!family) return;
+    
+    // Auto-generate members if they don't exist
+    if (family.members.length === 0) {
+      const generatedMembers: FamilyMember[] = [];
+      for (let i = 1; i <= family.numberOfPeople; i++) {
+        generatedMembers.push({
+          name: `Familiemedlem ${i}`,
+          arrivalDate: family.arrivalDate,
+          arrivalTime: family.arrivalTime,
+          departureDate: family.departureDate,
+          departureTime: family.departureTime
+        });
+      }
+      
+      setFamilies(prev => prev.map(fam => 
+        fam.id === familyId ? { ...fam, members: generatedMembers, expanded: true } : fam
+      ));
+      
+      toast.success(`${family.numberOfPeople} medlemmer opprettet! Klikk på navnene for å endre datoer.`);
+    } else {
+      // Just expand if members already exist
+      toggleFamilyExpanded(familyId);
+    }
+  };
+
   const openMemberDialog = (familyId: string) => {
     const family = families.find(f => f.id === familyId);
     if (!family) return;
@@ -211,7 +241,20 @@ export default function Jul25App() {
     setNewMemberArrivalTime(family.arrivalTime);
     setNewMemberDepartureDate(family.departureDate);
     setNewMemberDepartureTime(family.departureTime);
-    setMemberDialog({ open: true, familyId });
+    setMemberDialog({ open: true, familyId, editIndex: undefined });
+  };
+  
+  const openEditMemberDialog = (familyId: string, memberIndex: number) => {
+    const family = families.find(f => f.id === familyId);
+    if (!family) return;
+    
+    const member = family.members[memberIndex];
+    setNewMemberName(member.name);
+    setNewMemberArrivalDate(member.arrivalDate);
+    setNewMemberArrivalTime(member.arrivalTime);
+    setNewMemberDepartureDate(member.departureDate);
+    setNewMemberDepartureTime(member.departureTime);
+    setMemberDialog({ open: true, familyId, editIndex: memberIndex });
   };
   
   const addMember = () => {
@@ -225,23 +268,41 @@ export default function Jul25App() {
       return;
     }
     
-    setFamilies(prev => prev.map(fam => 
-      fam.id === memberDialog.familyId
-        ? { 
-            ...fam, 
-            members: [...fam.members, { 
-              name: newMemberName, 
-              arrivalDate: newMemberArrivalDate,
-              arrivalTime: newMemberArrivalTime,
-              departureDate: newMemberDepartureDate,
-              departureTime: newMemberDepartureTime
-            }] 
-          }
-        : fam
-    ));
+    const memberData: FamilyMember = {
+      name: newMemberName,
+      arrivalDate: newMemberArrivalDate,
+      arrivalTime: newMemberArrivalTime,
+      departureDate: newMemberDepartureDate,
+      departureTime: newMemberDepartureTime
+    };
     
-    toast.success(`${newMemberName} lagt til!`);
-    setMemberDialog({ open: false, familyId: null });
+    if (memberDialog.editIndex !== undefined) {
+      // Edit existing member
+      setFamilies(prev => prev.map(fam => 
+        fam.id === memberDialog.familyId
+          ? { 
+              ...fam, 
+              members: fam.members.map((m, idx) => 
+                idx === memberDialog.editIndex ? memberData : m
+              )
+            }
+          : fam
+      ));
+      toast.success(`${newMemberName} oppdatert!`);
+    } else {
+      // Add new member
+      setFamilies(prev => prev.map(fam => 
+        fam.id === memberDialog.familyId
+          ? { 
+              ...fam, 
+              members: [...fam.members, memberData] 
+            }
+          : fam
+      ));
+      toast.success(`${newMemberName} lagt til!`);
+    }
+    
+    setMemberDialog({ open: false, familyId: null, editIndex: undefined });
   };
 
   const toggleFamilyExpanded = (familyId: string) => {
@@ -299,6 +360,22 @@ export default function Jul25App() {
     }
   };
 
+  const getMembersPerDay = (family: FamilyRegistration): Record<number, number> => {
+    const membersPerDay: Record<number, number> = {};
+    
+    for (let day = family.arrivalDate; day <= family.departureDate; day++) {
+      if (family.members.length === 0) {
+        membersPerDay[day] = family.numberOfPeople;
+      } else {
+        membersPerDay[day] = family.members.filter(member => 
+          day >= member.arrivalDate && day <= member.departureDate
+        ).length;
+      }
+    }
+    
+    return membersPerDay;
+  };
+
   const getGuestsPerDay = () => {
     const guestsPerDay: Record<number, number> = {};
     
@@ -307,21 +384,10 @@ export default function Jul25App() {
     }
     
     families.forEach(family => {
-      for (let day = family.arrivalDate; day <= family.departureDate; day++) {
-        // If no members specified, use numberOfPeople
-        if (family.members.length === 0) {
-          guestsPerDay[day] += family.numberOfPeople;
-        } else {
-          // Count family members who are present this day
-          let presentCount = 0;
-          family.members.forEach(member => {
-            if (day >= member.arrivalDate && day <= member.departureDate) {
-              presentCount++;
-            }
-          });
-          guestsPerDay[day] += presentCount;
-        }
-      }
+      const familyMembersPerDay = getMembersPerDay(family);
+      Object.entries(familyMembersPerDay).forEach(([day, count]) => {
+        guestsPerDay[parseInt(day)] += count;
+      });
     });
     
     return guestsPerDay;
@@ -352,6 +418,24 @@ export default function Jul25App() {
         if (!b.deadline) return -1;
         return a.deadline.localeCompare(b.deadline);
       });
+    }
+  };
+
+  const sendInvitations = async () => {
+    if (!invitationEmail.trim()) {
+      toast.error("Vennligst skriv inn e-postadresse");
+      return;
+    }
+
+    try {
+      // Here you would call your email service
+      // For now, just show success
+      toast.success(`Invitasjon sendt til ${invitationEmail}! 📧`);
+      setInvitationEmail("");
+      setShowInvitationDialog(false);
+    } catch (error) {
+      console.error('Error sending invitation:', error);
+      toast.error('Kunne ikke sende invitasjon');
     }
   };
 
@@ -398,14 +482,25 @@ export default function Jul25App() {
                 <CalendarIcon className="w-5 h-5 text-green-600" />
                 Kalender
               </CardTitle>
-              <Button 
-                onClick={() => setIsAddingFamily(true)}
-                size="sm"
-                className="bg-gradient-to-r from-green-600 to-amber-600 w-full sm:w-auto"
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Legg til familie
-              </Button>
+              <div className="flex gap-2 w-full sm:w-auto">
+                <Button 
+                  onClick={() => setShowInvitationDialog(true)}
+                  size="sm"
+                  variant="outline"
+                  className="flex-1 sm:flex-none"
+                >
+                  <Mail className="mr-2 h-4 w-4" />
+                  Send invitasjon
+                </Button>
+                <Button 
+                  onClick={() => setIsAddingFamily(true)}
+                  size="sm"
+                  className="bg-gradient-to-r from-green-600 to-amber-600 flex-1 sm:flex-none"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Legg til familie
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4 sm:space-y-6">
@@ -439,6 +534,7 @@ export default function Jul25App() {
                 {families.map((family) => {
                   const startOffset = (family.arrivalDate - 19) * 40;
                   const duration = (family.departureDate - family.arrivalDate + 1) * 40;
+                  const familyMembersPerDay = getMembersPerDay(family);
                   
                   return (
                     <div key={family.id} className="space-y-2">
@@ -483,14 +579,25 @@ export default function Jul25App() {
                             ))}
                           </div>
                           <div 
-                            className="absolute top-1 h-6 bg-green-600 rounded cursor-pointer hover:bg-green-700 transition-colors flex items-center justify-center text-xs text-white font-medium min-w-max"
+                            className="absolute top-1 h-6 bg-green-600 rounded cursor-pointer hover:bg-green-700 transition-colors flex items-center text-xs text-white font-medium min-w-max overflow-hidden"
                             style={{ 
                               left: `${startOffset}px`, 
                               width: `${duration}px` 
                             }}
                             title={`${family.familyName}: ${family.arrivalDate}. ${family.arrivalTime} - ${family.departureDate}. ${family.departureTime}`}
                           >
-                            {family.members.length > 0 ? family.members.length : family.numberOfPeople}
+                            {Object.entries(familyMembersPerDay).map(([day, count]) => {
+                              const dayOffset = (parseInt(day) - family.arrivalDate) * 40;
+                              return (
+                                <span 
+                                  key={day}
+                                  className="absolute top-0 bottom-0 flex items-center justify-center"
+                                  style={{ left: `${dayOffset}px`, width: '40px' }}
+                                >
+                                  {count}
+                                </span>
+                              );
+                            })}
                           </div>
                         </div>
                       </div>
@@ -509,9 +616,12 @@ export default function Jul25App() {
                             return (
                               <div key={idx} className="flex flex-col sm:flex-row gap-1 items-start text-xs bg-accent/30 sm:bg-transparent p-2 sm:p-0 rounded">
                                 <div className="flex gap-1 items-center w-full sm:w-32 md:w-40">
-                                  <span className="flex-1 text-muted-foreground truncate">
+                                  <button
+                                    onClick={() => openEditMemberDialog(family.id, idx)}
+                                    className="flex-1 text-muted-foreground truncate text-left hover:text-foreground hover:underline cursor-pointer"
+                                  >
                                     {member.name}
-                                  </span>
+                                  </button>
                                   <Button 
                                     size="sm" 
                                     variant="ghost" 
@@ -545,15 +655,26 @@ export default function Jul25App() {
                               </div>
                             );
                           })}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-xs h-8 sm:h-6 mt-2 sm:mt-1 w-full sm:w-auto"
-                            onClick={() => openMemberDialog(family.id)}
-                          >
-                            <Plus className="w-3 h-3 mr-1" />
-                            Legg til medlem
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-xs h-8 sm:h-6 mt-2 sm:mt-1 flex-1 sm:flex-none"
+                              onClick={() => specifyDays(family.id)}
+                            >
+                              <CalendarIcon className="w-3 h-3 mr-1" />
+                              Spesifiser dager
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-xs h-8 sm:h-6 mt-2 sm:mt-1"
+                              onClick={() => openMemberDialog(family.id)}
+                            >
+                              <Plus className="w-3 h-3 mr-1" />
+                              Legg til medlem
+                            </Button>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -860,10 +981,12 @@ export default function Jul25App() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Users className="w-5 h-5 text-green-600" />
-                Legg til familiemedlem
+                {memberDialog.editIndex !== undefined ? "Rediger familiemedlem" : "Legg til familiemedlem"}
               </DialogTitle>
               <DialogDescription>
-                Legg til et enkeltmedlem med egne ankomst/avreise datoer.
+                {memberDialog.editIndex !== undefined 
+                  ? "Endre ankomst/avreise datoer for medlemmet."
+                  : "Legg til et enkeltmedlem med egne ankomst/avreise datoer."}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
@@ -934,12 +1057,21 @@ export default function Jul25App() {
               </div>
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setMemberDialog({ open: false, familyId: null })}>
+              <Button variant="outline" onClick={() => setMemberDialog({ open: false, familyId: null, editIndex: undefined })}>
                 Avbryt
               </Button>
               <Button onClick={addMember} className="bg-gradient-to-r from-green-600 to-amber-600">
-                <Plus className="mr-2 h-4 w-4" />
-                Legg til
+                {memberDialog.editIndex !== undefined ? (
+                  <>
+                    <Edit2 className="mr-2 h-4 w-4" />
+                    Oppdater
+                  </>
+                ) : (
+                  <>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Legg til
+                  </>
+                )}
               </Button>
             </div>
           </DialogContent>
@@ -975,6 +1107,45 @@ export default function Jul25App() {
               <Button onClick={saveTask} className="bg-gradient-to-r from-green-600 to-amber-600">
                 <Plus className="mr-2 h-4 w-4" />
                 {editingTask ? "Oppdater" : "Legg til"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Invitation Dialog */}
+        <Dialog open={showInvitationDialog} onOpenChange={setShowInvitationDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Mail className="w-5 h-5 text-green-600" />
+                Send invitasjon
+              </DialogTitle>
+              <DialogDescription>
+                Send en invitasjon til nye familier for å melde seg på julebordet.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="invitationEmail">E-postadresse *</Label>
+                <Input
+                  id="invitationEmail"
+                  type="email"
+                  placeholder="f.eks. familie@eksempel.no"
+                  value={invitationEmail}
+                  onChange={(e) => setInvitationEmail(e.target.value)}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Invitasjonen inneholder en link til påmeldingsskjemaet.
+              </p>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowInvitationDialog(false)}>
+                Avbryt
+              </Button>
+              <Button onClick={sendInvitations} className="bg-gradient-to-r from-green-600 to-amber-600">
+                <Mail className="mr-2 h-4 w-4" />
+                Send invitasjon
               </Button>
             </div>
           </DialogContent>
