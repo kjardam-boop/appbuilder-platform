@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { Calendar as CalendarIcon, Users, Sparkles, Star, CheckSquare, Plus, ArrowUpDown, Baby, Church, Heart, Edit2, Trash2, X, Mail } from "lucide-react";
+import { Calendar as CalendarIcon, Users, Sparkles, Star, CheckSquare, Plus, ArrowUpDown, Baby, Church, Heart, Edit2, Trash2, X, Mail, LogOut, LogIn, UserCog } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { nb } from "date-fns/locale";
+import { useAuth } from "@/modules/core/user/hooks/useAuth";
 
 interface FamilyMember {
   name: string;
@@ -55,6 +56,7 @@ interface Task {
   done: boolean;
   assignedTo?: string;
   deadline?: string; // ISO date string
+  assignedFamilyId?: string; // Ny: hvilken familie som har ansvaret
 }
 
 interface MemberDialogState {
@@ -64,6 +66,15 @@ interface MemberDialogState {
 }
 
 export default function Jul25App() {
+  const { user, signOut } = useAuth();
+  const [showLoginDialog, setShowLoginDialog] = useState(false);
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  
+  // Admin emails (kan utvides til database-løsning senere)
+  const adminEmails = ["admin@jul25.no", "kjetil@agj.no"];
+  const isAdmin = user && adminEmails.includes(user.email || "");
+  
   const [families, setFamilies] = useState<FamilyRegistration[]>([]);
   const [christmasWords, setChristmasWords] = useState<ChristmasWord[]>([]);
   const [isAddingFamily, setIsAddingFamily] = useState(false);
@@ -97,6 +108,30 @@ export default function Jul25App() {
   const [showInvitationDialog, setShowInvitationDialog] = useState(false);
   const [invitationEmail, setInvitationEmail] = useState("");
   const [hideCompletedTasks, setHideCompletedTasks] = useState(false);
+  
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: loginEmail,
+        password: loginPassword,
+      });
+      
+      if (error) throw error;
+      
+      toast.success("Velkommen! 🎄");
+      setShowLoginDialog(false);
+      setLoginEmail("");
+      setLoginPassword("");
+    } catch (error: any) {
+      toast.error(error.message || "Innlogging feilet");
+    }
+  };
+  
+  const handleLogout = async () => {
+    await signOut();
+    toast.success("Du er nå logget ut");
+  };
 
   useEffect(() => {
     // Initialize Christmas words for days 1-24
@@ -175,6 +210,11 @@ export default function Jul25App() {
       };
       setFamilies([...families, newFamily]);
       toast.success(`Familie ${newFamilyName} lagt til! 🎄`);
+      
+      // Auto-assign a task if admin and no tasks assigned to this family yet
+      if (isAdmin) {
+        autoAssignTaskToFamily(newFamily.id);
+      }
     }
     
     setNewFamilyName("");
@@ -185,6 +225,18 @@ export default function Jul25App() {
     setNewDepartureTime("12:00");
     setIsAddingFamily(false);
     setEditingFamily(null);
+  };
+  
+  const autoAssignTaskToFamily = (familyId: string) => {
+    // Find unassigned tasks
+    const unassignedTasks = tasks.filter(t => !t.assignedFamilyId);
+    if (unassignedTasks.length > 0) {
+      const taskToAssign = unassignedTasks[0];
+      setTasks(prev => prev.map(t => 
+        t.id === taskToAssign.id ? { ...t, assignedFamilyId: familyId } : t
+      ));
+      toast.info(`Oppgave "${taskToAssign.text}" tildelt ny familie!`);
+    }
   };
 
   const openEditFamilyDialog = (family: FamilyRegistration) => {
@@ -466,9 +518,9 @@ export default function Jul25App() {
       <div className="container mx-auto py-8 space-y-8 relative z-10">
         {/* Header */}
         <div className="text-center space-y-4">
-          <div className="flex items-center justify-center gap-3">
+          <div className="flex items-center justify-center gap-3 flex-wrap">
             <Star className="w-12 h-12 text-yellow-500 animate-pulse" />
-            <h1 className="text-5xl font-bold bg-gradient-to-r from-green-700 via-amber-600 to-green-700 bg-clip-text text-transparent">
+            <h1 className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-green-700 via-amber-600 to-green-700 bg-clip-text text-transparent">
               Jul25 Familiejul
             </h1>
             <Star className="w-12 h-12 text-yellow-500 animate-pulse" />
@@ -479,6 +531,39 @@ export default function Jul25App() {
           <p className="text-sm text-muted-foreground">
             🎄 Meld deg på og fortell oss når du kommer! 🎅
           </p>
+          
+          {/* Login/Logout Button */}
+          <div className="flex justify-center gap-2">
+            {user ? (
+              <div className="flex items-center gap-2">
+                {isAdmin && (
+                  <Badge variant="secondary" className="bg-amber-100 text-amber-900">
+                    <UserCog className="w-3 h-3 mr-1" />
+                    Admin
+                  </Badge>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLogout}
+                  className="gap-2"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Logg ut
+                </Button>
+              </div>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowLoginDialog(true)}
+                className="gap-2"
+              >
+                <LogIn className="w-4 h-4" />
+                Admin innlogging
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Main Calendar - Family Registration */}
@@ -490,15 +575,17 @@ export default function Jul25App() {
                 Kalender
               </CardTitle>
               <div className="flex gap-2 w-full sm:w-auto">
-                <Button 
-                  onClick={() => setShowInvitationDialog(true)}
-                  size="sm"
-                  variant="outline"
-                  className="flex-1 sm:flex-none"
-                >
-                  <Mail className="mr-2 h-4 w-4" />
-                  Send invitasjon
-                </Button>
+                {isAdmin && (
+                  <Button 
+                    onClick={() => setShowInvitationDialog(true)}
+                    size="sm"
+                    variant="outline"
+                    className="flex-1 sm:flex-none"
+                  >
+                    <Mail className="mr-2 h-4 w-4" />
+                    Send invitasjon
+                  </Button>
+                )}
                 <Button 
                   onClick={() => setIsAddingFamily(true)}
                   size="sm"
@@ -556,22 +643,26 @@ export default function Jul25App() {
                               <span className="text-xs">{family.expanded ? '▼' : '▶'}</span>
                               <span className="truncate">{family.familyName}</span>
                             </button>
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
-                              className="h-auto py-1 px-2" 
-                              onClick={() => openEditFamilyDialog(family)}
-                            >
-                              <Edit2 className="w-3 h-3" />
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
-                              className="h-auto py-1 px-2 text-destructive" 
-                              onClick={() => deleteFamily(family.id)}
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
+                            {isAdmin && (
+                              <>
+                                <Button 
+                                  size="sm" 
+                                  variant="ghost" 
+                                  className="h-auto py-1 px-2" 
+                                  onClick={() => openEditFamilyDialog(family)}
+                                >
+                                  <Edit2 className="w-3 h-3" />
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="ghost" 
+                                  className="h-auto py-1 px-2 text-destructive" 
+                                  onClick={() => deleteFamily(family.id)}
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </Button>
+                              </>
+                            )}
                           </div>
                           <div className="text-xs text-muted-foreground mt-1 sm:hidden">
                             {family.arrivalDate}/12 {family.arrivalTime} - {family.departureDate}/12 {family.departureTime}
@@ -693,7 +784,8 @@ export default function Jul25App() {
         </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-          {/* Tasks Widget */}
+          {/* Tasks Widget - Only visible for admins */}
+          {isAdmin && (
           <Card className="border-amber-200 dark:border-amber-900">
             <CardHeader>
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
@@ -772,21 +864,21 @@ export default function Jul25App() {
                           className="h-7 text-xs flex-1 sm:w-28 !text-foreground [&::-webkit-datetime-edit]:text-foreground [&::-webkit-calendar-picker-indicator]:opacity-70"
                         />
                         <Select
-                          value={task.assignedTo || "none"}
+                          value={task.assignedFamilyId || "none"}
                           onValueChange={(value) => {
                             setTasks(prev => prev.map(t => 
-                              t.id === task.id ? { ...t, assignedTo: value === "none" ? undefined : value } : t
+                              t.id === task.id ? { ...t, assignedFamilyId: value === "none" ? undefined : value } : t
                             ));
                           }}
                         >
                           <SelectTrigger className="h-7 text-xs flex-1 sm:w-32">
-                            <SelectValue placeholder="Tilordne" />
+                            <SelectValue placeholder="Tilordne familie" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="none">Ingen</SelectItem>
-                            {people.map(person => (
-                              <SelectItem key={person.id} value={person.id}>
-                                {person.label}
+                            <SelectItem value="none">Ingen familie</SelectItem>
+                            {families.map(fam => (
+                              <SelectItem key={fam.id} value={fam.id}>
+                                {fam.familyName}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -810,6 +902,7 @@ export default function Jul25App() {
               </div>
             </CardContent>
           </Card>
+          )}
 
           {/* Christmas Calendar - AI Word of the Day */}
           <Card className="border-2 border-purple-300 dark:border-purple-900">
@@ -1165,6 +1258,53 @@ export default function Jul25App() {
                 Send invitasjon
               </Button>
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Login Dialog */}
+        <Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <LogIn className="w-5 h-5 text-green-600" />
+                Admin innlogging
+              </DialogTitle>
+              <DialogDescription>
+                Logg inn som administrator for å administrere oppgaver og invitasjoner.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleLogin} className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="login-email">E-post</Label>
+                <Input
+                  id="login-email"
+                  type="email"
+                  placeholder="admin@jul25.no"
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="login-password">Passord</Label>
+                <Input
+                  id="login-password"
+                  type="password"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setShowLoginDialog(false)}>
+                  Avbryt
+                </Button>
+                <Button type="submit" className="bg-gradient-to-r from-green-600 to-amber-600">
+                  <LogIn className="mr-2 h-4 w-4" />
+                  Logg inn
+                </Button>
+              </div>
+            </form>
           </DialogContent>
         </Dialog>
       </div>
