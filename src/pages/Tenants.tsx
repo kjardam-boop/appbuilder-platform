@@ -241,7 +241,11 @@ export default function Tenants() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredTenants.map((tenant) => (
-            <Card key={tenant.id} className="hover:shadow-md transition-shadow">
+            <Card 
+              key={tenant.id} 
+              className="hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => window.location.href = `/admin/tenants/${tenant.id}`}
+            >
               <CardContent className="pt-6">
                 <div className="space-y-3">
                   <div className="flex items-start justify-between">

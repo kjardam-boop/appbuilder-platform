@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Modules from "./pages/Modules";
 import Tenants from "./pages/Tenants";
+import TenantDetails from "./pages/TenantDetails";
 import CompanyRegistration from "./pages/onboarding/CompanyRegistration";
 import ProjectCreation from "./pages/onboarding/ProjectCreation";
 import Auth from "./pages/Auth";
@@ -81,6 +82,7 @@ const App = () => (
             <Route path="/admin" element={<AdminLayout><Admin /></AdminLayout>}>
               <Route index element={<AdminDashboard />} />
               <Route path="tenants" element={<Tenants />} />
+              <Route path="tenants/:tenantId" element={<TenantDetails />} />
               <Route path="users" element={<UserManagement />} />
               <Route path="roles" element={<RoleManagement />} />
               <Route path="roles/config" element={<RoleConfiguration />} />
