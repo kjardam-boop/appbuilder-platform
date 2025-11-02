@@ -396,7 +396,7 @@ export default function Jul25App() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
                 <CalendarIcon className="w-5 h-5 text-green-600" />
-                Familiejul Kalender
+                Kalender
               </CardTitle>
               <Button 
                 onClick={() => setIsAddingFamily(true)}
