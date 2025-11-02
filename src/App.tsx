@@ -46,6 +46,7 @@ import SupplierAuth from "./pages/SupplierAuth";
 import SupplierScoringPage from "./pages/SupplierScoringPage";
 import ArchivedResources from "./pages/ArchivedResources";
 import NotFound from "./pages/NotFound";
+import Jul25App from "./pages/apps/Jul25App";
 
 const queryClient = new QueryClient();
 
@@ -129,6 +130,9 @@ const App = () => (
             {/* Supplier routes */}
             <Route path="/supplier/auth" element={<SupplierAuth />} />
             <Route path="/supplier/scoring/:projectId/:supplierId" element={<SupplierScoringPage />} />
+            
+            {/* Customer Apps */}
+            <Route path="/apps/jul25" element={<Jul25App />} />
             
             {/* Catch-all 404 route - MUST BE LAST */}
             <Route path="*" element={<NotFound />} />

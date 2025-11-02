@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { 
+import {
   ArrowLeft, 
   Building2, 
   Globe, 
@@ -402,6 +402,15 @@ export default function TenantDetails() {
                             Live
                             <ExternalLink className="h-3 w-3" />
                           </a>
+                        </Button>
+                      )}
+                      {/* Internal preview link for POC */}
+                      {project.subdomain === 'jul25-agj' && (
+                        <Button size="sm" variant="secondary" asChild>
+                          <Link to="/apps/jul25" className="flex items-center gap-2">
+                            <Eye className="h-4 w-4" />
+                            Åpne app
+                          </Link>
                         </Button>
                       )}
                     </div>
