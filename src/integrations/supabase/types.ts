@@ -209,6 +209,113 @@ export type Database = {
         }
         Relationships: []
       }
+      capabilities: {
+        Row: {
+          category: string
+          created_at: string | null
+          current_version: string
+          demo_url: string | null
+          dependencies: string[] | null
+          description: string | null
+          documentation_url: string | null
+          estimated_dev_hours: number | null
+          icon_name: string | null
+          id: string
+          is_active: boolean | null
+          key: string
+          name: string
+          price_per_month: number | null
+          tags: string[] | null
+          updated_at: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          current_version?: string
+          demo_url?: string | null
+          dependencies?: string[] | null
+          description?: string | null
+          documentation_url?: string | null
+          estimated_dev_hours?: number | null
+          icon_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          key: string
+          name: string
+          price_per_month?: number | null
+          tags?: string[] | null
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          current_version?: string
+          demo_url?: string | null
+          dependencies?: string[] | null
+          description?: string | null
+          documentation_url?: string | null
+          estimated_dev_hours?: number | null
+          icon_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          key?: string
+          name?: string
+          price_per_month?: number | null
+          tags?: string[] | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      capability_versions: {
+        Row: {
+          breaking_changes: boolean | null
+          capability_id: string
+          changelog: string | null
+          code_reference: string | null
+          database_migrations: string[] | null
+          deprecated_at: string | null
+          edge_functions: string[] | null
+          end_of_life_at: string | null
+          id: string
+          released_at: string | null
+          version: string
+        }
+        Insert: {
+          breaking_changes?: boolean | null
+          capability_id: string
+          changelog?: string | null
+          code_reference?: string | null
+          database_migrations?: string[] | null
+          deprecated_at?: string | null
+          edge_functions?: string[] | null
+          end_of_life_at?: string | null
+          id?: string
+          released_at?: string | null
+          version: string
+        }
+        Update: {
+          breaking_changes?: boolean | null
+          capability_id?: string
+          changelog?: string | null
+          code_reference?: string | null
+          database_migrations?: string[] | null
+          deprecated_at?: string | null
+          edge_functions?: string[] | null
+          end_of_life_at?: string | null
+          id?: string
+          released_at?: string | null
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "capability_versions_capability_id_fkey"
+            columns: ["capability_id"]
+            isOneToOne: false
+            referencedRelation: "capabilities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       companies: {
         Row: {
           company_roles: string[] | null
@@ -447,6 +554,74 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: true
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_app_projects: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          branding: Json | null
+          created_at: string | null
+          created_by: string | null
+          deployed_to_preview_at: string | null
+          deployed_to_production_at: string | null
+          description: string | null
+          estimated_cost: number | null
+          estimated_hours: number | null
+          id: string
+          name: string
+          selected_capabilities: Json | null
+          status: string | null
+          subdomain: string | null
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          branding?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          deployed_to_preview_at?: string | null
+          deployed_to_production_at?: string | null
+          description?: string | null
+          estimated_cost?: number | null
+          estimated_hours?: number | null
+          id?: string
+          name: string
+          selected_capabilities?: Json | null
+          status?: string | null
+          subdomain?: string | null
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          branding?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          deployed_to_preview_at?: string | null
+          deployed_to_production_at?: string | null
+          description?: string | null
+          estimated_cost?: number | null
+          estimated_hours?: number | null
+          id?: string
+          name?: string
+          selected_capabilities?: Json | null
+          status?: string | null
+          subdomain?: string | null
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_app_projects_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -1558,6 +1733,63 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_capabilities: {
+        Row: {
+          activated_at: string | null
+          activated_by: string | null
+          auto_update: boolean | null
+          capability_id: string
+          config: Json | null
+          id: string
+          is_enabled: boolean | null
+          last_used_at: string | null
+          tenant_id: string
+          version_locked: string | null
+          version_locked_until: string | null
+        }
+        Insert: {
+          activated_at?: string | null
+          activated_by?: string | null
+          auto_update?: boolean | null
+          capability_id: string
+          config?: Json | null
+          id?: string
+          is_enabled?: boolean | null
+          last_used_at?: string | null
+          tenant_id: string
+          version_locked?: string | null
+          version_locked_until?: string | null
+        }
+        Update: {
+          activated_at?: string | null
+          activated_by?: string | null
+          auto_update?: boolean | null
+          capability_id?: string
+          config?: Json | null
+          id?: string
+          is_enabled?: boolean | null
+          last_used_at?: string | null
+          tenant_id?: string
+          version_locked?: string | null
+          version_locked_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_capabilities_capability_id_fkey"
+            columns: ["capability_id"]
+            isOneToOne: false
+            referencedRelation: "capabilities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_capabilities_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
