@@ -49,27 +49,22 @@ export class CapabilityService {
    * Get single capability by ID or key
    */
   static async getCapability(idOrKey: string): Promise<Capability | null> {
-    // Try ID first
+    // Check if it looks like a UUID
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrKey);
+    
     let query = supabase
       .from("capabilities")
-      .select("*")
-      .eq("id", idOrKey)
-      .single();
+      .select("*");
 
-    let { data, error } = await query;
-
-    // If not found, try key
-    if (error?.code === 'PGRST116') {
-      query = supabase
-        .from("capabilities")
-        .select("*")
-        .eq("key", idOrKey)
-        .single();
-
-      const result = await query;
-      data = result.data;
-      error = result.error;
+    if (isUuid) {
+      // Try ID first if it's a UUID
+      query = query.eq("id", idOrKey);
+    } else {
+      // Otherwise search by key
+      query = query.eq("key", idOrKey);
     }
+
+    const { data, error } = await query.single();
 
     if (error && error.code !== 'PGRST116') throw error;
     return data as Capability | null;
@@ -94,6 +89,7 @@ export class CapabilityService {
         documentation_url: input.documentation_url || null,
         icon_name: input.icon_name || null,
         tags: input.tags || [],
+        code_reference: input.code_reference || null,
       }])
       .select()
       .single();
