@@ -383,11 +383,11 @@ export default function Jul25App() {
                                   <div 
                                     className={cn(
                                       "absolute top-1 h-4 rounded min-w-max",
-                                      isDifferent ? "bg-amber-500" : "bg-green-500"
+                                      isDifferent ? "bg-[hsl(var(--christmas-gold-muted))]" : "bg-[hsl(var(--christmas-emerald))]"
                                     )}
                                     style={{ 
                                       left: `${memberStartOffset}px`, 
-                                      width: `${memberDuration}px` 
+                                      width: `${memberDuration}px`
                                     }}
                                     title={`${member.name}: ${member.arrivalDate}. ${member.arrivalTime} - ${member.departureDate}. ${member.departureTime}`}
                                   />
