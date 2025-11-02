@@ -465,7 +465,7 @@ export default function Jul25App() {
                               t.id === task.id ? { ...t, deadline: e.target.value } : t
                             ));
                           }}
-                          className="h-7 text-xs flex-1 sm:w-28 text-foreground"
+                          className="h-7 text-xs flex-1 sm:w-28 !text-foreground [&::-webkit-datetime-edit]:text-foreground [&::-webkit-calendar-picker-indicator]:opacity-70"
                         />
                         <Select
                           value={task.assignedTo || "none"}
