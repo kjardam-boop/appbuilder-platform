@@ -357,7 +357,7 @@ export default function Jul25App() {
 
                       {/* Expanded Members */}
                       {family.expanded && (
-                        <div className="ml-4 sm:ml-0 sm:pl-36 md:pl-44 space-y-2 sm:space-y-1 mt-2">
+                        <div className="ml-4 sm:ml-0 space-y-2 sm:space-y-1 mt-2">
                           {family.members.map((member, idx) => {
                             const memberStartOffset = (member.arrivalDate - 19) * 40;
                             const memberDuration = (member.departureDate - member.arrivalDate + 1) * 40;
@@ -368,7 +368,7 @@ export default function Jul25App() {
                             
                             return (
                               <div key={idx} className="flex flex-col sm:flex-row gap-1 items-start text-xs bg-accent/30 sm:bg-transparent p-2 sm:p-0 rounded">
-                                <span className="w-full sm:w-28 md:w-32 text-muted-foreground truncate flex items-center gap-1">
+                                <span className="w-full sm:w-32 md:w-40 text-muted-foreground truncate flex items-center gap-1">
                                   {member.name} {isDifferent && <span className="text-orange-500">⚠️</span>}
                                 </span>
                                 <div className="text-xs text-muted-foreground sm:hidden">
