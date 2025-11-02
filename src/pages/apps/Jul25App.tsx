@@ -34,6 +34,7 @@ interface FamilyMember {
 interface FamilyRegistration {
   id: string;
   familyName: string;
+  numberOfPeople: number;
   arrivalDate: number;
   arrivalTime: string;
   departureDate: number;
@@ -66,7 +67,9 @@ export default function Jul25App() {
   const [families, setFamilies] = useState<FamilyRegistration[]>([]);
   const [christmasWords, setChristmasWords] = useState<ChristmasWord[]>([]);
   const [isAddingFamily, setIsAddingFamily] = useState(false);
+  const [editingFamily, setEditingFamily] = useState<FamilyRegistration | null>(null);
   const [newFamilyName, setNewFamilyName] = useState("");
+  const [newNumberOfPeople, setNewNumberOfPeople] = useState(2);
   const [newArrivalDate, setNewArrivalDate] = useState(19);
   const [newArrivalTime, setNewArrivalTime] = useState("15:00");
   const [newDepartureDate, setNewDepartureDate] = useState(31);
@@ -87,12 +90,7 @@ export default function Jul25App() {
     { id: "3", text: "Sende ut invitasjoner", done: true },
   ]);
   const [taskSortBy, setTaskSortBy] = useState<"name" | "date">("name");
-  
-  const [editingFamilyId, setEditingFamilyId] = useState<string | null>(null);
-  const [editingFamilyName, setEditingFamilyName] = useState("");
-  const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
-  const [editingMemberName, setEditingMemberName] = useState("");
-  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editingTaskText, setEditingTaskText] = useState("");
   
   const [mockToday] = useState(15);
@@ -151,25 +149,57 @@ export default function Jul25App() {
       return;
     }
     
-    const newFamily: FamilyRegistration = {
-      id: crypto.randomUUID(),
-      familyName: newFamilyName,
-      arrivalDate: newArrivalDate,
-      arrivalTime: newArrivalTime,
-      departureDate: newDepartureDate,
-      departureTime: newDepartureTime,
-      members: [],
-      expanded: false
-    };
+    if (editingFamily) {
+      // Update existing
+      setFamilies(prev => prev.map(f => 
+        f.id === editingFamily.id 
+          ? { ...f, familyName: newFamilyName, numberOfPeople: newNumberOfPeople, arrivalDate: newArrivalDate, arrivalTime: newArrivalTime, departureDate: newDepartureDate, departureTime: newDepartureTime }
+          : f
+      ));
+      toast.success(`Familie ${newFamilyName} oppdatert! 🎄`);
+    } else {
+      // Add new
+      const newFamily: FamilyRegistration = {
+        id: crypto.randomUUID(),
+        familyName: newFamilyName,
+        numberOfPeople: newNumberOfPeople,
+        arrivalDate: newArrivalDate,
+        arrivalTime: newArrivalTime,
+        departureDate: newDepartureDate,
+        departureTime: newDepartureTime,
+        members: [],
+        expanded: false
+      };
+      setFamilies([...families, newFamily]);
+      toast.success(`Familie ${newFamilyName} lagt til! 🎄`);
+    }
     
-    setFamilies([...families, newFamily]);
     setNewFamilyName("");
+    setNewNumberOfPeople(2);
     setNewArrivalDate(19);
     setNewArrivalTime("15:00");
     setNewDepartureDate(31);
     setNewDepartureTime("12:00");
     setIsAddingFamily(false);
-    toast.success(`Familie ${newFamilyName} lagt til! 🎄`);
+    setEditingFamily(null);
+  };
+
+  const openEditFamilyDialog = (family: FamilyRegistration) => {
+    setEditingFamily(family);
+    setNewFamilyName(family.familyName);
+    setNewNumberOfPeople(family.numberOfPeople);
+    setNewArrivalDate(family.arrivalDate);
+    setNewArrivalTime(family.arrivalTime);
+    setNewDepartureDate(family.departureDate);
+    setNewDepartureTime(family.departureTime);
+    setIsAddingFamily(true);
+  };
+
+  const deleteFamily = (familyId: string) => {
+    if (confirm("Er du sikker på at du vil slette denne familien?")) {
+      setFamilies(prev => prev.filter(f => f.id !== familyId));
+      toast.success("Familie slettet");
+    }
   };
 
   const openMemberDialog = (familyId: string) => {
@@ -219,53 +249,44 @@ export default function Jul25App() {
       fam.id === familyId ? { ...fam, expanded: !fam.expanded } : fam
     ));
   };
-  
-  const startEditFamily = (familyId: string, currentName: string) => {
-    setEditingFamilyId(familyId);
-    setEditingFamilyName(currentName);
+
+  const openEditTaskDialog = (task: Task) => {
+    setEditingTask(task);
+    setEditingTaskText(task.text);
   };
-  
-  const saveEditFamily = () => {
-    if (!editingFamilyName.trim()) {
-      toast.error("Familienavn kan ikke være tomt");
+
+  const saveTask = () => {
+    if (!editingTaskText.trim()) {
+      toast.error("Oppgavetekst kan ikke være tom");
       return;
     }
-    setFamilies(prev => prev.map(fam => 
-      fam.id === editingFamilyId ? { ...fam, familyName: editingFamilyName } : fam
-    ));
-    setEditingFamilyId(null);
-    toast.success("Familienavn oppdatert");
+    
+    if (editingTask) {
+      setTasks(prev => prev.map(t => 
+        t.id === editingTask.id ? { ...t, text: editingTaskText } : t
+      ));
+      toast.success("Oppgave oppdatert");
+    } else {
+      const newTask: Task = {
+        id: crypto.randomUUID(),
+        text: editingTaskText,
+        done: false
+      };
+      setTasks(prev => [...prev, newTask]);
+      toast.success("Oppgave lagt til");
+    }
+    
+    setEditingTask(null);
+    setEditingTaskText("");
   };
-  
-  const deleteFamily = (familyId: string) => {
-    if (confirm("Er du sikker på at du vil slette denne familien?")) {
-      setFamilies(prev => prev.filter(f => f.id !== familyId));
-      toast.success("Familie slettet");
+
+  const deleteTask = (taskId: string) => {
+    if (confirm("Er du sikker på at du vil slette denne oppgaven?")) {
+      setTasks(prev => prev.filter(t => t.id !== taskId));
+      toast.success("Oppgave slettet");
     }
   };
-  
-  const startEditMember = (familyId: string, memberIdx: number, currentName: string) => {
-    setEditingMemberId(`${familyId}-${memberIdx}`);
-    setEditingMemberName(currentName);
-  };
-  
-  const saveEditMember = (familyId: string, memberIdx: number) => {
-    if (!editingMemberName.trim()) {
-      toast.error("Medlemsnavn kan ikke være tomt");
-      return;
-    }
-    setFamilies(prev => prev.map(fam => 
-      fam.id === familyId ? {
-        ...fam,
-        members: fam.members.map((m, idx) => 
-          idx === memberIdx ? { ...m, name: editingMemberName } : m
-        )
-      } : fam
-    ));
-    setEditingMemberId(null);
-    toast.success("Medlemsnavn oppdatert");
-  };
-  
+
   const deleteMember = (familyId: string, memberIdx: number) => {
     if (confirm("Er du sikker på at du vil slette dette medlemmet?")) {
       setFamilies(prev => prev.map(fam => 
@@ -277,40 +298,33 @@ export default function Jul25App() {
       toast.success("Medlem slettet");
     }
   };
-  
-  const startEditTask = (taskId: string, currentText: string) => {
-    setEditingTaskId(taskId);
-    setEditingTaskText(currentText);
-  };
-  
-  const saveEditTask = () => {
-    if (!editingTaskText.trim()) {
-      toast.error("Oppgavetekst kan ikke være tom");
-      return;
+
+  const getGuestsPerDay = () => {
+    const guestsPerDay: Record<number, number> = {};
+    
+    for (let day = 19; day <= 31; day++) {
+      guestsPerDay[day] = 0;
     }
-    setTasks(prev => prev.map(t => 
-      t.id === editingTaskId ? { ...t, text: editingTaskText } : t
-    ));
-    setEditingTaskId(null);
-    toast.success("Oppgave oppdatert");
-  };
-  
-  const deleteTask = (taskId: string) => {
-    if (confirm("Er du sikker på at du vil slette denne oppgaven?")) {
-      setTasks(prev => prev.filter(t => t.id !== taskId));
-      toast.success("Oppgave slettet");
-    }
-  };
-  
-  const addNewTask = () => {
-    const newTask: Task = {
-      id: crypto.randomUUID(),
-      text: "Ny oppgave",
-      done: false
-    };
-    setTasks(prev => [...prev, newTask]);
-    setEditingTaskId(newTask.id);
-    setEditingTaskText(newTask.text);
+    
+    families.forEach(family => {
+      for (let day = family.arrivalDate; day <= family.departureDate; day++) {
+        // If no members specified, use numberOfPeople
+        if (family.members.length === 0) {
+          guestsPerDay[day] += family.numberOfPeople;
+        } else {
+          // Count family members who are present this day
+          let presentCount = 0;
+          family.members.forEach(member => {
+            if (day >= member.arrivalDate && day <= member.departureDate) {
+              presentCount++;
+            }
+          });
+          guestsPerDay[day] += presentCount;
+        }
+      }
+    });
+    
+    return guestsPerDay;
   };
   
   const getAllRegisteredPeople = () => {
@@ -396,13 +410,21 @@ export default function Jul25App() {
           </CardHeader>
           <CardContent className="space-y-4 sm:space-y-6">
             {/* Date Header - Hidden on mobile, scrollable on larger screens */}
-            <div className="hidden sm:flex gap-0 overflow-x-auto pb-2">
-              <div className="w-32 sm:w-40 flex-shrink-0" />
-              {eventDates.map(date => (
-                <div key={date} className="w-10 flex-shrink-0 text-center font-medium text-xs border-l border-border/30">
-                  {date}
-                </div>
-              ))}
+            <div className="hidden sm:block overflow-x-auto pb-2">
+              <div className="flex gap-0">
+                <div className="w-32 sm:w-40 flex-shrink-0" />
+                {eventDates.map(date => {
+                  const guestsPerDay = getGuestsPerDay();
+                  return (
+                    <div key={date} className="w-10 flex-shrink-0 text-center">
+                      <div className="font-medium text-xs border-l border-border/30 pb-1">{date}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {guestsPerDay[date] > 0 ? `${guestsPerDay[date]}` : '-'}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Family Rows - Gantt Style */}
@@ -423,52 +445,31 @@ export default function Jul25App() {
                       <div className="flex flex-col sm:flex-row gap-2 sm:gap-1 items-start">
                         {/* Family Name and Info */}
                         <div className="w-full sm:w-32 md:w-40 flex-shrink-0">
-                          {editingFamilyId === family.id ? (
-                            <div className="flex gap-1">
-                              <Input
-                                value={editingFamilyName}
-                                onChange={(e) => setEditingFamilyName(e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') saveEditFamily();
-                                  if (e.key === 'Escape') setEditingFamilyId(null);
-                                }}
-                                className="h-8 text-sm"
-                                autoFocus
-                              />
-                              <Button size="sm" variant="ghost" className="h-8 px-2" onClick={saveEditFamily}>
-                                <CheckSquare className="w-4 h-4" />
-                              </Button>
-                              <Button size="sm" variant="ghost" className="h-8 px-2" onClick={() => setEditingFamilyId(null)}>
-                                <X className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          ) : (
-                            <div className="flex gap-1">
-                              <button
-                                onClick={() => toggleFamilyExpanded(family.id)}
-                                className="flex-1 bg-green-700 text-white rounded px-2 py-2 sm:py-1 text-sm text-left hover:bg-green-800 transition-colors flex items-center gap-1"
-                              >
-                                <span className="text-xs">{family.expanded ? '▼' : '▶'}</span>
-                                <span className="truncate">{family.familyName}</span>
-                              </button>
-                              <Button 
-                                size="sm" 
-                                variant="ghost" 
-                                className="h-auto py-1 px-2" 
-                                onClick={() => startEditFamily(family.id, family.familyName)}
-                              >
-                                <Edit2 className="w-3 h-3" />
-                              </Button>
-                              <Button 
-                                size="sm" 
-                                variant="ghost" 
-                                className="h-auto py-1 px-2 text-destructive" 
-                                onClick={() => deleteFamily(family.id)}
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </Button>
-                            </div>
-                          )}
+                          <div className="flex gap-1">
+                            <button
+                              onClick={() => toggleFamilyExpanded(family.id)}
+                              className="flex-1 bg-green-700 text-white rounded px-2 py-2 sm:py-1 text-sm text-left hover:bg-green-800 transition-colors flex items-center gap-1"
+                            >
+                              <span className="text-xs">{family.expanded ? '▼' : '▶'}</span>
+                              <span className="truncate">{family.familyName}</span>
+                            </button>
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              className="h-auto py-1 px-2" 
+                              onClick={() => openEditFamilyDialog(family)}
+                            >
+                              <Edit2 className="w-3 h-3" />
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              className="h-auto py-1 px-2 text-destructive" 
+                              onClick={() => deleteFamily(family.id)}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
                           <div className="text-xs text-muted-foreground mt-1 sm:hidden">
                             {family.arrivalDate}/12 {family.arrivalTime} - {family.departureDate}/12 {family.departureTime}
                           </div>
@@ -507,48 +508,19 @@ export default function Jul25App() {
                             
                             return (
                               <div key={idx} className="flex flex-col sm:flex-row gap-1 items-start text-xs bg-accent/30 sm:bg-transparent p-2 sm:p-0 rounded">
-                                {editingMemberId === `${family.id}-${idx}` ? (
-                                  <div className="flex gap-1 w-full sm:w-32 md:w-40">
-                                    <Input
-                                      value={editingMemberName}
-                                      onChange={(e) => setEditingMemberName(e.target.value)}
-                                      onKeyDown={(e) => {
-                                        if (e.key === 'Enter') saveEditMember(family.id, idx);
-                                        if (e.key === 'Escape') setEditingMemberId(null);
-                                      }}
-                                      className="h-7 text-xs"
-                                      autoFocus
-                                    />
-                                    <Button size="sm" variant="ghost" className="h-7 px-1" onClick={() => saveEditMember(family.id, idx)}>
-                                      <CheckSquare className="w-3 h-3" />
-                                    </Button>
-                                    <Button size="sm" variant="ghost" className="h-7 px-1" onClick={() => setEditingMemberId(null)}>
-                                      <X className="w-3 h-3" />
-                                    </Button>
-                                  </div>
-                                ) : (
-                                  <div className="flex gap-1 items-center w-full sm:w-32 md:w-40">
-                                    <span className="flex-1 text-muted-foreground truncate">
-                                      {member.name}
-                                    </span>
-                                    <Button 
-                                      size="sm" 
-                                      variant="ghost" 
-                                      className="h-6 px-1" 
-                                      onClick={() => startEditMember(family.id, idx, member.name)}
-                                    >
-                                      <Edit2 className="w-3 h-3" />
-                                    </Button>
-                                    <Button 
-                                      size="sm" 
-                                      variant="ghost" 
-                                      className="h-6 px-1 text-destructive" 
-                                      onClick={() => deleteMember(family.id, idx)}
-                                    >
-                                      <Trash2 className="w-3 h-3" />
-                                    </Button>
-                                  </div>
-                                )}
+                                <div className="flex gap-1 items-center w-full sm:w-32 md:w-40">
+                                  <span className="flex-1 text-muted-foreground truncate">
+                                    {member.name}
+                                  </span>
+                                  <Button 
+                                    size="sm" 
+                                    variant="ghost" 
+                                    className="h-6 px-1 text-destructive" 
+                                    onClick={() => deleteMember(family.id, idx)}
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </Button>
+                                </div>
                                 <div className="text-xs text-muted-foreground sm:hidden">
                                   {member.arrivalDate}/12 {member.arrivalTime} - {member.departureDate}/12 {member.departureTime}
                                 </div>
@@ -630,48 +602,25 @@ export default function Jul25App() {
                           }}
                           className="w-4 h-4 flex-shrink-0"
                         />
-                        {editingTaskId === task.id ? (
-                          <div className="flex gap-1 flex-1">
-                            <Input
-                              value={editingTaskText}
-                              onChange={(e) => setEditingTaskText(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') saveEditTask();
-                                if (e.key === 'Escape') setEditingTaskId(null);
-                              }}
-                              className="h-7 text-sm"
-                              autoFocus
-                            />
-                            <Button size="sm" variant="ghost" className="h-7 px-2" onClick={saveEditTask}>
-                              <CheckSquare className="w-3 h-3" />
-                            </Button>
-                            <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => setEditingTaskId(null)}>
-                              <X className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <>
-                            <span className={cn("text-sm flex-1", task.done && "line-through text-muted-foreground")}>
-                              {task.text}
-                            </span>
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
-                              className="h-7 px-2" 
-                              onClick={() => startEditTask(task.id, task.text)}
-                            >
-                              <Edit2 className="w-3 h-3" />
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
-                              className="h-7 px-2 text-destructive" 
-                              onClick={() => deleteTask(task.id)}
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
-                          </>
-                        )}
+                        <span className={cn("text-sm flex-1", task.done && "line-through text-muted-foreground")}>
+                          {task.text}
+                        </span>
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          className="h-7 px-2" 
+                          onClick={() => openEditTaskDialog(task)}
+                        >
+                          <Edit2 className="w-3 h-3" />
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          className="h-7 px-2 text-destructive" 
+                          onClick={() => deleteTask(task.id)}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
                       </div>
                       <div className="flex gap-2 w-full sm:w-auto pl-6 sm:pl-0">
                         <Input
@@ -712,7 +661,10 @@ export default function Jul25App() {
                   variant="ghost"
                   size="sm"
                   className="w-full text-xs mt-2"
-                  onClick={addNewTask}
+                  onClick={() => {
+                    setEditingTask(null);
+                    setEditingTaskText("Ny oppgave");
+                  }}
                 >
                   <Plus className="w-3 h-3 mr-1" />
                   Legg til oppgave
@@ -802,7 +754,7 @@ export default function Jul25App() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Users className="w-5 h-5 text-green-600" />
-                Legg til familie
+                {editingFamily ? "Rediger familie" : "Legg til familie"}
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
@@ -813,6 +765,17 @@ export default function Jul25App() {
                   placeholder="f.eks. Familie Hansen"
                   value={newFamilyName}
                   onChange={(e) => setNewFamilyName(e.target.value)}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="numberOfPeople">Antall personer i familien *</Label>
+                <Input
+                  id="numberOfPeople"
+                  type="number"
+                  min="1"
+                  value={newNumberOfPeople}
+                  onChange={(e) => setNewNumberOfPeople(parseInt(e.target.value) || 1)}
                 />
               </div>
               
@@ -974,6 +937,38 @@ export default function Jul25App() {
               <Button onClick={addMember} className="bg-gradient-to-r from-green-600 to-amber-600">
                 <Plus className="mr-2 h-4 w-4" />
                 Legg til
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Task Dialog */}
+        <Dialog open={editingTask !== null} onOpenChange={(open) => !open && setEditingTask(null)}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <CheckSquare className="w-5 h-5 text-amber-600" />
+                {editingTask ? "Rediger oppgave" : "Ny oppgave"}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="taskText">Oppgavetekst *</Label>
+                <Input
+                  id="taskText"
+                  placeholder="f.eks. Bestille mat"
+                  value={editingTaskText}
+                  onChange={(e) => setEditingTaskText(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setEditingTask(null)}>
+                Avbryt
+              </Button>
+              <Button onClick={saveTask} className="bg-gradient-to-r from-green-600 to-amber-600">
+                <Plus className="mr-2 h-4 w-4" />
+                {editingTask ? "Oppdater" : "Legg til"}
               </Button>
             </div>
           </DialogContent>
