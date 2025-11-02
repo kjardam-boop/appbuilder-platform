@@ -30,12 +30,7 @@ export default function CapabilityCatalog() {
 
   return (
     <div className="container mx-auto py-8 space-y-6">
-      <AppBreadcrumbs
-        items={[
-          { label: "Hjem", href: "/" },
-          { label: "Capability Catalog", href: "/capabilities" },
-        ]}
-      />
+      <AppBreadcrumbs customLabel="Capability Catalog" />
 
       <div className="flex items-center justify-between">
         <div>

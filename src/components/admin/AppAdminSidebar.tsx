@@ -45,6 +45,7 @@ const adminNavItems = [
     items: [
       { title: "Industries", url: "/admin/industries", icon: Briefcase },
       { title: "Applications", url: "/admin/applications", icon: Package },
+      { title: "Capabilities", url: "/admin/capabilities", icon: Package },
     ],
   },
   {
@@ -52,7 +53,7 @@ const adminNavItems = [
     items: [
       { title: "Integrations", url: "/admin/integrations", icon: Plug },
       { title: "Security", url: "/admin/security", icon: Shield },
-      { title: "Database Tools", url: "/admin/database", icon: Database },
+      { title: "Seed Database", url: "/admin/database", icon: Database },
     ],
   },
 ];
