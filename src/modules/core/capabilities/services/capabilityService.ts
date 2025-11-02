@@ -89,7 +89,6 @@ export class CapabilityService {
         documentation_url: input.documentation_url || null,
         icon_name: input.icon_name || null,
         tags: input.tags || [],
-        code_reference: input.code_reference || null,
       }])
       .select()
       .single();
