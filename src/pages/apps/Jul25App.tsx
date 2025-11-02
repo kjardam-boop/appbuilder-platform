@@ -294,7 +294,7 @@ export default function Jul25App() {
             <div className="hidden sm:flex gap-1 overflow-x-auto pb-2">
               <div className="w-32 sm:w-40 flex-shrink-0" />
               {eventDates.map(date => (
-                <div key={date} className="w-8 sm:w-10 flex-shrink-0 text-center font-medium text-xs border-l border-border/30">
+                <div key={date} className="w-10 flex-shrink-0 text-center font-medium text-xs border-l border-border/30">
                   {date}
                 </div>
               ))}
@@ -310,8 +310,8 @@ export default function Jul25App() {
             ) : (
               <div className="space-y-3">
                 {families.map((family) => {
-                  const startOffset = (family.arrivalDate - 19) * 32;
-                  const duration = (family.departureDate - family.arrivalDate + 1) * 32;
+                  const startOffset = (family.arrivalDate - 19) * 40;
+                  const duration = (family.departureDate - family.arrivalDate + 1) * 40;
                   
                   return (
                     <div key={family.id} className="space-y-2">
@@ -334,7 +334,7 @@ export default function Jul25App() {
                         <div className="relative flex-1 h-8 hidden sm:block overflow-x-auto">
                           <div className="absolute inset-y-0 flex gap-1 min-w-max">
                             {eventDates.map(date => (
-                              <div key={date} className="w-8 sm:w-10 h-8 border-l border-border/30" />
+                              <div key={date} className="w-10 h-8 border-l border-border/30" />
                             ))}
                           </div>
                           <div 
@@ -354,8 +354,8 @@ export default function Jul25App() {
                       {family.expanded && (
                         <div className="ml-4 sm:ml-0 sm:pl-36 md:pl-44 space-y-2 sm:space-y-1 mt-2">
                           {family.members.map((member, idx) => {
-                            const memberStartOffset = (member.arrivalDate - 19) * 32;
-                            const memberDuration = (member.departureDate - member.arrivalDate + 1) * 32;
+                            const memberStartOffset = (member.arrivalDate - 19) * 40;
+                            const memberDuration = (member.departureDate - member.arrivalDate + 1) * 40;
                             const isDifferent = member.arrivalDate !== family.arrivalDate || 
                                               member.departureDate !== family.departureDate ||
                                               member.arrivalTime !== family.arrivalTime ||
@@ -372,7 +372,7 @@ export default function Jul25App() {
                                 <div className="relative flex-1 h-6 hidden sm:block overflow-x-auto">
                                   <div className="absolute inset-y-0 flex gap-1 min-w-max">
                                     {eventDates.map(date => (
-                                      <div key={date} className="w-8 sm:w-10 h-6 border-l border-border/30" />
+                                      <div key={date} className="w-10 h-6 border-l border-border/30" />
                                     ))}
                                   </div>
                                   <div 
