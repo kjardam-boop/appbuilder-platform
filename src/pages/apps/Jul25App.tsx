@@ -241,6 +241,11 @@ export default function Jul25App() {
     }
   };
 
+  // Gantt layout constants
+  const DAY_W = 40; // matches w-10
+  const DAY_GAP = 0; // matches gap-0
+  const DAY_UNIT = DAY_W + DAY_GAP;
+
   const eventDates = Array.from({ length: 13 }, (_, i) => i + 19); // 19-31
 
   return (
@@ -291,7 +296,7 @@ export default function Jul25App() {
           </CardHeader>
           <CardContent className="space-y-4 sm:space-y-6">
             {/* Date Header - Hidden on mobile, scrollable on larger screens */}
-            <div className="hidden sm:flex gap-1 overflow-x-auto pb-2">
+            <div className="hidden sm:flex gap-0 overflow-x-auto pb-2">
               <div className="w-32 sm:w-40 flex-shrink-0" />
               {eventDates.map(date => (
                 <div key={date} className="w-10 flex-shrink-0 text-center font-medium text-xs border-l border-border/30">
@@ -332,7 +337,7 @@ export default function Jul25App() {
 
                         {/* Gantt Bar - Hidden on mobile */}
                         <div className="relative flex-1 h-8 hidden sm:block overflow-x-auto">
-                          <div className="absolute inset-y-0 flex gap-1 min-w-max">
+                          <div className="absolute inset-y-0 flex gap-0 min-w-max">
                             {eventDates.map(date => (
                               <div key={date} className="w-10 h-8 border-l border-border/30" />
                             ))}
@@ -370,7 +375,7 @@ export default function Jul25App() {
                                   {member.arrivalDate}/12 {member.arrivalTime} - {member.departureDate}/12 {member.departureTime}
                                 </div>
                                 <div className="relative flex-1 h-6 hidden sm:block overflow-x-auto">
-                                  <div className="absolute inset-y-0 flex gap-1 min-w-max">
+                                  <div className="absolute inset-y-0 flex gap-0 min-w-max">
                                     {eventDates.map(date => (
                                       <div key={date} className="w-10 h-6 border-l border-border/30" />
                                     ))}
