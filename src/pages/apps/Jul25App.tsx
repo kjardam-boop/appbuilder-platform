@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { Calendar as CalendarIcon, Users, Sparkles, Star, CheckSquare, Plus, ArrowUpDown, Baby, Church, Heart } from "lucide-react";
+import { Calendar as CalendarIcon, Users, Sparkles, Star, CheckSquare, Plus, ArrowUpDown, Baby, Church, Heart, Edit2, Trash2, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -87,6 +87,13 @@ export default function Jul25App() {
     { id: "3", text: "Sende ut invitasjoner", done: true },
   ]);
   const [taskSortBy, setTaskSortBy] = useState<"name" | "date">("name");
+  
+  const [editingFamilyId, setEditingFamilyId] = useState<string | null>(null);
+  const [editingFamilyName, setEditingFamilyName] = useState("");
+  const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
+  const [editingMemberName, setEditingMemberName] = useState("");
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editingTaskText, setEditingTaskText] = useState("");
   
   const [mockToday] = useState(15);
 
@@ -213,6 +220,99 @@ export default function Jul25App() {
     ));
   };
   
+  const startEditFamily = (familyId: string, currentName: string) => {
+    setEditingFamilyId(familyId);
+    setEditingFamilyName(currentName);
+  };
+  
+  const saveEditFamily = () => {
+    if (!editingFamilyName.trim()) {
+      toast.error("Familienavn kan ikke være tomt");
+      return;
+    }
+    setFamilies(prev => prev.map(fam => 
+      fam.id === editingFamilyId ? { ...fam, familyName: editingFamilyName } : fam
+    ));
+    setEditingFamilyId(null);
+    toast.success("Familienavn oppdatert");
+  };
+  
+  const deleteFamily = (familyId: string) => {
+    if (confirm("Er du sikker på at du vil slette denne familien?")) {
+      setFamilies(prev => prev.filter(f => f.id !== familyId));
+      toast.success("Familie slettet");
+    }
+  };
+  
+  const startEditMember = (familyId: string, memberIdx: number, currentName: string) => {
+    setEditingMemberId(`${familyId}-${memberIdx}`);
+    setEditingMemberName(currentName);
+  };
+  
+  const saveEditMember = (familyId: string, memberIdx: number) => {
+    if (!editingMemberName.trim()) {
+      toast.error("Medlemsnavn kan ikke være tomt");
+      return;
+    }
+    setFamilies(prev => prev.map(fam => 
+      fam.id === familyId ? {
+        ...fam,
+        members: fam.members.map((m, idx) => 
+          idx === memberIdx ? { ...m, name: editingMemberName } : m
+        )
+      } : fam
+    ));
+    setEditingMemberId(null);
+    toast.success("Medlemsnavn oppdatert");
+  };
+  
+  const deleteMember = (familyId: string, memberIdx: number) => {
+    if (confirm("Er du sikker på at du vil slette dette medlemmet?")) {
+      setFamilies(prev => prev.map(fam => 
+        fam.id === familyId ? {
+          ...fam,
+          members: fam.members.filter((_, idx) => idx !== memberIdx)
+        } : fam
+      ));
+      toast.success("Medlem slettet");
+    }
+  };
+  
+  const startEditTask = (taskId: string, currentText: string) => {
+    setEditingTaskId(taskId);
+    setEditingTaskText(currentText);
+  };
+  
+  const saveEditTask = () => {
+    if (!editingTaskText.trim()) {
+      toast.error("Oppgavetekst kan ikke være tom");
+      return;
+    }
+    setTasks(prev => prev.map(t => 
+      t.id === editingTaskId ? { ...t, text: editingTaskText } : t
+    ));
+    setEditingTaskId(null);
+    toast.success("Oppgave oppdatert");
+  };
+  
+  const deleteTask = (taskId: string) => {
+    if (confirm("Er du sikker på at du vil slette denne oppgaven?")) {
+      setTasks(prev => prev.filter(t => t.id !== taskId));
+      toast.success("Oppgave slettet");
+    }
+  };
+  
+  const addNewTask = () => {
+    const newTask: Task = {
+      id: crypto.randomUUID(),
+      text: "Ny oppgave",
+      done: false
+    };
+    setTasks(prev => [...prev, newTask]);
+    setEditingTaskId(newTask.id);
+    setEditingTaskText(newTask.text);
+  };
+  
   const getAllRegisteredPeople = () => {
     const people: { id: string; label: string }[] = [];
     families.forEach(family => {
@@ -323,13 +423,52 @@ export default function Jul25App() {
                       <div className="flex flex-col sm:flex-row gap-2 sm:gap-1 items-start">
                         {/* Family Name and Info */}
                         <div className="w-full sm:w-32 md:w-40 flex-shrink-0">
-                          <button
-                            onClick={() => toggleFamilyExpanded(family.id)}
-                            className="w-full bg-green-700 text-white rounded px-2 py-2 sm:py-1 text-sm text-left hover:bg-green-800 transition-colors flex items-center gap-1"
-                          >
-                            <span className="text-xs">{family.expanded ? '▼' : '▶'}</span>
-                            <span className="truncate">{family.familyName}</span>
-                          </button>
+                          {editingFamilyId === family.id ? (
+                            <div className="flex gap-1">
+                              <Input
+                                value={editingFamilyName}
+                                onChange={(e) => setEditingFamilyName(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') saveEditFamily();
+                                  if (e.key === 'Escape') setEditingFamilyId(null);
+                                }}
+                                className="h-8 text-sm"
+                                autoFocus
+                              />
+                              <Button size="sm" variant="ghost" className="h-8 px-2" onClick={saveEditFamily}>
+                                <CheckSquare className="w-4 h-4" />
+                              </Button>
+                              <Button size="sm" variant="ghost" className="h-8 px-2" onClick={() => setEditingFamilyId(null)}>
+                                <X className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="flex gap-1">
+                              <button
+                                onClick={() => toggleFamilyExpanded(family.id)}
+                                className="flex-1 bg-green-700 text-white rounded px-2 py-2 sm:py-1 text-sm text-left hover:bg-green-800 transition-colors flex items-center gap-1"
+                              >
+                                <span className="text-xs">{family.expanded ? '▼' : '▶'}</span>
+                                <span className="truncate">{family.familyName}</span>
+                              </button>
+                              <Button 
+                                size="sm" 
+                                variant="ghost" 
+                                className="h-auto py-1 px-2" 
+                                onClick={() => startEditFamily(family.id, family.familyName)}
+                              >
+                                <Edit2 className="w-3 h-3" />
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="ghost" 
+                                className="h-auto py-1 px-2 text-destructive" 
+                                onClick={() => deleteFamily(family.id)}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          )}
                           <div className="text-xs text-muted-foreground mt-1 sm:hidden">
                             {family.arrivalDate}/12 {family.arrivalTime} - {family.departureDate}/12 {family.departureTime}
                           </div>
@@ -368,9 +507,48 @@ export default function Jul25App() {
                             
                             return (
                               <div key={idx} className="flex flex-col sm:flex-row gap-1 items-start text-xs bg-accent/30 sm:bg-transparent p-2 sm:p-0 rounded">
-                                <span className="w-full sm:w-32 md:w-40 text-muted-foreground truncate flex items-center gap-1">
-                                  {member.name}
-                                </span>
+                                {editingMemberId === `${family.id}-${idx}` ? (
+                                  <div className="flex gap-1 w-full sm:w-32 md:w-40">
+                                    <Input
+                                      value={editingMemberName}
+                                      onChange={(e) => setEditingMemberName(e.target.value)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') saveEditMember(family.id, idx);
+                                        if (e.key === 'Escape') setEditingMemberId(null);
+                                      }}
+                                      className="h-7 text-xs"
+                                      autoFocus
+                                    />
+                                    <Button size="sm" variant="ghost" className="h-7 px-1" onClick={() => saveEditMember(family.id, idx)}>
+                                      <CheckSquare className="w-3 h-3" />
+                                    </Button>
+                                    <Button size="sm" variant="ghost" className="h-7 px-1" onClick={() => setEditingMemberId(null)}>
+                                      <X className="w-3 h-3" />
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <div className="flex gap-1 items-center w-full sm:w-32 md:w-40">
+                                    <span className="flex-1 text-muted-foreground truncate">
+                                      {member.name}
+                                    </span>
+                                    <Button 
+                                      size="sm" 
+                                      variant="ghost" 
+                                      className="h-6 px-1" 
+                                      onClick={() => startEditMember(family.id, idx, member.name)}
+                                    >
+                                      <Edit2 className="w-3 h-3" />
+                                    </Button>
+                                    <Button 
+                                      size="sm" 
+                                      variant="ghost" 
+                                      className="h-6 px-1 text-destructive" 
+                                      onClick={() => deleteMember(family.id, idx)}
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </Button>
+                                  </div>
+                                )}
                                 <div className="text-xs text-muted-foreground sm:hidden">
                                   {member.arrivalDate}/12 {member.arrivalTime} - {member.departureDate}/12 {member.departureTime}
                                 </div>
@@ -452,9 +630,48 @@ export default function Jul25App() {
                           }}
                           className="w-4 h-4 flex-shrink-0"
                         />
-                        <span className={cn("text-sm flex-1", task.done && "line-through text-muted-foreground")}>
-                          {task.text}
-                        </span>
+                        {editingTaskId === task.id ? (
+                          <div className="flex gap-1 flex-1">
+                            <Input
+                              value={editingTaskText}
+                              onChange={(e) => setEditingTaskText(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') saveEditTask();
+                                if (e.key === 'Escape') setEditingTaskId(null);
+                              }}
+                              className="h-7 text-sm"
+                              autoFocus
+                            />
+                            <Button size="sm" variant="ghost" className="h-7 px-2" onClick={saveEditTask}>
+                              <CheckSquare className="w-3 h-3" />
+                            </Button>
+                            <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => setEditingTaskId(null)}>
+                              <X className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <>
+                            <span className={cn("text-sm flex-1", task.done && "line-through text-muted-foreground")}>
+                              {task.text}
+                            </span>
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              className="h-7 px-2" 
+                              onClick={() => startEditTask(task.id, task.text)}
+                            >
+                              <Edit2 className="w-3 h-3" />
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              className="h-7 px-2 text-destructive" 
+                              onClick={() => deleteTask(task.id)}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </>
+                        )}
                       </div>
                       <div className="flex gap-2 w-full sm:w-auto pl-6 sm:pl-0">
                         <Input
@@ -495,12 +712,7 @@ export default function Jul25App() {
                   variant="ghost"
                   size="sm"
                   className="w-full text-xs mt-2"
-                  onClick={() => {
-                    const text = prompt("Ny oppgave:");
-                    if (text) {
-                      setTasks(prev => [...prev, { id: crypto.randomUUID(), text, done: false }]);
-                    }
-                  }}
+                  onClick={addNewTask}
                 >
                   <Plus className="w-3 h-3 mr-1" />
                   Legg til oppgave
