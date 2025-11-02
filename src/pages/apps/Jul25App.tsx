@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { Calendar as CalendarIcon, Users, Sparkles, Gift, Star, CheckSquare, Plus, ArrowUpDown } from "lucide-react";
+import { Calendar as CalendarIcon, Users, Sparkles, Star, CheckSquare, Plus, ArrowUpDown, Baby, Church, Heart } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -120,7 +120,7 @@ export default function Jul25App() {
 
       if (error) throw error;
 
-      const newWord = { date: day, word: data.text, generated: true };
+      const newWord = { date: day, word: data.content || data.text || "Julebro", generated: true };
       setChristmasWords(prev => prev.map(w => 
         w.date === day ? newWord : w
       ));
@@ -249,24 +249,24 @@ export default function Jul25App() {
   const eventDates = Array.from({ length: 13 }, (_, i) => i + 19); // 19-31
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-red-50 via-green-50 to-white dark:from-red-950/20 dark:via-green-950/20 dark:to-background">
-      {/* Snowflake decorations */}
+    <div className="min-h-screen bg-gradient-to-b from-green-50 via-amber-50 to-white dark:from-green-950/20 dark:via-amber-950/20 dark:to-background">
+      {/* Christmas decorations - bibel tema */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <Sparkles className="absolute top-10 left-10 w-6 h-6 text-blue-300 animate-pulse" />
-        <Star className="absolute top-20 right-20 w-5 h-5 text-yellow-300 animate-pulse" />
-        <Gift className="absolute bottom-20 left-20 w-6 h-6 text-red-300 animate-bounce" />
-        <Sparkles className="absolute bottom-10 right-10 w-5 h-5 text-blue-300 animate-pulse" />
+        <Star className="absolute top-10 left-10 w-8 h-8 text-yellow-400 animate-pulse" />
+        <Star className="absolute top-20 right-20 w-6 h-6 text-amber-300 animate-pulse" />
+        <Heart className="absolute bottom-20 left-20 w-7 h-7 text-green-400 animate-pulse" />
+        <Baby className="absolute bottom-10 right-10 w-6 h-6 text-amber-400 animate-pulse" />
       </div>
 
       <div className="container mx-auto py-8 space-y-8 relative z-10">
         {/* Header */}
         <div className="text-center space-y-4">
           <div className="flex items-center justify-center gap-3">
-            <Gift className="w-12 h-12 text-red-600 animate-bounce" />
-            <h1 className="text-5xl font-bold bg-gradient-to-r from-red-600 via-green-600 to-red-600 bg-clip-text text-transparent">
+            <Star className="w-12 h-12 text-yellow-500 animate-pulse" />
+            <h1 className="text-5xl font-bold bg-gradient-to-r from-green-700 via-amber-600 to-green-700 bg-clip-text text-transparent">
               Jul25 Familiejul
             </h1>
-            <Gift className="w-12 h-12 text-red-600 animate-bounce" />
+            <Star className="w-12 h-12 text-yellow-500 animate-pulse" />
           </div>
           <p className="text-xl text-muted-foreground">
             AG Jacobsen Consulting - Familiejul 2025
@@ -277,17 +277,17 @@ export default function Jul25App() {
         </div>
 
         {/* Main Calendar - Family Registration */}
-        <Card className="border-2 border-red-200 dark:border-red-900">
+        <Card className="border-2 border-green-200 dark:border-green-900">
           <CardHeader>
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
-                <CalendarIcon className="w-5 h-5 text-red-600" />
+                <CalendarIcon className="w-5 h-5 text-green-600" />
                 Familiejul Kalender
               </CardTitle>
               <Button 
                 onClick={() => setIsAddingFamily(true)}
                 size="sm"
-                className="bg-gradient-to-r from-red-600 to-green-600 w-full sm:w-auto"
+                className="bg-gradient-to-r from-green-600 to-amber-600 w-full sm:w-auto"
               >
                 <Plus className="mr-2 h-4 w-4" />
                 Legg til familie
@@ -325,7 +325,7 @@ export default function Jul25App() {
                         <div className="w-full sm:w-32 md:w-40 flex-shrink-0">
                           <button
                             onClick={() => toggleFamilyExpanded(family.id)}
-                            className="w-full bg-red-600 text-white rounded px-2 py-2 sm:py-1 text-sm text-left hover:bg-red-700 transition-colors flex items-center gap-1"
+                            className="w-full bg-green-700 text-white rounded px-2 py-2 sm:py-1 text-sm text-left hover:bg-green-800 transition-colors flex items-center gap-1"
                           >
                             <span className="text-xs">{family.expanded ? '▼' : '▶'}</span>
                             <span className="truncate">{family.familyName}</span>
@@ -343,7 +343,7 @@ export default function Jul25App() {
                             ))}
                           </div>
                           <div 
-                            className="absolute top-1 h-6 bg-red-500 rounded cursor-pointer hover:bg-red-600 transition-colors flex items-center justify-center text-xs text-white font-medium min-w-max"
+                            className="absolute top-1 h-6 bg-green-600 rounded cursor-pointer hover:bg-green-700 transition-colors flex items-center justify-center text-xs text-white font-medium min-w-max"
                             style={{ 
                               left: `${startOffset}px`, 
                               width: `${duration}px` 
@@ -369,7 +369,7 @@ export default function Jul25App() {
                             return (
                               <div key={idx} className="flex flex-col sm:flex-row gap-1 items-start text-xs bg-accent/30 sm:bg-transparent p-2 sm:p-0 rounded">
                                 <span className="w-full sm:w-32 md:w-40 text-muted-foreground truncate flex items-center gap-1">
-                                  {member.name} {isDifferent && <span className="text-orange-500">⚠️</span>}
+                                  {member.name}
                                 </span>
                                 <div className="text-xs text-muted-foreground sm:hidden">
                                   {member.arrivalDate}/12 {member.arrivalTime} - {member.departureDate}/12 {member.departureTime}
@@ -383,7 +383,7 @@ export default function Jul25App() {
                                   <div 
                                     className={cn(
                                       "absolute top-1 h-4 rounded min-w-max",
-                                      isDifferent ? "bg-orange-400" : "bg-red-400"
+                                      isDifferent ? "bg-amber-500" : "bg-green-500"
                                     )}
                                     style={{ 
                                       left: `${memberStartOffset}px`, 
@@ -416,11 +416,11 @@ export default function Jul25App() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           {/* Tasks Widget */}
-          <Card className="border-blue-200 dark:border-blue-900">
+          <Card className="border-amber-200 dark:border-amber-900">
             <CardHeader>
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                 <CardTitle className="text-base sm:text-lg flex items-center gap-2">
-                  <CheckSquare className="w-5 h-5 text-blue-600" />
+                  <CheckSquare className="w-5 h-5 text-amber-600" />
                   Oppgaveliste
                 </CardTitle>
                 <Select value={taskSortBy} onValueChange={(v) => setTaskSortBy(v as "name" | "date")}>
@@ -510,10 +510,10 @@ export default function Jul25App() {
           </Card>
 
           {/* Christmas Calendar - AI Word of the Day */}
-          <Card className="border-2 border-green-200 dark:border-green-900">
+          <Card className="border-2 border-purple-300 dark:border-purple-900">
             <CardHeader>
               <CardTitle className="text-base sm:text-lg flex items-center gap-2">
-                <Gift className="w-5 h-5 text-green-600" />
+                <Church className="w-5 h-5 text-purple-600" />
                 Julekalender - Ord for dagen
               </CardTitle>
               <CardDescription className="text-xs sm:text-sm">
@@ -536,25 +536,25 @@ export default function Jul25App() {
                         "relative aspect-square rounded-lg border-2 p-2",
                         "transition-all",
                         isOpened 
-                          ? "bg-green-100 dark:bg-green-950/30 border-green-300 dark:border-green-900 hover:scale-105" 
+                          ? "bg-purple-100 dark:bg-purple-950/30 border-purple-300 dark:border-purple-900 hover:scale-105" 
                           : isFuture
                           ? "bg-gray-100 dark:bg-gray-900/30 border-gray-300 dark:border-gray-800 opacity-50 cursor-not-allowed"
-                          : "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900 hover:bg-red-100 dark:hover:bg-red-950/40 hover:scale-105 hover:shadow-lg cursor-pointer"
+                          : "bg-purple-50 dark:bg-purple-950/20 border-purple-200 dark:border-purple-900 hover:bg-purple-100 dark:hover:bg-purple-950/40 hover:scale-105 hover:shadow-lg cursor-pointer"
                       )}
                     >
                       <div className={cn(
                         "absolute top-1 left-1 text-xs font-bold",
-                        isFuture ? "text-gray-400" : "text-red-600"
+                        isFuture ? "text-gray-400" : "text-purple-700"
                       )}>
-                        {item.date}
+                        {item.date}.
                       </div>
                       <div className="flex items-center justify-center h-full text-center">
                         {isOpened ? (
-                          <Sparkles className="w-6 h-6 text-green-600" />
+                          <Star className="w-6 h-6 text-yellow-500" />
                         ) : (
-                          <Gift className={cn(
+                          <Star className={cn(
                             "w-6 h-6 opacity-50",
-                            isFuture ? "text-gray-400" : "text-red-400"
+                            isFuture ? "text-gray-400" : "text-purple-400"
                           )} />
                         )}
                       </div>
@@ -571,15 +571,15 @@ export default function Jul25App() {
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <Gift className="w-6 h-6 text-green-600" />
-                Dag {selectedWord?.date} - Ord for dagen
+                <Star className="w-6 h-6 text-yellow-500" />
+                {selectedWord?.date}. desember - Ord for dagen
               </DialogTitle>
             </DialogHeader>
             <div className="py-8 text-center">
-              <div className="text-3xl sm:text-4xl font-bold text-green-600 mb-4">
-                {selectedWord?.word}
+              <div className="text-3xl sm:text-4xl font-bold text-purple-600 mb-4">
+                {selectedWord?.word || "Laster..."}
               </div>
-              <Sparkles className="w-12 h-12 mx-auto text-green-500 animate-pulse" />
+              <Star className="w-12 h-12 mx-auto text-yellow-500 animate-pulse" />
             </div>
           </DialogContent>
         </Dialog>
@@ -589,7 +589,7 @@ export default function Jul25App() {
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-red-600" />
+                <Users className="w-5 h-5 text-green-600" />
                 Legg til familie
               </DialogTitle>
             </DialogHeader>
@@ -668,7 +668,7 @@ export default function Jul25App() {
               <Button variant="outline" onClick={() => setIsAddingFamily(false)}>
                 Avbryt
               </Button>
-              <Button onClick={addFamily} className="bg-gradient-to-r from-red-600 to-green-600">
+              <Button onClick={addFamily} className="bg-gradient-to-r from-green-600 to-amber-600">
                 <Plus className="mr-2 h-4 w-4" />
                 Legg til
               </Button>
@@ -681,7 +681,7 @@ export default function Jul25App() {
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-red-600" />
+                <Users className="w-5 h-5 text-green-600" />
                 Legg til familiemedlem
               </DialogTitle>
               <DialogDescription className="text-xs">
@@ -759,7 +759,7 @@ export default function Jul25App() {
               <Button variant="outline" onClick={() => setMemberDialog({ open: false, familyId: null })}>
                 Avbryt
               </Button>
-              <Button onClick={addMember} className="bg-gradient-to-r from-red-600 to-green-600">
+              <Button onClick={addMember} className="bg-gradient-to-r from-green-600 to-amber-600">
                 <Plus className="mr-2 h-4 w-4" />
                 Legg til
               </Button>
