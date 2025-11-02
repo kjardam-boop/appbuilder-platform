@@ -23,10 +23,23 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { nb } from "date-fns/locale";
 
+interface FamilyMember {
+  name: string;
+  arrivalDate: number;
+  arrivalTime: string;
+  departureDate: number;
+  departureTime: string;
+}
+
 interface FamilyRegistration {
   id: string;
   familyName: string;
-  members: { name: string; dates: number[] }[];
+  arrivalDate: number;
+  arrivalTime: string;
+  departureDate: number;
+  departureTime: string;
+  members: FamilyMember[];
+  expanded: boolean;
 }
 
 interface ChristmasWord {
@@ -35,17 +48,30 @@ interface ChristmasWord {
   generated: boolean;
 }
 
+interface Task {
+  id: string;
+  text: string;
+  done: boolean;
+  assignedTo?: string; // familyId-memberIndex or familyId
+}
+
 export default function Jul25App() {
   const [families, setFamilies] = useState<FamilyRegistration[]>([]);
   const [christmasWords, setChristmasWords] = useState<ChristmasWord[]>([]);
-  const [selectedChristmasDate, setSelectedChristmasDate] = useState<number | null>(null);
   const [isAddingFamily, setIsAddingFamily] = useState(false);
   const [newFamilyName, setNewFamilyName] = useState("");
-  const [tasks, setTasks] = useState<{ id: string; text: string; done: boolean }[]>([
+  const [newArrivalDate, setNewArrivalDate] = useState(19);
+  const [newArrivalTime, setNewArrivalTime] = useState("15:00");
+  const [newDepartureDate, setNewDepartureDate] = useState(31);
+  const [newDepartureTime, setNewDepartureTime] = useState("12:00");
+  const [tasks, setTasks] = useState<Task[]>([
     { id: "1", text: "Bestille mat", done: false },
     { id: "2", text: "Planlegge aktiviteter", done: false },
     { id: "3", text: "Sende ut invitasjoner", done: true },
   ]);
+  
+  // Mock today's date for testing (day of December)
+  const [mockToday] = useState(15); // Set to 15 for testing, so doors 1-15 can be opened
 
   useEffect(() => {
     // Initialize Christmas words for days 1-24
@@ -57,6 +83,11 @@ export default function Jul25App() {
   }, []);
 
   const generateWordForDay = async (day: number) => {
+    if (day > mockToday) {
+      toast.error("Du kan ikke åpne fremtidige luker!");
+      return;
+    }
+    
     const prompt = `Generer et positivt, julete norsk ord eller uttrykk for dag ${day} i julekalenderen. Bare ett ord eller kort uttrykk, ingen forklaring.`;
     
     try {
@@ -83,41 +114,84 @@ export default function Jul25App() {
       return;
     }
     
+    if (newArrivalDate > newDepartureDate) {
+      toast.error("Ankomstdato må være før avreisedato");
+      return;
+    }
+    
     const newFamily: FamilyRegistration = {
       id: crypto.randomUUID(),
       familyName: newFamilyName,
-      members: []
+      arrivalDate: newArrivalDate,
+      arrivalTime: newArrivalTime,
+      departureDate: newDepartureDate,
+      departureTime: newDepartureTime,
+      members: [],
+      expanded: false
     };
     
     setFamilies([...families, newFamily]);
     setNewFamilyName("");
+    setNewArrivalDate(19);
+    setNewArrivalTime("15:00");
+    setNewDepartureDate(31);
+    setNewDepartureTime("12:00");
     setIsAddingFamily(false);
     toast.success(`Familie ${newFamilyName} lagt til! 🎄`);
   };
 
-  const addMemberToFamily = (familyId: string, memberName: string) => {
+  const addMemberToFamily = (familyId: string) => {
+    const memberName = prompt("Navn på familiemedlem:");
+    if (!memberName) return;
+    
+    const family = families.find(f => f.id === familyId);
+    if (!family) return;
+    
+    const arrivalDateStr = prompt("Ankomstdato (19-31):", family.arrivalDate.toString());
+    const arrivalDate = parseInt(arrivalDateStr || family.arrivalDate.toString());
+    
+    const arrivalTime = prompt("Ankomsttid (HH:MM):", family.arrivalTime) || family.arrivalTime;
+    
+    const departureDateStr = prompt("Avreisedato (19-31):", family.departureDate.toString());
+    const departureDate = parseInt(departureDateStr || family.departureDate.toString());
+    
+    const departureTime = prompt("Avreisetid (HH:MM):", family.departureTime) || family.departureTime;
+    
     setFamilies(prev => prev.map(fam => 
       fam.id === familyId 
-        ? { ...fam, members: [...fam.members, { name: memberName, dates: [] }] }
+        ? { 
+            ...fam, 
+            members: [...fam.members, { 
+              name: memberName, 
+              arrivalDate,
+              arrivalTime,
+              departureDate,
+              departureTime
+            }] 
+          }
         : fam
     ));
+    toast.success(`${memberName} lagt til!`);
   };
 
-  const toggleDateForMember = (familyId: string, memberIndex: number, date: number) => {
-    setFamilies(prev => prev.map(fam => {
-      if (fam.id !== familyId) return fam;
-      
-      const newMembers = [...fam.members];
-      const member = newMembers[memberIndex];
-      
-      if (member.dates.includes(date)) {
-        member.dates = member.dates.filter(d => d !== date);
-      } else {
-        member.dates = [...member.dates, date].sort((a, b) => a - b);
-      }
-      
-      return { ...fam, members: newMembers };
-    }));
+  const toggleFamilyExpanded = (familyId: string) => {
+    setFamilies(prev => prev.map(fam => 
+      fam.id === familyId ? { ...fam, expanded: !fam.expanded } : fam
+    ));
+  };
+  
+  const getAllRegisteredPeople = () => {
+    const people: { id: string; label: string }[] = [];
+    families.forEach(family => {
+      people.push({ id: family.id, label: family.familyName });
+      family.members.forEach((member, idx) => {
+        people.push({ 
+          id: `${family.id}-${idx}`, 
+          label: `${member.name} (${family.familyName})` 
+        });
+      });
+    });
+    return people;
   };
 
   const eventDates = Array.from({ length: 13 }, (_, i) => i + 19); // 19-31
@@ -170,16 +244,16 @@ export default function Jul25App() {
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Date Header */}
-            <div className="flex gap-2 overflow-x-auto pb-2">
+            <div className="flex gap-1 overflow-x-auto pb-2">
               <div className="w-40 flex-shrink-0" /> {/* Spacer for family names */}
               {eventDates.map(date => (
-                <div key={date} className="w-12 flex-shrink-0 text-center font-medium text-sm">
+                <div key={date} className="w-10 flex-shrink-0 text-center font-medium text-xs border-l border-border/30">
                   {date}
                 </div>
               ))}
             </div>
 
-            {/* Family Rows */}
+            {/* Family Rows - Gantt Style */}
             {families.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <Users className="w-12 h-12 mx-auto mb-2 opacity-20" />
@@ -187,75 +261,94 @@ export default function Jul25App() {
                 <p className="text-sm">Klikk "Legg til familie" for å komme i gang</p>
               </div>
             ) : (
-              <div className="space-y-4">
-                {families.map((family) => (
-                  <div key={family.id} className="space-y-2">
-                    <div className="flex gap-2 items-start">
-                      {/* Family Name */}
-                      <div className="w-40 flex-shrink-0">
-                        <Select
-                          value={family.familyName}
-                          onValueChange={(value) => {
-                            setFamilies(prev => prev.map(f => 
-                              f.id === family.id ? { ...f, familyName: value } : f
-                            ));
-                          }}
+              <div className="space-y-3">
+                {families.map((family) => {
+                  const startOffset = (family.arrivalDate - 19) * 40; // 40px per day
+                  const duration = (family.departureDate - family.arrivalDate + 1) * 40;
+                  
+                  return (
+                    <div key={family.id} className="space-y-1">
+                      <div className="flex gap-1 items-center">
+                        {/* Family Name */}
+                        <button
+                          onClick={() => toggleFamilyExpanded(family.id)}
+                          className="w-40 flex-shrink-0 bg-red-600 text-white rounded px-2 py-1 text-sm text-left hover:bg-red-700 transition-colors flex items-center gap-1"
                         >
-                          <SelectTrigger className="bg-red-600 text-white border-0 h-8 text-sm">
-                            <SelectValue placeholder="<Familienavn>" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value={family.familyName}>{family.familyName}</SelectItem>
-                          </SelectContent>
-                        </Select>
+                          <span className="text-xs">{family.expanded ? '▼' : '▶'}</span>
+                          {family.familyName}
+                        </button>
+
+                        {/* Gantt Bar */}
+                        <div className="relative flex-1 h-8">
+                          <div className="absolute inset-y-0 flex gap-1">
+                            {eventDates.map(date => (
+                              <div key={date} className="w-10 h-8 border-l border-border/30" />
+                            ))}
+                          </div>
+                          <div 
+                            className="absolute top-1 h-6 bg-red-500 rounded cursor-pointer hover:bg-red-600 transition-colors flex items-center justify-center text-xs text-white font-medium"
+                            style={{ 
+                              left: `${startOffset}px`, 
+                              width: `${duration}px` 
+                            }}
+                            title={`${family.familyName}: ${family.arrivalDate}. ${family.arrivalTime} - ${family.departureDate}. ${family.departureTime}`}
+                          >
+                            {family.members.length > 0 ? `${family.members.length + 1}` : '1'}
+                          </div>
+                        </div>
                       </div>
 
-                      {/* Date Grid for this family */}
-                      <div className="flex gap-2 overflow-x-auto">
-                        {eventDates.map(date => {
-                          const membersOnDate = family.members.filter(m => m.dates.includes(date));
-                          return (
-                            <div key={date} className="w-12 h-8 flex-shrink-0 text-center text-xs">
-                              {membersOnDate.length > 0 && (
-                                <Badge variant="secondary" className="w-full h-full flex items-center justify-center">
-                                  {membersOnDate.length}
-                                </Badge>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
+                      {/* Expanded Members */}
+                      {family.expanded && (
+                        <div className="pl-44 space-y-1">
+                          {family.members.map((member, idx) => {
+                            const memberStartOffset = (member.arrivalDate - 19) * 40;
+                            const memberDuration = (member.departureDate - member.arrivalDate + 1) * 40;
+                            const isDifferent = member.arrivalDate !== family.arrivalDate || 
+                                              member.departureDate !== family.departureDate ||
+                                              member.arrivalTime !== family.arrivalTime ||
+                                              member.departureTime !== family.departureTime;
+                            
+                            return (
+                              <div key={idx} className="flex gap-1 items-center text-xs">
+                                <span className="w-32 text-muted-foreground truncate">
+                                  {member.name} {isDifferent && '⚠️'}
+                                </span>
+                                <div className="relative flex-1 h-6">
+                                  <div className="absolute inset-y-0 flex gap-1">
+                                    {eventDates.map(date => (
+                                      <div key={date} className="w-10 h-6 border-l border-border/30" />
+                                    ))}
+                                  </div>
+                                  <div 
+                                    className={cn(
+                                      "absolute top-1 h-4 rounded",
+                                      isDifferent ? "bg-orange-400" : "bg-red-400"
+                                    )}
+                                    style={{ 
+                                      left: `${memberStartOffset}px`, 
+                                      width: `${memberDuration}px` 
+                                    }}
+                                    title={`${member.name}: ${member.arrivalDate}. ${member.arrivalTime} - ${member.departureDate}. ${member.departureTime}`}
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-xs h-6 mt-1"
+                            onClick={() => addMemberToFamily(family.id)}
+                          >
+                            <Plus className="w-3 h-3 mr-1" />
+                            Legg til medlem
+                          </Button>
+                        </div>
+                      )}
                     </div>
-
-                    {/* Member Buttons */}
-                    <div className="flex gap-2 items-center pl-40">
-                      {family.members.map((member, idx) => (
-                        <Button
-                          key={idx}
-                          variant="outline"
-                          size="sm"
-                          className="bg-red-100 dark:bg-red-950/30 border-red-300 dark:border-red-900 text-xs h-7"
-                          onClick={() => {
-                            toast.info(`Redigerer datoer for ${member.name}`);
-                          }}
-                        >
-                          {member.name}
-                        </Button>
-                      ))}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-xs h-7"
-                        onClick={() => {
-                          const name = prompt("Navn på nytt familiemedlem:");
-                          if (name) addMemberToFamily(family.id, name);
-                        }}
-                      >
-                        + Navn
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CardContent>
@@ -272,23 +365,48 @@ export default function Jul25App() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {tasks.map(task => (
-                  <div key={task.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent">
-                    <input
-                      type="checkbox"
-                      checked={task.done}
-                      onChange={() => {
-                        setTasks(prev => prev.map(t => 
-                          t.id === task.id ? { ...t, done: !t.done } : t
-                        ));
-                      }}
-                      className="w-4 h-4"
-                    />
-                    <span className={cn("text-sm", task.done && "line-through text-muted-foreground")}>
-                      {task.text}
-                    </span>
-                  </div>
-                ))}
+                {tasks.map(task => {
+                  const people = getAllRegisteredPeople();
+                  const assignedPerson = people.find(p => p.id === task.assignedTo);
+                  
+                  return (
+                    <div key={task.id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-accent">
+                      <input
+                        type="checkbox"
+                        checked={task.done}
+                        onChange={() => {
+                          setTasks(prev => prev.map(t => 
+                            t.id === task.id ? { ...t, done: !t.done } : t
+                          ));
+                        }}
+                        className="w-4 h-4"
+                      />
+                      <span className={cn("text-sm flex-1", task.done && "line-through text-muted-foreground")}>
+                        {task.text}
+                      </span>
+                      <Select
+                        value={task.assignedTo || ""}
+                        onValueChange={(value) => {
+                          setTasks(prev => prev.map(t => 
+                            t.id === task.id ? { ...t, assignedTo: value || undefined } : t
+                          ));
+                        }}
+                      >
+                        <SelectTrigger className="w-32 h-7 text-xs">
+                          <SelectValue placeholder="Tilordne" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Ingen</SelectItem>
+                          {people.map(person => (
+                            <SelectItem key={person.id} value={person.id}>
+                              {person.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  );
+                })}
                 <Button
                   variant="ghost"
                   size="sm"
@@ -322,21 +440,28 @@ export default function Jul25App() {
               <div className="grid grid-cols-4 md:grid-cols-6 gap-2">
                 {christmasWords.map((item) => {
                   const isOpened = item.generated;
+                  const canOpen = item.date <= mockToday;
+                  const isFuture = item.date > mockToday;
                   
                   return (
                     <button
                       key={item.date}
-                      onClick={() => !isOpened && generateWordForDay(item.date)}
-                      disabled={isOpened}
+                      onClick={() => canOpen && !isOpened && generateWordForDay(item.date)}
+                      disabled={isOpened || isFuture}
                       className={cn(
                         "relative aspect-square rounded-lg border-2 p-2",
-                        "transition-all hover:scale-105 hover:shadow-lg",
+                        "transition-all",
                         isOpened 
                           ? "bg-green-100 dark:bg-green-950/30 border-green-300 dark:border-green-900" 
-                          : "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900 hover:bg-red-100 dark:hover:bg-red-950/40"
+                          : isFuture
+                          ? "bg-gray-100 dark:bg-gray-900/30 border-gray-300 dark:border-gray-800 opacity-50 cursor-not-allowed"
+                          : "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900 hover:bg-red-100 dark:hover:bg-red-950/40 hover:scale-105 hover:shadow-lg cursor-pointer"
                       )}
                     >
-                      <div className="absolute top-1 left-1 text-xs font-bold text-red-600">
+                      <div className={cn(
+                        "absolute top-1 left-1 text-xs font-bold",
+                        isFuture ? "text-gray-400" : "text-red-600"
+                      )}>
                         {item.date}
                       </div>
                       <div className="flex items-center justify-center h-full text-center">
@@ -345,7 +470,10 @@ export default function Jul25App() {
                             {item.word}
                           </div>
                         ) : (
-                          <Gift className="w-6 h-6 text-red-400 opacity-50" />
+                          <Gift className={cn(
+                            "w-6 h-6 opacity-50",
+                            isFuture ? "text-gray-400" : "text-red-400"
+                          )} />
                         )}
                       </div>
                     </button>
@@ -373,9 +501,68 @@ export default function Jul25App() {
                   placeholder="f.eks. Familie Hansen"
                   value={newFamilyName}
                   onChange={(e) => setNewFamilyName(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && addFamily()}
                 />
               </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="arrivalDate">Ankomstdato *</Label>
+                  <Select value={newArrivalDate.toString()} onValueChange={(v) => setNewArrivalDate(parseInt(v))}>
+                    <SelectTrigger id="arrivalDate">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {eventDates.map(date => (
+                        <SelectItem key={date} value={date.toString()}>
+                          {date}. desember
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="arrivalTime">Klokkeslett</Label>
+                  <Input
+                    id="arrivalTime"
+                    type="time"
+                    value={newArrivalTime}
+                    onChange={(e) => setNewArrivalTime(e.target.value)}
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="departureDate">Avreisedato *</Label>
+                  <Select value={newDepartureDate.toString()} onValueChange={(v) => setNewDepartureDate(parseInt(v))}>
+                    <SelectTrigger id="departureDate">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {eventDates.map(date => (
+                        <SelectItem key={date} value={date.toString()}>
+                          {date}. desember
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="departureTime">Klokkeslett</Label>
+                  <Input
+                    id="departureTime"
+                    type="time"
+                    value={newDepartureTime}
+                    onChange={(e) => setNewDepartureTime(e.target.value)}
+                  />
+                </div>
+              </div>
+              
+              <p className="text-xs text-muted-foreground">
+                Du kan legge til familiemedlemmer med egne datoer etter at familien er opprettet
+              </p>
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setIsAddingFamily(false)}>
