@@ -22,6 +22,13 @@ interface UserProfile {
   full_name: string;
 }
 
+interface ScopeNameCache {
+  tenants: Record<string, string>;
+  companies: Record<string, string>;
+  projects: Record<string, string>;
+  apps: Record<string, string>;
+}
+
 const ROLES_BY_SCOPE: Record<RoleScope, AppRole[]> = {
   platform: ['platform_owner', 'platform_support', 'platform_auditor'],
   tenant: ['tenant_owner', 'tenant_admin', 'security_admin', 'data_protection'],
@@ -34,6 +41,12 @@ export function UserList() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [userRoles, setUserRoles] = useState<Record<string, Record<RoleScope, any[]>>>({});
+  const [scopeNames, setScopeNames] = useState<ScopeNameCache>({
+    tenants: {},
+    companies: {},
+    projects: {},
+    apps: {}
+  });
   
   // State for adding roles
   const [selectedUserId, setSelectedUserId] = useState<string>("");
@@ -66,11 +79,83 @@ export function UserList() {
         rolesMap[profile.user_id] = rolesByScope;
       }
       setUserRoles(rolesMap);
+      
+      // Load scope names
+      await loadScopeNames(rolesMap);
     } catch (error) {
       console.error('Error loading users:', error);
       toast.error('Kunne ikke laste brukere');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadScopeNames = async (rolesMap: Record<string, Record<RoleScope, any[]>>) => {
+    try {
+      const tenantIds = new Set<string>();
+      const companyIds = new Set<string>();
+      const projectIds = new Set<string>();
+      const appIds = new Set<string>();
+
+      // Collect all unique scope_ids from all users
+      Object.values(rolesMap).forEach(rolesByScope => {
+        rolesByScope.tenant?.forEach((role: any) => role.scope_id && tenantIds.add(role.scope_id));
+        rolesByScope.company?.forEach((role: any) => role.scope_id && companyIds.add(role.scope_id));
+        rolesByScope.project?.forEach((role: any) => role.scope_id && projectIds.add(role.scope_id));
+        rolesByScope.app?.forEach((role: any) => role.scope_id && appIds.add(role.scope_id));
+      });
+
+      const newScopeNames: ScopeNameCache = {
+        tenants: {},
+        companies: {},
+        projects: {},
+        apps: {}
+      };
+
+      // Load company names
+      if (companyIds.size > 0) {
+        const { data: companies } = await supabase
+          .from('companies')
+          .select('id, name')
+          .in('id', Array.from(companyIds));
+        
+        companies?.forEach(c => {
+          newScopeNames.companies[c.id] = c.name;
+        });
+      }
+
+      // Load project names
+      if (projectIds.size > 0) {
+        const { data: projects } = await supabase
+          .from('projects')
+          .select('id, name')
+          .in('id', Array.from(projectIds));
+        
+        projects?.forEach(p => {
+          newScopeNames.projects[p.id] = p.name;
+        });
+      }
+
+      // Load app names
+      if (appIds.size > 0) {
+        const { data: apps } = await supabase
+          .from('applications')
+          .select('id, name')
+          .in('id', Array.from(appIds));
+        
+        apps?.forEach(a => {
+          newScopeNames.apps[a.id] = a.name;
+        });
+      }
+
+      // For tenants, use shortened ID
+      tenantIds.forEach(id => {
+        newScopeNames.tenants[id] = `Tenant ${id.substring(0, 8)}`;
+      });
+
+      setScopeNames(newScopeNames);
+    } catch (error) {
+      console.error('Error loading scope names:', error);
     }
   };
 
@@ -116,6 +201,23 @@ export function UserList() {
     if (!selectedRole) return false;
     if (scope === 'platform') return true; // Platform doesn't need scope ID
     return !!selectedScopeId; // Other scopes need a scope ID
+  };
+
+  const getScopeName = (scope: RoleScope, scopeId: string | null): string | null => {
+    if (!scopeId) return null;
+    
+    switch (scope) {
+      case 'tenant':
+        return scopeNames.tenants[scopeId] || null;
+      case 'company':
+        return scopeNames.companies[scopeId] || null;
+      case 'project':
+        return scopeNames.projects[scopeId] || null;
+      case 'app':
+        return scopeNames.apps[scopeId] || null;
+      default:
+        return null;
+    }
   };
 
   if (loading) {
@@ -197,28 +299,37 @@ export function UserList() {
                           {roles[scope].length === 0 ? (
                             <Badge variant="outline">Ingen roller</Badge>
                           ) : (
-                            roles[scope].map((roleRecord: any) => (
-                              <div key={roleRecord.id} className="flex items-center gap-1 border rounded-md p-2">
-                                <div className="flex flex-col gap-1">
-                                  <Badge variant={getRoleBadgeVariant(roleRecord.role)}>
-                                    {ROLE_LABELS[roleRecord.role]}
-                                  </Badge>
-                                  {roleRecord.scope_id && (
-                                    <span className="text-xs text-muted-foreground">
-                                      ID: {roleRecord.scope_id.substring(0, 8)}...
-                                    </span>
-                                  )}
+                            roles[scope].map((roleRecord: any) => {
+                              const scopeName = getScopeName(scope, roleRecord.scope_id);
+                              
+                              return (
+                                <div key={roleRecord.id} className="flex items-center gap-1 border rounded-md p-2">
+                                  <div className="flex flex-col gap-1">
+                                    <Badge variant={getRoleBadgeVariant(roleRecord.role)}>
+                                      {ROLE_LABELS[roleRecord.role]}
+                                    </Badge>
+                                    {scopeName && (
+                                      <span className="text-xs text-muted-foreground">
+                                        {scopeName}
+                                      </span>
+                                    )}
+                                    {roleRecord.scope_id && !scopeName && (
+                                      <span className="text-xs text-muted-foreground">
+                                        ID: {roleRecord.scope_id.substring(0, 8)}...
+                                      </span>
+                                    )}
+                                  </div>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-6 w-6 ml-2"
+                                    onClick={() => handleRemoveRole(user.user_id, roleRecord.role, scope, roleRecord.scope_id)}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
                                 </div>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="h-6 w-6 ml-2"
-                                  onClick={() => handleRemoveRole(user.user_id, roleRecord.role, scope, roleRecord.scope_id)}
-                                >
-                                  <X className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            ))
+                              );
+                            })
                           )}
                         </div>
                       </div>
