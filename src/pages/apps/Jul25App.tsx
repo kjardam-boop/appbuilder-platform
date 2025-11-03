@@ -714,8 +714,8 @@ export default function Jul25App() {
                               memberPeriods.some(mp => mp.period_id === p.id)
                             );
                             
-                            // If no periods assigned, show nothing (or use all family periods as fallback)
-                            const effectivePeriods = assignedPeriods.length > 0 ? assignedPeriods : [];
+                            // If no periods assigned, use all family periods as fallback
+                            const effectivePeriods = assignedPeriods.length > 0 ? assignedPeriods : periods;
                             
                             return (
                               <div key={member.id} className="flex flex-col sm:flex-row gap-2 sm:gap-1 items-start">
@@ -763,13 +763,23 @@ export default function Jul25App() {
                                     ))}
                                   </div>
                                   {effectivePeriods.map(period => {
-                                    // Use custom member dates if available, otherwise use period dates
-                                    const arr = member.arrival_date && member.departure_date 
-                                      ? timestampToDay(member.arrival_date)
-                                      : timestampToDay(period.arrival_date);
-                                    const dep = member.arrival_date && member.departure_date
-                                      ? timestampToDay(member.departure_date)
-                                      : timestampToDay(period.departure_date);
+                                    // Always use period dates as base
+                                    let arr = timestampToDay(period.arrival_date);
+                                    let dep = timestampToDay(period.departure_date);
+                                    
+                                    // If member has custom dates, use them to override period dates
+                                    if (member.arrival_date && member.departure_date) {
+                                      const memberArr = timestampToDay(member.arrival_date);
+                                      const memberDep = timestampToDay(member.departure_date);
+                                      // Only override if within or overlapping period
+                                      if (memberArr >= arr && memberArr <= dep) {
+                                        arr = memberArr;
+                                      }
+                                      if (memberDep >= arr && memberDep <= dep) {
+                                        dep = memberDep;
+                                      }
+                                    }
+                                    
                                     const startOffset = (arr - minDate) * 40;
                                     const width = (dep - arr + 1) * 40;
                                     
