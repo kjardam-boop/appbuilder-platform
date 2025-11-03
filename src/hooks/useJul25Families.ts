@@ -16,7 +16,7 @@ export interface Jul25Family {
 
 export interface Jul25FamilyMember {
   id: string;
-  user_id: string;
+  user_id: string | null; // Nullable for non-user members like children
   family_id: string;
   name: string;
   arrival_date: number | null;
@@ -140,7 +140,7 @@ export const useJoinFamily = () => {
     mutationFn: async (params: {
       family_id: string;
       name: string;
-      user_id: string;
+      user_id: string | null; // Nullable for non-user members
       is_admin?: boolean;
       arrival_date?: number;
       arrival_time?: string;
@@ -158,10 +158,10 @@ export const useJoinFamily = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["jul25-family-members"] });
-      toast.success("Du er nå med i familien! 🎄");
+      toast.success("Familiemedlem lagt til! 🎄");
     },
     onError: (error: any) => {
-      toast.error(error.message || "Kunne ikke bli med i familie");
+      toast.error(error.message || "Kunne ikke legge til familiemedlem");
     },
   });
 };
@@ -187,6 +187,28 @@ export const useUpdateFamilyMember = () => {
     },
     onError: (error: any) => {
       toast.error(error.message || "Kunne ikke oppdatere medlem");
+    },
+  });
+};
+
+export const useDeleteFamilyMember = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (memberId: string) => {
+      const { error } = await supabase
+        .from("jul25_family_members")
+        .delete()
+        .eq("id", memberId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["jul25-family-members"] });
+      toast.success("Medlem slettet");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Kunne ikke slette medlem");
     },
   });
 };

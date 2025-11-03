@@ -1020,7 +1020,7 @@ export type Database = {
           is_admin: boolean | null
           name: string
           updated_at: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           arrival_date?: number | null
@@ -1033,7 +1033,7 @@ export type Database = {
           is_admin?: boolean | null
           name: string
           updated_at?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           arrival_date?: number | null
@@ -1046,7 +1046,7 @@ export type Database = {
           is_admin?: boolean | null
           name?: string
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {

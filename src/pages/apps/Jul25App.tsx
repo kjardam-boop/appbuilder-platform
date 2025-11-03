@@ -25,6 +25,8 @@ import { toast } from "sonner";
 import { useAuth } from "@/modules/core/user/hooks/useAuth";
 import { useJul25Families, useJul25FamilyMembers, useCreateFamily, useUpdateFamily, useDeleteFamily, useJoinFamily, useUpdateFamilyMember } from "@/hooks/useJul25Families";
 import { useJul25Tasks, useCreateTask, useUpdateTask, useDeleteTask } from "@/hooks/useJul25Tasks";
+import { EditFamilyDialog } from "@/components/Jul25/EditFamilyDialog";
+import { ManageFamilyMembersDialog } from "@/components/Jul25/ManageFamilyMembersDialog";
 
 interface ChristmasWord {
   date: number;
@@ -66,6 +68,9 @@ export default function Jul25App() {
   const [editingTask, setEditingTask] = useState<any>(null);
   const [hideCompletedTasks, setHideCompletedTasks] = useState(false);
   const [expandedFamilies, setExpandedFamilies] = useState<Set<string>>(new Set());
+  const [editingFamily, setEditingFamily] = useState<any>(null);
+  const [managingFamilyId, setManagingFamilyId] = useState<string | null>(null);
+  const [taskFamilyFilter, setTaskFamilyFilter] = useState<string>("all");
   
   // Login form
   const [loginEmail, setLoginEmail] = useState("");
@@ -202,11 +207,12 @@ export default function Jul25App() {
           return;
         }
         
+        // Bli med som admin (begge foreldre blir admins)
         await joinFamily.mutateAsync({
           family_id: selectedFamilyId,
           name: memberName,
           user_id: user.id,
-          is_admin: false,
+          is_admin: true,
         });
         
         setShowFamilyOnboarding(false);
@@ -343,9 +349,13 @@ export default function Jul25App() {
       sorted = sorted.filter(task => !task.done);
     }
     
-    // Hvis bruker ikke er admin, vis bare egne familie-oppgaver
-    if (!isAdmin && userFamily) {
-      sorted = sorted.filter(task => task.assigned_family_id === userFamily.id);
+    // Filtrer på familie hvis valgt
+    if (taskFamilyFilter !== "all") {
+      if (taskFamilyFilter === "mine" && userFamily) {
+        sorted = sorted.filter(task => task.assigned_family_id === userFamily.id);
+      } else if (taskFamilyFilter !== "mine") {
+        sorted = sorted.filter(task => task.assigned_family_id === taskFamilyFilter);
+      }
     }
     
     return sorted;
@@ -420,17 +430,18 @@ export default function Jul25App() {
           </div>
         </div>
 
-        {/* Main Calendar */}
-        <Card className="border-2 border-green-200 dark:border-green-900">
-          <CardHeader>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
-                <CalendarIcon className="w-5 h-5 text-green-600" />
-                Kalender - Familier
-              </CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4 sm:space-y-6">
+        {/* Main Calendar - Only visible when logged in */}
+        {user && (
+          <Card className="border-2 border-green-200 dark:border-green-900">
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
+                  <CalendarIcon className="w-5 h-5 text-green-600" />
+                  Kalender - Familier
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4 sm:space-y-6">
             {/* Date Header */}
             <div className="hidden sm:block overflow-x-auto pb-2">
               <div className="flex gap-0">
@@ -465,18 +476,42 @@ export default function Jul25App() {
                   const membersPerDay = getMembersPerDay(family);
                   const isExpanded = expandedFamilies.has(family.id);
                   
+                  const isUserFamilyAdmin = isAdmin || (userMembership && userMembership.family_id === family.id && userMembership.is_admin);
+                  
                   return (
                     <div key={family.id} className="space-y-2">
                       <div className="flex flex-col sm:flex-row gap-2 sm:gap-1 items-start">
                         {/* Family Name */}
                         <div className="w-full sm:w-32 md:w-40 flex-shrink-0">
-                          <button
-                            onClick={() => toggleFamilyExpanded(family.id)}
-                            className="w-full bg-green-700 text-white rounded px-2 py-2 sm:py-1 text-sm text-left hover:bg-green-800 transition-colors flex items-center gap-1"
-                          >
-                            <span className="text-xs">{isExpanded ? '▼' : '▶'}</span>
-                            <span className="truncate">{family.name}</span>
-                          </button>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => toggleFamilyExpanded(family.id)}
+                              className="flex-1 bg-green-700 text-white rounded px-2 py-2 sm:py-1 text-sm text-left hover:bg-green-800 transition-colors flex items-center gap-1"
+                            >
+                              <span className="text-xs">{isExpanded ? '▼' : '▶'}</span>
+                              <span className="truncate">{family.name}</span>
+                            </button>
+                            {isUserFamilyAdmin && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 w-7 p-0"
+                                  onClick={() => setEditingFamily(family)}
+                                >
+                                  <Edit2 className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 w-7 p-0"
+                                  onClick={() => setManagingFamilyId(family.id)}
+                                >
+                                  <Users className="h-3 w-3" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
                           <div className="text-xs text-muted-foreground mt-1 sm:hidden">
                             {family.arrival_date}/12 {family.arrival_time} - {family.departure_date}/12 {family.departure_time}
                           </div>
@@ -532,42 +567,65 @@ export default function Jul25App() {
             )}
           </CardContent>
         </Card>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           {/* Tasks Widget - Visible to all logged-in users */}
           {user && (
             <Card className="border-amber-200 dark:border-amber-900">
               <CardHeader>
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                  <CardTitle className="text-base sm:text-lg flex items-center gap-2">
-                    <CheckSquare className="w-5 h-5 text-amber-600" />
-                    {isAdmin ? "Alle oppgaver" : `Oppgaver for ${userFamily?.name || "din familie"}`}
-                  </CardTitle>
-                  <div className="flex gap-2 w-full sm:w-auto">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setHideCompletedTasks(!hideCompletedTasks)}
-                      className="h-8 text-xs flex-1 sm:flex-none"
-                    >
-                      {hideCompletedTasks ? "Vis fullførte" : "Skjul fullførte"}
-                    </Button>
-                    {isAdmin && (
+                <div className="flex flex-col gap-3">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                    <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                      <CheckSquare className="w-5 h-5 text-amber-600" />
+                      Oppgaver
+                    </CardTitle>
+                    <div className="flex gap-2 w-full sm:w-auto">
                       <Button
+                        variant="outline"
                         size="sm"
-                        onClick={() => {
-                          setEditingTask(null);
-                          setTaskText("");
-                          setTaskDeadline("");
-                          setTaskAssignedFamily("");
-                          setShowTaskDialog(true);
-                        }}
-                        className="h-8 text-xs"
+                        onClick={() => setHideCompletedTasks(!hideCompletedTasks)}
+                        className="h-8 text-xs flex-1 sm:flex-none"
                       >
-                        <Plus className="w-3 h-3 mr-1" />
-                        Ny oppgave
+                        {hideCompletedTasks ? "Vis fullførte" : "Skjul fullførte"}
                       </Button>
-                    )}
+                      {isAdmin && (
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            setEditingTask(null);
+                            setTaskText("");
+                            setTaskDeadline("");
+                            setTaskAssignedFamily("");
+                            setShowTaskDialog(true);
+                          }}
+                          className="h-8 text-xs"
+                        >
+                          <Plus className="w-3 h-3 mr-1" />
+                          Ny oppgave
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  {/* Family filter */}
+                  <div className="flex items-center gap-2">
+                    <Label className="text-xs">Filtrer:</Label>
+                    <Select value={taskFamilyFilter} onValueChange={setTaskFamilyFilter}>
+                      <SelectTrigger className="h-8 text-xs w-[180px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Alle oppgaver</SelectItem>
+                        {userFamily && (
+                          <SelectItem value="mine">Min familie</SelectItem>
+                        )}
+                        {families.map(family => (
+                          <SelectItem key={family.id} value={family.id}>
+                            {family.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </CardHeader>
@@ -635,9 +693,9 @@ export default function Jul25App() {
                       </div>
                     );
                   })}
-                  {getSortedTasks().length === 0 && (
+                   {getSortedTasks().length === 0 && (
                     <p className="text-sm text-muted-foreground text-center py-4">
-                      {isAdmin ? "Ingen oppgaver ennå" : "Ingen oppgaver tildelt din familie"}
+                      Ingen oppgaver {taskFamilyFilter === "all" ? "" : "for valgt filter"}
                     </p>
                   )}
                 </div>
@@ -968,6 +1026,25 @@ export default function Jul25App() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Edit Family Dialog */}
+        {editingFamily && (
+          <EditFamilyDialog
+            family={editingFamily}
+            open={!!editingFamily}
+            onOpenChange={(open) => !open && setEditingFamily(null)}
+          />
+        )}
+
+        {/* Manage Family Members Dialog */}
+        {managingFamilyId && (
+          <ManageFamilyMembersDialog
+            familyId={managingFamilyId}
+            members={allMembers.filter(m => m.family_id === managingFamilyId)}
+            open={!!managingFamilyId}
+            onOpenChange={(open) => !open && setManagingFamilyId(null)}
+          />
+        )}
       </div>
     </div>
   );
