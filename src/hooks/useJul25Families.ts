@@ -47,7 +47,7 @@ export const useJul25FamilyMembers = (familyId?: string) => {
   return useQuery({
     queryKey: ["jul25-family-members", familyId],
     queryFn: async () => {
-      let query = supabase.from("jul25_family_members").select("*");
+      let query = supabase.from("jul25_family_members").select("*").order("created_at", { ascending: true });
       
       if (familyId) {
         query = query.eq("family_id", familyId);
