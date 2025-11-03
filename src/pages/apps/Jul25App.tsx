@@ -717,20 +717,17 @@ export default function Jul25App() {
                                     <div className="flex-1 bg-green-500 text-white rounded px-2 py-1 text-xs truncate">
                                       {member.name}
                                     </div>
-                                     {isUserFamilyAdmin && (
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        className="h-6 w-6 p-0"
-                                        onClick={() => {
-                                          setInitialEditMemberId(member.id);
-                                          setManagingFamilyId(family.id);
-                                        }}
-                                        title="Rediger person"
-                                      >
-                                        <Edit2 className="h-3 w-3" />
-                                      </Button>
-                                    )}
+                                      {isUserFamilyAdmin && (
+                                       <Button
+                                         size="sm"
+                                         variant="ghost"
+                                         className="h-6 w-6 p-0"
+                                         onClick={() => navigate(`/apps/jul25/member/${member.id}`)}
+                                         title="Rediger person"
+                                       >
+                                         <Edit2 className="h-3 w-3" />
+                                       </Button>
+                                     )}
                                   </div>
                                   <div className="text-xs text-muted-foreground mt-1 sm:hidden">
                                     {dayToDateString(arr)} - {dayToDateString(dep)}
