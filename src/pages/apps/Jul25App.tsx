@@ -53,6 +53,7 @@ export default function Jul25App() {
   
   // Fetch member periods for all members at once
   const { data: allMemberPeriods = [] } = useMemberPeriods();
+  const { data: allCustomPeriods = [] } = useMemberCustomPeriods();
   
   // Mutations
   const createFamily = useCreateFamily();
@@ -472,8 +473,6 @@ export default function Jul25App() {
   };
   
   // Calculate dynamic date range based on periods (family + member custom)
-  const { data: allCustomPeriods = [] } = useMemberCustomPeriods();
-
   const getDateRange = () => {
     let minDay = Infinity;
     let maxDay = -Infinity;
@@ -613,6 +612,7 @@ export default function Jul25App() {
                         {displayDay}
                       </div>
                       <div className="text-xs text-muted-foreground h-[18px] flex items-center justify-center">
+                        {guestsPerDay[date] > 0 ? `${guestsPerDay[date]}` : '-'}
                       </div>
                     </div>
                   );
