@@ -179,10 +179,17 @@ const RoleManagement = () => {
         });
       }
 
-      // For tenants, we'll just use the ID as there's no tenants table visible
-      tenantIds.forEach(id => {
-        newScopeNames.tenants[id] = `Tenant ${id.substring(0, 8)}`;
-      });
+      // Load tenant names
+      if (tenantIds.size > 0) {
+        const { data: tenants } = await supabase
+          .from('tenants')
+          .select('id, name')
+          .in('id', Array.from(tenantIds));
+        
+        tenants?.forEach(t => {
+          newScopeNames.tenants[t.id] = t.name;
+        });
+      }
 
       console.log('[RoleManagement] Scope names loaded:', newScopeNames);
       setScopeNames(newScopeNames);

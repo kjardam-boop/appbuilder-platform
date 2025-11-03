@@ -124,6 +124,18 @@ export function UserList() {
         });
       }
 
+      // Load tenant names
+      if (tenantIds.size > 0) {
+        const { data: tenants } = await supabase
+          .from('tenants')
+          .select('id, name')
+          .in('id', Array.from(tenantIds));
+        
+        tenants?.forEach(t => {
+          newScopeNames.tenants[t.id] = t.name;
+        });
+      }
+
       // Load project names
       if (projectIds.size > 0) {
         const { data: projects } = await supabase
@@ -147,11 +159,6 @@ export function UserList() {
           newScopeNames.apps[a.id] = a.name;
         });
       }
-
-      // For tenants, use shortened ID
-      tenantIds.forEach(id => {
-        newScopeNames.tenants[id] = `Tenant ${id.substring(0, 8)}`;
-      });
 
       setScopeNames(newScopeNames);
     } catch (error) {
