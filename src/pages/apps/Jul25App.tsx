@@ -230,12 +230,14 @@ export default function Jul25App() {
     }
     
     try {
+      const familyId = taskAssignedFamily && taskAssignedFamily !== "none" ? taskAssignedFamily : null;
+      
       if (editingTask) {
         await updateTask.mutateAsync({
           id: editingTask.id,
           text: taskText,
           deadline: taskDeadline || null,
-          assigned_family_id: taskAssignedFamily || null,
+          assigned_family_id: familyId,
         });
         toast.success("Oppgave oppdatert");
       } else {
@@ -243,7 +245,7 @@ export default function Jul25App() {
           text: taskText,
           done: false,
           deadline: taskDeadline || null,
-          assigned_family_id: taskAssignedFamily || null,
+          assigned_family_id: familyId,
           created_by: user?.id || null,
         });
         toast.success("Oppgave opprettet");
@@ -1077,7 +1079,7 @@ export default function Jul25App() {
                     <SelectValue placeholder="Velg familie (valgfritt)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Ingen familie</SelectItem>
+                    <SelectItem value="none">Ingen familie</SelectItem>
                     {families.map(family => (
                       <SelectItem key={family.id} value={family.id}>
                         {family.name}
