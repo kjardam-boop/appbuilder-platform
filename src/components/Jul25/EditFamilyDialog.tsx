@@ -20,9 +20,13 @@ export function EditFamilyDialog({ family, open, onOpenChange }: EditFamilyDialo
   const [name, setName] = useState(family.name);
   const [numberOfPeople, setNumberOfPeople] = useState(family.number_of_people);
   
-  // Convert day numbers to dates (assuming December 2024)
-  const dayToDate = (day: number) => new Date(2024, 11, day); // December is month 11
-  const dateToDay = (date: Date | undefined) => date ? date.getDate() : 1;
+  // Convert day numbers to dates (spanning Dec 2024 - Jan 2025)
+  // Days 20-31 = December 2024, Days 1-19 = January 2025
+  const dayToDate = (day: number) => {
+    if (day >= 20) return new Date(2024, 11, day); // December 2024
+    return new Date(2025, 0, day); // January 2025
+  };
+  const dateToDay = (date: Date | undefined) => date ? date.getDate() : 20;
   
   const [arrivalDate, setArrivalDate] = useState<Date | undefined>(
     dayToDate(family.arrival_date)
@@ -38,6 +42,12 @@ export function EditFamilyDialog({ family, open, onOpenChange }: EditFamilyDialo
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!arrivalDate || !departureDate) return;
+    
+    // Validate departure is not before arrival
+    if (departureDate < arrivalDate) {
+      alert("Avreisedato kan ikke være før ankomstdato");
+      return;
+    }
     
     updateFamily.mutate({
       id: family.id,

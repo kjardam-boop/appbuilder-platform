@@ -34,8 +34,13 @@ export function ManageFamilyMembersDialog({
   const [addingMember, setAddingMember] = useState(false);
   const [memberName, setMemberName] = useState("");
   
-  // Convert day numbers to dates (assuming December 2024)
-  const dayToDate = (day: number | null) => day ? new Date(2024, 11, day) : undefined;
+  // Convert day numbers to dates (spanning Dec 2024 - Jan 2025)
+  // Days 20-31 = December 2024, Days 1-19 = January 2025
+  const dayToDate = (day: number | null) => {
+    if (!day) return undefined;
+    if (day >= 20) return new Date(2024, 11, day); // December 2024
+    return new Date(2025, 0, day); // January 2025
+  };
   const dateToDay = (date: Date | undefined) => date ? date.getDate() : null;
   
   const [arrivalDate, setArrivalDate] = useState<Date | undefined>();
@@ -63,6 +68,13 @@ export function ManageFamilyMembersDialog({
 
   const handleAddMember = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate departure is not before arrival
+    if (arrivalDate && departureDate && departureDate < arrivalDate) {
+      alert("Avreisedato kan ikke være før ankomstdato");
+      return;
+    }
+    
     addMember.mutate({
       family_id: familyId,
       name: memberName,
@@ -87,6 +99,12 @@ export function ManageFamilyMembersDialog({
   const handleUpdateMember = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingMember) return;
+    
+    // Validate departure is not before arrival
+    if (arrivalDate && departureDate && departureDate < arrivalDate) {
+      alert("Avreisedato kan ikke være før ankomstdato");
+      return;
+    }
     
     updateMember.mutate({
       id: editingMember.id,
