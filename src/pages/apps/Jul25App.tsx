@@ -492,10 +492,14 @@ export default function Jul25App() {
     // Include multi custom periods
     allCustomPeriods.forEach(cp => consider(cp.start_date, cp.end_date));
 
-    // Fallback: show at least Nov 1 .. Jan 4 (1..66)
+    // Ensure we always render the full base season range Nov 1 -> Jan 4 (1..66) at minimum
     if (minDay === Infinity) {
-      minDay = 1; // 1. nov
-      maxDay = 66; // 4. jan
+      minDay = 1;
+      maxDay = 66;
+    } else {
+      // Always start from Nov 1 for consistent grid and allow beyond Jan 4 if data requires
+      minDay = 1;
+      maxDay = Math.max(maxDay, 66);
     }
 
     return Array.from({ length: maxDay - minDay + 1 }, (_, i) => i + minDay);
@@ -504,7 +508,7 @@ export default function Jul25App() {
   const eventDates = getDateRange();
   
   // Memoize guests per day to avoid stale values and heavy recomputation
-  const guestsPerDayMap = useMemo(() => getGuestsPerDay(), [families, allMembers, eventDates]);
+  const guestsPerDayMap = useMemo(() => getGuestsPerDay(), [families, allMembers, allPeriods, allCustomPeriods]);
   
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50 via-amber-50 to-white dark:from-green-950/20 dark:via-amber-950/20 dark:to-background">
