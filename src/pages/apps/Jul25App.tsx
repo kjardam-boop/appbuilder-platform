@@ -32,6 +32,7 @@ import { useJul25Families, useJul25FamilyMembers, useCreateFamily, useUpdateFami
 import { useJul25Tasks, useCreateTask, useUpdateTask, useDeleteTask, useTaskAssignments, useSetTaskAssignments } from "@/hooks/useJul25Tasks";
 import { useJul25FamilyPeriods, useMemberPeriods } from "@/hooks/useJul25FamilyPeriods";
 import { useMemberCustomPeriods } from "@/hooks/useJul25MemberCustomPeriods";
+import { useAppAdmin } from "@/hooks/useAppRole";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -44,6 +45,7 @@ interface ChristmasWord {
 export default function Jul25App() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const { isAppAdmin, isLoading: isLoadingAppRole } = useAppAdmin('jul25');
   
   // Data fra database
   const { data: families = [] } = useJul25Families();
@@ -113,10 +115,8 @@ export default function Jul25App() {
     }
   };
 
-  
-  // Admin emails
-  const adminEmails = ["admin@jul25.no", "kjetil@agj.no"];
-  const isAdmin = user && adminEmails.includes(user?.email || "");
+  // Admin status: Check if user is app admin (tenant_owner/tenant_admin or explicit app_admin role)
+  const isAdmin = isAppAdmin;
   
   // Finn brukerens familie-medlemskap
   const userMembership = allMembers.find(m => m.user_id === user?.id);

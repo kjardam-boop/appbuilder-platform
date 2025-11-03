@@ -78,6 +78,7 @@ const RoleManagement = () => {
       case 'tenant': return <Users className="h-4 w-4" />;
       case 'company': return <Building2 className="h-4 w-4" />;
       case 'project': return <FolderKanban className="h-4 w-4" />;
+      case 'app': return <Briefcase className="h-4 w-4" />;
     }
   };
 
@@ -151,7 +152,7 @@ const RoleManagement = () => {
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="platform" className="w-full">
-                <TabsList className="grid w-full grid-cols-4">
+                <TabsList className="grid w-full grid-cols-5">
                   <TabsTrigger value="platform">
                     <Shield className="h-4 w-4 mr-2" />
                     Plattform
@@ -168,9 +169,13 @@ const RoleManagement = () => {
                     <FolderKanban className="h-4 w-4 mr-2" />
                     Prosjekt
                   </TabsTrigger>
+                  <TabsTrigger value="app">
+                    <Briefcase className="h-4 w-4 mr-2" />
+                    App
+                  </TabsTrigger>
                 </TabsList>
 
-                {(['platform', 'tenant', 'company', 'project'] as RoleScope[]).map((scope) => (
+                {(['platform', 'tenant', 'company', 'project', 'app'] as RoleScope[]).map((scope) => (
                   <TabsContent key={scope} value={scope} className="space-y-4 mt-4">
                     {user.rolesByScope[scope].length === 0 ? (
                       <p className="text-sm text-muted-foreground">

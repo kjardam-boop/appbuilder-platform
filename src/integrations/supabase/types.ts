@@ -2267,6 +2267,10 @@ export type Database = {
         Args: { _company_id: string; _user_id: string }
         Returns: boolean
       }
+      has_app_role: {
+        Args: { _app_key: string; _user_id: string }
+        Returns: boolean
+      }
       has_role_in_scope: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -2274,6 +2278,10 @@ export type Database = {
           _scope_type: Database["public"]["Enums"]["role_scope"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      is_app_admin: {
+        Args: { _app_key: string; _user_id: string }
         Returns: boolean
       }
       is_company_admin: {
@@ -2315,13 +2323,15 @@ export type Database = {
         | "analyst"
         | "contributor"
         | "viewer"
+        | "app_admin"
+        | "app_user"
       project_phase_enum:
         | "as_is"
         | "to_be"
         | "evaluation"
         | "execution"
         | "closure"
-      role_scope: "platform" | "tenant" | "company" | "project"
+      role_scope: "platform" | "tenant" | "company" | "project" | "app"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2460,6 +2470,8 @@ export const Constants = {
         "analyst",
         "contributor",
         "viewer",
+        "app_admin",
+        "app_user",
       ],
       project_phase_enum: [
         "as_is",
@@ -2468,7 +2480,7 @@ export const Constants = {
         "execution",
         "closure",
       ],
-      role_scope: ["platform", "tenant", "company", "project"],
+      role_scope: ["platform", "tenant", "company", "project", "app"],
     },
   },
 } as const

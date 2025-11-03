@@ -29,6 +29,7 @@ const mockUserRolesByScope = (userId: string): Record<RoleScope, UserRoleRecord[
     tenant: [],
     company: [],
     project: [],
+    app: [],
   };
 };
 
@@ -153,6 +154,7 @@ describe("RoleManagement", () => {
             tenant: [],
             company: [],
             project: [],
+            app: [],
           };
         }
         return mockUserRolesByScope(userId);

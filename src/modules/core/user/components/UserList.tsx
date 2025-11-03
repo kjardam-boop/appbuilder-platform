@@ -26,6 +26,7 @@ const ROLES_BY_SCOPE: Record<RoleScope, AppRole[]> = {
   tenant: ['tenant_owner', 'tenant_admin', 'security_admin', 'data_protection'],
   company: ['integration_service', 'supplier_user'],
   project: ['project_owner', 'analyst', 'contributor', 'approver', 'viewer', 'external_reviewer'],
+  app: ['app_admin', 'app_user'],
 };
 
 export function UserList() {

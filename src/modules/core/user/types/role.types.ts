@@ -1,4 +1,4 @@
-export type RoleScope = 'platform' | 'tenant' | 'company' | 'project';
+export type RoleScope = 'platform' | 'tenant' | 'company' | 'project' | 'app';
 
 export type AppRole = 
   | 'platform_owner'
@@ -15,7 +15,9 @@ export type AppRole =
   | 'viewer'
   | 'external_reviewer'
   | 'integration_service'
-  | 'supplier_user';
+  | 'supplier_user'
+  | 'app_admin'
+  | 'app_user';
 
 export interface UserRoleRecord {
   id: string;
@@ -53,6 +55,8 @@ export const ROLE_LABELS: Record<AppRole, string> = {
   external_reviewer: 'Ekstern Evaluerer',
   integration_service: 'Integrasjonstjeneste',
   supplier_user: 'Leverandørbruker',
+  app_admin: 'App Administrator',
+  app_user: 'App Bruker',
 };
 
 export const SCOPE_LABELS: Record<RoleScope, string> = {
@@ -60,6 +64,7 @@ export const SCOPE_LABELS: Record<RoleScope, string> = {
   tenant: 'Tenant',
   company: 'Selskap',
   project: 'Prosjekt',
+  app: 'Applikasjon',
 };
 
 // Map company roles to app roles
@@ -88,4 +93,6 @@ export const APP_TO_COMPANY_ROLE: Record<AppRole, string> = {
   external_reviewer: 'viewer',
   integration_service: 'viewer',
   supplier_user: 'viewer',
+  app_admin: 'admin',
+  app_user: 'member',
 };

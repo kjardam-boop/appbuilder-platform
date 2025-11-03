@@ -15,7 +15,9 @@
         "document:*",
         "tasks:*",
         "opportunity:read",
-        "opportunity:update"
+        "opportunity:update",
+        "app:read",
+        "app:update"
       ]
     },
     "user": {
@@ -28,7 +30,8 @@
         "document:read",
         "document:create",
         "tasks:read",
-        "tasks:update"
+        "tasks:update",
+        "app:read"
       ]
     },
     "viewer": {
@@ -38,7 +41,8 @@
         "company:read",
         "project:read",
         "document:read",
-        "tasks:read"
+        "tasks:read",
+        "app:read"
       ]
     }
   },
@@ -49,7 +53,8 @@
     "tasks",
     "opportunity",
     "supplier",
-    "integration"
+    "integration",
+    "app"
   ],
   "actions": [
     "create",

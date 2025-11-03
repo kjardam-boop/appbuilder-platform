@@ -201,6 +201,7 @@ export class RoleService {
       tenant: [],
       company: [],
       project: [],
+      app: [],
     };
 
     roles.forEach(role => {
