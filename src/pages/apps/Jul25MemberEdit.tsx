@@ -15,6 +15,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { useJul25FamilyMembers, useUpdateFamilyMember } from "@/hooks/useJul25Families";
 import { useJul25FamilyPeriods, useMemberPeriods, useSetMemberPeriods } from "@/hooks/useJul25FamilyPeriods";
+import { useMemberCustomPeriods, useCreateMemberCustomPeriod, useUpdateMemberCustomPeriod, useDeleteMemberCustomPeriod } from "@/hooks/useJul25MemberCustomPeriods";
 import { useDebounce } from "@/hooks/useDebounce";
 
 export default function Jul25MemberEdit() {
@@ -28,9 +29,13 @@ export default function Jul25MemberEdit() {
   
   const { data: periods = [] } = useJul25FamilyPeriods(familyId);
   const { data: memberPeriods = [] } = useMemberPeriods(memberId);
+  const { data: customPeriods = [] } = useMemberCustomPeriods(memberId);
   
   const updateMember = useUpdateFamilyMember();
   const setMemberPeriods = useSetMemberPeriods();
+  const createCustom = useCreateMemberCustomPeriod();
+  const updateCustom = useUpdateMemberCustomPeriod();
+  const deleteCustom = useDeleteMemberCustomPeriod();
   
   // Local state
   const [memberName, setMemberName] = useState(member?.name || "");
@@ -44,6 +49,7 @@ export default function Jul25MemberEdit() {
   const [customLocation, setCustomLocation] = useState<'Jajabo' | 'JaJabu' | undefined>(
     (member?.custom_period_location as 'Jajabo' | 'JaJabu') || undefined
   );
+  const [editingCustomId, setEditingCustomId] = useState<string | null>(null);
   
   // Initialize selected periods
   useEffect(() => {
@@ -78,23 +84,24 @@ export default function Jul25MemberEdit() {
   
   const handleSave = () => {
     if (!member) return;
-    
-    // Save custom dates and location if provided
+
+    // Save or update one custom period from the form if set
     if (customArrival && customDeparture && customLocation) {
-      updateMember.mutate({
-        id: member.id,
-        arrival_date: customArrival.toISOString(),
-        departure_date: customDeparture.toISOString(),
-        custom_period_location: customLocation,
-      });
-    } else if (!customArrival && !customDeparture) {
-      // Clear custom dates if both are removed
-      updateMember.mutate({
-        id: member.id,
-        arrival_date: null,
-        departure_date: null,
-        custom_period_location: null,
-      });
+      if (editingCustomId) {
+        updateCustom.mutate({
+          id: editingCustomId,
+          location: customLocation,
+          start_date: customArrival.toISOString(),
+          end_date: customDeparture.toISOString(),
+        }, { onSuccess: () => setEditingCustomId(null) });
+      } else {
+        createCustom.mutate({
+          member_id: member.id,
+          location: customLocation,
+          start_date: customArrival.toISOString(),
+          end_date: customDeparture.toISOString(),
+        });
+      }
     }
     
     // Save period selections
@@ -252,7 +259,7 @@ export default function Jul25MemberEdit() {
             {/* Custom Dates (Optional Override) */}
             <div className="pt-4 border-t">
               <Label className="text-base font-semibold mb-3 block">
-                Egendefinerte datoer (valgfritt)
+                Egendefinerte datoer (flere intervaller støttes)
               </Label>
               <p className="text-sm text-muted-foreground mb-3">
                 Sett egne datoer hvis medlemmet kun kommer deler av periodene
@@ -339,20 +346,32 @@ export default function Jul25MemberEdit() {
             </div>
             
             {/* Action Buttons */}
-            <div className="flex justify-end gap-2 pt-4">
-              <Button 
-                variant="outline" 
-                onClick={() => navigate(`/apps/jul25/admin?familyId=${familyId}`)}
-              >
-                Avbryt
-              </Button>
-              <Button 
-                onClick={handleSave}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                Lagre
-              </Button>
-            </div>
+              <div className="flex justify-end gap-2 pt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => navigate(`/apps/jul25/admin?familyId=${familyId}`)}
+                >
+                  Avbryt
+                </Button>
+                <Button 
+                  onClick={() => {
+                    // clear form
+                    setCustomArrival(undefined);
+                    setCustomDeparture(undefined);
+                    setCustomLocation(undefined);
+                    setEditingCustomId(null);
+                  }}
+                  variant="secondary"
+                >
+                  Nullstill egendefinert
+                </Button>
+                <Button 
+                  onClick={handleSave}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {editingCustomId ? 'Oppdater' : 'Lagre'}
+                </Button>
+              </div>
           </CardContent>
         </Card>
       </div>

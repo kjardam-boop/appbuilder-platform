@@ -31,6 +31,7 @@ import { useAuth } from "@/modules/core/user/hooks/useAuth";
 import { useJul25Families, useJul25FamilyMembers, useCreateFamily, useUpdateFamily, useDeleteFamily, useJoinFamily, useUpdateFamilyMember } from "@/hooks/useJul25Families";
 import { useJul25Tasks, useCreateTask, useUpdateTask, useDeleteTask, useTaskAssignments, useSetTaskAssignments } from "@/hooks/useJul25Tasks";
 import { useJul25FamilyPeriods, useMemberPeriods } from "@/hooks/useJul25FamilyPeriods";
+import { useMemberCustomPeriods } from "@/hooks/useJul25MemberCustomPeriods";
 import { useNavigate } from "react-router-dom";
 
 interface ChristmasWord {
@@ -65,34 +66,30 @@ export default function Jul25App() {
   const setTaskAssignments = useSetTaskAssignments();
   
   // Dato hjelpefunksjoner
-  // Konverterer dato (ISO-string eller Date) til kontinuerlig dag-nummer (20-50+)
-  // Desember: 20-31, Januar: 32-50 (31 + dag i januar)
+  // Normaliser datoer til dagindeks relativt til 1. nov 2025 (UTC) for å støtte nov+des 2025 og jan 2026
+  const BASE_UTC = Date.UTC(2025, 10, 1); // 10 = november
+  const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+  const toStartOfDayUTC = (d: Date) => Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+
+  // Konverter ISO/Date til fortløpende dagnummer (1 = 1. nov 2025)
   const timestampToDay = (input: string | Date): number => {
-    const date = typeof input === 'string' ? new Date(input) : input;
-    const month = date.getMonth(); // 0 = januar, 11 = desember
-    const day = date.getDate();
-    return month === 11 ? day : 31 + day;
+    const d = typeof input === 'string' ? new Date(input) : input;
+    const diffDays = Math.floor((toStartOfDayUTC(d) - BASE_UTC) / MS_PER_DAY) + 1;
+    return diffDays; // kan være < 1 hvis før base (skal ikke skje i UI)
   };
-  
-  // Konverterer kontinuerlig dag-nummer til ISO timestamp
-  const dayToTimestamp = (day: number): string => {
-    if (day >= 20 && day <= 31) {
-      // Desember 2024
-      return new Date(2024, 11, day).toISOString();
-    } else {
-      // Januar 2025 (dag - 31)
-      return new Date(2025, 0, day - 31).toISOString();
-    }
-  };
-  
-  // Konverterer dag-nummer til leselig dato-streng (f.eks. "20. des" eller "3. jan")
+
+  // Konverter dagnummer tilbake til lesbar dato
   const dayToDateString = (day: number): string => {
-    if (day >= 20 && day <= 31) {
-      return `${day}. des`;
+    if (day <= 30) {
+      return `${day}. nov`;
+    } else if (day <= 61) {
+      return `${day - 30}. des`;
     } else {
-      return `${day - 31}. jan`;
+      return `${day - 61}. jan`;
     }
   };
+
   
   // Admin emails
   const adminEmails = ["admin@jul25.no", "kjetil@agj.no"];
@@ -474,24 +471,34 @@ export default function Jul25App() {
     return sorted;
   };
   
-  // Calculate dynamic date range based on periods
+  // Calculate dynamic date range based on periods (family + member custom)
+  const { data: allCustomPeriods = [] } = useMemberCustomPeriods();
+
   const getDateRange = () => {
-    if (allPeriods.length === 0) {
-      return Array.from({ length: 13 }, (_, i) => i + 19);
-    }
-    
     let minDay = Infinity;
     let maxDay = -Infinity;
-    
-    allPeriods.forEach(period => {
-      const startDay = timestampToDay(period.arrival_date);
-      const endDay = timestampToDay(period.departure_date);
-      if (startDay < minDay) minDay = startDay;
-      if (endDay > maxDay) maxDay = endDay;
-    });
-    
-    if (minDay === Infinity) return Array.from({ length: 13 }, (_, i) => i + 19);
-    
+
+    const consider = (isoStart?: string, isoEnd?: string) => {
+      if (!isoStart || !isoEnd) return;
+      const s = timestampToDay(isoStart);
+      const e = timestampToDay(isoEnd);
+      if (s < minDay) minDay = s;
+      if (e > maxDay) maxDay = e;
+    };
+
+    // Include family periods
+    allPeriods.forEach(p => consider(p.arrival_date, p.departure_date));
+    // Include member-level single custom (backwards compat)
+    allMembers.forEach(m => consider(m.arrival_date || undefined, m.departure_date || undefined));
+    // Include multi custom periods
+    allCustomPeriods.forEach(cp => consider(cp.start_date, cp.end_date));
+
+    // Fallback: show at least Nov 1 .. Jan 4 (1..66)
+    if (minDay === Infinity) {
+      minDay = 1; // 1. nov
+      maxDay = 66; // 4. jan
+    }
+
     return Array.from({ length: maxDay - minDay + 1 }, (_, i) => i + minDay);
   };
   
@@ -714,22 +721,33 @@ export default function Jul25App() {
                               memberPeriods.some(mp => mp.period_id === p.id)
                             );
                             
-                            // Check if member has custom period
-                            const hasCustomPeriod = member.arrival_date && member.departure_date && member.custom_period_location;
-                            
-                            // If has custom period, show only custom period
-                            // Otherwise, use assigned periods (or all periods as fallback if none assigned)
-                            const effectivePeriods = hasCustomPeriod 
-                              ? [{
-                                  id: `custom-${member.id}`,
-                                  family_id: member.family_id,
-                                  location: member.custom_period_location,
-                                  arrival_date: member.arrival_date,
-                                  departure_date: member.departure_date,
-                                  created_at: member.created_at,
-                                  updated_at: member.updated_at,
-                                }]
-                              : (assignedPeriods.length > 0 ? assignedPeriods : periods);
+                             // Member multi custom periods (new table)
+                             const memberCustoms = allCustomPeriods
+                               .filter(cp => cp.member_id === member.id)
+                               .map(cp => ({
+                                 id: cp.id,
+                                 family_id: member.family_id,
+                                 location: cp.location,
+                                 arrival_date: cp.start_date,
+                                 departure_date: cp.end_date,
+                                 created_at: cp.created_at,
+                                 updated_at: cp.updated_at,
+                               }));
+
+                             // Backwards compat: single custom stored on member
+                             const singleCustom = (member.arrival_date && member.departure_date && member.custom_period_location)
+                               ? [{
+                                   id: `custom-${member.id}`,
+                                   family_id: member.family_id,
+                                   location: member.custom_period_location,
+                                   arrival_date: member.arrival_date,
+                                   departure_date: member.departure_date,
+                                   created_at: member.created_at,
+                                   updated_at: member.updated_at,
+                                 }]
+                               : [];
+
+                             const effectivePeriods = [...memberCustoms, ...singleCustom, ...(assignedPeriods.length > 0 ? assignedPeriods : periods)];
                             
                             return (
                               <div key={member.id} className="flex flex-col sm:flex-row gap-2 sm:gap-1 items-start">
@@ -771,11 +789,13 @@ export default function Jul25App() {
 
                                 {/* Member Gantt Bar - Multiple segments for different periods */}
                                 <div className="relative flex-1 h-7 hidden sm:block overflow-x-auto">
-                                  <div className="absolute inset-y-0 flex gap-0 min-w-max">
-                                    {eventDates.map(date => (
-                                      <div key={date} className="w-10 h-7 border-l border-border/30" />
-                                    ))}
-                                  </div>
+                                   <div className="absolute inset-y-0 flex gap-0 min-w-max">
+                                     {eventDates.map(date => (
+                                       <div key={date} className="w-10 h-7 border-l border-border/30" />
+                                     ))}
+                                     {/* Left boundary line */}
+                                     <div className="absolute left-0 top-0 bottom-0 border-l border-border/50" />
+                                   </div>
                                   {effectivePeriods.map(period => {
                                     // Use period dates directly
                                     const arr = timestampToDay(period.arrival_date);
@@ -784,24 +804,24 @@ export default function Jul25App() {
                                     const startOffset = (arr - minDate) * 40;
                                     const width = (dep - arr + 1) * 40;
                                     
-                                    return (
-                                      <div 
-                                        key={period.id}
-                                        className={cn(
-                                          "absolute top-1 h-5 rounded-sm cursor-pointer transition-colors flex items-center text-[10px] text-white font-medium px-2",
-                                          period.location === 'Jajabo'
-                                            ? "bg-green-500 hover:bg-green-600"
-                                            : "bg-red-500 hover:bg-red-600"
-                                        )}
-                                        style={{ 
-                                          left: `${startOffset}px`, 
-                                          width: `${width}px` 
-                                        }}
-                                        title={`${member.name} - ${period.location}: ${dayToDateString(arr)} - ${dayToDateString(dep)}`}
-                                      >
-                                        <span className="truncate">{period.location}</span>
-                                      </div>
-                                    );
+                                   return (
+                                       <div 
+                                         key={period.id}
+                                         className={cn(
+                                           "absolute top-1 h-5 rounded-sm cursor-pointer transition-colors flex items-center text-[10px] text-white font-medium px-2",
+                                           period.location === 'Jajabo'
+                                             ? "bg-green-500 hover:bg-green-600"
+                                             : "bg-red-500 hover:bg-red-600"
+                                         )}
+                                         style={{ 
+                                           left: `${startOffset}px`, 
+                                           width: `${width}px` 
+                                         }}
+                                         title={`${member.name} - ${period.location}: ${dayToDateString(arr)} - ${dayToDateString(dep)}`}
+                                       >
+                                         <span className="truncate">{period.location}</span>
+                                       </div>
+                                     );
                                   })}
                                 </div>
                               </div>

@@ -1081,6 +1081,44 @@ export type Database = {
           },
         ]
       }
+      jul25_member_custom_periods: {
+        Row: {
+          created_at: string
+          end_date: string
+          id: string
+          location: string
+          member_id: string
+          start_date: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          id?: string
+          location: string
+          member_id: string
+          start_date: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          id?: string
+          location?: string
+          member_id?: string
+          start_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jul25_member_custom_periods_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "jul25_family_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       jul25_member_periods: {
         Row: {
           created_at: string | null
