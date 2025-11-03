@@ -19,7 +19,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/modules/core/user/hooks/useAuth";
@@ -122,7 +125,7 @@ export default function Jul25App() {
   
   // Task form
   const [taskText, setTaskText] = useState("");
-  const [taskDeadline, setTaskDeadline] = useState<string>("");
+  const [taskDeadline, setTaskDeadline] = useState<Date | undefined>();
   const [taskAssignedFamily, setTaskAssignedFamily] = useState<string>("");
   
   // Invitation
@@ -264,7 +267,7 @@ export default function Jul25App() {
         await updateTask.mutateAsync({
           id: editingTask.id,
           text: taskText,
-          deadline: taskDeadline || null,
+          deadline: taskDeadline ? taskDeadline.toISOString() : null,
           assigned_family_id: familyId,
         });
         toast.success("Oppgave oppdatert");
@@ -272,7 +275,7 @@ export default function Jul25App() {
         await createTask.mutateAsync({
           text: taskText,
           done: false,
-          deadline: taskDeadline || null,
+          deadline: taskDeadline ? taskDeadline.toISOString() : null,
           assigned_family_id: familyId,
           created_by: user?.id || null,
         });
@@ -282,7 +285,7 @@ export default function Jul25App() {
       setShowTaskDialog(false);
       setEditingTask(null);
       setTaskText("");
-      setTaskDeadline("");
+      setTaskDeadline(undefined);
       setTaskAssignedFamily("");
     } catch (error: any) {
       toast.error(error.message || "Kunne ikke lagre oppgave");
@@ -795,7 +798,7 @@ export default function Jul25App() {
                           onClick={() => {
                             setEditingTask(null);
                             setTaskText("");
-                            setTaskDeadline("");
+                            setTaskDeadline(undefined);
                             setTaskAssignedFamily("");
                             setShowTaskDialog(true);
                           }}
@@ -847,7 +850,7 @@ export default function Jul25App() {
                     const creator = allMembers.find(m => m.user_id === task.created_by);
                     
                     return (
-                      <div key={task.id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-accent">
+                      <div key={task.id} className="grid grid-cols-[auto,1fr,120px,100px,auto] items-center gap-2 p-2 rounded-lg hover:bg-accent">
                         <input
                           type="checkbox"
                           checked={task.done}
@@ -859,7 +862,7 @@ export default function Jul25App() {
                           }}
                           className="w-4 h-4 flex-shrink-0"
                         />
-                        <div className="flex-1 min-w-0">
+                        <div className="min-w-0">
                           <span className={cn("text-sm", task.done && "line-through text-muted-foreground")}>
                             {task.text}
                           </span>
@@ -869,26 +872,34 @@ export default function Jul25App() {
                             </div>
                           )}
                         </div>
-                        {task.deadline && (
-                          <Badge variant="outline" className="text-xs whitespace-nowrap">
-                            📅 {new Date(task.deadline).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' })}
-                          </Badge>
-                        )}
-                        {assignedFamily && (
-                          <Badge variant="secondary" className="text-xs whitespace-nowrap">
-                            {assignedFamily.name}
-                          </Badge>
-                        )}
+                        <div className="flex justify-end">
+                          {task.deadline ? (
+                            <Badge variant="outline" className="text-xs whitespace-nowrap">
+                              📅 {new Date(task.deadline).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' })}
+                            </Badge>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">-</span>
+                          )}
+                        </div>
+                        <div className="flex justify-end">
+                          {assignedFamily ? (
+                            <Badge variant="secondary" className="text-xs whitespace-nowrap">
+                              {assignedFamily.name}
+                            </Badge>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">-</span>
+                          )}
+                        </div>
                         {user && (
-                          <>
+                          <div className="flex gap-1 flex-shrink-0">
                             <Button 
                               size="sm" 
                               variant="ghost" 
-                              className="h-7 px-2 flex-shrink-0" 
+                              className="h-7 px-2" 
                               onClick={() => {
                                 setEditingTask(task);
                                 setTaskText(task.text);
-                                setTaskDeadline(task.deadline || "");
+                                setTaskDeadline(task.deadline ? new Date(task.deadline) : undefined);
                                 setTaskAssignedFamily(task.assigned_family_id || "none");
                                 setShowTaskDialog(true);
                               }}
@@ -898,7 +909,7 @@ export default function Jul25App() {
                             <Button 
                               size="sm" 
                               variant="ghost" 
-                              className="h-7 px-2 text-destructive flex-shrink-0" 
+                              className="h-7 px-2 text-destructive" 
                               onClick={() => {
                                 if (confirm("Er du sikker på at du vil slette denne oppgaven?")) {
                                   deleteTask.mutate(task.id);
@@ -907,7 +918,7 @@ export default function Jul25App() {
                             >
                               <Trash2 className="w-3 h-3" />
                             </Button>
-                          </>
+                          </div>
                         )}
                       </div>
                     );
@@ -1227,12 +1238,36 @@ export default function Jul25App() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="task-deadline">Frist (valgfritt)</Label>
-                <Input
-                  id="task-deadline"
-                  type="date"
-                  value={taskDeadline}
-                  onChange={(e) => setTaskDeadline(e.target.value)}
-                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !taskDeadline && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {taskDeadline ? format(taskDeadline, "PPP") : <span>Velg dato</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={taskDeadline}
+                      onSelect={setTaskDeadline}
+                      defaultMonth={new Date(2024, 11, 20)}
+                      disabled={(date) => {
+                        // Only allow dates between Dec 20, 2024 and Jan 31, 2025
+                        const dec20 = new Date(2024, 11, 20);
+                        const jan31 = new Date(2025, 0, 31);
+                        return date < dec20 || date > jan31;
+                      }}
+                      initialFocus
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
             <div className="flex justify-end gap-2">
