@@ -26,6 +26,7 @@ interface UserWithRoles {
 const RoleManagement = () => {
   const [users, setUsers] = useState<UserWithRoles[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedScope, setSelectedScope] = useState<RoleScope | 'all'>('all');
 
   useEffect(() => {
@@ -34,32 +35,64 @@ const RoleManagement = () => {
 
   const loadUsers = async () => {
     try {
+      console.log('[RoleManagement] Starting to load users...');
       setLoading(true);
+      setError(null);
       
       // Get all profiles
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, email, full_name')
+        .select('id, user_id, email, full_name')
         .order('full_name');
 
-      if (profilesError) throw profilesError;
+      console.log('[RoleManagement] Profiles loaded:', profiles?.length, 'profiles');
+
+      if (profilesError) {
+        console.error('[RoleManagement] Error loading profiles:', profilesError);
+        throw profilesError;
+      }
 
       // Get roles for each user grouped by scope
       const usersWithRoles: UserWithRoles[] = await Promise.all(
         (profiles || []).map(async (profile) => {
-          const rolesByScope = await RoleService.getUserRolesByScope(profile.id);
-          return {
-            id: profile.id,
-            email: profile.email,
-            full_name: profile.full_name || 'Ukjent navn',
-            rolesByScope,
-          };
+          console.log('[RoleManagement] Loading roles for user:', profile.email);
+          
+          try {
+            const rolesByScope = await RoleService.getUserRolesByScope(profile.user_id);
+            console.log('[RoleManagement] Roles loaded for', profile.email, ':', 
+              Object.entries(rolesByScope).map(([scope, roles]) => `${scope}: ${roles.length}`).join(', ')
+            );
+            
+            return {
+              id: profile.user_id,
+              email: profile.email,
+              full_name: profile.full_name || 'Ukjent navn',
+              rolesByScope,
+            };
+          } catch (err) {
+            console.error('[RoleManagement] Error loading roles for', profile.email, ':', err);
+            // Return user with empty roles on error
+            return {
+              id: profile.user_id,
+              email: profile.email,
+              full_name: profile.full_name || 'Ukjent navn',
+              rolesByScope: {
+                platform: [],
+                tenant: [],
+                company: [],
+                project: [],
+                app: [],
+              },
+            };
+          }
         })
       );
 
+      console.log('[RoleManagement] Total users with roles:', usersWithRoles.length);
       setUsers(usersWithRoles);
     } catch (error) {
-      console.error('Error loading users:', error);
+      console.error('[RoleManagement] Error loading users:', error);
+      setError(error instanceof Error ? error.message : 'Kunne ikke laste brukere');
     } finally {
       setLoading(false);
     }
@@ -112,6 +145,15 @@ const RoleManagement = () => {
           Kun lesbar oversikt over roller i systemet. For å endre roller, bruk brukeradministrasjonssiden.
         </p>
       </div>
+
+      {error && (
+        <Alert variant="destructive">
+          <Info className="h-4 w-4" />
+          <AlertDescription>
+            Feil ved lasting av brukere: {error}
+          </AlertDescription>
+        </Alert>
+      )}
 
       <Alert>
         <Info className="h-4 w-4" />

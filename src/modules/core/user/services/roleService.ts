@@ -57,44 +57,65 @@ export class RoleService {
     scopeType?: RoleScope,
     scopeId?: string
   ): Promise<UserRoleRecord[]> {
-    // Check if current user is platform admin to determine access method
-    const authRes = await supabase.auth.getUser();
-    const user = authRes?.data?.user ?? null;
+    console.log('[RoleService.getUserRoles] Called with:', { userId, scopeType, scopeId });
     
-    if (user) {
-      const rpcRes = await supabase.rpc('admin_has_platform_role', {
-        check_user_id: user.id
-      });
-      const isAdmin = rpcRes?.data === true;
+    try {
+      // Check if current user is platform admin to determine access method
+      const authRes = await supabase.auth.getUser();
+      const user = authRes?.data?.user ?? null;
+      
+      console.log('[RoleService.getUserRoles] Current user:', user?.id);
+      
+      if (user) {
+        const rpcRes = await supabase.rpc('admin_has_platform_role', {
+          check_user_id: user.id
+        });
+        
+        console.log('[RoleService.getUserRoles] RPC admin check result:', rpcRes);
+        
+        const isAdmin = rpcRes?.data === true;
+        const isOwnRoles = user.id === userId;
 
-      // If admin or querying own roles, use direct query
-      if (isAdmin || user.id === userId) {
-        let query = supabase
-          .from('user_roles')
-          .select('*')
-          .eq('user_id', userId);
+        console.log('[RoleService.getUserRoles] Access check:', { isAdmin, isOwnRoles });
 
-        if (scopeType) {
-          query = query.eq('scope_type', scopeType);
-        }
+        // If admin or querying own roles, use direct query
+        if (isAdmin || isOwnRoles) {
+          let query = supabase
+            .from('user_roles')
+            .select('*')
+            .eq('user_id', userId);
 
-        if (scopeId !== undefined) {
-          if (scopeId) {
-            query = query.eq('scope_id', scopeId);
-          } else {
-            query = query.is('scope_id', null);
+          if (scopeType) {
+            query = query.eq('scope_type', scopeType);
           }
+
+          if (scopeId !== undefined) {
+            if (scopeId) {
+              query = query.eq('scope_id', scopeId);
+            } else {
+              query = query.is('scope_id', null);
+            }
+          }
+
+          const { data, error } = await query.order('created_at', { ascending: false });
+
+          if (error) {
+            console.error('[RoleService.getUserRoles] Query error:', error);
+            throw error;
+          }
+          
+          console.log('[RoleService.getUserRoles] Found roles:', data?.length || 0);
+          return data as UserRoleRecord[];
         }
-
-        const { data, error } = await query.order('created_at', { ascending: false });
-
-        if (error) throw error;
-        return data as UserRoleRecord[];
       }
-    }
 
-    // Non-admin users can only view their own roles
-    throw new Error('Access denied');
+      // Non-admin users can only view their own roles
+      console.warn('[RoleService.getUserRoles] Access denied - not admin or own roles');
+      return []; // Return empty array instead of throwing
+    } catch (error) {
+      console.error('[RoleService.getUserRoles] Error:', error);
+      return []; // Return empty array on error
+    }
   }
 
   /**
