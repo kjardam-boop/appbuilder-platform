@@ -327,9 +327,10 @@ export default function Jul25App() {
   const getGuestsPerDay = () => {
     const guestsPerDay: Record<number, number> = {};
     
-    for (let day = 19; day <= 31; day++) {
+    // Initialize with eventDates range
+    eventDates.forEach(day => {
       guestsPerDay[day] = 0;
-    }
+    });
     
     families.forEach(family => {
       const familyMembersPerDay = getMembersPerDay(family);
@@ -361,7 +362,37 @@ export default function Jul25App() {
     return sorted;
   };
   
-  const eventDates = Array.from({ length: 13 }, (_, i) => i + 19);
+  // Calculate dynamic date range based on earliest and latest dates
+  const getDateRange = () => {
+    if (families.length === 0) {
+      return Array.from({ length: 13 }, (_, i) => i + 19); // Default 19-31
+    }
+    
+    let minDate = Infinity;
+    let maxDate = -Infinity;
+    
+    families.forEach(family => {
+      if (family.arrival_date < minDate) minDate = family.arrival_date;
+      if (family.departure_date > maxDate) maxDate = family.departure_date;
+      
+      // Also check family members
+      allMembers.filter(m => m.family_id === family.id).forEach(member => {
+        const arrDate = member.arrival_date || family.arrival_date;
+        const depDate = member.departure_date || family.departure_date;
+        if (arrDate < minDate) minDate = arrDate;
+        if (depDate > maxDate) maxDate = depDate;
+      });
+    });
+    
+    if (minDate === Infinity || maxDate === -Infinity) {
+      return Array.from({ length: 13 }, (_, i) => i + 19); // Default 19-31
+    }
+    
+    const length = maxDate - minDate + 1;
+    return Array.from({ length }, (_, i) => i + minDate);
+  };
+  
+  const eventDates = getDateRange();
   
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50 via-amber-50 to-white dark:from-green-950/20 dark:via-amber-950/20 dark:to-background">
@@ -376,10 +407,10 @@ export default function Jul25App() {
       <div className="container mx-auto py-8 space-y-8 relative z-10">
         {/* Header */}
         <div className="text-center space-y-4">
-          <div className="flex items-center justify-center gap-3 flex-wrap">
+            <div className="flex items-center justify-center gap-3 flex-wrap">
             <Star className="w-12 h-12 text-yellow-500 animate-pulse" />
             <h1 className="text-4xl sm:text-5xl font-bold" style={{
-              background: 'linear-gradient(to right, hsl(var(--jul25-red)), hsl(var(--jul25-red-dark)), hsl(var(--jul25-red)))',
+              background: 'linear-gradient(to right, hsl(var(--jul25-red)), hsl(120, 70%, 35%), hsl(45, 100%, 60%), hsl(var(--jul25-red-dark)))',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text'
@@ -450,7 +481,10 @@ export default function Jul25App() {
             {/* Date Header */}
             <div className="hidden sm:block overflow-x-auto pb-2">
               <div className="flex gap-0">
-                <div className="w-32 sm:w-40 flex-shrink-0" />
+                <div className="w-32 sm:w-40 flex-shrink-0">
+                  <div className="text-xs font-medium text-muted-foreground pb-1">Dato</div>
+                  <div className="text-xs font-medium text-muted-foreground">Antall tilstede</div>
+                </div>
                 {eventDates.map(date => {
                   const guestsPerDay = getGuestsPerDay();
                   return (
@@ -475,7 +509,8 @@ export default function Jul25App() {
             ) : (
               <div className="space-y-3">
                 {families.map((family) => {
-                  const startOffset = (family.arrival_date - 19) * 40;
+                  const minDate = eventDates[0] || 19;
+                  const startOffset = (family.arrival_date - minDate) * 40;
                   const duration = (family.departure_date - family.arrival_date + 1) * 40;
                   const familyMembers = allMembers.filter(m => m.family_id === family.id);
                   const membersPerDay = getMembersPerDay(family);
