@@ -138,7 +138,8 @@ export function ManageFamilyMembersDialog({
                       <>{format(new Date(member.arrival_date), "d. MMM")} - {format(new Date(member.departure_date), "d. MMM")}</>
                     )}
                     {member.is_admin && " (Admin)"}
-                    {!member.user_id && " (Ikke bruker)"}
+                    {!member.user_id && /^.+\s\d+$/.test(member.name) && " (Ledig plass)"}
+                    {!member.user_id && !/^.+\s\d+$/.test(member.name) && " (Ikke bruker)"}
                   </div>
                 </div>
                 <div className="flex gap-2">

@@ -57,6 +57,53 @@ export const useJul25FamilyMembers = (familyId?: string) => {
   });
 };
 
+// Helper function to ensure family has the correct number of placeholder members
+async function ensureFamilyMemberCount(familyId: string, familyName: string, targetCount: number, arrivalDate: string, departureDate: string) {
+  // Get current members
+  const { data: existingMembers, error: fetchError } = await supabase
+    .from("jul25_family_members")
+    .select("*")
+    .eq("family_id", familyId);
+  
+  if (fetchError) throw fetchError;
+  
+  const currentCount = existingMembers?.length || 0;
+  const neededCount = targetCount - currentCount;
+  
+  if (neededCount > 0) {
+    // Create placeholder members
+    const placeholders = Array.from({ length: neededCount }, (_, i) => ({
+      family_id: familyId,
+      name: `${familyName} ${currentCount + i + 1}`,
+      user_id: null,
+      is_admin: false,
+      arrival_date: arrivalDate,
+      departure_date: departureDate,
+    }));
+    
+    const { error: insertError } = await supabase
+      .from("jul25_family_members")
+      .insert(placeholders);
+    
+    if (insertError) throw insertError;
+  } else if (neededCount < 0) {
+    // Remove excess placeholder members (those with user_id = null and auto-generated names)
+    const placeholderMembers = existingMembers
+      ?.filter(m => !m.user_id && /^.+\s\d+$/.test(m.name))
+      .slice(0, Math.abs(neededCount));
+    
+    if (placeholderMembers && placeholderMembers.length > 0) {
+      const idsToDelete = placeholderMembers.map(m => m.id);
+      const { error: deleteError } = await supabase
+        .from("jul25_family_members")
+        .delete()
+        .in("id", idsToDelete);
+      
+      if (deleteError) throw deleteError;
+    }
+  }
+}
+
 export const useCreateFamily = () => {
   const queryClient = useQueryClient();
   
@@ -69,10 +116,21 @@ export const useCreateFamily = () => {
         .single();
       
       if (error) throw error;
+      
+      // Auto-generate placeholder members
+      await ensureFamilyMemberCount(
+        data.id,
+        data.name,
+        data.number_of_people,
+        data.arrival_date,
+        data.departure_date
+      );
+      
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["jul25-families"] });
+      queryClient.invalidateQueries({ queryKey: ["jul25-family-members"] });
       toast.success("Familie opprettet! 🎄");
     },
     onError: (error: any) => {
@@ -94,10 +152,23 @@ export const useUpdateFamily = () => {
         .single();
       
       if (error) throw error;
+      
+      // If number_of_people was updated, ensure placeholder members match
+      if (updates.number_of_people !== undefined) {
+        await ensureFamilyMemberCount(
+          data.id,
+          data.name,
+          data.number_of_people,
+          data.arrival_date,
+          data.departure_date
+        );
+      }
+      
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["jul25-families"] });
+      queryClient.invalidateQueries({ queryKey: ["jul25-family-members"] });
       toast.success("Familie oppdatert! 🎄");
     },
     onError: (error: any) => {
