@@ -612,13 +612,16 @@ export default function Jul25App() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4 sm:space-y-6">
-            {/* Date Header */}
+            {/* Single scroll container for entire calendar */}
             <div className="hidden sm:block overflow-x-auto pb-2">
-              <div className="flex gap-0">
-                <div className="w-32 sm:w-40 flex-shrink-0 flex flex-col justify-end">
-                  <div className="text-xs font-medium text-muted-foreground h-[18px] flex items-center border-b border-border/30">Dato</div>
-                  <div className="text-xs font-medium text-muted-foreground h-[18px] flex items-center">Antall tilstede</div>
-                </div>
+              <div className="flex flex-col" style={{ minWidth: `${160 + eventDates.length * 40}px` }}>
+                
+                {/* Date Header */}
+                <div className="flex gap-0 mb-4">
+                  <div className="w-32 sm:w-40 flex-shrink-0 flex flex-col justify-end sticky left-0 bg-background z-10">
+                    <div className="text-xs font-medium text-muted-foreground h-[18px] flex items-center border-b border-border/30">Dato</div>
+                    <div className="text-xs font-medium text-muted-foreground h-[18px] flex items-center">Antall tilstede</div>
+                  </div>
                 {eventDates.map((date, index) => {
                   const guestsPerDay = getGuestsPerDay();
                   const isFirstOfMonth = index === 0 || (date === 31 && eventDates[index - 1] === 30) || (date === 62 && eventDates[index - 1] === 61);
@@ -640,18 +643,17 @@ export default function Jul25App() {
                   );
                 })}
               </div>
-            </div>
 
-            {/* Family Rows */}
-            {families.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Users className="w-12 h-12 mx-auto mb-2 opacity-20" />
-                <p>Ingen familier lagt til ennå</p>
-                {!user && <p className="text-sm mt-2">Logg inn for å melde deg på!</p>}
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {families.map((family) => {
+                {/* Family Rows */}
+                {families.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Users className="w-12 h-12 mx-auto mb-2 opacity-20" />
+                    <p>Ingen familier lagt til ennå</p>
+                    {!user && <p className="text-sm mt-2">Logg inn for å melde deg på!</p>}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {families.map((family) => {
                   const minDate = eventDates[0] || 1;
                   const effectiveDates = getEffectiveFamilyDates(family);
                   const arrDay = timestampToDay(effectiveDates.arrival_date);
@@ -664,69 +666,69 @@ export default function Jul25App() {
                   
                   const isUserFamilyAdmin = isAdmin || (userMembership && userMembership.family_id === family.id && userMembership.is_admin);
                   
-                  return (
-                    <div key={family.id} className="space-y-2">
-                      <div className="flex flex-col sm:flex-row gap-2 sm:gap-1 items-start">
-                        {/* Family Name */}
-                        <div className="w-full sm:w-32 md:w-40 flex-shrink-0">
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => toggleFamilyExpanded(family.id)}
-                              className="flex-1 bg-green-700 text-white rounded px-2 py-2 sm:py-1 text-sm text-left hover:bg-green-800 transition-colors flex items-center gap-1"
-                            >
-                              <span className="text-xs">{isExpanded ? '▼' : '▶'}</span>
-                              <span className="truncate">{family.name}</span>
-                            </button>
-                            {isUserFamilyAdmin && (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-7 w-7 p-0"
-                                onClick={() => navigate(`/apps/jul25/admin?familyId=${family.id}`)}
-                                title="Administrer familie"
-                              >
-                                <UserCog className="h-3 w-3" />
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Gantt Bar */}
-                        <div className="relative flex-1 h-8 hidden sm:block overflow-x-auto">
-                          <div className="absolute inset-y-0 flex gap-0 min-w-max">
-                            {eventDates.map(date => (
-                              <div key={date} className="w-10 h-8 border-l border-border/30" />
-                            ))}
-                          </div>
-                          <div 
-                            className="absolute top-1 h-6 bg-green-600 rounded cursor-pointer hover:bg-green-700 transition-colors flex items-center text-xs text-white font-medium min-w-max overflow-hidden"
-                            style={{ 
-                              left: `${startOffset}px`, 
-                              width: `${duration}px` 
-                            }}
-                            title={`${family.name}: ${dayToDateString(arrDay)} - ${dayToDateString(depDay)}`}
-                          >
-                            {Object.entries(membersPerDay).map(([day, count]) => {
-                              const dayNum = parseInt(day);
-                              const dayOffset = (dayNum - arrDay) * 40;
-                              return (
-                                <span 
-                                  key={day}
-                                  className="absolute top-0 bottom-0 flex items-center justify-center"
-                                  style={{ left: `${dayOffset}px`, width: '40px' }}
+                      return (
+                        <div key={family.id} className="space-y-2">
+                          <div className="flex gap-2 sm:gap-1 items-start">
+                            {/* Family Name */}
+                            <div className="w-full sm:w-32 md:w-40 flex-shrink-0 sticky left-0 bg-background z-10">
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => toggleFamilyExpanded(family.id)}
+                                  className="flex-1 bg-green-700 text-white rounded px-2 py-2 sm:py-1 text-sm text-left hover:bg-green-800 transition-colors flex items-center gap-1"
                                 >
-                                  {count}
-                                </span>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      </div>
+                                  <span className="text-xs">{isExpanded ? '▼' : '▶'}</span>
+                                  <span className="truncate">{family.name}</span>
+                                </button>
+                                {isUserFamilyAdmin && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 w-7 p-0"
+                                    onClick={() => navigate(`/apps/jul25/admin?familyId=${family.id}`)}
+                                    title="Administrer familie"
+                                  >
+                                    <UserCog className="h-3 w-3" />
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
 
-                      {/* Expanded Members */}
-                      {isExpanded && (
-                        <div className="ml-4 sm:ml-0 space-y-1 mt-2">
-                          {familyMembers.map((member) => {
+                            {/* Gantt Bar */}
+                            <div className="relative flex-1 h-8">
+                              <div className="absolute inset-y-0 flex gap-0">
+                                {eventDates.map(date => (
+                                  <div key={date} className="w-10 h-8 border-l border-border/30" />
+                                ))}
+                              </div>
+                              <div 
+                                className="absolute top-1 h-6 bg-green-600 rounded cursor-pointer hover:bg-green-700 transition-colors flex items-center text-xs text-white font-medium overflow-hidden"
+                                style={{ 
+                                  left: `${startOffset}px`, 
+                                  width: `${duration}px` 
+                                }}
+                                title={`${family.name}: ${dayToDateString(arrDay)} - ${dayToDateString(depDay)}`}
+                              >
+                                {Object.entries(membersPerDay).map(([day, count]) => {
+                                  const dayNum = parseInt(day);
+                                  const dayOffset = (dayNum - arrDay) * 40;
+                                  return (
+                                    <span 
+                                      key={day}
+                                      className="absolute top-0 bottom-0 flex items-center justify-center"
+                                      style={{ left: `${dayOffset}px`, width: '40px' }}
+                                    >
+                                      {count}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Expanded Members */}
+                          {isExpanded && (
+                            <div className="ml-4 sm:ml-0 space-y-1 mt-2">
+                              {familyMembers.map((member) => {
                             const periods = allPeriods.filter(p => p.family_id === family.id);
                             const memberPeriods = allMemberPeriods.filter(mp => mp.member_id === member.id);
                             const assignedPeriods = periods.filter(p => 
@@ -757,71 +759,73 @@ export default function Jul25App() {
                                 }]
                               : [];
 
-                            const effectivePeriods = [...memberCustoms, ...singleCustom, ...(assignedPeriods.length > 0 ? assignedPeriods : [])];
-                            
-                            return (
-                              <div key={member.id} className="flex flex-col sm:flex-row gap-2 sm:gap-1 items-start">
-                                <div className="w-full sm:w-32 md:w-40 flex-shrink-0">
-                                  <div className="flex items-center gap-1">
-                                    <div className="flex-1 bg-green-500 text-white rounded px-2 py-1 text-xs truncate">
-                                      {member.name}
+                                const effectivePeriods = [...memberCustoms, ...singleCustom, ...(assignedPeriods.length > 0 ? assignedPeriods : [])];
+                                
+                                return (
+                                  <div key={member.id} className="flex gap-2 sm:gap-1 items-start">
+                                    <div className="w-full sm:w-32 md:w-40 flex-shrink-0 sticky left-0 bg-background z-10">
+                                      <div className="flex items-center gap-1">
+                                        <div className="flex-1 bg-green-500 text-white rounded px-2 py-1 text-xs truncate">
+                                          {member.name}
+                                        </div>
+                                        {isUserFamilyAdmin && (
+                                         <Button
+                                           size="sm"
+                                           variant="ghost"
+                                           className="h-6 w-6 p-0"
+                                           onClick={() => navigate(`/apps/jul25/member/${member.id}`)}
+                                           title="Rediger person"
+                                         >
+                                           <Edit2 className="h-3 w-3" />
+                                         </Button>
+                                       )}
+                                      </div>
                                     </div>
-                                    {isUserFamilyAdmin && (
-                                     <Button
-                                       size="sm"
-                                       variant="ghost"
-                                       className="h-6 w-6 p-0"
-                                       onClick={() => navigate(`/apps/jul25/member/${member.id}`)}
-                                       title="Rediger person"
-                                     >
-                                       <Edit2 className="h-3 w-3" />
-                                     </Button>
-                                   )}
-                                  </div>
-                                </div>
 
-                                <div className="relative flex-1 h-7 hidden sm:block overflow-x-auto">
-                                   <div className="absolute inset-y-0 flex gap-0 min-w-max">
-                                     {eventDates.map(date => (
-                                       <div key={date} className="w-10 h-7 border-l border-border/30" />
-                                     ))}
-                                   </div>
-                                  {effectivePeriods.map(period => {
+                                    <div className="relative flex-1 h-7">
+                                      <div className="absolute inset-y-0 flex gap-0">
+                                        {eventDates.map(date => (
+                                          <div key={date} className="w-10 h-7 border-l border-border/30" />
+                                        ))}
+                                      </div>
+                                      {effectivePeriods.map(period => {
                                     const arr = Math.max(1, timestampToDay(period.arrival_date));
                                     const dep = Math.max(1, timestampToDay(period.departure_date));
                                     const startOffset = (arr - minDate) * 40;
                                     const width = (dep - arr + 1) * 40;
                                     
-                                   return (
-                                       <div 
-                                         key={period.id}
-                                         className={cn(
-                                           "absolute top-1 h-5 rounded-sm cursor-pointer transition-colors flex items-center text-[10px] text-white font-medium px-2",
-                                           period.location === 'Jajabo'
-                                             ? "bg-green-500 hover:bg-green-600"
-                                             : "bg-red-500 hover:bg-red-600"
-                                         )}
-                                         style={{ 
-                                           left: `${startOffset}px`, 
-                                           width: `${width}px` 
-                                         }}
-                                         title={`${member.name} - ${period.location}: ${dayToDateString(arr)} - ${dayToDateString(dep)}`}
-                                       >
-                                         <span className="truncate">{period.location}</span>
-                                       </div>
-                                     );
-                                  })}
-                                </div>
-                              </div>
-                            );
-                          })}
+                                        return (
+                                          <div 
+                                            key={period.id}
+                                            className={cn(
+                                              "absolute top-1 h-5 rounded-sm cursor-pointer transition-colors flex items-center text-[10px] text-white font-medium px-2",
+                                              period.location === 'Jajabo'
+                                                ? "bg-green-500 hover:bg-green-600"
+                                                : "bg-red-500 hover:bg-red-600"
+                                            )}
+                                            style={{ 
+                                              left: `${startOffset}px`, 
+                                              width: `${width}px` 
+                                            }}
+                                            title={`${member.name} - ${period.location}: ${dayToDateString(arr)} - ${dayToDateString(dep)}`}
+                                          >
+                                            <span className="truncate">{period.location}</span>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  );
-                })}
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </CardContent>
         </Card>
         )}
