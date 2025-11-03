@@ -33,6 +33,7 @@ import { useJul25Tasks, useCreateTask, useUpdateTask, useDeleteTask, useTaskAssi
 import { useJul25FamilyPeriods, useMemberPeriods } from "@/hooks/useJul25FamilyPeriods";
 import { useMemberCustomPeriods } from "@/hooks/useJul25MemberCustomPeriods";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface ChristmasWord {
   date: number;
@@ -65,6 +66,27 @@ export default function Jul25App() {
   const updateTask = useUpdateTask();
   const deleteTask = useDeleteTask();
   const setTaskAssignments = useSetTaskAssignments();
+  
+  // Realtime updates for member periods and custom periods to avoid stale UI
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    const channel = supabase
+      .channel('jul25-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'jul25_member_periods' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['jul25-member-periods'] });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'jul25_member_custom_periods' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['jul25-member-custom-periods'] });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'jul25_family_periods' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['jul25-family-periods'] });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
   
   // Dato hjelpefunksjoner
   // Normaliser datoer til dagindeks relativt til 1. nov 2025 (UTC) for å støtte nov+des 2025 og jan 2026
@@ -492,14 +514,10 @@ export default function Jul25App() {
     // Include multi custom periods
     allCustomPeriods.forEach(cp => consider(cp.start_date, cp.end_date));
 
-    // Ensure we always render the full base season range Nov 1 -> Jan 4 (1..66) at minimum
+    // Fallback: if no data, show Nov 1 .. Jan 4 (1..66)
     if (minDay === Infinity) {
       minDay = 1;
       maxDay = 66;
-    } else {
-      // Always start from Nov 1 for consistent grid and allow beyond Jan 4 if data requires
-      minDay = 1;
-      maxDay = Math.max(maxDay, 66);
     }
 
     return Array.from({ length: maxDay - minDay + 1 }, (_, i) => i + minDay);
@@ -739,7 +757,7 @@ export default function Jul25App() {
                                 }]
                               : [];
 
-                            const effectivePeriods = [...memberCustoms, ...singleCustom, ...(assignedPeriods.length > 0 ? assignedPeriods : periods)];
+                            const effectivePeriods = [...memberCustoms, ...singleCustom, ...(assignedPeriods.length > 0 ? assignedPeriods : [])];
                             
                             return (
                               <div key={member.id} className="flex flex-col sm:flex-row gap-2 sm:gap-1 items-start">
