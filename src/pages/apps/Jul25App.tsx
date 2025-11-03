@@ -371,20 +371,25 @@ export default function Jul25App() {
   const getMembersPerDay = (family: any): Record<number, number> => {
     const membersPerDay: Record<number, number> = {};
     const familyMembers = allMembers.filter(m => m.family_id === family.id);
+    
+    // Always use fresh effective dates
     const effectiveDates = getEffectiveFamilyDates(family);
     
     const startDay = timestampToDay(effectiveDates.arrival_date.toISOString());
     const endDay = timestampToDay(effectiveDates.departure_date.toISOString());
     
+    // Loop through all days in the effective range
     for (let day = startDay; day <= endDay; day++) {
       if (familyMembers.length === 0) {
         membersPerDay[day] = family.number_of_people;
       } else {
-        membersPerDay[day] = familyMembers.filter(member => {
+        // Count how many members are present on this specific day
+        const count = familyMembers.filter(member => {
           const arrDay = member.arrival_date ? timestampToDay(member.arrival_date) : timestampToDay(family.arrival_date);
           const depDay = member.departure_date ? timestampToDay(member.departure_date) : timestampToDay(family.departure_date);
           return day >= arrDay && day <= depDay;
         }).length;
+        membersPerDay[day] = count;
       }
     }
     

@@ -176,7 +176,8 @@ export const useUpdateFamilyMember = () => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["jul25-family-members"] });
+      // Invalidate all member queries to ensure fresh data
+      queryClient.invalidateQueries({ queryKey: ["jul25-family-members"], refetchType: 'all' });
       toast.success("Medlem oppdatert!");
     },
     onError: (error: any) => {
