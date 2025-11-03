@@ -70,10 +70,6 @@ export default function Jul25App() {
   const adminEmails = ["admin@jul25.no", "kjetil@agj.no"];
   const isAdmin = user && adminEmails.includes(user?.email || "");
   
-  // Admin emails
-  const adminEmails = ["admin@jul25.no", "kjetil@agj.no"];
-  const isAdmin = user && adminEmails.includes(user.email || "");
-  
   // Finn brukerens familie-medlemskap
   const userMembership = allMembers.find(m => m.user_id === user?.id);
   const userFamily = families.find(f => f.id === userMembership?.family_id);
@@ -585,8 +581,10 @@ export default function Jul25App() {
                 {families.map((family) => {
                   const minDate = eventDates[0] || 19;
                   const effectiveDates = getEffectiveFamilyDates(family);
-                  const startOffset = (effectiveDates.arrival_date - minDate) * 40;
-                  const duration = (effectiveDates.departure_date - effectiveDates.arrival_date + 1) * 40;
+                  const arrDay = timestampToDay(effectiveDates.arrival_date.toISOString());
+                  const depDay = timestampToDay(effectiveDates.departure_date.toISOString());
+                  const startOffset = (arrDay - minDate) * 40;
+                  const duration = (depDay - arrDay + 1) * 40;
                   const familyMembers = allMembers.filter(m => m.family_id === family.id);
                   const membersPerDay = getMembersPerDay(family);
                   const isExpanded = expandedFamilies.has(family.id);
@@ -649,17 +647,10 @@ export default function Jul25App() {
                           >
                             {Object.entries(membersPerDay).map(([day, count]) => {
                               const dayNum = parseInt(day);
-                              const dayOffset = (dayNum - arr) * 40;
+                              const dayOffset = (dayNum - arrDay) * 40;
                               return (
                                 <span 
                                   key={day}
-                                  className="absolute top-0 bottom-0 flex items-center justify-center"
-                                  style={{ left: `${dayOffset}px`, width: '40px' }}
-                                >
-                                  {count}
-                                </span>
-                              );
-                            })}
                                   className="absolute top-0 bottom-0 flex items-center justify-center"
                                   style={{ left: `${dayOffset}px`, width: '40px' }}
                                 >
