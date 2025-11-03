@@ -203,6 +203,7 @@ export function ManageFamilyMembersDialog({
                         mode="single"
                         selected={arrivalDate}
                         onSelect={setArrivalDate}
+                        defaultMonth={new Date(2024, 11, 1)}
                         initialFocus
                         className={cn("p-3 pointer-events-auto")}
                       />
@@ -240,6 +241,7 @@ export function ManageFamilyMembersDialog({
                         mode="single"
                         selected={departureDate}
                         onSelect={setDepartureDate}
+                        defaultMonth={new Date(2024, 11, 1)}
                         initialFocus
                         className={cn("p-3 pointer-events-auto")}
                       />

@@ -309,11 +309,40 @@ export default function Jul25App() {
     });
   };
   
+  // Get effective family dates based on actual member dates
+  const getEffectiveFamilyDates = (family: any) => {
+    const familyMembers = allMembers.filter(m => m.family_id === family.id);
+    
+    if (familyMembers.length === 0) {
+      return {
+        arrival_date: family.arrival_date,
+        departure_date: family.departure_date,
+      };
+    }
+    
+    let earliestArrival = family.arrival_date;
+    let latestDeparture = family.departure_date;
+    
+    familyMembers.forEach(member => {
+      const arrDate = member.arrival_date || family.arrival_date;
+      const depDate = member.departure_date || family.departure_date;
+      
+      if (arrDate < earliestArrival) earliestArrival = arrDate;
+      if (depDate > latestDeparture) latestDeparture = depDate;
+    });
+    
+    return {
+      arrival_date: earliestArrival,
+      departure_date: latestDeparture,
+    };
+  };
+  
   const getMembersPerDay = (family: any): Record<number, number> => {
     const membersPerDay: Record<number, number> = {};
     const familyMembers = allMembers.filter(m => m.family_id === family.id);
+    const effectiveDates = getEffectiveFamilyDates(family);
     
-    for (let day = family.arrival_date; day <= family.departure_date; day++) {
+    for (let day = effectiveDates.arrival_date; day <= effectiveDates.departure_date; day++) {
       if (familyMembers.length === 0) {
         membersPerDay[day] = family.number_of_people;
       } else {
@@ -502,11 +531,19 @@ export default function Jul25App() {
                   <div className="text-xs font-medium text-muted-foreground pb-1">Dato</div>
                   <div className="text-xs font-medium text-muted-foreground">Antall tilstede</div>
                 </div>
-                {eventDates.map(date => {
+                {eventDates.map((date, index) => {
                   const guestsPerDay = getGuestsPerDay();
+                  const isFirstOfMonth = index === 0 || (date === 1 && eventDates[index - 1] !== 31);
+                  const month = date >= 1 && date <= 10 ? 'Jan' : 'Des';
+                  
                   return (
                     <div key={date} className="w-10 flex-shrink-0 text-center">
-                      <div className="font-medium text-xs border-l border-border/30 pb-1">{date}</div>
+                      {isFirstOfMonth && (
+                        <div className="text-[10px] font-semibold text-muted-foreground/70 pb-0.5">{month}</div>
+                      )}
+                      <div className={cn("font-medium text-xs border-l border-border/30 pb-1", !isFirstOfMonth && "pt-3.5")}>
+                        {date}
+                      </div>
                       <div className="text-xs text-muted-foreground">
                         {guestsPerDay[date] > 0 ? `${guestsPerDay[date]}` : '-'}
                       </div>
@@ -527,8 +564,9 @@ export default function Jul25App() {
               <div className="space-y-3">
                 {families.map((family) => {
                   const minDate = eventDates[0] || 19;
-                  const startOffset = (family.arrival_date - minDate) * 40;
-                  const duration = (family.departure_date - family.arrival_date + 1) * 40;
+                  const effectiveDates = getEffectiveFamilyDates(family);
+                  const startOffset = (effectiveDates.arrival_date - minDate) * 40;
+                  const duration = (effectiveDates.departure_date - effectiveDates.arrival_date + 1) * 40;
                   const familyMembers = allMembers.filter(m => m.family_id === family.id);
                   const membersPerDay = getMembersPerDay(family);
                   const isExpanded = expandedFamilies.has(family.id);
