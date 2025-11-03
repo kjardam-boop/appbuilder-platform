@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Plus, Edit2, Trash2, MapPin, CalendarIcon, Users, UserPlus, Minus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -52,11 +52,11 @@ export default function Jul25FamilyAdmin() {
   const debouncedFamilyName = useDebounce(familyName, 500);
   
   // Autosave family name
-  useState(() => {
+  useEffect(() => {
     if (family && debouncedFamilyName && debouncedFamilyName !== family.name) {
       updateFamily.mutate({ id: family.id, name: debouncedFamilyName });
     }
-  });
+  }, [debouncedFamilyName, family]);
   
   // Autosave people count
   const handlePeopleCountChange = (delta: number) => {
