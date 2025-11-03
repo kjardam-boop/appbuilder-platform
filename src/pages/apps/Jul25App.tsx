@@ -432,8 +432,9 @@ export default function Jul25App() {
       } else {
         // Count how many members are present on this specific day
         const count = familyMembers.filter(member => {
-          const arrDay = member.arrival_date ? timestampToDay(member.arrival_date) : timestampToDay(family.arrival_date);
-          const depDay = member.departure_date ? timestampToDay(member.departure_date) : timestampToDay(family.departure_date);
+          // Use member's custom dates if set, otherwise use family's effective dates
+          const arrDay = member.arrival_date ? timestampToDay(member.arrival_date) : startDay;
+          const depDay = member.departure_date ? timestampToDay(member.departure_date) : endDay;
           return day >= arrDay && day <= depDay;
         }).length;
         membersPerDay[day] = count;
