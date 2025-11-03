@@ -1046,6 +1046,42 @@ export type Database = {
           },
         ]
       }
+      jul25_task_assignments: {
+        Row: {
+          created_at: string
+          family_member_id: string
+          id: string
+          task_id: string
+        }
+        Insert: {
+          created_at?: string
+          family_member_id: string
+          id?: string
+          task_id: string
+        }
+        Update: {
+          created_at?: string
+          family_member_id?: string
+          id?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jul25_task_assignments_family_member_id_fkey"
+            columns: ["family_member_id"]
+            isOneToOne: false
+            referencedRelation: "jul25_family_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jul25_task_assignments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "jul25_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       jul25_tasks: {
         Row: {
           assigned_family_id: string | null

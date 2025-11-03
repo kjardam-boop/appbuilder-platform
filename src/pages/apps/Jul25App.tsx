@@ -21,13 +21,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/modules/core/user/hooks/useAuth";
 import { useJul25Families, useJul25FamilyMembers, useCreateFamily, useUpdateFamily, useDeleteFamily, useJoinFamily, useUpdateFamilyMember } from "@/hooks/useJul25Families";
-import { useJul25Tasks, useCreateTask, useUpdateTask, useDeleteTask } from "@/hooks/useJul25Tasks";
+import { useJul25Tasks, useCreateTask, useUpdateTask, useDeleteTask, useTaskAssignments, useSetTaskAssignments } from "@/hooks/useJul25Tasks";
 import { EditFamilyDialog } from "@/components/Jul25/EditFamilyDialog";
 import { ManageFamilyMembersDialog } from "@/components/Jul25/ManageFamilyMembersDialog";
 
@@ -44,6 +46,7 @@ export default function Jul25App() {
   const { data: families = [] } = useJul25Families();
   const { data: allMembers = [] } = useJul25FamilyMembers();
   const { data: tasks = [] } = useJul25Tasks();
+  const { data: allAssignments = [] } = useTaskAssignments();
   
   // Mutations
   const createFamily = useCreateFamily();
@@ -54,6 +57,7 @@ export default function Jul25App() {
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
   const deleteTask = useDeleteTask();
+  const setTaskAssignments = useSetTaskAssignments();
   
   // Dato hjelpefunksjoner
   // Konverterer dato (ISO-string eller Date) til kontinuerlig dag-nummer (20-50+)
@@ -126,7 +130,7 @@ export default function Jul25App() {
   // Task form
   const [taskText, setTaskText] = useState("");
   const [taskDeadline, setTaskDeadline] = useState<Date | undefined>();
-  const [taskAssignedFamily, setTaskAssignedFamily] = useState<string>("");
+  const [taskAssignedMembers, setTaskAssignedMembers] = useState<string[]>([]);
   
   // Invitation
   const [invitationEmail, setInvitationEmail] = useState("");
@@ -261,24 +265,38 @@ export default function Jul25App() {
     }
     
     try {
-      const familyId = taskAssignedFamily && taskAssignedFamily !== "none" ? taskAssignedFamily : null;
-      
       if (editingTask) {
         await updateTask.mutateAsync({
           id: editingTask.id,
           text: taskText,
           deadline: taskDeadline ? taskDeadline.toISOString() : null,
-          assigned_family_id: familyId,
+          assigned_family_id: null, // Deprecated - using assignments instead
         });
+        
+        // Update assignments
+        await setTaskAssignments.mutateAsync({
+          taskId: editingTask.id,
+          memberIds: taskAssignedMembers,
+        });
+        
         toast.success("Oppgave oppdatert");
       } else {
-        await createTask.mutateAsync({
+        const newTask = await createTask.mutateAsync({
           text: taskText,
           done: false,
           deadline: taskDeadline ? taskDeadline.toISOString() : null,
-          assigned_family_id: familyId,
+          assigned_family_id: null, // Deprecated - using assignments instead
           created_by: user?.id || null,
         });
+        
+        // Create assignments
+        if (taskAssignedMembers.length > 0) {
+          await setTaskAssignments.mutateAsync({
+            taskId: newTask.id,
+            memberIds: taskAssignedMembers,
+          });
+        }
+        
         toast.success("Oppgave opprettet");
       }
       
@@ -286,7 +304,7 @@ export default function Jul25App() {
       setEditingTask(null);
       setTaskText("");
       setTaskDeadline(undefined);
-      setTaskAssignedFamily("");
+      setTaskAssignedMembers([]);
     } catch (error: any) {
       toast.error(error.message || "Kunne ikke lagre oppgave");
     }
@@ -799,7 +817,7 @@ export default function Jul25App() {
                             setEditingTask(null);
                             setTaskText("");
                             setTaskDeadline(undefined);
-                            setTaskAssignedFamily("");
+                            setTaskAssignedMembers([]);
                             setShowTaskDialog(true);
                           }}
                           className="h-8 text-xs"
@@ -846,11 +864,14 @@ export default function Jul25App() {
               <CardContent>
                 <div className="space-y-2">
                   {getSortedTasks().map(task => {
-                    const assignedFamily = families.find(f => f.id === task.assigned_family_id);
+                    const taskAssignments = allAssignments.filter(a => a.task_id === task.id);
+                    const assignedMembers = taskAssignments
+                      .map(a => allMembers.find(m => m.id === a.family_member_id))
+                      .filter(Boolean);
                     const creator = allMembers.find(m => m.user_id === task.created_by);
                     
                     return (
-                      <div key={task.id} className="grid grid-cols-[auto,1fr,120px,100px,auto] items-center gap-2 p-2 rounded-lg hover:bg-accent">
+                      <div key={task.id} className="grid grid-cols-[auto,1fr,120px,150px,auto] items-center gap-2 p-2 rounded-lg hover:bg-accent">
                         <input
                           type="checkbox"
                           checked={task.done}
@@ -882,10 +903,14 @@ export default function Jul25App() {
                           )}
                         </div>
                         <div className="flex justify-end">
-                          {assignedFamily ? (
-                            <Badge variant="secondary" className="text-xs whitespace-nowrap">
-                              {assignedFamily.name}
-                            </Badge>
+                          {assignedMembers.length > 0 ? (
+                            <div className="flex flex-wrap gap-1 justify-end">
+                              {assignedMembers.map(member => (
+                                <Badge key={member?.id} variant="secondary" className="text-xs whitespace-nowrap">
+                                  {member?.name}
+                                </Badge>
+                              ))}
+                            </div>
                           ) : (
                             <span className="text-xs text-muted-foreground">-</span>
                           )}
@@ -900,24 +925,27 @@ export default function Jul25App() {
                                 setEditingTask(task);
                                 setTaskText(task.text);
                                 setTaskDeadline(task.deadline ? new Date(task.deadline) : undefined);
-                                setTaskAssignedFamily(task.assigned_family_id || "none");
+                                const taskAssignments = allAssignments.filter(a => a.task_id === task.id);
+                                setTaskAssignedMembers(taskAssignments.map(a => a.family_member_id));
                                 setShowTaskDialog(true);
                               }}
                             >
                               <Edit2 className="w-3 h-3" />
                             </Button>
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
-                              className="h-7 px-2 text-destructive" 
-                              onClick={() => {
-                                if (confirm("Er du sikker på at du vil slette denne oppgaven?")) {
-                                  deleteTask.mutate(task.id);
-                                }
-                              }}
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
+                            {(isAdmin || task.created_by === user?.id) && (
+                              <Button 
+                                size="sm" 
+                                variant="ghost" 
+                                className="h-7 px-2 text-destructive hover:text-destructive"
+                                onClick={async () => {
+                                  if (confirm("Er du sikker på at du vil slette denne oppgaven?")) {
+                                    await deleteTask.mutateAsync(task.id);
+                                  }
+                                }}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1221,20 +1249,39 @@ export default function Jul25App() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="task-family">Tildel familie</Label>
-                <Select value={taskAssignedFamily} onValueChange={setTaskAssignedFamily}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Velg familie (valgfritt)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Ingen familie</SelectItem>
-                    {families.map(family => (
-                      <SelectItem key={family.id} value={family.id}>
-                        {family.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>Ansvarlige (valgfritt)</Label>
+                <ScrollArea className="h-[200px] border rounded-md p-3">
+                  <div className="space-y-2">
+                    {allMembers.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">Ingen personer tilgjengelig</p>
+                    ) : (
+                      allMembers.map(member => {
+                        const family = families.find(f => f.id === member.family_id);
+                        return (
+                          <div key={member.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`member-${member.id}`}
+                              checked={taskAssignedMembers.includes(member.id)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setTaskAssignedMembers([...taskAssignedMembers, member.id]);
+                                } else {
+                                  setTaskAssignedMembers(taskAssignedMembers.filter(id => id !== member.id));
+                                }
+                              }}
+                            />
+                            <Label
+                              htmlFor={`member-${member.id}`}
+                              className="text-sm font-normal cursor-pointer"
+                            >
+                              {member.name} {family && <span className="text-muted-foreground">({family.name})</span>}
+                            </Label>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </ScrollArea>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="task-deadline">Frist (valgfritt)</Label>

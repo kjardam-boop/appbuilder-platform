@@ -13,6 +13,13 @@ export interface Jul25Task {
   updated_at: string;
 }
 
+export interface Jul25TaskAssignment {
+  id: string;
+  task_id: string;
+  family_member_id: string;
+  created_at: string;
+}
+
 export const useJul25Tasks = () => {
   return useQuery({
     queryKey: ["jul25-tasks"],
@@ -94,6 +101,63 @@ export const useDeleteTask = () => {
     },
     onError: (error: any) => {
       toast.error(error.message || "Kunne ikke slette oppgave");
+    },
+  });
+};
+
+// Task assignments hooks
+export const useTaskAssignments = (taskId?: string) => {
+  return useQuery({
+    queryKey: ["jul25-task-assignments", taskId],
+    queryFn: async () => {
+      let query = supabase
+        .from("jul25_task_assignments")
+        .select("*");
+      
+      if (taskId) {
+        query = query.eq("task_id", taskId);
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) throw error;
+      return data as Jul25TaskAssignment[];
+    },
+  });
+};
+
+export const useSetTaskAssignments = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ taskId, memberIds }: { taskId: string; memberIds: string[] }) => {
+      // First, delete existing assignments
+      const { error: deleteError } = await supabase
+        .from("jul25_task_assignments")
+        .delete()
+        .eq("task_id", taskId);
+      
+      if (deleteError) throw deleteError;
+      
+      // Then, insert new assignments
+      if (memberIds.length > 0) {
+        const assignments = memberIds.map(memberId => ({
+          task_id: taskId,
+          family_member_id: memberId,
+        }));
+        
+        const { error: insertError } = await supabase
+          .from("jul25_task_assignments")
+          .insert(assignments);
+        
+        if (insertError) throw insertError;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["jul25-task-assignments"] });
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Kunne ikke oppdatere ansvarlige");
     },
   });
 };
