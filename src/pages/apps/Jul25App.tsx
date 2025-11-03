@@ -30,7 +30,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/modules/core/user/hooks/useAuth";
 import { useJul25Families, useJul25FamilyMembers, useCreateFamily, useUpdateFamily, useDeleteFamily, useJoinFamily, useUpdateFamilyMember } from "@/hooks/useJul25Families";
 import { useJul25Tasks, useCreateTask, useUpdateTask, useDeleteTask, useTaskAssignments, useSetTaskAssignments } from "@/hooks/useJul25Tasks";
-import { useJul25FamilyPeriods } from "@/hooks/useJul25FamilyPeriods";
+import { useJul25FamilyPeriods, useMemberPeriods } from "@/hooks/useJul25FamilyPeriods";
 import { useNavigate } from "react-router-dom";
 
 interface ChristmasWord {
@@ -49,6 +49,9 @@ export default function Jul25App() {
   const { data: allPeriods = [] } = useJul25FamilyPeriods();
   const { data: tasks = [] } = useJul25Tasks();
   const { data: allAssignments = [] } = useTaskAssignments();
+  
+  // Fetch member periods for all members at once
+  const { data: allMemberPeriods = [] } = useMemberPeriods();
   
   // Mutations
   const createFamily = useCreateFamily();
@@ -701,13 +704,18 @@ export default function Jul25App() {
                       {isExpanded && (
                         <div className="ml-4 sm:ml-0 space-y-1 mt-2">
                           {/* Per-person Gantt bars */}
-                          {familyMembers.map((member, idx) => {
+                          {familyMembers.map((member) => {
                             const minDate = eventDates[0] || 19;
                             const periods = allPeriods.filter(p => p.family_id === family.id);
-                            const arr = member.arrival_date ? timestampToDay(member.arrival_date) : (periods[0] ? timestampToDay(periods[0].arrival_date) : 20);
-                            const dep = member.departure_date ? timestampToDay(member.departure_date) : (periods[periods.length-1] ? timestampToDay(periods[periods.length-1].departure_date) : 31);
-                            const startOffset = (arr - minDate) * 40;
-                            const width = (dep - arr + 1) * 40;
+                            
+                            // Get member's assigned periods from allMemberPeriods
+                            const memberPeriods = allMemberPeriods.filter(mp => mp.member_id === member.id);
+                            const assignedPeriods = periods.filter(p => 
+                              memberPeriods.some(mp => mp.period_id === p.id)
+                            );
+                            
+                            // If no periods assigned, show nothing (or use all family periods as fallback)
+                            const effectivePeriods = assignedPeriods.length > 0 ? assignedPeriods : [];
                             
                             return (
                               <div key={member.id} className="flex flex-col sm:flex-row gap-2 sm:gap-1 items-start">
@@ -729,28 +737,61 @@ export default function Jul25App() {
                                        </Button>
                                      )}
                                   </div>
-                                  <div className="text-xs text-muted-foreground mt-1 sm:hidden">
-                                    {dayToDateString(arr)} - {dayToDateString(dep)}
+                                  <div className="text-xs text-muted-foreground mt-1 sm:hidden flex gap-1 flex-wrap">
+                                    {effectivePeriods.map(p => (
+                                      <Badge 
+                                        key={p.id}
+                                        variant="outline"
+                                        className={cn(
+                                          "text-[10px] h-4",
+                                          p.location === 'Jajabo' 
+                                            ? "bg-green-200 text-green-800 border-green-300" 
+                                            : "bg-red-200 text-red-800 border-red-300"
+                                        )}
+                                      >
+                                        {p.location}
+                                      </Badge>
+                                    ))}
                                   </div>
                                 </div>
 
-                                {/* Member Gantt Bar */}
+                                {/* Member Gantt Bar - Multiple segments for different periods */}
                                 <div className="relative flex-1 h-7 hidden sm:block overflow-x-auto">
                                   <div className="absolute inset-y-0 flex gap-0 min-w-max">
                                     {eventDates.map(date => (
                                       <div key={date} className="w-10 h-7 border-l border-border/30" />
                                     ))}
                                   </div>
-                                  <div 
-                                    className="absolute top-1 h-5 bg-green-500 rounded-sm cursor-pointer hover:bg-green-600 transition-colors flex items-center text-[10px] text-white font-medium px-2"
-                                    style={{ 
-                                      left: `${startOffset}px`, 
-                                      width: `${width}px` 
-                                    }}
-                                    title={`${member.name}: ${dayToDateString(arr)} - ${dayToDateString(dep)}`}
-                                  >
-                                    <span className="truncate">{member.name}</span>
-                                  </div>
+                                  {effectivePeriods.map(period => {
+                                    // Use custom member dates if available, otherwise use period dates
+                                    const arr = member.arrival_date && member.departure_date 
+                                      ? timestampToDay(member.arrival_date)
+                                      : timestampToDay(period.arrival_date);
+                                    const dep = member.arrival_date && member.departure_date
+                                      ? timestampToDay(member.departure_date)
+                                      : timestampToDay(period.departure_date);
+                                    const startOffset = (arr - minDate) * 40;
+                                    const width = (dep - arr + 1) * 40;
+                                    
+                                    return (
+                                      <div 
+                                        key={period.id}
+                                        className={cn(
+                                          "absolute top-1 h-5 rounded-sm cursor-pointer transition-colors flex items-center text-[10px] text-white font-medium px-2",
+                                          period.location === 'Jajabo'
+                                            ? "bg-green-500 hover:bg-green-600"
+                                            : "bg-red-500 hover:bg-red-600"
+                                        )}
+                                        style={{ 
+                                          left: `${startOffset}px`, 
+                                          width: `${width}px` 
+                                        }}
+                                        title={`${member.name} - ${period.location}: ${dayToDateString(arr)} - ${dayToDateString(dep)}`}
+                                      >
+                                        <span className="truncate">{period.location}</span>
+                                      </div>
+                                    );
+                                  })}
                                 </div>
                               </div>
                             );
