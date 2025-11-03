@@ -1256,12 +1256,12 @@ export default function Jul25App() {
                       mode="single"
                       selected={taskDeadline}
                       onSelect={setTaskDeadline}
-                      defaultMonth={new Date(2024, 11, 20)}
+                      defaultMonth={new Date(2025, 11, 1)}
                       disabled={(date) => {
-                        // Only allow dates between Dec 20, 2024 and Jan 31, 2025
-                        const dec20 = new Date(2024, 11, 20);
-                        const jan31 = new Date(2025, 0, 31);
-                        return date < dec20 || date > jan31;
+                        // Only allow dates between Dec 1, 2025 and Jan 31, 2026
+                        const dec1 = new Date(2025, 11, 1);
+                        const jan31 = new Date(2026, 0, 31);
+                        return date < dec1 || date > jan31;
                       }}
                       initialFocus
                       className={cn("p-3 pointer-events-auto")}
