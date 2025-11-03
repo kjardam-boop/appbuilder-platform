@@ -9,7 +9,7 @@
  * - Admin-panel for administrasjon
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Calendar as CalendarIcon, Users, Star, CheckSquare, Plus, Edit2, Trash2, Mail, LogOut, LogIn, UserCog, Baby, Church, Heart } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -339,6 +339,7 @@ export default function Jul25App() {
   const getEffectiveFamilyDates = (family: any) => {
     const familyMembers = allMembers.filter(m => m.family_id === family.id);
     
+    // If no members, fall back to family's own dates
     if (familyMembers.length === 0) {
       return {
         arrival_date: new Date(family.arrival_date),
@@ -346,20 +347,30 @@ export default function Jul25App() {
       };
     }
     
-    let earliestArrival = new Date(family.arrival_date);
-    let latestDeparture = new Date(family.departure_date);
+    // With members: compute union (min arrival, max departure) based on member-effective dates
+    let earliestArrival: Date | null = null;
+    let latestDeparture: Date | null = null;
     
     familyMembers.forEach(member => {
-      const arrDate = member.arrival_date ? new Date(member.arrival_date) : new Date(family.arrival_date);
-      const depDate = member.departure_date ? new Date(member.departure_date) : new Date(family.departure_date);
+      const arrDate = member.arrival_date
+        ? new Date(member.arrival_date)
+        : (family.arrival_date ? new Date(family.arrival_date) : null);
+      const depDate = member.departure_date
+        ? new Date(member.departure_date)
+        : (family.departure_date ? new Date(family.departure_date) : null);
       
-      if (arrDate < earliestArrival) earliestArrival = arrDate;
-      if (depDate > latestDeparture) latestDeparture = depDate;
+      if (arrDate) {
+        earliestArrival = !earliestArrival || arrDate < earliestArrival ? arrDate : earliestArrival;
+      }
+      if (depDate) {
+        latestDeparture = !latestDeparture || depDate > latestDeparture ? depDate : latestDeparture;
+      }
     });
     
+    // Fallback to family dates if members are missing both
     return {
-      arrival_date: earliestArrival,
-      departure_date: latestDeparture,
+      arrival_date: earliestArrival || new Date(family.arrival_date),
+      departure_date: latestDeparture || new Date(family.departure_date),
     };
   };
   
@@ -476,6 +487,9 @@ export default function Jul25App() {
   };
   
   const eventDates = getDateRange();
+  
+  // Memoize guests per day to avoid stale values and heavy recomputation
+  const guestsPerDayMap = useMemo(() => getGuestsPerDay(), [families, allMembers, eventDates]);
   
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50 via-amber-50 to-white dark:from-green-950/20 dark:via-amber-950/20 dark:to-background">
