@@ -378,8 +378,13 @@ export default function Jul25App() {
         <div className="text-center space-y-4">
           <div className="flex items-center justify-center gap-3 flex-wrap">
             <Star className="w-12 h-12 text-yellow-500 animate-pulse" />
-            <h1 className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-green-700 via-amber-600 to-green-700 bg-clip-text text-transparent">
-              Jul25 Familiejul
+            <h1 className="text-4xl sm:text-5xl font-bold" style={{
+              background: 'linear-gradient(to right, hsl(var(--jul25-red)), hsl(var(--jul25-red-dark)), hsl(var(--jul25-red)))',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text'
+            }}>
+              JaJabo jul 2025
             </h1>
             <Star className="w-12 h-12 text-yellow-500 animate-pulse" />
           </div>

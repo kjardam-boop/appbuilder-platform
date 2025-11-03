@@ -38,6 +38,9 @@ All colors MUST be HSL.
 
     --radius: 0.5rem;
 
+    --jul25-red: 357 70% 32%;
+    --jul25-red-dark: 359 76% 25%;
+
     --sidebar-background: 222 47% 11%;
     --sidebar-foreground: 210 40% 98%;
     --sidebar-primary: 210 40% 96%;
@@ -76,6 +79,9 @@ All colors MUST be HSL.
     --border: 217 33% 17%;
     --input: 217 33% 17%;
     --ring: 212 95% 70%;
+
+    --jul25-red: 357 70% 32%;
+    --jul25-red-dark: 359 76% 25%;
 
     --sidebar-background: 222 47% 11%;
     --sidebar-foreground: 210 40% 98%;
