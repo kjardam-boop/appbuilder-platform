@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, User, CalendarIcon, MapPin } from "lucide-react";
+import { ArrowLeft, User, CalendarIcon, MapPin, Trash2, Pencil } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -264,6 +264,66 @@ export default function Jul25MemberEdit() {
               <p className="text-sm text-muted-foreground mb-3">
                 Sett egne datoer hvis medlemmet kun kommer deler av periodene
               </p>
+
+              {/* Existing custom periods for this member */}
+              {customPeriods.length > 0 && (
+                <div className="space-y-2 mb-4">
+                  <Label className="text-sm">Lagrede egendefinerte intervaller</Label>
+                  {customPeriods.map((cp) => (
+                    <div
+                      key={cp.id}
+                      className={cn(
+                        "flex items-center justify-between p-3 rounded-lg border-2",
+                        cp.location === "Jajabo"
+                          ? "bg-green-50 border-green-300"
+                          : "bg-amber-50 border-amber-300"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <MapPin
+                          className={cn(
+                            "h-4 w-4",
+                            cp.location === "Jajabo" ? "text-green-700" : "text-amber-700"
+                          )}
+                        />
+                        <div className="font-medium text-sm">
+                          {cp.location} {cp.location === "Jajabo" ? "(Nøtterøy)" : "(Nissedal)"}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {format(new Date(cp.start_date), "dd. MMM")} - {format(new Date(cp.end_date), "dd. MMM yyyy")}
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setCustomLocation(cp.location);
+                            setCustomArrival(new Date(cp.start_date));
+                            setCustomDeparture(new Date(cp.end_date));
+                            setEditingCustomId(cp.id);
+                          }}
+                          title="Rediger periode"
+                        >
+                          <Pencil className="h-3 w-3" /> Rediger
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => {
+                            if (window.confirm("Slette denne egendefinerte perioden?")) {
+                              deleteCustom.mutate(cp.id);
+                            }
+                          }}
+                          title="Slett periode"
+                        >
+                          <Trash2 className="h-3 w-3" /> Slett
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
               
               <div className="space-y-4">
                 {/* Location Selection */}
