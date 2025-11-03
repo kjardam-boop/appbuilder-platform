@@ -714,8 +714,22 @@ export default function Jul25App() {
                               memberPeriods.some(mp => mp.period_id === p.id)
                             );
                             
-                            // If no periods assigned, use all family periods as fallback
-                            const effectivePeriods = assignedPeriods.length > 0 ? assignedPeriods : periods;
+                            // Check if member has custom period
+                            const hasCustomPeriod = member.arrival_date && member.departure_date && member.custom_period_location;
+                            
+                            // If has custom period, show only custom period
+                            // Otherwise, use assigned periods (or all periods as fallback if none assigned)
+                            const effectivePeriods = hasCustomPeriod 
+                              ? [{
+                                  id: `custom-${member.id}`,
+                                  family_id: member.family_id,
+                                  location: member.custom_period_location,
+                                  arrival_date: member.arrival_date,
+                                  departure_date: member.departure_date,
+                                  created_at: member.created_at,
+                                  updated_at: member.updated_at,
+                                }]
+                              : (assignedPeriods.length > 0 ? assignedPeriods : periods);
                             
                             return (
                               <div key={member.id} className="flex flex-col sm:flex-row gap-2 sm:gap-1 items-start">
@@ -763,22 +777,9 @@ export default function Jul25App() {
                                     ))}
                                   </div>
                                   {effectivePeriods.map(period => {
-                                    // Always use period dates as base
-                                    let arr = timestampToDay(period.arrival_date);
-                                    let dep = timestampToDay(period.departure_date);
-                                    
-                                    // If member has custom dates, use them to override period dates
-                                    if (member.arrival_date && member.departure_date) {
-                                      const memberArr = timestampToDay(member.arrival_date);
-                                      const memberDep = timestampToDay(member.departure_date);
-                                      // Only override if within or overlapping period
-                                      if (memberArr >= arr && memberArr <= dep) {
-                                        arr = memberArr;
-                                      }
-                                      if (memberDep >= arr && memberDep <= dep) {
-                                        dep = memberDep;
-                                      }
-                                    }
+                                    // Use period dates directly
+                                    const arr = timestampToDay(period.arrival_date);
+                                    const dep = timestampToDay(period.departure_date);
                                     
                                     const startOffset = (arr - minDate) * 40;
                                     const width = (dep - arr + 1) * 40;

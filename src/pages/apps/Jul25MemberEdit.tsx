@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -39,6 +40,9 @@ export default function Jul25MemberEdit() {
   );
   const [customDeparture, setCustomDeparture] = useState<Date | undefined>(
     member?.departure_date ? new Date(member.departure_date) : undefined
+  );
+  const [customLocation, setCustomLocation] = useState<'Jajabo' | 'JaJabu' | undefined>(
+    (member?.custom_period_location as 'Jajabo' | 'JaJabu') || undefined
   );
   
   // Initialize selected periods
@@ -75,12 +79,21 @@ export default function Jul25MemberEdit() {
   const handleSave = () => {
     if (!member) return;
     
-    // Save custom dates if provided
-    if (customArrival || customDeparture) {
+    // Save custom dates and location if provided
+    if (customArrival && customDeparture && customLocation) {
       updateMember.mutate({
         id: member.id,
-        arrival_date: customArrival?.toISOString() || null,
-        departure_date: customDeparture?.toISOString() || null,
+        arrival_date: customArrival.toISOString(),
+        departure_date: customDeparture.toISOString(),
+        custom_period_location: customLocation,
+      });
+    } else if (!customArrival && !customDeparture) {
+      // Clear custom dates if both are removed
+      updateMember.mutate({
+        id: member.id,
+        arrival_date: null,
+        departure_date: null,
+        custom_period_location: null,
       });
     }
     
@@ -205,6 +218,34 @@ export default function Jul25MemberEdit() {
                     </div>
                   </div>
                 ))}
+                
+                {/* Show custom period if dates and location are set */}
+                {customArrival && customDeparture && customLocation && (
+                  <div 
+                    className={cn(
+                      "flex items-start gap-3 p-3 rounded-lg border-2",
+                      customLocation === 'Jajabo' 
+                        ? "bg-green-50 border-green-300" 
+                        : "bg-amber-50 border-amber-300"
+                    )}
+                  >
+                    <div className="w-5 h-5 rounded border-2 bg-primary flex items-center justify-center text-white">
+                      ✓
+                    </div>
+                    <div className="flex-1">
+                      <Label className="font-semibold flex items-center gap-2">
+                        <MapPin className={cn(
+                          "h-4 w-4",
+                          customLocation === 'Jajabo' ? "text-green-700" : "text-amber-700"
+                        )} />
+                        {customLocation} {customLocation === 'Jajabo' ? '(Nøtterøy)' : '(Nissedal)'} - Egendefinert
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        {format(customArrival, "dd. MMM")} - {format(customDeparture, "dd. MMM yyyy")}
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             
@@ -217,57 +258,82 @@ export default function Jul25MemberEdit() {
                 Sett egne datoer hvis medlemmet kun kommer deler av periodene
               </p>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-4">
+                {/* Location Selection */}
                 <div>
-                  <Label>Ankomst</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal mt-1",
-                          !customArrival && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {customArrival ? format(customArrival, "PPP") : <span>Velg dato</span>}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={customArrival}
-                        onSelect={setCustomArrival}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
+                  <Label>Sted</Label>
+                  <RadioGroup 
+                    value={customLocation || ""} 
+                    onValueChange={(value) => setCustomLocation(value as 'Jajabo' | 'JaJabu')}
+                    className="flex gap-4 mt-2"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="Jajabo" id="custom-jajabo" />
+                      <Label htmlFor="custom-jajabo" className="cursor-pointer">
+                        Jajabo (Nøtterøy)
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="JaJabu" id="custom-jajabu" />
+                      <Label htmlFor="custom-jajabu" className="cursor-pointer">
+                        JaJabu (Nissedal)
+                      </Label>
+                    </div>
+                  </RadioGroup>
                 </div>
                 
-                <div>
-                  <Label>Avreise</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal mt-1",
-                          !customDeparture && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {customDeparture ? format(customDeparture, "PPP") : <span>Velg dato</span>}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={customDeparture}
-                        onSelect={setCustomDeparture}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Ankomst</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal mt-1",
+                            !customArrival && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {customArrival ? format(customArrival, "PPP") : <span>Velg dato</span>}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={customArrival}
+                          onSelect={setCustomArrival}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  
+                  <div>
+                    <Label>Avreise</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal mt-1",
+                            !customDeparture && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {customDeparture ? format(customDeparture, "PPP") : <span>Velg dato</span>}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={customDeparture}
+                          onSelect={setCustomDeparture}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
                 </div>
               </div>
             </div>

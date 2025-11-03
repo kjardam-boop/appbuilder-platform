@@ -1000,6 +1000,7 @@ export type Database = {
         Row: {
           arrival_date: string | null
           created_at: string
+          custom_period_location: string | null
           departure_date: string | null
           family_id: string
           id: string
@@ -1011,6 +1012,7 @@ export type Database = {
         Insert: {
           arrival_date?: string | null
           created_at?: string
+          custom_period_location?: string | null
           departure_date?: string | null
           family_id: string
           id?: string
@@ -1022,6 +1024,7 @@ export type Database = {
         Update: {
           arrival_date?: string | null
           created_at?: string
+          custom_period_location?: string | null
           departure_date?: string | null
           family_id?: string
           id?: string

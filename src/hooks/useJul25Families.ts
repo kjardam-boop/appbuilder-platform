@@ -17,6 +17,7 @@ export interface Jul25FamilyMember {
   name: string;
   arrival_date: string | null; // ISO timestamp
   departure_date: string | null; // ISO timestamp
+  custom_period_location: 'Jajabo' | 'JaJabu' | null;
   is_admin: boolean;
   created_at: string;
   updated_at: string;
