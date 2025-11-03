@@ -13,10 +13,10 @@ describe('RoleManagement - Read-Only Mode', () => {
       order: vi.fn().mockResolvedValue({ data: [], error: null }),
     });
 
-    const { getByText } = render(<RoleManagement />);
+    const { findByText } = render(<RoleManagement />);
 
-    expect(getByText('Rolleoversikt')).toBeInTheDocument();
-    expect(getByText(/Kun lesbar oversikt/)).toBeInTheDocument();
+    expect(await findByText('Rolleoversikt')).toBeInTheDocument();
+    expect(await findByText(/Kun lesbar oversikt/)).toBeInTheDocument();
   });
 
   it('should display info alert about editing', async () => {
@@ -25,10 +25,10 @@ describe('RoleManagement - Read-Only Mode', () => {
       order: vi.fn().mockResolvedValue({ data: [], error: null }),
     });
 
-    const { getByText } = render(<RoleManagement />);
+    const { findByText } = render(<RoleManagement />);
 
-    expect(getByText(/For å legge til eller fjerne roller/)).toBeInTheDocument();
-    expect(getByText('Brukeradministrasjon')).toBeInTheDocument();
+    expect(await findByText(/For å legge til eller fjerne roller/)).toBeInTheDocument();
+    expect(await findByText('Brukeradministrasjon')).toBeInTheDocument();
   });
 
   it('should not render any remove buttons', async () => {
@@ -56,9 +56,9 @@ describe('RoleManagement - Read-Only Mode', () => {
       order: vi.fn().mockResolvedValue({ data: [], error: null }),
     });
 
-    const { getByText } = render(<RoleManagement />);
+    const { findByText } = render(<RoleManagement />);
 
     // Wait for loading to complete and verify App tab exists
-    expect(await getByText('App')).toBeInTheDocument();
+    expect(await findByText('App')).toBeInTheDocument();
   });
 });

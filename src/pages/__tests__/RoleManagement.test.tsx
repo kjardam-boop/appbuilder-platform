@@ -64,11 +64,9 @@ describe("RoleManagement", () => {
       </BrowserRouter>
     );
 
-    expect(await findByText("Rolleadministrasjon")).toBeInTheDocument();
+    expect(await findByText("Rolleoversikt")).toBeInTheDocument();
     expect(
-      await findByText(
-        "Administrer brukerroller på tvers av plattform, tenants, selskaper og prosjekter"
-      )
+      await findByText(/Kun lesbar oversikt over roller/)
     ).toBeInTheDocument();
   });
 

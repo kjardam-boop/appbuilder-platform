@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AppSelector } from '../AppSelector';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -7,6 +8,17 @@ vi.mock('@/integrations/supabase/client');
 vi.mock('@/hooks/useTenantContext', () => ({
   useTenantContext: () => ({ tenant_id: 'test-tenant-id' }),
 }));
+
+const createWrapper = () => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+    },
+  });
+  return ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+};
 
 describe('AppSelector', () => {
   const mockOnValueChange = vi.fn();
@@ -27,7 +39,7 @@ describe('AppSelector', () => {
       order: vi.fn().mockResolvedValue({ data: mockApps, error: null }),
     });
 
-    render(<AppSelector value="" onValueChange={mockOnValueChange} />);
+    render(<AppSelector value="" onValueChange={mockOnValueChange} />, { wrapper: createWrapper() });
 
     // Verify supabase was called
     expect(supabase.from).toHaveBeenCalledWith('applications');
@@ -40,9 +52,9 @@ describe('AppSelector', () => {
       order: vi.fn().mockResolvedValue({ data: [], error: null }),
     });
 
-    const { getByText } = render(<AppSelector value="" onValueChange={mockOnValueChange} />);
+    const { findByText } = render(<AppSelector value="" onValueChange={mockOnValueChange} />, { wrapper: createWrapper() });
 
-    expect(getByText('Ingen aktive applikasjoner')).toBeInTheDocument();
+    expect(await findByText('Ingen aktive applikasjoner')).toBeInTheDocument();
   });
 
   it('handles errors gracefully', async () => {
@@ -54,9 +66,11 @@ describe('AppSelector', () => {
       order: vi.fn().mockResolvedValue({ data: null, error: { message: 'Test error' } }),
     });
 
-    render(<AppSelector value="" onValueChange={mockOnValueChange} />);
+    render(<AppSelector value="" onValueChange={mockOnValueChange} />, { wrapper: createWrapper() });
 
-    expect(consoleErrorSpy).toHaveBeenCalled();
+    await vi.waitFor(() => {
+      expect(consoleErrorSpy).toHaveBeenCalled();
+    });
     consoleErrorSpy.mockRestore();
   });
 });
