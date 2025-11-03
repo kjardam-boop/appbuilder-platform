@@ -53,17 +53,38 @@ export default function Jul25App() {
   const deleteTask = useDeleteTask();
   
   // Dato hjelpefunksjoner
-  // Konverterer ISO timestamp til dag-nummer (1-31)
+  // Konverterer ISO timestamp til kontinuerlig dag-nummer (20-50+)
+  // Desember: 20-31, Januar: 32-50 (31 + dag i januar)
   const timestampToDay = (timestamp: string): number => {
     const date = new Date(timestamp);
-    return date.getDate();
+    const month = date.getMonth(); // 0 = januar, 11 = desember
+    const day = date.getDate();
+    
+    if (month === 11) { // Desember
+      return day; // 20-31
+    } else { // Januar (eller andre måneder)
+      return 31 + day; // 32 (1.jan), 33 (2.jan), osv.
+    }
   };
   
-  // Konverterer dag-nummer til ISO timestamp (desember 2024/januar 2025)
+  // Konverterer kontinuerlig dag-nummer til ISO timestamp
   const dayToTimestamp = (day: number): string => {
-    const month = day >= 20 ? 11 : 0; // Dec 2024 eller Jan 2025
-    const year = day >= 20 ? 2024 : 2025;
-    return new Date(year, month, day).toISOString();
+    if (day >= 20 && day <= 31) {
+      // Desember 2024
+      return new Date(2024, 11, day).toISOString();
+    } else {
+      // Januar 2025 (dag - 31)
+      return new Date(2025, 0, day - 31).toISOString();
+    }
+  };
+  
+  // Konverterer dag-nummer til leselig dato-streng (f.eks. "20. des" eller "3. jan")
+  const dayToDateString = (day: number): string => {
+    if (day >= 20 && day <= 31) {
+      return `${day}. des`;
+    } else {
+      return `${day - 31}. jan`;
+    }
   };
   
   // Admin emails
@@ -549,8 +570,9 @@ export default function Jul25App() {
                 </div>
                 {eventDates.map((date, index) => {
                   const guestsPerDay = getGuestsPerDay();
-                  const isFirstOfMonth = index === 0 || (date === 1 && eventDates[index - 1] !== 31);
-                  const month = date >= 1 && date <= 10 ? 'Jan' : 'Des';
+                  const isFirstOfMonth = index === 0 || (date === 32 && eventDates[index - 1] === 31);
+                  const month = date >= 32 ? 'Jan' : 'Des';
+                  const displayDay = date >= 32 ? date - 31 : date;
                   
                   return (
                     <div key={date} className="w-10 flex-shrink-0 text-center">
@@ -558,7 +580,7 @@ export default function Jul25App() {
                         <div className="text-[10px] font-semibold text-muted-foreground/70 pb-0.5">{month}</div>
                       )}
                       <div className={cn("font-medium text-xs border-l border-border/30 pb-1", !isFirstOfMonth && "pt-3.5")}>
-                        {date}
+                        {displayDay}
                       </div>
                       <div className="text-xs text-muted-foreground">
                         {guestsPerDay[date] > 0 ? `${guestsPerDay[date]}` : '-'}
@@ -626,7 +648,7 @@ export default function Jul25App() {
                             )}
                           </div>
                           <div className="text-xs text-muted-foreground mt-1 sm:hidden">
-                            {timestampToDay(family.arrival_date)}/12 - {timestampToDay(family.departure_date)}/12
+                            {dayToDateString(timestampToDay(family.arrival_date))} - {dayToDateString(timestampToDay(family.departure_date))}
                           </div>
                         </div>
 
@@ -643,7 +665,7 @@ export default function Jul25App() {
                               left: `${startOffset}px`, 
                               width: `${duration}px` 
                             }}
-                            title={`${family.name}: ${timestampToDay(family.arrival_date)}. des - ${timestampToDay(family.departure_date)}. des`}
+                            title={`${family.name}: ${dayToDateString(arrDay)} - ${dayToDateString(depDay)}`}
                           >
                             {Object.entries(membersPerDay).map(([day, count]) => {
                               const dayNum = parseInt(day);
@@ -697,7 +719,7 @@ export default function Jul25App() {
                                     )}
                                   </div>
                                   <div className="text-xs text-muted-foreground mt-1 sm:hidden">
-                                    {arr}/12 - {dep}/12
+                                    {dayToDateString(arr)} - {dayToDateString(dep)}
                                   </div>
                                 </div>
 
@@ -714,7 +736,7 @@ export default function Jul25App() {
                                       left: `${startOffset}px`, 
                                       width: `${width}px` 
                                     }}
-                                    title={`${member.name}: ${arr}.12 - ${dep}.12`}
+                                    title={`${member.name}: ${dayToDateString(arr)} - ${dayToDateString(dep)}`}
                                   >
                                     <span className="truncate">{member.name}</span>
                                   </div>
