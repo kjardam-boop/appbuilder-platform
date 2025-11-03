@@ -1,9 +1,13 @@
 import { useState } from "react";
+import { format } from "date-fns";
+import { CalendarIcon, Pencil, Trash2, Plus } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Pencil, Trash2, Plus } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import { 
   Jul25FamilyMember, 
   useJoinFamily, 
@@ -27,9 +31,14 @@ export function ManageFamilyMembersDialog({
   const [editingMember, setEditingMember] = useState<Jul25FamilyMember | null>(null);
   const [addingMember, setAddingMember] = useState(false);
   const [memberName, setMemberName] = useState("");
-  const [arrivalDate, setArrivalDate] = useState<number | null>(null);
+  
+  // Convert day numbers to dates (assuming December 2024)
+  const dayToDate = (day: number | null) => day ? new Date(2024, 11, day) : undefined;
+  const dateToDay = (date: Date | undefined) => date ? date.getDate() : null;
+  
+  const [arrivalDate, setArrivalDate] = useState<Date | undefined>();
   const [arrivalTime, setArrivalTime] = useState("");
-  const [departureDate, setDepartureDate] = useState<number | null>(null);
+  const [departureDate, setDepartureDate] = useState<Date | undefined>();
   const [departureTime, setDepartureTime] = useState("");
   
   const addMember = useJoinFamily();
@@ -43,17 +52,17 @@ export function ManageFamilyMembersDialog({
       name: memberName,
       user_id: null, // Non-user member (child, etc.)
       is_admin: false,
-      arrival_date: arrivalDate,
+      arrival_date: dateToDay(arrivalDate),
       arrival_time: arrivalTime || null,
-      departure_date: departureDate,
+      departure_date: dateToDay(departureDate),
       departure_time: departureTime || null,
     }, {
       onSuccess: () => {
         setAddingMember(false);
         setMemberName("");
-        setArrivalDate(null);
+        setArrivalDate(undefined);
         setArrivalTime("");
-        setDepartureDate(null);
+        setDepartureDate(undefined);
         setDepartureTime("");
       },
     });
@@ -66,17 +75,17 @@ export function ManageFamilyMembersDialog({
     updateMember.mutate({
       id: editingMember.id,
       name: memberName,
-      arrival_date: arrivalDate,
+      arrival_date: dateToDay(arrivalDate),
       arrival_time: arrivalTime || null,
-      departure_date: departureDate,
+      departure_date: dateToDay(departureDate),
       departure_time: departureTime || null,
     }, {
       onSuccess: () => {
         setEditingMember(null);
         setMemberName("");
-        setArrivalDate(null);
+        setArrivalDate(undefined);
         setArrivalTime("");
-        setDepartureDate(null);
+        setDepartureDate(undefined);
         setDepartureTime("");
       },
     });
@@ -85,9 +94,9 @@ export function ManageFamilyMembersDialog({
   const startEdit = (member: Jul25FamilyMember) => {
     setEditingMember(member);
     setMemberName(member.name);
-    setArrivalDate(member.arrival_date);
+    setArrivalDate(dayToDate(member.arrival_date));
     setArrivalTime(member.arrival_time || "");
-    setDepartureDate(member.departure_date);
+    setDepartureDate(dayToDate(member.departure_date));
     setDepartureTime(member.departure_time || "");
   };
 
@@ -95,9 +104,9 @@ export function ManageFamilyMembersDialog({
     setEditingMember(null);
     setAddingMember(false);
     setMemberName("");
-    setArrivalDate(null);
+    setArrivalDate(undefined);
     setArrivalTime("");
-    setDepartureDate(null);
+    setDepartureDate(undefined);
     setDepartureTime("");
   };
 
@@ -159,15 +168,30 @@ export function ManageFamilyMembersDialog({
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="memberArrivalDate">Ankomstdag (1-24)</Label>
-                  <Input
-                    id="memberArrivalDate"
-                    type="number"
-                    min="1"
-                    max="24"
-                    value={arrivalDate || ""}
-                    onChange={(e) => setArrivalDate(e.target.value ? parseInt(e.target.value) : null)}
-                  />
+                  <Label>Ankomstdag</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !arrivalDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {arrivalDate ? format(arrivalDate, "PPP") : <span>Velg dato</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={arrivalDate}
+                        onSelect={setArrivalDate}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <div>
                   <Label htmlFor="memberArrivalTime">Ankomsttid</Label>
@@ -181,15 +205,30 @@ export function ManageFamilyMembersDialog({
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="memberDepartureDate">Avreisedag (1-24)</Label>
-                  <Input
-                    id="memberDepartureDate"
-                    type="number"
-                    min="1"
-                    max="24"
-                    value={departureDate || ""}
-                    onChange={(e) => setDepartureDate(e.target.value ? parseInt(e.target.value) : null)}
-                  />
+                  <Label>Avreisedag</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !departureDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {departureDate ? format(departureDate, "PPP") : <span>Velg dato</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={departureDate}
+                        onSelect={setDepartureDate}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <div>
                   <Label htmlFor="memberDepartureTime">Avreisetid</Label>
