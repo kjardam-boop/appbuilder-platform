@@ -58,73 +58,113 @@ export const useJul25FamilyMembers = (familyId?: string) => {
 
 // Helper function to ensure family has the correct number of placeholder members
 async function ensureFamilyMemberCount(familyId: string, familyName: string, targetCount: number) {
-  // Get current members
-  const { data: existingMembers, error: fetchError } = await supabase
-    .from("jul25_family_members")
-    .select("*")
-    .eq("family_id", familyId);
+  console.log(`[ensureFamilyMemberCount] Starting sync for family ${familyId}: target=${targetCount}`);
   
-  if (fetchError) throw fetchError;
-  
-  // Get all periods for this family
-  const { data: periods, error: periodsError } = await supabase
-    .from("jul25_family_periods")
-    .select("*")
-    .eq("family_id", familyId);
-  
-  if (periodsError) throw periodsError;
-  
-  const currentCount = existingMembers?.length || 0;
-  const neededCount = targetCount - currentCount;
-  
-  if (neededCount > 0) {
-    // Create placeholder members
-    const placeholders = Array.from({ length: neededCount }, (_, i) => ({
-      family_id: familyId,
-      name: `${familyName} ${currentCount + i + 1}`,
-      user_id: null,
-      is_admin: false,
-      arrival_date: null, // No custom dates for placeholders
-      departure_date: null,
-    }));
-    
-    const { data: newMembers, error: insertError } = await supabase
+  try {
+    // Get current members
+    const { data: existingMembers, error: fetchError } = await supabase
       .from("jul25_family_members")
-      .insert(placeholders)
-      .select();
+      .select("*")
+      .eq("family_id", familyId);
     
-    if (insertError) throw insertError;
-    
-    // Assign new placeholder members to all periods
-    if (newMembers && periods && periods.length > 0) {
-      const memberPeriods = newMembers.flatMap(member => 
-        periods.map(period => ({
-          member_id: member.id,
-          period_id: period.id,
-        }))
-      );
-      
-      const { error: mpError } = await supabase
-        .from("jul25_member_periods")
-        .insert(memberPeriods);
-      
-      if (mpError) throw mpError;
+    if (fetchError) {
+      console.error('[ensureFamilyMemberCount] Error fetching members:', fetchError);
+      throw fetchError;
     }
-  } else if (neededCount < 0) {
-    // Remove excess placeholder members (those with user_id = null and auto-generated names)
-    const placeholderMembers = existingMembers
-      ?.filter(m => !m.user_id && /^.+\s\d+$/.test(m.name))
-      .slice(0, Math.abs(neededCount));
     
-    if (placeholderMembers && placeholderMembers.length > 0) {
-      const idsToDelete = placeholderMembers.map(m => m.id);
-      const { error: deleteError } = await supabase
+    // Get all periods for this family
+    const { data: periods, error: periodsError } = await supabase
+      .from("jul25_family_periods")
+      .select("*")
+      .eq("family_id", familyId);
+    
+    if (periodsError) {
+      console.error('[ensureFamilyMemberCount] Error fetching periods:', periodsError);
+      throw periodsError;
+    }
+    
+    const currentCount = existingMembers?.length || 0;
+    const neededCount = targetCount - currentCount;
+    
+    console.log(`[ensureFamilyMemberCount] Current: ${currentCount}, Needed: ${neededCount}`);
+    
+    if (neededCount > 0) {
+      // Create placeholder members
+      const placeholders = Array.from({ length: neededCount }, (_, i) => ({
+        family_id: familyId,
+        name: `${familyName} ${currentCount + i + 1}`,
+        user_id: null,
+        is_admin: false,
+        arrival_date: null,
+        departure_date: null,
+      }));
+      
+      console.log('[ensureFamilyMemberCount] Creating placeholders:', placeholders);
+      
+      const { data: newMembers, error: insertError } = await supabase
         .from("jul25_family_members")
-        .delete()
-        .in("id", idsToDelete);
+        .insert(placeholders)
+        .select();
       
-      if (deleteError) throw deleteError;
+      if (insertError) {
+        console.error('[ensureFamilyMemberCount] Error inserting members:', insertError);
+        throw insertError;
+      }
+      
+      console.log('[ensureFamilyMemberCount] Created members:', newMembers);
+      
+      // Assign new placeholder members to all periods
+      if (newMembers && periods && periods.length > 0) {
+        const memberPeriods = newMembers.flatMap(member => 
+          periods.map(period => ({
+            member_id: member.id,
+            period_id: period.id,
+          }))
+        );
+        
+        console.log('[ensureFamilyMemberCount] Assigning member_periods:', memberPeriods);
+        
+        const { error: mpError } = await supabase
+          .from("jul25_member_periods")
+          .insert(memberPeriods);
+        
+        if (mpError) {
+          console.error('[ensureFamilyMemberCount] Error assigning periods:', mpError);
+          throw mpError;
+        }
+        
+        console.log('[ensureFamilyMemberCount] Successfully assigned periods');
+      }
+    } else if (neededCount < 0) {
+      // Remove excess placeholder members (those with user_id = null and auto-generated names)
+      const placeholderMembers = existingMembers
+        ?.filter(m => !m.user_id && /^.+\s\d+$/.test(m.name))
+        .slice(0, Math.abs(neededCount));
+      
+      if (placeholderMembers && placeholderMembers.length > 0) {
+        const idsToDelete = placeholderMembers.map(m => m.id);
+        
+        console.log('[ensureFamilyMemberCount] Deleting excess members:', idsToDelete);
+        
+        const { error: deleteError } = await supabase
+          .from("jul25_family_members")
+          .delete()
+          .in("id", idsToDelete);
+        
+        if (deleteError) {
+          console.error('[ensureFamilyMemberCount] Error deleting members:', deleteError);
+          throw deleteError;
+        }
+        
+        console.log('[ensureFamilyMemberCount] Successfully deleted excess members');
+      }
     }
+    
+    console.log('[ensureFamilyMemberCount] Sync completed successfully');
+  } catch (error) {
+    console.error('[ensureFamilyMemberCount] Fatal error:', error);
+    toast.error("Kunne ikke synkronisere familiemedlemmer");
+    throw error;
   }
 }
 
@@ -310,6 +350,25 @@ export const useDeleteFamilyMember = () => {
     },
     onError: (error: any) => {
       toast.error(error.message || "Kunne ikke slette medlem");
+    },
+  });
+};
+
+export const useSyncFamilyMembers = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (params: { familyId: string; familyName: string; targetCount: number }) => {
+      await ensureFamilyMemberCount(params.familyId, params.familyName, params.targetCount);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["jul25-family-members"] });
+      queryClient.invalidateQueries({ queryKey: ["jul25-families"] });
+      toast.success("Familiemedlemmer synkronisert! ✓");
+    },
+    onError: (error: any) => {
+      console.error('[useSyncFamilyMembers] Error:', error);
+      toast.error(error.message || "Kunne ikke synkronisere medlemmer");
     },
   });
 };

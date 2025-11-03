@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Plus, Edit2, Trash2, MapPin, CalendarIcon, Users, UserPlus, Minus } from "lucide-react";
+import { ArrowLeft, Plus, Edit2, Trash2, MapPin, CalendarIcon, Users, UserPlus, Minus, RefreshCw, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +14,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { useJul25Families, useJul25FamilyMembers, useUpdateFamily } from "@/hooks/useJul25Families";
+import { useJul25Families, useJul25FamilyMembers, useUpdateFamily, useSyncFamilyMembers } from "@/hooks/useJul25Families";
 import { useJul25FamilyPeriods, useCreatePeriod, useUpdatePeriod, useDeletePeriod, useMemberPeriods } from "@/hooks/useJul25FamilyPeriods";
 import { useDebounce } from "@/hooks/useDebounce";
 
@@ -36,6 +36,7 @@ export default function Jul25FamilyAdmin() {
   const createPeriod = useCreatePeriod();
   const updatePeriod = useUpdatePeriod();
   const deletePeriod = useDeletePeriod();
+  const syncMembers = useSyncFamilyMembers();
   
   // Local state for inline editing
   const [editingName, setEditingName] = useState(false);
@@ -124,6 +125,19 @@ export default function Jul25FamilyAdmin() {
     setPeriodDialogOpen(true);
   };
   
+  const handleSyncMembers = () => {
+    if (!family) return;
+    
+    syncMembers.mutate({
+      familyId: family.id,
+      familyName: family.name,
+      targetCount: family.number_of_people,
+    });
+  };
+  
+  // Check if member count matches expected
+  const memberCountMismatch = members.length !== family.number_of_people;
+  
   if (!family) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-green-50 to-white p-8">
@@ -150,14 +164,59 @@ export default function Jul25FamilyAdmin() {
         <h1 className="text-3xl font-bold text-green-800 mb-6">Familieadministrasjon</h1>
         
         {/* Family Info Card */}
-        <Card className="border-2 border-green-600">
-          <CardHeader className="bg-green-700 text-white">
+        <Card className={cn(
+          "border-2",
+          memberCountMismatch ? "border-red-500" : "border-green-600"
+        )}>
+          <CardHeader className={cn(
+            "text-white",
+            memberCountMismatch ? "bg-red-600" : "bg-green-700"
+          )}>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
               Familieinfo
+              {memberCountMismatch && (
+                <AlertTriangle className="h-5 w-5 ml-auto" />
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6 space-y-4">
+            {/* Mismatch Warning */}
+            {memberCountMismatch && (
+              <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4 space-y-3">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <div className="font-semibold text-red-900">
+                      Antall medlemmer matcher ikke
+                    </div>
+                    <div className="text-sm text-red-700 mt-1">
+                      Forventet: {family.number_of_people} medlemmer
+                      <br />
+                      Faktisk: {members.length} medlemmer
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  onClick={handleSyncMembers}
+                  disabled={syncMembers.isPending}
+                  className="w-full bg-red-600 hover:bg-red-700 text-white"
+                  size="sm"
+                >
+                  {syncMembers.isPending ? (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                      Synkroniserer...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Synkroniser medlemmer
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
             {/* Family Name */}
             <div>
               <Label>Familienavn</Label>
