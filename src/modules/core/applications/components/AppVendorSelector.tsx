@@ -41,7 +41,7 @@ export const AppVendorSelector = ({
             Ingen leverandører
           </SelectItem>
         ) : (
-          vendors.map((vendor) => (
+          vendors.filter(vendor => vendor.id && vendor.id.trim() !== '').map((vendor) => (
             <SelectItem key={vendor.id} value={vendor.id}>
               {vendor.name}
             </SelectItem>
