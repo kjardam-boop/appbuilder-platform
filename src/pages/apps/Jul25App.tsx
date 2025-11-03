@@ -71,6 +71,8 @@ export default function Jul25App() {
   const [editingFamily, setEditingFamily] = useState<any>(null);
   const [managingFamilyId, setManagingFamilyId] = useState<string | null>(null);
   const [taskFamilyFilter, setTaskFamilyFilter] = useState<string>("all");
+  const [taskSortBy, setTaskSortBy] = useState<"name" | "deadline">("name");
+  const [initialEditMemberId, setInitialEditMemberId] = useState<string | undefined>();
   
   // Login form
   const [loginEmail, setLoginEmail] = useState("");
@@ -347,6 +349,19 @@ export default function Jul25App() {
   const getSortedTasks = () => {
     let sorted = [...tasks];
     
+    // Sort based on selected option
+    if (taskSortBy === "deadline") {
+      sorted.sort((a, b) => {
+        if (!a.deadline && !b.deadline) return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        if (!a.deadline) return 1;
+        if (!b.deadline) return -1;
+        return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
+      });
+    } else {
+      // Sort by name
+      sorted.sort((a, b) => a.text.localeCompare(b.text));
+    }
+    
     // Filtrer bort fullførte hvis skjult
     if (hideCompletedTasks) {
       sorted = sorted.filter(task => !task.done);
@@ -609,12 +624,15 @@ export default function Jul25App() {
                                     <div className="flex-1 bg-green-500 text-white rounded px-2 py-1 text-xs truncate">
                                       {member.name}
                                     </div>
-                                    {isUserFamilyAdmin && (
+                                     {isUserFamilyAdmin && (
                                       <Button
                                         size="sm"
                                         variant="ghost"
                                         className="h-6 w-6 p-0"
-                                        onClick={() => setManagingFamilyId(family.id)}
+                                        onClick={() => {
+                                          setInitialEditMemberId(member.id);
+                                          setManagingFamilyId(family.id);
+                                        }}
                                         title="Rediger person"
                                       >
                                         <Edit2 className="h-3 w-3" />
@@ -696,11 +714,11 @@ export default function Jul25App() {
                       )}
                     </div>
                   </div>
-                  {/* Family filter */}
-                  <div className="flex items-center gap-2">
+                  {/* Family filter and Sort */}
+                  <div className="flex flex-wrap items-center gap-2">
                     <Label className="text-xs">Filtrer:</Label>
                     <Select value={taskFamilyFilter} onValueChange={setTaskFamilyFilter}>
-                      <SelectTrigger className="h-8 text-xs w-[180px]">
+                      <SelectTrigger className="h-8 text-xs w-[150px]">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -715,6 +733,17 @@ export default function Jul25App() {
                         ))}
                       </SelectContent>
                     </Select>
+                    
+                    <Label className="text-xs ml-2">Sorter:</Label>
+                    <Select value={taskSortBy} onValueChange={(v) => setTaskSortBy(v as "name" | "deadline")}>
+                      <SelectTrigger className="h-8 text-xs w-[130px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="name">Navn</SelectItem>
+                        <SelectItem value="deadline">Deadline</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </CardHeader>
@@ -722,6 +751,7 @@ export default function Jul25App() {
                 <div className="space-y-2">
                   {getSortedTasks().map(task => {
                     const assignedFamily = families.find(f => f.id === task.assigned_family_id);
+                    const creator = allMembers.find(m => m.user_id === task.created_by);
                     
                     return (
                       <div key={task.id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-accent">
@@ -736,30 +766,37 @@ export default function Jul25App() {
                           }}
                           className="w-4 h-4 flex-shrink-0"
                         />
-                        <span className={cn("text-sm flex-1", task.done && "line-through text-muted-foreground")}>
-                          {task.text}
-                        </span>
+                        <div className="flex-1 min-w-0">
+                          <span className={cn("text-sm", task.done && "line-through text-muted-foreground")}>
+                            {task.text}
+                          </span>
+                          {creator && (
+                            <div className="text-xs text-muted-foreground">
+                              Opprettet av: {creator.name}
+                            </div>
+                          )}
+                        </div>
+                        {task.deadline && (
+                          <Badge variant="outline" className="text-xs whitespace-nowrap">
+                            📅 {new Date(task.deadline).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' })}
+                          </Badge>
+                        )}
                         {assignedFamily && (
-                          <Badge variant="secondary" className="text-xs">
+                          <Badge variant="secondary" className="text-xs whitespace-nowrap">
                             {assignedFamily.name}
                           </Badge>
                         )}
-                        {task.deadline && (
-                          <span className="text-xs text-muted-foreground">
-                            {new Date(task.deadline).toLocaleDateString('nb-NO')}
-                          </span>
-                        )}
-                        {isAdmin && (
+                        {user && (
                           <>
                             <Button 
                               size="sm" 
                               variant="ghost" 
-                              className="h-7 px-2" 
+                              className="h-7 px-2 flex-shrink-0" 
                               onClick={() => {
                                 setEditingTask(task);
                                 setTaskText(task.text);
                                 setTaskDeadline(task.deadline || "");
-                                setTaskAssignedFamily(task.assigned_family_id || "");
+                                setTaskAssignedFamily(task.assigned_family_id || "none");
                                 setShowTaskDialog(true);
                               }}
                             >
@@ -768,7 +805,7 @@ export default function Jul25App() {
                             <Button 
                               size="sm" 
                               variant="ghost" 
-                              className="h-7 px-2 text-destructive" 
+                              className="h-7 px-2 text-destructive flex-shrink-0" 
                               onClick={() => {
                                 if (confirm("Er du sikker på at du vil slette denne oppgaven?")) {
                                   deleteTask.mutate(task.id);
@@ -1131,7 +1168,13 @@ export default function Jul25App() {
             familyId={managingFamilyId}
             members={allMembers.filter(m => m.family_id === managingFamilyId)}
             open={!!managingFamilyId}
-            onOpenChange={(open) => !open && setManagingFamilyId(null)}
+            onOpenChange={(open) => {
+              if (!open) {
+                setManagingFamilyId(null);
+                setInitialEditMemberId(undefined);
+              }
+            }}
+            initialEditMemberId={initialEditMemberId}
           />
         )}
       </div>
