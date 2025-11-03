@@ -1,15 +1,20 @@
-import { useEffect, useState } from "react";
-import { RoleService } from "@/modules/core/user/services/roleService";
-import { UserRoleRecord, RoleScope, AppRole, ROLE_LABELS, SCOPE_LABELS } from "@/modules/core/user/types/role.types";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "sonner";
-import { Shield, X, Building2, Users, Briefcase, FolderKanban } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
+import { RoleService } from "@/modules/core/user/services/roleService";
+import { 
+  UserRoleRecord, 
+  RoleScope, 
+  AppRole,
+  ROLE_LABELS,
+  SCOPE_LABELS 
+} from "@/modules/core/user/types/role.types";
+import { Shield, Building2, Users, Briefcase, FolderKanban, Info } from "lucide-react";
 
 interface UserWithRoles {
   id: string;
@@ -55,22 +60,11 @@ const RoleManagement = () => {
       setUsers(usersWithRoles);
     } catch (error) {
       console.error('Error loading users:', error);
-      toast.error('Kunne ikke laste brukere og roller');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRemoveRole = async (userId: string, role: AppRole, scopeType: RoleScope, scopeId?: string) => {
-    try {
-      await RoleService.revokeRole(userId, role, scopeType, scopeId || undefined);
-      toast.success('Rolle fjernet');
-      await loadUsers();
-    } catch (error) {
-      console.error('Error removing role:', error);
-      toast.error('Kunne ikke fjerne rolle');
-    }
-  };
 
   const getScopeIcon = (scope: RoleScope) => {
     switch (scope) {
@@ -113,11 +107,18 @@ const RoleManagement = () => {
   return (
     <div className="space-y-6 p-8">
       <div>
-        <h1 className="text-3xl font-bold mb-2">Rolleadministrasjon</h1>
+        <h1 className="text-3xl font-bold mb-2">Rolleoversikt</h1>
         <p className="text-muted-foreground">
-          Administrer brukerroller på tvers av plattform, tenants, selskaper og prosjekter
+          Kun lesbar oversikt over roller i systemet. For å endre roller, bruk brukeradministrasjonssiden.
         </p>
       </div>
+
+      <Alert>
+        <Info className="h-4 w-4" />
+        <AlertDescription>
+          Dette er en oversiktsside. For å legge til eller fjerne roller, gå til <a href="/admin/users" className="underline">Brukeradministrasjon</a>.
+        </AlertDescription>
+      </Alert>
 
       <div className="flex items-center gap-4">
         <Select value={selectedScope} onValueChange={(v) => setSelectedScope(v as RoleScope | 'all')}>
@@ -201,18 +202,6 @@ const RoleManagement = () => {
                                 )}
                               </div>
                             </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleRemoveRole(
-                                user.id,
-                                roleRecord.role,
-                                scope,
-                                roleRecord.scope_id || undefined
-                              )}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
                           </div>
                         ))}
                       </div>

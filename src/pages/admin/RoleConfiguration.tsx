@@ -13,6 +13,7 @@ const ROLES_BY_SCOPE = {
   tenant: ['tenant_owner', 'tenant_admin', 'security_admin', 'data_protection'] as AppRole[],
   company: ['integration_service'] as AppRole[],
   project: ['project_owner', 'analyst', 'contributor', 'approver', 'viewer', 'external_reviewer'] as AppRole[],
+  app: ['app_admin', 'app_user'] as AppRole[],
 };
 
 const RoleConfiguration = () => {
@@ -99,11 +100,12 @@ const RoleConfiguration = () => {
       </div>
 
       <Tabs defaultValue="platform" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="platform">Platform</TabsTrigger>
           <TabsTrigger value="tenant">Tenant</TabsTrigger>
           <TabsTrigger value="company">Selskap</TabsTrigger>
           <TabsTrigger value="project">Prosjekt</TabsTrigger>
+          <TabsTrigger value="app">App</TabsTrigger>
         </TabsList>
 
         {Object.entries(ROLES_BY_SCOPE).map(([scope, roles]) => (

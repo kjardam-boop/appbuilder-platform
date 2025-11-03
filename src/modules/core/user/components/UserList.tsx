@@ -7,11 +7,12 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Mail, Plus, X, Shield, Building2, Users, FolderKanban } from "lucide-react";
+import { Mail, Plus, X, Shield, Building2, Users, FolderKanban, Briefcase } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TenantSelector } from "@/components/Admin/TenantSelector";
 import { CompanySelector } from "@/components/Admin/CompanySelector";
 import { ProjectSelector } from "@/components/Admin/ProjectSelector";
+import { AppSelector } from "@/components/Admin/AppSelector";
 import { supabase } from "@/integrations/supabase/client";
 
 interface UserProfile {
@@ -164,7 +165,7 @@ export function UserList() {
               </CardHeader>
               <CardContent>
                 <Tabs defaultValue="platform" className="w-full">
-                  <TabsList className="grid w-full grid-cols-4">
+                  <TabsList className="grid w-full grid-cols-5">
                     <TabsTrigger value="platform">
                       <Shield className="h-4 w-4 mr-2" />
                       Platform
@@ -181,9 +182,13 @@ export function UserList() {
                       <FolderKanban className="h-4 w-4 mr-2" />
                       Prosjekt
                     </TabsTrigger>
+                    <TabsTrigger value="app">
+                      <Briefcase className="h-4 w-4 mr-2" />
+                      App
+                    </TabsTrigger>
                   </TabsList>
 
-                  {(['platform', 'tenant', 'company', 'project'] as RoleScope[]).map((scope) => (
+                  {(['platform', 'tenant', 'company', 'project', 'app'] as RoleScope[]).map((scope) => (
                     <TabsContent key={scope} value={scope} className="space-y-4 mt-4">
                       {/* Current Roles */}
                       <div>
@@ -249,6 +254,16 @@ export function UserList() {
                             )}
                             {scope === 'project' && (
                               <ProjectSelector
+                                value={selectedUserId === user.user_id ? selectedScopeId : ""}
+                                onValueChange={(value) => {
+                                  setSelectedUserId(user.user_id);
+                                  setSelectedScope(scope);
+                                  setSelectedScopeId(value);
+                                }}
+                              />
+                            )}
+                            {scope === 'app' && (
+                              <AppSelector
                                 value={selectedUserId === user.user_id ? selectedScopeId : ""}
                                 onValueChange={(value) => {
                                   setSelectedUserId(user.user_id);
