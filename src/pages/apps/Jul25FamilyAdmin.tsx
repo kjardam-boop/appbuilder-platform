@@ -26,6 +26,7 @@ export default function Jul25FamilyAdmin() {
   const { data: families = [] } = useJul25Families();
   const { data: allMembers = [] } = useJul25FamilyMembers();
   const { data: allPeriods = [] } = useJul25FamilyPeriods();
+  const { data: allMemberPeriods = [] } = useMemberPeriods(); // Fetch all member periods once
   
   const family = families.find(f => f.id === familyId);
   const members = allMembers.filter(m => m.family_id === familyId);
@@ -276,7 +277,8 @@ export default function Jul25FamilyAdmin() {
             <ScrollArea className="h-[400px]">
               <div className="space-y-2">
                 {members.map(member => {
-                  const { data: memberPeriods = [] } = useMemberPeriods(member.id);
+                  // Filter member periods for this specific member
+                  const memberPeriods = allMemberPeriods.filter(mp => mp.member_id === member.id);
                   
                   return (
                     <Card key={member.id} className="border">
