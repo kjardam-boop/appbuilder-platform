@@ -591,13 +591,53 @@ export default function Jul25App() {
                       {/* Expanded Members */}
                       {isExpanded && (
                         <div className="ml-4 sm:ml-0 space-y-2 sm:space-y-1 mt-2">
-                          {familyMembers.map((member) => (
-                            <div key={member.id} className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <Users className="w-3 h-3" />
-                              <span>{member.name}</span>
-                              {member.is_admin && <Badge variant="secondary" className="text-xs">Admin</Badge>}
+                          {/* Per-person Gantt bars */}
+                          <div className="relative flex-1 h-7 hidden sm:block overflow-x-auto">
+                            <div className="absolute inset-y-0 flex gap-0 min-w-max ml-[10rem]">
+                              {eventDates.map(date => (
+                                <div key={date} className="w-10 h-7 border-l border-border/30" />
+                              ))}
                             </div>
-                          ))}
+                            {familyMembers.map((member) => {
+                              const minDate = eventDates[0] || 19;
+                              const arr = (member.arrival_date ?? family.arrival_date);
+                              const dep = (member.departure_date ?? family.departure_date);
+                              const start = (arr - minDate) * 40;
+                              const width = (dep - arr + 1) * 40;
+                              return (
+                                <div key={member.id} className="relative min-w-max">
+                                  <div
+                                    className="absolute top-0 h-5 bg-green-500 rounded-sm cursor-pointer hover:bg-green-600 transition-colors text-white text-[10px] px-2 flex items-center"
+                                    style={{ left: `${start}px`, width: `${width}px` }}
+                                    title={`${member.name}: ${arr}.12 - ${dep}.12`}
+                                  >
+                                    <span className="truncate">{member.name}</span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          {/* Mobile simple list */}
+                          <div className="sm:hidden space-y-1">
+                            {familyMembers.map((member) => (
+                              <div key={member.id} className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <Users className="w-3 h-3" />
+                                <span className="truncate">{member.name}</span>
+                                {member.is_admin && <Badge variant="secondary" className="text-[10px]">Admin</Badge>}
+                                <span className="ml-auto">{(member.arrival_date ?? family.arrival_date)}/12 - {(member.departure_date ?? family.departure_date)}/12</span>
+                                {isUserFamilyAdmin && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-5 w-5 p-0"
+                                    onClick={() => setManagingFamilyId(family.id)}
+                                  >
+                                    <Edit2 className="h-2 w-2" />
+                                  </Button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -629,7 +669,7 @@ export default function Jul25App() {
                       >
                         {hideCompletedTasks ? "Vis fullførte" : "Skjul fullførte"}
                       </Button>
-                      {isAdmin && (
+                      {user && (
                         <Button
                           size="sm"
                           onClick={() => {

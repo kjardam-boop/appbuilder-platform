@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { CalendarIcon, Pencil, Trash2, Plus } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -20,13 +20,15 @@ interface ManageFamilyMembersDialogProps {
   members: Jul25FamilyMember[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialEditMemberId?: string;
 }
 
 export function ManageFamilyMembersDialog({ 
   familyId, 
   members, 
   open, 
-  onOpenChange 
+  onOpenChange,
+  initialEditMemberId
 }: ManageFamilyMembersDialogProps) {
   const [editingMember, setEditingMember] = useState<Jul25FamilyMember | null>(null);
   const [addingMember, setAddingMember] = useState(false);
@@ -40,6 +42,20 @@ export function ManageFamilyMembersDialog({
   const [arrivalTime, setArrivalTime] = useState("");
   const [departureDate, setDepartureDate] = useState<Date | undefined>();
   const [departureTime, setDepartureTime] = useState("");
+
+  useEffect(() => {
+    if (open && initialEditMemberId) {
+      const m = members.find(mm => mm.id === initialEditMemberId);
+      if (m) {
+        setEditingMember(m);
+        setMemberName(m.name);
+        setArrivalDate(dayToDate(m.arrival_date));
+        setArrivalTime(m.arrival_time || "");
+        setDepartureDate(dayToDate(m.departure_date));
+        setDepartureTime(m.departure_time || "");
+      }
+    }
+  }, [open, initialEditMemberId, members]);
   
   const addMember = useJoinFamily();
   const updateMember = useUpdateFamilyMember();
