@@ -63,8 +63,8 @@ export default function AppAdminSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <div className="flex items-center justify-between p-4 border-b">
-        {state === "expanded" && <h2 className="text-lg font-semibold">Admin Panel</h2>}
+      <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
+        {state === "expanded" && <h2 className="text-lg font-semibold text-sidebar-foreground">Admin Panel</h2>}
         {/* No SidebarTrigger here; global header hosts the trigger */}
       </div>
 
@@ -84,8 +84,8 @@ export default function AppAdminSidebar() {
                         end={item.end}
                         className={({ isActive }) =>
                           isActive
-                            ? "bg-muted text-primary font-medium"
-                            : "hover:bg-muted/50"
+                            ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                            : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
                         }
                       >
                         <item.icon className="h-4 w-4" />
