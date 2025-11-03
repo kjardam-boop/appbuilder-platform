@@ -1,9 +1,6 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
 import { RoleService } from "@/modules/core/user/services/roleService";
@@ -15,12 +12,25 @@ import {
   SCOPE_LABELS 
 } from "@/modules/core/user/types/role.types";
 import { Shield, Building2, Users, Briefcase, FolderKanban, Info } from "lucide-react";
+import { SmartDataTable } from "@/components/DataTable/SmartDataTable";
+import { ColumnDef } from "@/components/DataTable/types";
+import { format } from "date-fns";
+import { nb } from "date-fns/locale";
+import { toast } from "sonner";
 
-interface UserWithRoles {
+interface RoleRowData {
   id: string;
-  email: string;
-  full_name: string;
-  rolesByScope: Record<RoleScope, UserRoleRecord[]>;
+  userId: string;
+  userEmail: string;
+  userName: string;
+  role: AppRole;
+  roleLabel: string;
+  scopeType: RoleScope;
+  scopeTypeLabel: string;
+  scopeId: string | null;
+  scopeName: string;
+  grantedAt: string;
+  grantedBy: string | null;
 }
 
 interface ScopeNameCache {
@@ -30,27 +40,105 @@ interface ScopeNameCache {
   apps: Record<string, string>;
 }
 
+const roleColumns: ColumnDef<RoleRowData>[] = [
+  {
+    key: 'userEmail',
+    label: 'E-post',
+    type: 'text',
+    sortable: true,
+    filterable: true,
+    width: 200,
+  },
+  {
+    key: 'userName',
+    label: 'Navn',
+    type: 'text',
+    sortable: true,
+    filterable: true,
+    width: 150,
+  },
+  {
+    key: 'roleLabel',
+    label: 'Rolle',
+    type: 'select',
+    sortable: true,
+    filterable: true,
+    multiSelect: true,
+    filterOptions: Object.entries(ROLE_LABELS).map(([value, label]) => ({
+      value: label,
+      label,
+    })),
+    render: (value) => (
+      <Badge variant="default" className="whitespace-nowrap">
+        {value}
+      </Badge>
+    ),
+  },
+  {
+    key: 'scopeTypeLabel',
+    label: 'Scope Type',
+    type: 'select',
+    sortable: true,
+    filterable: true,
+    multiSelect: true,
+    filterOptions: Object.entries(SCOPE_LABELS).map(([value, label]) => ({
+      value: label,
+      label,
+    })),
+    render: (value, row) => {
+      const icons = {
+        'Plattform': <Shield className="h-3 w-3 mr-1" />,
+        'Tenant': <Users className="h-3 w-3 mr-1" />,
+        'Selskap': <Building2 className="h-3 w-3 mr-1" />,
+        'Prosjekt': <FolderKanban className="h-3 w-3 mr-1" />,
+        'Applikasjon': <Briefcase className="h-3 w-3 mr-1" />,
+      };
+      return (
+        <Badge variant="outline" className="whitespace-nowrap flex items-center w-fit">
+          {icons[value as keyof typeof icons]}
+          {value}
+        </Badge>
+      );
+    },
+  },
+  {
+    key: 'scopeName',
+    label: 'Scope',
+    type: 'text',
+    sortable: true,
+    filterable: true,
+    render: (value) => {
+      if (!value) return <span className="text-muted-foreground">-</span>;
+      return <span className="text-sm">{value}</span>;
+    },
+  },
+  {
+    key: 'grantedAt',
+    label: 'Tildelt',
+    type: 'date',
+    sortable: true,
+    filterable: true,
+    width: 150,
+    render: (value) => (
+      <span className="text-sm text-muted-foreground">
+        {format(new Date(value), "d. MMM yyyy HH:mm", { locale: nb })}
+      </span>
+    ),
+  },
+];
+
 const RoleManagement = () => {
-  const [users, setUsers] = useState<UserWithRoles[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedScope, setSelectedScope] = useState<RoleScope | 'all'>('all');
-  const [scopeNames, setScopeNames] = useState<ScopeNameCache>({
-    tenants: {},
-    companies: {},
-    projects: {},
-    apps: {}
-  });
+  const [roleRowData, setRoleRowData] = useState<RoleRowData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    loadUsers();
+    loadRolesData();
   }, []);
 
-  const loadUsers = async () => {
+  const loadRolesData = async () => {
+    setIsLoading(true);
     try {
-      console.log('[RoleManagement] Starting to load users...');
-      setLoading(true);
-      setError(null);
+      console.log('[RoleManagement] Starting to load roles data...');
       
       // Get all profiles
       const { data: profiles, error: profilesError } = await supabase
@@ -58,97 +146,120 @@ const RoleManagement = () => {
         .select('id, user_id, email, full_name')
         .order('full_name');
 
-      console.log('[RoleManagement] Profiles loaded:', profiles?.length, 'profiles');
+      if (profilesError) throw profilesError;
 
-      if (profilesError) {
-        console.error('[RoleManagement] Error loading profiles:', profilesError);
-        throw profilesError;
-      }
+      const allRoleRows: RoleRowData[] = [];
+      
+      // Collect all scope IDs for bulk fetching
+      const scopeIds = {
+        tenants: new Set<string>(),
+        companies: new Set<string>(),
+        projects: new Set<string>(),
+        apps: new Set<string>(),
+      };
 
-      // Get roles for each user grouped by scope
-      const usersWithRoles: UserWithRoles[] = await Promise.all(
+      // First pass: collect all roles and scope IDs
+      const usersWithRoles = await Promise.all(
         (profiles || []).map(async (profile) => {
-          console.log('[RoleManagement] Loading roles for user:', profile.email);
-          
           try {
             const rolesByScope = await RoleService.getUserRolesByScope(profile.user_id);
-            console.log('[RoleManagement] Roles loaded for', profile.email, ':', 
-              Object.entries(rolesByScope).map(([scope, roles]) => `${scope}: ${roles.length}`).join(', ')
-            );
             
+            // Collect scope IDs
+            Object.entries(rolesByScope).forEach(([scopeType, roles]) => {
+              roles.forEach((role: UserRoleRecord) => {
+                if (role.scope_id) {
+                  if (scopeType === 'tenant') scopeIds.tenants.add(role.scope_id);
+                  if (scopeType === 'company') scopeIds.companies.add(role.scope_id);
+                  if (scopeType === 'project') scopeIds.projects.add(role.scope_id);
+                  if (scopeType === 'app') scopeIds.apps.add(role.scope_id);
+                }
+              });
+            });
+
             return {
-              id: profile.user_id,
-              email: profile.email,
-              full_name: profile.full_name || 'Ukjent navn',
+              profile,
               rolesByScope,
             };
           } catch (err) {
             console.error('[RoleManagement] Error loading roles for', profile.email, ':', err);
-            // Return user with empty roles on error
-            return {
-              id: profile.user_id,
-              email: profile.email,
-              full_name: profile.full_name || 'Ukjent navn',
-              rolesByScope: {
-                platform: [],
-                tenant: [],
-                company: [],
-                project: [],
-                app: [],
-              },
-            };
+            return null;
           }
         })
       );
 
-      console.log('[RoleManagement] Total users with roles:', usersWithRoles.length);
-      setUsers(usersWithRoles);
-      
-      // Load scope names for all scope_ids
-      await loadScopeNames(usersWithRoles);
+      // Load all scope names in bulk
+      const scopeNames = await loadScopeNames(scopeIds);
+
+      // Second pass: transform to RoleRowData
+      usersWithRoles.forEach((userWithRoles) => {
+        if (!userWithRoles) return;
+
+        const { profile, rolesByScope } = userWithRoles;
+
+        Object.entries(rolesByScope).forEach(([scopeType, roles]) => {
+          (roles as UserRoleRecord[]).forEach((role) => {
+            const scopeName = getScopeName(scopeType as RoleScope, role.scope_id, scopeNames);
+            
+            allRoleRows.push({
+              id: role.id,
+              userId: role.user_id,
+              userEmail: profile.email || 'N/A',
+              userName: profile.full_name || 'N/A',
+              role: role.role,
+              roleLabel: ROLE_LABELS[role.role],
+              scopeType: role.scope_type,
+              scopeTypeLabel: SCOPE_LABELS[role.scope_type],
+              scopeId: role.scope_id,
+              scopeName: scopeName || (role.scope_id ? `ID: ${role.scope_id.substring(0, 8)}...` : '-'),
+              grantedAt: role.granted_at,
+              grantedBy: role.granted_by,
+            });
+          });
+        });
+      });
+
+      console.log('[RoleManagement] Transformed', allRoleRows.length, 'role rows');
+      setRoleRowData(allRoleRows);
     } catch (error) {
-      console.error('[RoleManagement] Error loading users:', error);
-      setError(error instanceof Error ? error.message : 'Kunne ikke laste brukere');
+      console.error('[RoleManagement] Error loading roles:', error);
+      toast.error('Kunne ikke laste roller');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const loadScopeNames = async (usersWithRoles: UserWithRoles[]) => {
+  const loadScopeNames = async (scopeIds: {
+    tenants: Set<string>;
+    companies: Set<string>;
+    projects: Set<string>;
+    apps: Set<string>;
+  }): Promise<ScopeNameCache> => {
+    const newScopeNames: ScopeNameCache = {
+      tenants: {},
+      companies: {},
+      projects: {},
+      apps: {}
+    };
+
     try {
-      const tenantIds = new Set<string>();
-      const companyIds = new Set<string>();
-      const projectIds = new Set<string>();
-      const appIds = new Set<string>();
-
-      // Collect all unique scope_ids
-      usersWithRoles.forEach(user => {
-        user.rolesByScope.tenant.forEach(role => role.scope_id && tenantIds.add(role.scope_id));
-        user.rolesByScope.company.forEach(role => role.scope_id && companyIds.add(role.scope_id));
-        user.rolesByScope.project.forEach(role => role.scope_id && projectIds.add(role.scope_id));
-        user.rolesByScope.app.forEach(role => role.scope_id && appIds.add(role.scope_id));
-      });
-
-      console.log('[RoleManagement] Loading scope names...', {
-        tenants: tenantIds.size,
-        companies: companyIds.size,
-        projects: projectIds.size,
-        apps: appIds.size
-      });
-
-      const newScopeNames: ScopeNameCache = {
-        tenants: {},
-        companies: {},
-        projects: {},
-        apps: {}
-      };
+      // Load tenant names
+      if (scopeIds.tenants.size > 0) {
+        const { data: tenants } = await supabase
+          .from('tenants')
+          .select('id, name')
+          .in('id', Array.from(scopeIds.tenants));
+        
+        tenants?.forEach(t => {
+          newScopeNames.tenants[t.id] = t.name;
+        });
+      }
 
       // Load company names
-      if (companyIds.size > 0) {
+      if (scopeIds.companies.size > 0) {
         const { data: companies } = await supabase
           .from('companies')
           .select('id, name')
-          .in('id', Array.from(companyIds));
+          .in('id', Array.from(scopeIds.companies));
         
         companies?.forEach(c => {
           newScopeNames.companies[c.id] = c.name;
@@ -156,11 +267,11 @@ const RoleManagement = () => {
       }
 
       // Load project names
-      if (projectIds.size > 0) {
+      if (scopeIds.projects.size > 0) {
         const { data: projects } = await supabase
           .from('projects')
           .select('id, name')
-          .in('id', Array.from(projectIds));
+          .in('id', Array.from(scopeIds.projects));
         
         projects?.forEach(p => {
           newScopeNames.projects[p.id] = p.name;
@@ -168,59 +279,25 @@ const RoleManagement = () => {
       }
 
       // Load app names
-      if (appIds.size > 0) {
+      if (scopeIds.apps.size > 0) {
         const { data: apps } = await supabase
           .from('applications')
           .select('id, name')
-          .in('id', Array.from(appIds));
+          .in('id', Array.from(scopeIds.apps));
         
         apps?.forEach(a => {
           newScopeNames.apps[a.id] = a.name;
         });
       }
 
-      // Load tenant names
-      if (tenantIds.size > 0) {
-        const { data: tenants } = await supabase
-          .from('tenants')
-          .select('id, name')
-          .in('id', Array.from(tenantIds));
-        
-        tenants?.forEach(t => {
-          newScopeNames.tenants[t.id] = t.name;
-        });
-      }
-
-      console.log('[RoleManagement] Scope names loaded:', newScopeNames);
-      setScopeNames(newScopeNames);
+      return newScopeNames;
     } catch (error) {
       console.error('[RoleManagement] Error loading scope names:', error);
+      return newScopeNames;
     }
   };
 
-
-  const getScopeIcon = (scope: RoleScope) => {
-    switch (scope) {
-      case 'platform': return <Shield className="h-4 w-4" />;
-      case 'tenant': return <Users className="h-4 w-4" />;
-      case 'company': return <Building2 className="h-4 w-4" />;
-      case 'project': return <FolderKanban className="h-4 w-4" />;
-      case 'app': return <Briefcase className="h-4 w-4" />;
-    }
-  };
-
-  const getRoleBadgeVariant = (role: AppRole) => {
-    if (role.includes('owner')) return 'default';
-    if (role.includes('admin')) return 'secondary';
-    return 'outline';
-  };
-
-  const filterUsersByScope = (user: UserWithRoles) => {
-    if (selectedScope === 'all') return true;
-    return user.rolesByScope[selectedScope].length > 0;
-  };
-
-  const getScopeName = (scope: RoleScope, scopeId: string | null): string | null => {
+  const getScopeName = (scope: RoleScope, scopeId: string | null, scopeNames: ScopeNameCache): string | null => {
     if (!scopeId) return null;
     
     switch (scope) {
@@ -237,150 +314,91 @@ const RoleManagement = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="space-y-4 p-8">
-        {[1, 2, 3].map((i) => (
-          <Card key={i}>
-            <CardHeader>
-              <Skeleton className="h-6 w-48" />
-              <Skeleton className="h-4 w-64" />
-            </CardHeader>
-          </Card>
-        ))}
-      </div>
-    );
-  }
-
-  const filteredUsers = users.filter(filterUsersByScope);
+  // Calculate statistics
+  const uniqueUsers = new Set(roleRowData.map(r => r.userId)).size;
+  const platformRoles = roleRowData.filter(r => r.scopeType === 'platform').length;
+  const tenantRoles = roleRowData.filter(r => r.scopeType === 'tenant').length;
+  const companyRoles = roleRowData.filter(r => r.scopeType === 'company').length;
 
   return (
     <div className="space-y-6 p-8">
-      <div>
-        <h1 className="text-3xl font-bold mb-2">Rolleoversikt</h1>
-        <p className="text-muted-foreground">
-          Kun lesbar oversikt over roller i systemet. For å endre roller, bruk brukeradministrasjonssiden.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Rolleadministrasjon</h1>
+          <p className="text-muted-foreground">
+            Oversikt over brukerroller på tvers av plattform, tenants og prosjekter
+          </p>
+        </div>
       </div>
-
-      {error && (
-        <Alert variant="destructive">
-          <Info className="h-4 w-4" />
-          <AlertDescription>
-            Feil ved lasting av brukere: {error}
-          </AlertDescription>
-        </Alert>
-      )}
 
       <Alert>
         <Info className="h-4 w-4" />
         <AlertDescription>
-          Dette er en oversiktsside. For å legge til eller fjerne roller, gå til <a href="/admin/users" className="underline">Brukeradministrasjon</a>.
+          Dette er en kun-lesbar oversikt. For å endre roller, gå til{" "}
+          <a href="/admin/users" className="underline font-medium">
+            Brukeradministrasjon
+          </a>
+          .
         </AlertDescription>
       </Alert>
 
-      <div className="flex items-center gap-4">
-        <Select value={selectedScope} onValueChange={(v) => setSelectedScope(v as RoleScope | 'all')}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Alle scopes</SelectItem>
-            {Object.entries(SCOPE_LABELS).map(([value, label]) => (
-              <SelectItem key={value} value={value}>
-                {label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Badge variant="secondary">{filteredUsers.length} brukere</Badge>
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Totalt roller</CardTitle>
+            <Shield className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{roleRowData.length}</div>
+            <p className="text-xs text-muted-foreground">{uniqueUsers} unike brukere</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Plattform</CardTitle>
+            <Shield className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{platformRoles}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Tenant</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{tenantRoles}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Selskap</CardTitle>
+            <Building2 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{companyRoles}</div>
+          </CardContent>
+        </Card>
       </div>
 
-      <div className="space-y-4">
-        {filteredUsers.map((user) => (
-          <Card key={user.id}>
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                  <CardTitle className="flex items-center gap-2">
-                    <Shield className="h-5 w-5 text-primary" />
-                    {user.full_name}
-                  </CardTitle>
-                  <CardDescription>{user.email}</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Tabs defaultValue="platform" className="w-full">
-                <TabsList className="grid w-full grid-cols-5">
-                  <TabsTrigger value="platform">
-                    <Shield className="h-4 w-4 mr-2" />
-                    Plattform
-                  </TabsTrigger>
-                  <TabsTrigger value="tenant">
-                    <Users className="h-4 w-4 mr-2" />
-                    Tenant
-                  </TabsTrigger>
-                  <TabsTrigger value="company">
-                    <Building2 className="h-4 w-4 mr-2" />
-                    Selskap
-                  </TabsTrigger>
-                  <TabsTrigger value="project">
-                    <FolderKanban className="h-4 w-4 mr-2" />
-                    Prosjekt
-                  </TabsTrigger>
-                  <TabsTrigger value="app">
-                    <Briefcase className="h-4 w-4 mr-2" />
-                    App
-                  </TabsTrigger>
-                </TabsList>
-
-                {(['platform', 'tenant', 'company', 'project', 'app'] as RoleScope[]).map((scope) => (
-                  <TabsContent key={scope} value={scope} className="space-y-4 mt-4">
-                    {user.rolesByScope[scope].length === 0 ? (
-                      <p className="text-sm text-muted-foreground">
-                        Ingen roller i {SCOPE_LABELS[scope].toLowerCase()}
-                      </p>
-                    ) : (
-                      <div className="space-y-2">
-                        {user.rolesByScope[scope].map((roleRecord) => {
-                          const scopeName = getScopeName(scope, roleRecord.scope_id);
-                          
-                          return (
-                            <div
-                              key={roleRecord.id}
-                              className="flex items-center justify-between p-3 border rounded-lg"
-                            >
-                              <div className="flex items-center gap-2">
-                                {getScopeIcon(scope)}
-                                <div>
-                                  <Badge variant={getRoleBadgeVariant(roleRecord.role)}>
-                                    {ROLE_LABELS[roleRecord.role]}
-                                  </Badge>
-                                  {scopeName && (
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                      {scopeName}
-                                    </p>
-                                  )}
-                                  {roleRecord.scope_id && !scopeName && (
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                      ID: {roleRecord.scope_id.substring(0, 8)}...
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </TabsContent>
-                ))}
-              </Tabs>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <Card>
+        <CardContent className="pt-6">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+            </div>
+          ) : (
+            <SmartDataTable
+              columns={roleColumns}
+              data={roleRowData}
+              searchKey="userEmail"
+              initialPageSize={25}
+              emptyMessage="Ingen roller funnet"
+            />
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };
