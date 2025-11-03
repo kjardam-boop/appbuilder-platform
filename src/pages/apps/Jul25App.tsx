@@ -480,8 +480,8 @@ export default function Jul25App() {
 
     const consider = (isoStart?: string, isoEnd?: string) => {
       if (!isoStart || !isoEnd) return;
-      const s = timestampToDay(isoStart);
-      const e = timestampToDay(isoEnd);
+      const s = Math.max(1, timestampToDay(isoStart));
+      const e = Math.max(1, timestampToDay(isoEnd));
       if (s < minDay) minDay = s;
       if (e > maxDay) maxDay = e;
     };
@@ -600,9 +600,9 @@ export default function Jul25App() {
                 </div>
                 {eventDates.map((date, index) => {
                   const guestsPerDay = getGuestsPerDay();
-                  const isFirstOfMonth = index === 0 || (date === 32 && eventDates[index - 1] === 31);
-                  const month = date >= 32 ? 'Jan' : 'Des';
-                  const displayDay = date >= 32 ? date - 31 : date;
+                  const isFirstOfMonth = index === 0 || (date === 31 && eventDates[index - 1] === 30) || (date === 62 && eventDates[index - 1] === 61);
+                  const month = date <= 30 ? 'Nov' : date <= 61 ? 'Des' : 'Jan';
+                  const displayDay = date <= 30 ? date : date <= 61 ? (date - 30) : (date - 61);
                   
                   return (
                     <div key={date} className="w-10 flex-shrink-0 text-center flex flex-col">
@@ -613,7 +613,6 @@ export default function Jul25App() {
                         {displayDay}
                       </div>
                       <div className="text-xs text-muted-foreground h-[18px] flex items-center justify-center">
-                        {guestsPerDay[date] > 0 ? `${guestsPerDay[date]}` : '-'}
                       </div>
                     </div>
                   );
@@ -631,7 +630,7 @@ export default function Jul25App() {
             ) : (
               <div className="space-y-3">
                 {families.map((family) => {
-                  const minDate = eventDates[0] || 19;
+                  const minDate = eventDates[0] || 1;
                   const effectiveDates = getEffectiveFamilyDates(family);
                   const arrDay = timestampToDay(effectiveDates.arrival_date);
                   const depDay = timestampToDay(effectiveDates.departure_date);
@@ -657,21 +656,16 @@ export default function Jul25App() {
                               <span className="truncate">{family.name}</span>
                             </button>
                             {isUserFamilyAdmin && (
-                              <>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-7 w-7 p-0"
-                                  onClick={() => navigate(`/apps/jul25/admin?familyId=${family.id}`)}
-                                  title="Administrer familie"
-                                >
-                                  <UserCog className="h-3 w-3" />
-                                </Button>
-                              </>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 w-7 p-0"
+                                onClick={() => navigate(`/apps/jul25/admin?familyId=${family.id}`)}
+                                title="Administrer familie"
+                              >
+                                <UserCog className="h-3 w-3" />
+                              </Button>
                             )}
-                          </div>
-                          <div className="text-xs text-muted-foreground mt-1 sm:hidden">
-                            {allPeriods.filter(p => p.family_id === family.id).map(p => p.location).join(' + ')}
                           </div>
                         </div>
 
@@ -710,97 +704,69 @@ export default function Jul25App() {
                       {/* Expanded Members */}
                       {isExpanded && (
                         <div className="ml-4 sm:ml-0 space-y-1 mt-2">
-                          {/* Per-person Gantt bars */}
                           {familyMembers.map((member) => {
-                            const minDate = eventDates[0] || 19;
                             const periods = allPeriods.filter(p => p.family_id === family.id);
-                            
-                            // Get member's assigned periods from allMemberPeriods
                             const memberPeriods = allMemberPeriods.filter(mp => mp.member_id === member.id);
                             const assignedPeriods = periods.filter(p => 
                               memberPeriods.some(mp => mp.period_id === p.id)
                             );
                             
-                             // Member multi custom periods (new table)
-                             const memberCustoms = allCustomPeriods
-                               .filter(cp => cp.member_id === member.id)
-                               .map(cp => ({
-                                 id: cp.id,
-                                 family_id: member.family_id,
-                                 location: cp.location,
-                                 arrival_date: cp.start_date,
-                                 departure_date: cp.end_date,
-                                 created_at: cp.created_at,
-                                 updated_at: cp.updated_at,
-                               }));
+                            const memberCustoms = allCustomPeriods
+                              .filter(cp => cp.member_id === member.id)
+                              .map(cp => ({
+                                id: cp.id,
+                                family_id: member.family_id,
+                                location: cp.location,
+                                arrival_date: cp.start_date,
+                                departure_date: cp.end_date,
+                                created_at: cp.created_at,
+                                updated_at: cp.updated_at,
+                              }));
 
-                             // Backwards compat: single custom stored on member
-                             const singleCustom = (member.arrival_date && member.departure_date && member.custom_period_location)
-                               ? [{
-                                   id: `custom-${member.id}`,
-                                   family_id: member.family_id,
-                                   location: member.custom_period_location,
-                                   arrival_date: member.arrival_date,
-                                   departure_date: member.departure_date,
-                                   created_at: member.created_at,
-                                   updated_at: member.updated_at,
-                                 }]
-                               : [];
+                            const singleCustom = (member.arrival_date && member.departure_date && member.custom_period_location)
+                              ? [{
+                                  id: `custom-${member.id}`,
+                                  family_id: member.family_id,
+                                  location: member.custom_period_location,
+                                  arrival_date: member.arrival_date,
+                                  departure_date: member.departure_date,
+                                  created_at: member.created_at,
+                                  updated_at: member.updated_at,
+                                }]
+                              : [];
 
-                             const effectivePeriods = [...memberCustoms, ...singleCustom, ...(assignedPeriods.length > 0 ? assignedPeriods : periods)];
+                            const effectivePeriods = [...memberCustoms, ...singleCustom, ...(assignedPeriods.length > 0 ? assignedPeriods : periods)];
                             
                             return (
                               <div key={member.id} className="flex flex-col sm:flex-row gap-2 sm:gap-1 items-start">
-                                {/* Member Name */}
                                 <div className="w-full sm:w-32 md:w-40 flex-shrink-0">
                                   <div className="flex items-center gap-1">
                                     <div className="flex-1 bg-green-500 text-white rounded px-2 py-1 text-xs truncate">
                                       {member.name}
                                     </div>
-                                      {isUserFamilyAdmin && (
-                                       <Button
-                                         size="sm"
-                                         variant="ghost"
-                                         className="h-6 w-6 p-0"
-                                         onClick={() => navigate(`/apps/jul25/member/${member.id}`)}
-                                         title="Rediger person"
-                                       >
-                                         <Edit2 className="h-3 w-3" />
-                                       </Button>
-                                     )}
-                                  </div>
-                                  <div className="text-xs text-muted-foreground mt-1 sm:hidden flex gap-1 flex-wrap">
-                                    {effectivePeriods.map(p => (
-                                      <Badge 
-                                        key={p.id}
-                                        variant="outline"
-                                        className={cn(
-                                          "text-[10px] h-4",
-                                          p.location === 'Jajabo' 
-                                            ? "bg-green-200 text-green-800 border-green-300" 
-                                            : "bg-red-200 text-red-800 border-red-300"
-                                        )}
-                                      >
-                                        {p.location}
-                                      </Badge>
-                                    ))}
+                                    {isUserFamilyAdmin && (
+                                     <Button
+                                       size="sm"
+                                       variant="ghost"
+                                       className="h-6 w-6 p-0"
+                                       onClick={() => navigate(`/apps/jul25/member/${member.id}`)}
+                                       title="Rediger person"
+                                     >
+                                       <Edit2 className="h-3 w-3" />
+                                     </Button>
+                                   )}
                                   </div>
                                 </div>
 
-                                {/* Member Gantt Bar - Multiple segments for different periods */}
                                 <div className="relative flex-1 h-7 hidden sm:block overflow-x-auto">
                                    <div className="absolute inset-y-0 flex gap-0 min-w-max">
                                      {eventDates.map(date => (
                                        <div key={date} className="w-10 h-7 border-l border-border/30" />
                                      ))}
-                                     {/* Left boundary line */}
-                                     <div className="absolute left-0 top-0 bottom-0 border-l border-border/50" />
                                    </div>
                                   {effectivePeriods.map(period => {
-                                    // Use period dates directly
-                                    const arr = timestampToDay(period.arrival_date);
-                                    const dep = timestampToDay(period.departure_date);
-                                    
+                                    const arr = Math.max(1, timestampToDay(period.arrival_date));
+                                    const dep = Math.max(1, timestampToDay(period.departure_date));
                                     const startOffset = (arr - minDate) * 40;
                                     const width = (dep - arr + 1) * 40;
                                     
@@ -1212,28 +1178,28 @@ export default function Jul25App() {
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
-                        {eventDates.map(date => (
-                          <SelectItem key={date} value={date.toString()}>
-                            {date}. des
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Avreise</Label>
-                    <Select value={newDepartureDate.toString()} onValueChange={(v) => setNewDepartureDate(parseInt(v))}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {eventDates.map(date => (
-                          <SelectItem key={date} value={date.toString()}>
-                            {date}. des
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
+                       <SelectContent>
+                         {eventDates.map(date => (
+                           <SelectItem key={date} value={date.toString()}>
+                             {dayToDateString(date)}
+                           </SelectItem>
+                         ))}
+                       </SelectContent>
+                     </Select>
+                   </div>
+                   <div className="space-y-2">
+                     <Label>Avreise</Label>
+                     <Select value={newDepartureDate.toString()} onValueChange={(v) => setNewDepartureDate(parseInt(v))}>
+                       <SelectTrigger>
+                         <SelectValue />
+                       </SelectTrigger>
+                       <SelectContent>
+                         {eventDates.map(date => (
+                           <SelectItem key={date} value={date.toString()}>
+                             {dayToDateString(date)}
+                           </SelectItem>
+                         ))}
+                       </SelectContent>
                     </Select>
                   </div>
                 </div>
