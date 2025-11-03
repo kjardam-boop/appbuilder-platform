@@ -53,18 +53,13 @@ export default function Jul25App() {
   const deleteTask = useDeleteTask();
   
   // Dato hjelpefunksjoner
-  // Konverterer ISO timestamp til kontinuerlig dag-nummer (20-50+)
+  // Konverterer dato (ISO-string eller Date) til kontinuerlig dag-nummer (20-50+)
   // Desember: 20-31, Januar: 32-50 (31 + dag i januar)
-  const timestampToDay = (timestamp: string): number => {
-    const date = new Date(timestamp);
+  const timestampToDay = (input: string | Date): number => {
+    const date = typeof input === 'string' ? new Date(input) : input;
     const month = date.getMonth(); // 0 = januar, 11 = desember
     const day = date.getDate();
-    
-    if (month === 11) { // Desember
-      return day; // 20-31
-    } else { // Januar (eller andre måneder)
-      return 31 + day; // 32 (1.jan), 33 (2.jan), osv.
-    }
+    return month === 11 ? day : 31 + day;
   };
   
   // Konverterer kontinuerlig dag-nummer til ISO timestamp
@@ -375,8 +370,8 @@ export default function Jul25App() {
     // Always use fresh effective dates
     const effectiveDates = getEffectiveFamilyDates(family);
     
-    const startDay = timestampToDay(effectiveDates.arrival_date.toISOString());
-    const endDay = timestampToDay(effectiveDates.departure_date.toISOString());
+    const startDay = timestampToDay(effectiveDates.arrival_date);
+    const endDay = timestampToDay(effectiveDates.departure_date);
     
     // Loop through all days in the effective range
     for (let day = startDay; day <= endDay; day++) {
@@ -608,8 +603,8 @@ export default function Jul25App() {
                 {families.map((family) => {
                   const minDate = eventDates[0] || 19;
                   const effectiveDates = getEffectiveFamilyDates(family);
-                  const arrDay = timestampToDay(effectiveDates.arrival_date.toISOString());
-                  const depDay = timestampToDay(effectiveDates.departure_date.toISOString());
+                  const arrDay = timestampToDay(effectiveDates.arrival_date);
+                  const depDay = timestampToDay(effectiveDates.departure_date);
                   const startOffset = (arrDay - minDate) * 40;
                   const duration = (depDay - arrDay + 1) * 40;
                   const familyMembers = allMembers.filter(m => m.family_id === family.id);
