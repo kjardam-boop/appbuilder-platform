@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface UserProfile {
   id: string;
+  user_id: string; // CRITICAL: This is the auth.users ID
   email: string;
   full_name: string;
 }
@@ -46,21 +47,21 @@ export function UserList() {
     try {
       setLoading(true);
       
-      // Get all profiles
+      // Get all profiles with user_id
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, email, full_name')
+        .select('id, user_id, email, full_name')
         .order('full_name');
 
       if (profilesError) throw profilesError;
 
       setUsers(profiles || []);
 
-      // Load roles for each user
+      // Load roles for each user (using user_id, not profile.id!)
       const rolesMap: Record<string, Record<RoleScope, any[]>> = {};
       for (const profile of profiles || []) {
-        const rolesByScope = await RoleService.getUserRolesByScope(profile.id);
-        rolesMap[profile.id] = rolesByScope;
+        const rolesByScope = await RoleService.getUserRolesByScope(profile.user_id);
+        rolesMap[profile.user_id] = rolesByScope;
       }
       setUserRoles(rolesMap);
     } catch (error) {
@@ -142,7 +143,7 @@ export function UserList() {
 
       <div className="space-y-3">
         {users.map((user) => {
-          const roles = userRoles[user.id] || { platform: [], tenant: [], company: [], project: [] };
+          const roles = userRoles[user.user_id] || { platform: [], tenant: [], company: [], project: [] };
           
           return (
             <Card key={user.id}>
@@ -206,7 +207,7 @@ export function UserList() {
                                   size="icon"
                                   variant="ghost"
                                   className="h-6 w-6 ml-2"
-                                  onClick={() => handleRemoveRole(user.id, roleRecord.role, scope, roleRecord.scope_id)}
+                                  onClick={() => handleRemoveRole(user.user_id, roleRecord.role, scope, roleRecord.scope_id)}
                                 >
                                   <X className="h-3 w-3" />
                                 </Button>
@@ -227,9 +228,9 @@ export function UserList() {
                             </label>
                             {scope === 'tenant' && (
                               <TenantSelector
-                                value={selectedUserId === user.id ? selectedScopeId : ""}
+                                value={selectedUserId === user.user_id ? selectedScopeId : ""}
                                 onValueChange={(value) => {
-                                  setSelectedUserId(user.id);
+                                  setSelectedUserId(user.user_id);
                                   setSelectedScope(scope);
                                   setSelectedScopeId(value);
                                 }}
@@ -237,9 +238,9 @@ export function UserList() {
                             )}
                             {scope === 'company' && (
                               <CompanySelector
-                                value={selectedUserId === user.id ? selectedScopeId : ""}
+                                value={selectedUserId === user.user_id ? selectedScopeId : ""}
                                 onValueChange={(value) => {
-                                  setSelectedUserId(user.id);
+                                  setSelectedUserId(user.user_id);
                                   setSelectedScope(scope);
                                   setSelectedScopeId(value);
                                 }}
@@ -247,9 +248,9 @@ export function UserList() {
                             )}
                             {scope === 'project' && (
                               <ProjectSelector
-                                value={selectedUserId === user.id ? selectedScopeId : ""}
+                                value={selectedUserId === user.user_id ? selectedScopeId : ""}
                                 onValueChange={(value) => {
-                                  setSelectedUserId(user.id);
+                                  setSelectedUserId(user.user_id);
                                   setSelectedScope(scope);
                                   setSelectedScopeId(value);
                                 }}
@@ -260,9 +261,9 @@ export function UserList() {
 
                         <div className="flex items-center gap-2">
                           <Select
-                            value={selectedUserId === user.id && selectedScope === scope ? selectedRole : ""}
+                            value={selectedUserId === user.user_id && selectedScope === scope ? selectedRole : ""}
                             onValueChange={(value) => {
-                              setSelectedUserId(user.id);
+                              setSelectedUserId(user.user_id);
                               setSelectedScope(scope);
                               setSelectedRole(value as AppRole);
                             }}
@@ -281,16 +282,16 @@ export function UserList() {
                           <Button
                             size="sm"
                             onClick={() => {
-                              if (selectedRole && selectedUserId === user.id && selectedScope === scope) {
+                              if (selectedRole && selectedUserId === user.user_id && selectedScope === scope) {
                                 handleAddRole(
-                                  user.id, 
+                                  user.user_id, 
                                   selectedRole, 
                                   scope, 
                                   scope === 'platform' ? undefined : selectedScopeId
                                 );
                               }
                             }}
-                            disabled={!canAddRole(user.id, scope) || selectedScope !== scope}
+                            disabled={!canAddRole(user.user_id, scope) || selectedScope !== scope}
                           >
                             <Plus className="h-4 w-4 mr-1" />
                             Legg til rolle
