@@ -974,33 +974,27 @@ export type Database = {
       }
       jul25_families: {
         Row: {
-          arrival_date: number
-          arrival_time: string
+          arrival_date: string
           created_at: string
-          departure_date: number
-          departure_time: string
+          departure_date: string
           id: string
           name: string
           number_of_people: number
           updated_at: string
         }
         Insert: {
-          arrival_date: number
-          arrival_time?: string
+          arrival_date: string
           created_at?: string
-          departure_date: number
-          departure_time?: string
+          departure_date: string
           id?: string
           name: string
           number_of_people?: number
           updated_at?: string
         }
         Update: {
-          arrival_date?: number
-          arrival_time?: string
+          arrival_date?: string
           created_at?: string
-          departure_date?: number
-          departure_time?: string
+          departure_date?: string
           id?: string
           name?: string
           number_of_people?: number
@@ -1010,11 +1004,9 @@ export type Database = {
       }
       jul25_family_members: {
         Row: {
-          arrival_date: number | null
-          arrival_time: string | null
+          arrival_date: string | null
           created_at: string
-          departure_date: number | null
-          departure_time: string | null
+          departure_date: string | null
           family_id: string
           id: string
           is_admin: boolean | null
@@ -1023,11 +1015,9 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
-          arrival_date?: number | null
-          arrival_time?: string | null
+          arrival_date?: string | null
           created_at?: string
-          departure_date?: number | null
-          departure_time?: string | null
+          departure_date?: string | null
           family_id: string
           id?: string
           is_admin?: boolean | null
@@ -1036,11 +1026,9 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
-          arrival_date?: number | null
-          arrival_time?: string | null
+          arrival_date?: string | null
           created_at?: string
-          departure_date?: number | null
-          departure_time?: string | null
+          departure_date?: string | null
           family_id?: string
           id?: string
           is_admin?: boolean | null

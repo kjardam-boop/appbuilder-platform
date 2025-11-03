@@ -52,6 +52,24 @@ export default function Jul25App() {
   const updateTask = useUpdateTask();
   const deleteTask = useDeleteTask();
   
+  // Dato hjelpefunksjoner
+  // Konverterer ISO timestamp til dag-nummer (1-31)
+  const timestampToDay = (timestamp: string): number => {
+    const date = new Date(timestamp);
+    return date.getDate();
+  };
+  
+  // Konverterer dag-nummer til ISO timestamp (desember 2024/januar 2025)
+  const dayToTimestamp = (day: number): string => {
+    const month = day >= 20 ? 11 : 0; // Dec 2024 eller Jan 2025
+    const year = day >= 20 ? 2024 : 2025;
+    return new Date(year, month, day).toISOString();
+  };
+  
+  // Admin emails
+  const adminEmails = ["admin@jul25.no", "kjetil@agj.no"];
+  const isAdmin = user && adminEmails.includes(user?.email || "");
+  
   // Admin emails
   const adminEmails = ["admin@jul25.no", "kjetil@agj.no"];
   const isAdmin = user && adminEmails.includes(user.email || "");
@@ -87,9 +105,7 @@ export default function Jul25App() {
   const [newFamilyName, setNewFamilyName] = useState("");
   const [newNumberOfPeople, setNewNumberOfPeople] = useState(2);
   const [newArrivalDate, setNewArrivalDate] = useState(19);
-  const [newArrivalTime, setNewArrivalTime] = useState("15:00");
   const [newDepartureDate, setNewDepartureDate] = useState(31);
-  const [newDepartureTime, setNewDepartureTime] = useState("12:00");
   const [memberName, setMemberName] = useState("");
   
   // Task form
@@ -186,10 +202,8 @@ export default function Jul25App() {
         const family = await createFamily.mutateAsync({
           name: newFamilyName,
           number_of_people: newNumberOfPeople,
-          arrival_date: newArrivalDate,
-          arrival_time: newArrivalTime,
-          departure_date: newDepartureDate,
-          departure_time: newDepartureTime,
+          arrival_date: dayToTimestamp(newArrivalDate),
+          departure_date: dayToTimestamp(newDepartureDate),
         });
         
         // Bli med som admin
@@ -315,17 +329,17 @@ export default function Jul25App() {
     
     if (familyMembers.length === 0) {
       return {
-        arrival_date: family.arrival_date,
-        departure_date: family.departure_date,
+        arrival_date: new Date(family.arrival_date),
+        departure_date: new Date(family.departure_date),
       };
     }
     
-    let earliestArrival = family.arrival_date;
-    let latestDeparture = family.departure_date;
+    let earliestArrival = new Date(family.arrival_date);
+    let latestDeparture = new Date(family.departure_date);
     
     familyMembers.forEach(member => {
-      const arrDate = member.arrival_date || family.arrival_date;
-      const depDate = member.departure_date || family.departure_date;
+      const arrDate = member.arrival_date ? new Date(member.arrival_date) : new Date(family.arrival_date);
+      const depDate = member.departure_date ? new Date(member.departure_date) : new Date(family.departure_date);
       
       if (arrDate < earliestArrival) earliestArrival = arrDate;
       if (depDate > latestDeparture) latestDeparture = depDate;
@@ -342,14 +356,17 @@ export default function Jul25App() {
     const familyMembers = allMembers.filter(m => m.family_id === family.id);
     const effectiveDates = getEffectiveFamilyDates(family);
     
-    for (let day = effectiveDates.arrival_date; day <= effectiveDates.departure_date; day++) {
+    const startDay = timestampToDay(effectiveDates.arrival_date.toISOString());
+    const endDay = timestampToDay(effectiveDates.departure_date.toISOString());
+    
+    for (let day = startDay; day <= endDay; day++) {
       if (familyMembers.length === 0) {
         membersPerDay[day] = family.number_of_people;
       } else {
         membersPerDay[day] = familyMembers.filter(member => {
-          const arrDate = member.arrival_date || family.arrival_date;
-          const depDate = member.departure_date || family.departure_date;
-          return day >= arrDate && day <= depDate;
+          const arrDay = member.arrival_date ? timestampToDay(member.arrival_date) : timestampToDay(family.arrival_date);
+          const depDay = member.departure_date ? timestampToDay(member.departure_date) : timestampToDay(family.departure_date);
+          return day >= arrDay && day <= depDay;
         }).length;
       }
     }
@@ -414,28 +431,31 @@ export default function Jul25App() {
       return Array.from({ length: 13 }, (_, i) => i + 19); // Default 19-31
     }
     
-    let minDate = Infinity;
-    let maxDate = -Infinity;
+    let minDay = Infinity;
+    let maxDay = -Infinity;
     
     families.forEach(family => {
-      if (family.arrival_date < minDate) minDate = family.arrival_date;
-      if (family.departure_date > maxDate) maxDate = family.departure_date;
+      const familyStartDay = timestampToDay(family.arrival_date);
+      const familyEndDay = timestampToDay(family.departure_date);
+      
+      if (familyStartDay < minDay) minDay = familyStartDay;
+      if (familyEndDay > maxDay) maxDay = familyEndDay;
       
       // Also check family members
       allMembers.filter(m => m.family_id === family.id).forEach(member => {
-        const arrDate = member.arrival_date || family.arrival_date;
-        const depDate = member.departure_date || family.departure_date;
-        if (arrDate < minDate) minDate = arrDate;
-        if (depDate > maxDate) maxDate = depDate;
+        const arrDay = member.arrival_date ? timestampToDay(member.arrival_date) : familyStartDay;
+        const depDay = member.departure_date ? timestampToDay(member.departure_date) : familyEndDay;
+        if (arrDay < minDay) minDay = arrDay;
+        if (depDay > maxDay) maxDay = depDay;
       });
     });
     
-    if (minDate === Infinity || maxDate === -Infinity) {
+    if (minDay === Infinity || maxDay === -Infinity) {
       return Array.from({ length: 13 }, (_, i) => i + 19); // Default 19-31
     }
     
-    const length = maxDate - minDate + 1;
-    return Array.from({ length }, (_, i) => i + minDate);
+    const length = maxDay - minDay + 1;
+    return Array.from({ length }, (_, i) => i + minDay);
   };
   
   const eventDates = getDateRange();
@@ -608,7 +628,7 @@ export default function Jul25App() {
                             )}
                           </div>
                           <div className="text-xs text-muted-foreground mt-1 sm:hidden">
-                            {family.arrival_date}/12 {family.arrival_time} - {family.departure_date}/12 {family.departure_time}
+                            {timestampToDay(family.arrival_date)}/12 - {timestampToDay(family.departure_date)}/12
                           </div>
                         </div>
 
@@ -625,13 +645,21 @@ export default function Jul25App() {
                               left: `${startOffset}px`, 
                               width: `${duration}px` 
                             }}
-                            title={`${family.name}: ${family.arrival_date}. ${family.arrival_time} - ${family.departure_date}. ${family.departure_time}`}
+                            title={`${family.name}: ${timestampToDay(family.arrival_date)}. des - ${timestampToDay(family.departure_date)}. des`}
                           >
                             {Object.entries(membersPerDay).map(([day, count]) => {
-                              const dayOffset = (parseInt(day) - family.arrival_date) * 40;
+                              const dayNum = parseInt(day);
+                              const dayOffset = (dayNum - arr) * 40;
                               return (
                                 <span 
                                   key={day}
+                                  className="absolute top-0 bottom-0 flex items-center justify-center"
+                                  style={{ left: `${dayOffset}px`, width: '40px' }}
+                                >
+                                  {count}
+                                </span>
+                              );
+                            })}
                                   className="absolute top-0 bottom-0 flex items-center justify-center"
                                   style={{ left: `${dayOffset}px`, width: '40px' }}
                                 >
@@ -649,8 +677,8 @@ export default function Jul25App() {
                           {/* Per-person Gantt bars */}
                           {familyMembers.map((member, idx) => {
                             const minDate = eventDates[0] || 19;
-                            const arr = (member.arrival_date ?? family.arrival_date);
-                            const dep = (member.departure_date ?? family.departure_date);
+                            const arr = member.arrival_date ? timestampToDay(member.arrival_date) : timestampToDay(family.arrival_date);
+                            const dep = member.departure_date ? timestampToDay(member.departure_date) : timestampToDay(family.departure_date);
                             const startOffset = (arr - minDate) * 40;
                             const width = (dep - arr + 1) * 40;
                             
@@ -678,7 +706,7 @@ export default function Jul25App() {
                                     )}
                                   </div>
                                   <div className="text-xs text-muted-foreground mt-1 sm:hidden">
-                                    {arr}/12 {member.arrival_time || family.arrival_time} - {dep}/12 {member.departure_time || family.departure_time}
+                                    {arr}/12 - {dep}/12
                                   </div>
                                 </div>
 
@@ -695,7 +723,7 @@ export default function Jul25App() {
                                       left: `${startOffset}px`, 
                                       width: `${width}px` 
                                     }}
-                                    title={`${member.name}: ${arr}.12 ${member.arrival_time || family.arrival_time} - ${dep}.12 ${member.departure_time || family.departure_time}`}
+                                    title={`${member.name}: ${arr}.12 - ${dep}.12`}
                                   >
                                     <span className="truncate">{member.name}</span>
                                   </div>

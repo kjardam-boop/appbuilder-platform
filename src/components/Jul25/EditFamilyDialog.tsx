@@ -20,22 +20,12 @@ export function EditFamilyDialog({ family, open, onOpenChange }: EditFamilyDialo
   const [name, setName] = useState(family.name);
   const [numberOfPeople, setNumberOfPeople] = useState(family.number_of_people);
   
-  // Convert day numbers to dates (spanning Dec 2024 - Jan 2025)
-  // Days 20-31 = December 2024, Days 1-19 = January 2025
-  const dayToDate = (day: number) => {
-    if (day >= 20) return new Date(2024, 11, day); // December 2024
-    return new Date(2025, 0, day); // January 2025
-  };
-  const dateToDay = (date: Date | undefined) => date ? date.getDate() : 20;
-  
   const [arrivalDate, setArrivalDate] = useState<Date | undefined>(
-    dayToDate(family.arrival_date)
+    new Date(family.arrival_date)
   );
-  const [arrivalTime, setArrivalTime] = useState(family.arrival_time);
   const [departureDate, setDepartureDate] = useState<Date | undefined>(
-    dayToDate(family.departure_date)
+    new Date(family.departure_date)
   );
-  const [departureTime, setDepartureTime] = useState(family.departure_time);
   
   const updateFamily = useUpdateFamily();
 
@@ -53,10 +43,8 @@ export function EditFamilyDialog({ family, open, onOpenChange }: EditFamilyDialo
       id: family.id,
       name,
       number_of_people: numberOfPeople,
-      arrival_date: dateToDay(arrivalDate),
-      arrival_time: arrivalTime,
-      departure_date: dateToDay(departureDate),
-      departure_time: departureTime,
+      arrival_date: arrivalDate.toISOString(),
+      departure_date: departureDate.toISOString(),
     }, {
       onSuccess: () => onOpenChange(false),
     });
@@ -89,83 +77,59 @@ export function EditFamilyDialog({ family, open, onOpenChange }: EditFamilyDialo
               required
             />
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>Ankomstdag</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !arrivalDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {arrivalDate ? format(arrivalDate, "PPP") : <span>Velg dato</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={arrivalDate}
-                    onSelect={setArrivalDate}
-                    defaultMonth={new Date(2024, 11, 1)}
-                    initialFocus
-                    className={cn("p-3 pointer-events-auto")}
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div>
-              <Label htmlFor="arrivalTime">Ankomsttid</Label>
-              <Input
-                id="arrivalTime"
-                type="time"
-                value={arrivalTime}
-                onChange={(e) => setArrivalTime(e.target.value)}
-                required
-              />
-            </div>
+          <div>
+            <Label>Ankomstdag</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !arrivalDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {arrivalDate ? format(arrivalDate, "PPP") : <span>Velg dato</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={arrivalDate}
+                  onSelect={setArrivalDate}
+                  defaultMonth={new Date(2025, 11, 1)}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>Avreisedag</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !departureDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {departureDate ? format(departureDate, "PPP") : <span>Velg dato</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={departureDate}
-                    onSelect={setDepartureDate}
-                    defaultMonth={new Date(2024, 11, 1)}
-                    initialFocus
-                    className={cn("p-3 pointer-events-auto")}
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div>
-              <Label htmlFor="departureTime">Avreisetid</Label>
-              <Input
-                id="departureTime"
-                type="time"
-                value={departureTime}
-                onChange={(e) => setDepartureTime(e.target.value)}
-                required
-              />
-            </div>
+          <div>
+            <Label>Avreisedag</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !departureDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {departureDate ? format(departureDate, "PPP") : <span>Velg dato</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={departureDate}
+                  onSelect={setDepartureDate}
+                  defaultMonth={new Date(2025, 11, 1)}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
           </div>
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

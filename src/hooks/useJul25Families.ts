@@ -6,10 +6,8 @@ export interface Jul25Family {
   id: string;
   name: string;
   number_of_people: number;
-  arrival_date: number;
-  arrival_time: string;
-  departure_date: number;
-  departure_time: string;
+  arrival_date: string; // ISO timestamp
+  departure_date: string; // ISO timestamp
   created_at: string;
   updated_at: string;
 }
@@ -19,10 +17,8 @@ export interface Jul25FamilyMember {
   user_id: string | null; // Nullable for non-user members like children
   family_id: string;
   name: string;
-  arrival_date: number | null;
-  arrival_time: string | null;
-  departure_date: number | null;
-  departure_time: string | null;
+  arrival_date: string | null; // ISO timestamp
+  departure_date: string | null; // ISO timestamp
   is_admin: boolean;
   created_at: string;
   updated_at: string;
@@ -38,7 +34,7 @@ export const useJul25Families = () => {
         .order("arrival_date");
       
       if (error) throw error;
-      return data as Jul25Family[];
+      return data;
     },
   });
 };
@@ -56,7 +52,7 @@ export const useJul25FamilyMembers = (familyId?: string) => {
       const { data, error } = await query;
       
       if (error) throw error;
-      return data as Jul25FamilyMember[];
+      return data;
     },
   });
 };
@@ -73,7 +69,7 @@ export const useCreateFamily = () => {
         .single();
       
       if (error) throw error;
-      return data as Jul25Family;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["jul25-families"] });
@@ -98,7 +94,7 @@ export const useUpdateFamily = () => {
         .single();
       
       if (error) throw error;
-      return data as Jul25Family;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["jul25-families"] });
@@ -142,10 +138,8 @@ export const useJoinFamily = () => {
       name: string;
       user_id: string | null; // Nullable for non-user members
       is_admin?: boolean;
-      arrival_date?: number;
-      arrival_time?: string;
-      departure_date?: number;
-      departure_time?: string;
+      arrival_date?: string | null;
+      departure_date?: string | null;
     }) => {
       const { data, error } = await supabase
         .from("jul25_family_members")
@@ -154,7 +148,7 @@ export const useJoinFamily = () => {
         .single();
       
       if (error) throw error;
-      return data as Jul25FamilyMember;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["jul25-family-members"] });
@@ -179,7 +173,7 @@ export const useUpdateFamilyMember = () => {
         .single();
       
       if (error) throw error;
-      return data as Jul25FamilyMember;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["jul25-family-members"] });

@@ -34,19 +34,8 @@ export function ManageFamilyMembersDialog({
   const [addingMember, setAddingMember] = useState(false);
   const [memberName, setMemberName] = useState("");
   
-  // Convert day numbers to dates (spanning Dec 2024 - Jan 2025)
-  // Days 20-31 = December 2024, Days 1-19 = January 2025
-  const dayToDate = (day: number | null) => {
-    if (!day) return undefined;
-    if (day >= 20) return new Date(2024, 11, day); // December 2024
-    return new Date(2025, 0, day); // January 2025
-  };
-  const dateToDay = (date: Date | undefined) => date ? date.getDate() : null;
-  
   const [arrivalDate, setArrivalDate] = useState<Date | undefined>();
-  const [arrivalTime, setArrivalTime] = useState("");
   const [departureDate, setDepartureDate] = useState<Date | undefined>();
-  const [departureTime, setDepartureTime] = useState("");
 
   useEffect(() => {
     if (open && initialEditMemberId) {
@@ -54,10 +43,8 @@ export function ManageFamilyMembersDialog({
       if (m) {
         setEditingMember(m);
         setMemberName(m.name);
-        setArrivalDate(dayToDate(m.arrival_date));
-        setArrivalTime(m.arrival_time || "");
-        setDepartureDate(dayToDate(m.departure_date));
-        setDepartureTime(m.departure_time || "");
+        setArrivalDate(m.arrival_date ? new Date(m.arrival_date) : undefined);
+        setDepartureDate(m.departure_date ? new Date(m.departure_date) : undefined);
       }
     }
   }, [open, initialEditMemberId, members]);
@@ -80,18 +67,14 @@ export function ManageFamilyMembersDialog({
       name: memberName,
       user_id: null, // Non-user member (child, etc.)
       is_admin: false,
-      arrival_date: dateToDay(arrivalDate),
-      arrival_time: arrivalTime || null,
-      departure_date: dateToDay(departureDate),
-      departure_time: departureTime || null,
+      arrival_date: arrivalDate?.toISOString() || null,
+      departure_date: departureDate?.toISOString() || null,
     }, {
       onSuccess: () => {
         setAddingMember(false);
         setMemberName("");
         setArrivalDate(undefined);
-        setArrivalTime("");
         setDepartureDate(undefined);
-        setDepartureTime("");
       },
     });
   };
@@ -109,18 +92,14 @@ export function ManageFamilyMembersDialog({
     updateMember.mutate({
       id: editingMember.id,
       name: memberName,
-      arrival_date: dateToDay(arrivalDate),
-      arrival_time: arrivalTime || null,
-      departure_date: dateToDay(departureDate),
-      departure_time: departureTime || null,
+      arrival_date: arrivalDate?.toISOString() || null,
+      departure_date: departureDate?.toISOString() || null,
     }, {
       onSuccess: () => {
         setEditingMember(null);
         setMemberName("");
         setArrivalDate(undefined);
-        setArrivalTime("");
         setDepartureDate(undefined);
-        setDepartureTime("");
       },
     });
   };
@@ -128,10 +107,8 @@ export function ManageFamilyMembersDialog({
   const startEdit = (member: Jul25FamilyMember) => {
     setEditingMember(member);
     setMemberName(member.name);
-    setArrivalDate(dayToDate(member.arrival_date));
-    setArrivalTime(member.arrival_time || "");
-    setDepartureDate(dayToDate(member.departure_date));
-    setDepartureTime(member.departure_time || "");
+    setArrivalDate(member.arrival_date ? new Date(member.arrival_date) : undefined);
+    setDepartureDate(member.departure_date ? new Date(member.departure_date) : undefined);
   };
 
   const cancelEdit = () => {
@@ -139,9 +116,7 @@ export function ManageFamilyMembersDialog({
     setAddingMember(false);
     setMemberName("");
     setArrivalDate(undefined);
-    setArrivalTime("");
     setDepartureDate(undefined);
-    setDepartureTime("");
   };
 
   return (
@@ -160,7 +135,7 @@ export function ManageFamilyMembersDialog({
                   <div className="font-medium">{member.name}</div>
                   <div className="text-sm text-muted-foreground">
                     {member.arrival_date && member.departure_date && (
-                      <>Dag {member.arrival_date} - {member.departure_date}</>
+                      <>{format(new Date(member.arrival_date), "d. MMM")} - {format(new Date(member.departure_date), "d. MMM")}</>
                     )}
                     {member.is_admin && " (Admin)"}
                     {!member.user_id && " (Ikke bruker)"}
@@ -200,81 +175,59 @@ export function ManageFamilyMembersDialog({
                   required
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Ankomstdag</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !arrivalDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {arrivalDate ? format(arrivalDate, "PPP") : <span>Velg dato</span>}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={arrivalDate}
-                        onSelect={setArrivalDate}
-                        defaultMonth={new Date(2024, 11, 1)}
-                        initialFocus
-                        className={cn("p-3 pointer-events-auto")}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                <div>
-                  <Label htmlFor="memberArrivalTime">Ankomsttid</Label>
-                  <Input
-                    id="memberArrivalTime"
-                    type="time"
-                    value={arrivalTime}
-                    onChange={(e) => setArrivalTime(e.target.value)}
-                  />
-                </div>
+              <div>
+                <Label>Ankomstdag</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !arrivalDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {arrivalDate ? format(arrivalDate, "PPP") : <span>Velg dato</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={arrivalDate}
+                      onSelect={setArrivalDate}
+                      defaultMonth={new Date(2025, 11, 1)}
+                      initialFocus
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Avreisedag</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !departureDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {departureDate ? format(departureDate, "PPP") : <span>Velg dato</span>}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={departureDate}
-                        onSelect={setDepartureDate}
-                        defaultMonth={new Date(2024, 11, 1)}
-                        initialFocus
-                        className={cn("p-3 pointer-events-auto")}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                <div>
-                  <Label htmlFor="memberDepartureTime">Avreisetid</Label>
-                  <Input
-                    id="memberDepartureTime"
-                    type="time"
-                    value={departureTime}
-                    onChange={(e) => setDepartureTime(e.target.value)}
-                  />
-                </div>
+              <div>
+                <Label>Avreisedag</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !departureDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {departureDate ? format(departureDate, "PPP") : <span>Velg dato</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={departureDate}
+                      onSelect={setDepartureDate}
+                      defaultMonth={new Date(2025, 11, 1)}
+                      initialFocus
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={cancelEdit}>
