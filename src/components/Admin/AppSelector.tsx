@@ -1,9 +1,7 @@
-import { useEffect, useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { supabase } from "@/integrations/supabase/client";
-import { useTenantContext } from "@/hooks/useTenantContext";
+import { useTenantApplications } from "@/hooks/useTenantApplications";
 
-interface Application {
+export interface Application {
   id: string;
   key: string;
   name: string;
@@ -18,38 +16,13 @@ interface AppSelectorProps {
 }
 
 export const AppSelector = ({ value, onValueChange, disabled }: AppSelectorProps) => {
-  const [apps, setApps] = useState<Application[]>([]);
-  const [loading, setLoading] = useState(true);
-  const context = useTenantContext();
+  const { data: apps, isLoading } = useTenantApplications();
 
-  useEffect(() => {
-    const loadApps = async () => {
-      if (!context?.tenant_id) return;
-      
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('applications')
-        .select('*')
-        .eq('tenant_id', context.tenant_id)
-        .eq('is_active', true)
-        .order('name');
-
-      if (error) {
-        console.error('Error loading apps:', error);
-      } else {
-        setApps(data || []);
-      }
-      setLoading(false);
-    };
-
-    loadApps();
-  }, [context?.tenant_id]);
-
-  if (loading) {
+  if (isLoading) {
     return <div className="text-sm text-muted-foreground">Laster applikasjoner...</div>;
   }
 
-  if (apps.length === 0) {
+  if (!apps || apps.length === 0) {
     return <div className="text-sm text-muted-foreground">Ingen aktive applikasjoner</div>;
   }
 
@@ -60,7 +33,7 @@ export const AppSelector = ({ value, onValueChange, disabled }: AppSelectorProps
       </SelectTrigger>
       <SelectContent>
         {apps.map((app) => (
-          <SelectItem key={app.key} value={app.key}>
+          <SelectItem key={app.id} value={app.id}>
             {app.name}
           </SelectItem>
         ))}
