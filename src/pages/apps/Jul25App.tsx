@@ -443,6 +443,37 @@ export default function Jul25App() {
     return membersPerDay;
   };
   
+  // Calculate dynamic date range based on periods (family + member custom) - MOVED BEFORE getGuestsPerDay
+  const getDateRange = () => {
+    let minDay = Infinity;
+    let maxDay = -Infinity;
+
+    const consider = (isoStart?: string, isoEnd?: string) => {
+      if (!isoStart || !isoEnd) return;
+      const s = Math.max(1, timestampToDay(isoStart));
+      const e = Math.max(1, timestampToDay(isoEnd));
+      if (s < minDay) minDay = s;
+      if (e > maxDay) maxDay = e;
+    };
+
+    // Include family periods
+    allPeriods.forEach(p => consider(p.arrival_date, p.departure_date));
+    // Include member-level single custom (backwards compat)
+    allMembers.forEach(m => consider(m.arrival_date || undefined, m.departure_date || undefined));
+    // Include multi custom periods
+    allCustomPeriods.forEach(cp => consider(cp.start_date, cp.end_date));
+
+    // Fallback: if no data, show Nov 1 .. Jan 4 (1..66)
+    if (minDay === Infinity) {
+      minDay = 1;
+      maxDay = 66;
+    }
+
+    return Array.from({ length: maxDay - minDay + 1 }, (_, i) => i + minDay);
+  };
+  
+  const eventDates = getDateRange();
+  
   const getGuestsPerDay = () => {
     const guestsPerDay: Record<number, number> = {};
     
@@ -493,37 +524,6 @@ export default function Jul25App() {
     
     return sorted;
   };
-  
-  // Calculate dynamic date range based on periods (family + member custom)
-  const getDateRange = () => {
-    let minDay = Infinity;
-    let maxDay = -Infinity;
-
-    const consider = (isoStart?: string, isoEnd?: string) => {
-      if (!isoStart || !isoEnd) return;
-      const s = Math.max(1, timestampToDay(isoStart));
-      const e = Math.max(1, timestampToDay(isoEnd));
-      if (s < minDay) minDay = s;
-      if (e > maxDay) maxDay = e;
-    };
-
-    // Include family periods
-    allPeriods.forEach(p => consider(p.arrival_date, p.departure_date));
-    // Include member-level single custom (backwards compat)
-    allMembers.forEach(m => consider(m.arrival_date || undefined, m.departure_date || undefined));
-    // Include multi custom periods
-    allCustomPeriods.forEach(cp => consider(cp.start_date, cp.end_date));
-
-    // Fallback: if no data, show Nov 1 .. Jan 4 (1..66)
-    if (minDay === Infinity) {
-      minDay = 1;
-      maxDay = 66;
-    }
-
-    return Array.from({ length: maxDay - minDay + 1 }, (_, i) => i + minDay);
-  };
-  
-  const eventDates = getDateRange();
   
   // Memoize guests per day to avoid stale values and heavy recomputation
   const guestsPerDayMap = useMemo(() => getGuestsPerDay(), [families, allMembers, allPeriods, allCustomPeriods]);
