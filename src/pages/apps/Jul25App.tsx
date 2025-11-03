@@ -30,8 +30,8 @@ import { toast } from "sonner";
 import { useAuth } from "@/modules/core/user/hooks/useAuth";
 import { useJul25Families, useJul25FamilyMembers, useCreateFamily, useUpdateFamily, useDeleteFamily, useJoinFamily, useUpdateFamilyMember } from "@/hooks/useJul25Families";
 import { useJul25Tasks, useCreateTask, useUpdateTask, useDeleteTask, useTaskAssignments, useSetTaskAssignments } from "@/hooks/useJul25Tasks";
-import { EditFamilyDialog } from "@/components/Jul25/EditFamilyDialog";
-import { ManageFamilyMembersDialog } from "@/components/Jul25/ManageFamilyMembersDialog";
+import { useJul25FamilyPeriods } from "@/hooks/useJul25FamilyPeriods";
+import { useNavigate } from "react-router-dom";
 
 interface ChristmasWord {
   date: number;
@@ -41,10 +41,12 @@ interface ChristmasWord {
 
 export default function Jul25App() {
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   
   // Data fra database
   const { data: families = [] } = useJul25Families();
   const { data: allMembers = [] } = useJul25FamilyMembers();
+  const { data: allPeriods = [] } = useJul25FamilyPeriods();
   const { data: tasks = [] } = useJul25Tasks();
   const { data: allAssignments = [] } = useTaskAssignments();
   
@@ -105,11 +107,8 @@ export default function Jul25App() {
   const [editingTask, setEditingTask] = useState<any>(null);
   const [hideCompletedTasks, setHideCompletedTasks] = useState(false);
   const [expandedFamilies, setExpandedFamilies] = useState<Set<string>>(new Set());
-  const [editingFamily, setEditingFamily] = useState<any>(null);
-  const [managingFamilyId, setManagingFamilyId] = useState<string | null>(null);
   const [taskFamilyFilter, setTaskFamilyFilter] = useState<string>("all");
   const [taskSortBy, setTaskSortBy] = useState<"name" | "deadline">("name");
-  const [initialEditMemberId, setInitialEditMemberId] = useState<string | undefined>();
   
   // Login form
   const [loginEmail, setLoginEmail] = useState("");
@@ -221,8 +220,6 @@ export default function Jul25App() {
         const family = await createFamily.mutateAsync({
           name: newFamilyName,
           number_of_people: newNumberOfPeople,
-          arrival_date: dayToTimestamp(newArrivalDate),
-          departure_date: dayToTimestamp(newDepartureDate),
         });
         
         // Bli med som admin
@@ -474,37 +471,25 @@ export default function Jul25App() {
     return sorted;
   };
   
-  // Calculate dynamic date range based on earliest and latest dates
+  // Calculate dynamic date range based on periods
   const getDateRange = () => {
-    if (families.length === 0) {
-      return Array.from({ length: 13 }, (_, i) => i + 19); // Default 19-31
+    if (allPeriods.length === 0) {
+      return Array.from({ length: 13 }, (_, i) => i + 19);
     }
     
     let minDay = Infinity;
     let maxDay = -Infinity;
     
-    families.forEach(family => {
-      const familyStartDay = timestampToDay(family.arrival_date);
-      const familyEndDay = timestampToDay(family.departure_date);
-      
-      if (familyStartDay < minDay) minDay = familyStartDay;
-      if (familyEndDay > maxDay) maxDay = familyEndDay;
-      
-      // Also check family members
-      allMembers.filter(m => m.family_id === family.id).forEach(member => {
-        const arrDay = member.arrival_date ? timestampToDay(member.arrival_date) : familyStartDay;
-        const depDay = member.departure_date ? timestampToDay(member.departure_date) : familyEndDay;
-        if (arrDay < minDay) minDay = arrDay;
-        if (depDay > maxDay) maxDay = depDay;
-      });
+    allPeriods.forEach(period => {
+      const startDay = timestampToDay(period.arrival_date);
+      const endDay = timestampToDay(period.departure_date);
+      if (startDay < minDay) minDay = startDay;
+      if (endDay > maxDay) maxDay = endDay;
     });
     
-    if (minDay === Infinity || maxDay === -Infinity) {
-      return Array.from({ length: 13 }, (_, i) => i + 19); // Default 19-31
-    }
+    if (minDay === Infinity) return Array.from({ length: 13 }, (_, i) => i + 19);
     
-    const length = maxDay - minDay + 1;
-    return Array.from({ length }, (_, i) => i + minDay);
+    return Array.from({ length: maxDay - minDay + 1 }, (_, i) => i + minDay);
   };
   
   const eventDates = getDateRange();
@@ -667,23 +652,16 @@ export default function Jul25App() {
                                   size="sm"
                                   variant="ghost"
                                   className="h-7 w-7 p-0"
-                                  onClick={() => setEditingFamily(family)}
+                                  onClick={() => navigate(`/apps/jul25/admin?familyId=${family.id}`)}
+                                  title="Administrer familie"
                                 >
-                                  <Edit2 className="h-3 w-3" />
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-7 w-7 p-0"
-                                  onClick={() => setManagingFamilyId(family.id)}
-                                >
-                                  <Users className="h-3 w-3" />
+                                  <UserCog className="h-3 w-3" />
                                 </Button>
                               </>
                             )}
                           </div>
                           <div className="text-xs text-muted-foreground mt-1 sm:hidden">
-                            {dayToDateString(timestampToDay(family.arrival_date))} - {dayToDateString(timestampToDay(family.departure_date))}
+                            {allPeriods.filter(p => p.family_id === family.id).map(p => p.location).join(' + ')}
                           </div>
                         </div>
 
@@ -725,8 +703,9 @@ export default function Jul25App() {
                           {/* Per-person Gantt bars */}
                           {familyMembers.map((member, idx) => {
                             const minDate = eventDates[0] || 19;
-                            const arr = member.arrival_date ? timestampToDay(member.arrival_date) : timestampToDay(family.arrival_date);
-                            const dep = member.departure_date ? timestampToDay(member.departure_date) : timestampToDay(family.departure_date);
+                            const periods = allPeriods.filter(p => p.family_id === family.id);
+                            const arr = member.arrival_date ? timestampToDay(member.arrival_date) : (periods[0] ? timestampToDay(periods[0].arrival_date) : 20);
+                            const dep = member.departure_date ? timestampToDay(member.departure_date) : (periods[periods.length-1] ? timestampToDay(periods[periods.length-1].departure_date) : 31);
                             const startOffset = (arr - minDate) * 40;
                             const width = (dep - arr + 1) * 40;
                             
@@ -1328,30 +1307,7 @@ export default function Jul25App() {
           </DialogContent>
         </Dialog>
 
-        {/* Edit Family Dialog */}
-        {editingFamily && (
-          <EditFamilyDialog
-            family={editingFamily}
-            open={!!editingFamily}
-            onOpenChange={(open) => !open && setEditingFamily(null)}
-          />
-        )}
-
-        {/* Manage Family Members Dialog */}
-        {managingFamilyId && (
-          <ManageFamilyMembersDialog
-            familyId={managingFamilyId}
-            members={allMembers.filter(m => m.family_id === managingFamilyId)}
-            open={!!managingFamilyId}
-            onOpenChange={(open) => {
-              if (!open) {
-                setManagingFamilyId(null);
-                setInitialEditMemberId(undefined);
-              }
-            }}
-            initialEditMemberId={initialEditMemberId}
-          />
-        )}
+        {/* Dialogs removed - now use dedicated admin pages */}
       </div>
     </div>
   );

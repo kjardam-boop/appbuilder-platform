@@ -6,8 +6,6 @@ export interface Jul25Family {
   id: string;
   name: string;
   number_of_people: number;
-  arrival_date: string; // ISO timestamp
-  departure_date: string; // ISO timestamp
   created_at: string;
   updated_at: string;
 }
@@ -31,7 +29,7 @@ export const useJul25Families = () => {
       const { data, error } = await supabase
         .from("jul25_families")
         .select("*")
-        .order("arrival_date");
+        .order("created_at");
       
       if (error) throw error;
       return data;
@@ -58,7 +56,7 @@ export const useJul25FamilyMembers = (familyId?: string) => {
 };
 
 // Helper function to ensure family has the correct number of placeholder members
-async function ensureFamilyMemberCount(familyId: string, familyName: string, targetCount: number, arrivalDate: string, departureDate: string) {
+async function ensureFamilyMemberCount(familyId: string, familyName: string, targetCount: number) {
   // Get current members
   const { data: existingMembers, error: fetchError } = await supabase
     .from("jul25_family_members")
@@ -66,6 +64,14 @@ async function ensureFamilyMemberCount(familyId: string, familyName: string, tar
     .eq("family_id", familyId);
   
   if (fetchError) throw fetchError;
+  
+  // Get all periods for this family
+  const { data: periods, error: periodsError } = await supabase
+    .from("jul25_family_periods")
+    .select("*")
+    .eq("family_id", familyId);
+  
+  if (periodsError) throw periodsError;
   
   const currentCount = existingMembers?.length || 0;
   const neededCount = targetCount - currentCount;
@@ -77,15 +83,32 @@ async function ensureFamilyMemberCount(familyId: string, familyName: string, tar
       name: `${familyName} ${currentCount + i + 1}`,
       user_id: null,
       is_admin: false,
-      arrival_date: arrivalDate,
-      departure_date: departureDate,
+      arrival_date: null, // No custom dates for placeholders
+      departure_date: null,
     }));
     
-    const { error: insertError } = await supabase
+    const { data: newMembers, error: insertError } = await supabase
       .from("jul25_family_members")
-      .insert(placeholders);
+      .insert(placeholders)
+      .select();
     
     if (insertError) throw insertError;
+    
+    // Assign new placeholder members to all periods
+    if (newMembers && periods && periods.length > 0) {
+      const memberPeriods = newMembers.flatMap(member => 
+        periods.map(period => ({
+          member_id: member.id,
+          period_id: period.id,
+        }))
+      );
+      
+      const { error: mpError } = await supabase
+        .from("jul25_member_periods")
+        .insert(memberPeriods);
+      
+      if (mpError) throw mpError;
+    }
   } else if (neededCount < 0) {
     // Remove excess placeholder members (those with user_id = null and auto-generated names)
     const placeholderMembers = existingMembers
@@ -117,13 +140,25 @@ export const useCreateFamily = () => {
       
       if (error) throw error;
       
+      // Create default Jajabo period
+      const { data: period, error: periodError } = await supabase
+        .from("jul25_family_periods")
+        .insert({
+          family_id: data.id,
+          location: "Jajabo",
+          arrival_date: new Date(2025, 11, 20).toISOString(),
+          departure_date: new Date(2025, 11, 25).toISOString(),
+        })
+        .select()
+        .single();
+      
+      if (periodError) throw periodError;
+      
       // Auto-generate placeholder members
       await ensureFamilyMemberCount(
         data.id,
         data.name,
-        data.number_of_people,
-        data.arrival_date,
-        data.departure_date
+        data.number_of_people
       );
       
       return data;
@@ -131,6 +166,7 @@ export const useCreateFamily = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["jul25-families"] });
       queryClient.invalidateQueries({ queryKey: ["jul25-family-members"] });
+      queryClient.invalidateQueries({ queryKey: ["jul25-family-periods"] });
       toast.success("Familie opprettet! 🎄");
     },
     onError: (error: any) => {
@@ -158,9 +194,7 @@ export const useUpdateFamily = () => {
         await ensureFamilyMemberCount(
           data.id,
           data.name,
-          data.number_of_people,
-          data.arrival_date,
-          data.departure_date
+          data.number_of_people
         );
       }
       

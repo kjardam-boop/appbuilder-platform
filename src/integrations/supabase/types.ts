@@ -974,27 +974,21 @@ export type Database = {
       }
       jul25_families: {
         Row: {
-          arrival_date: string
           created_at: string
-          departure_date: string
           id: string
           name: string
           number_of_people: number
           updated_at: string
         }
         Insert: {
-          arrival_date: string
           created_at?: string
-          departure_date: string
           id?: string
           name: string
           number_of_people?: number
           updated_at?: string
         }
         Update: {
-          arrival_date?: string
           created_at?: string
-          departure_date?: string
           id?: string
           name?: string
           number_of_people?: number
@@ -1042,6 +1036,80 @@ export type Database = {
             columns: ["family_id"]
             isOneToOne: false
             referencedRelation: "jul25_families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jul25_family_periods: {
+        Row: {
+          arrival_date: string
+          created_at: string | null
+          departure_date: string
+          family_id: string
+          id: string
+          location: string
+          updated_at: string | null
+        }
+        Insert: {
+          arrival_date: string
+          created_at?: string | null
+          departure_date: string
+          family_id: string
+          id?: string
+          location: string
+          updated_at?: string | null
+        }
+        Update: {
+          arrival_date?: string
+          created_at?: string | null
+          departure_date?: string
+          family_id?: string
+          id?: string
+          location?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jul25_family_periods_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "jul25_families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jul25_member_periods: {
+        Row: {
+          created_at: string | null
+          id: string
+          member_id: string
+          period_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          member_id: string
+          period_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          member_id?: string
+          period_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jul25_member_periods_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "jul25_family_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jul25_member_periods_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "jul25_family_periods"
             referencedColumns: ["id"]
           },
         ]

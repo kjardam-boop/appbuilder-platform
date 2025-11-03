@@ -47,6 +47,8 @@ import SupplierScoringPage from "./pages/SupplierScoringPage";
 import ArchivedResources from "./pages/ArchivedResources";
 import NotFound from "./pages/NotFound";
 import Jul25App from "./pages/apps/Jul25App";
+import Jul25FamilyAdmin from "./pages/apps/Jul25FamilyAdmin";
+import Jul25MemberEdit from "./pages/apps/Jul25MemberEdit";
 
 const queryClient = new QueryClient();
 
@@ -133,6 +135,8 @@ const App = () => (
             
             {/* Customer Apps */}
             <Route path="/apps/jul25" element={<Jul25App />} />
+            <Route path="/apps/jul25/admin" element={<Jul25FamilyAdmin />} />
+            <Route path="/apps/jul25/member/:memberId" element={<Jul25MemberEdit />} />
             
             {/* Catch-all 404 route - MUST BE LAST */}
             <Route path="*" element={<NotFound />} />
