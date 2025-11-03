@@ -564,9 +564,9 @@ export default function Jul25App() {
             {/* Date Header */}
             <div className="hidden sm:block overflow-x-auto pb-2">
               <div className="flex gap-0">
-                <div className="w-32 sm:w-40 flex-shrink-0">
-                  <div className="text-xs font-medium text-muted-foreground pb-1">Dato</div>
-                  <div className="text-xs font-medium text-muted-foreground">Antall tilstede</div>
+                <div className="w-32 sm:w-40 flex-shrink-0 flex flex-col justify-end">
+                  <div className="text-xs font-medium text-muted-foreground h-[18px] flex items-center border-b border-border/30">Dato</div>
+                  <div className="text-xs font-medium text-muted-foreground h-[18px] flex items-center">Antall tilstede</div>
                 </div>
                 {eventDates.map((date, index) => {
                   const guestsPerDay = getGuestsPerDay();
@@ -575,14 +575,14 @@ export default function Jul25App() {
                   const displayDay = date >= 32 ? date - 31 : date;
                   
                   return (
-                    <div key={date} className="w-10 flex-shrink-0 text-center">
+                    <div key={date} className="w-10 flex-shrink-0 text-center flex flex-col">
                       {isFirstOfMonth && (
-                        <div className="text-[10px] font-semibold text-muted-foreground/70 pb-0.5">{month}</div>
+                        <div className="text-[10px] font-semibold text-muted-foreground/70 h-3">{month}</div>
                       )}
-                      <div className={cn("font-medium text-xs border-l border-border/30 pb-1", !isFirstOfMonth && "pt-3.5")}>
+                      <div className={cn("font-medium text-xs border-l border-border/30 h-[18px] flex items-center justify-center", !isFirstOfMonth && "mt-3")}>
                         {displayDay}
                       </div>
-                      <div className="text-xs text-muted-foreground">
+                      <div className="text-xs text-muted-foreground h-[18px] flex items-center justify-center">
                         {guestsPerDay[date] > 0 ? `${guestsPerDay[date]}` : '-'}
                       </div>
                     </div>
