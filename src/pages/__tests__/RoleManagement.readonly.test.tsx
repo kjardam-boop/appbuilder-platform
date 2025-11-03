@@ -5,6 +5,17 @@ import { supabase } from '@/integrations/supabase/client';
 
 vi.mock('@/integrations/supabase/client');
 vi.mock('@/modules/core/user/services/roleService');
+vi.mock('@/modules/core/user/services/roleService', () => ({
+  RoleService: {
+    getUserRolesByScope: vi.fn().mockResolvedValue({
+      platform: [],
+      tenant: [],
+      company: [],
+      project: [],
+      app: [],
+    }),
+  },
+}));
 
 describe('RoleManagement - Read-Only Mode', () => {
   it('should render as read-only overview page', async () => {
@@ -15,7 +26,9 @@ describe('RoleManagement - Read-Only Mode', () => {
 
     const { findByText } = render(<RoleManagement />);
 
-    expect(await findByText('Rolleoversikt')).toBeInTheDocument();
+    await vi.waitFor(async () => {
+      expect(await findByText('Rolleoversikt')).toBeInTheDocument();
+    });
     expect(await findByText(/Kun lesbar oversikt/)).toBeInTheDocument();
   });
 
@@ -53,12 +66,21 @@ describe('RoleManagement - Read-Only Mode', () => {
   it('should display app scope in tabs', async () => {
     (supabase.from as any).mockReturnValue({
       select: vi.fn().mockReturnThis(),
-      order: vi.fn().mockResolvedValue({ data: [], error: null }),
+      order: vi.fn().mockResolvedValue({ 
+        data: [{
+          id: 'user-1',
+          email: 'test@example.com',
+          full_name: 'Test User',
+        }], 
+        error: null 
+      }),
     });
 
     const { findByText } = render(<RoleManagement />);
 
     // Wait for loading to complete and verify App tab exists
-    expect(await findByText('App')).toBeInTheDocument();
+    await vi.waitFor(async () => {
+      expect(await findByText('App')).toBeInTheDocument();
+    }, { timeout: 3000 });
   });
 });

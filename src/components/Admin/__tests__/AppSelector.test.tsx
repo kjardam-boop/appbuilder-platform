@@ -9,14 +9,16 @@ vi.mock('@/hooks/useTenantContext', () => ({
   useTenantContext: () => ({ tenant_id: 'test-tenant-id' }),
 }));
 
-const createWrapper = () => {
+const renderWithQuery = (component: React.ReactElement) => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
     },
   });
-  return ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  return render(
+    <QueryClientProvider client={queryClient}>
+      {component}
+    </QueryClientProvider>
   );
 };
 
@@ -39,10 +41,11 @@ describe('AppSelector', () => {
       order: vi.fn().mockResolvedValue({ data: mockApps, error: null }),
     });
 
-    render(<AppSelector value="" onValueChange={mockOnValueChange} />, { wrapper: createWrapper() });
+    renderWithQuery(<AppSelector value="" onValueChange={mockOnValueChange} />);
 
-    // Verify supabase was called
-    expect(supabase.from).toHaveBeenCalledWith('applications');
+    await vi.waitFor(() => {
+      expect(supabase.from).toHaveBeenCalledWith('applications');
+    });
   });
 
   it('shows message when no apps available', async () => {
@@ -52,7 +55,7 @@ describe('AppSelector', () => {
       order: vi.fn().mockResolvedValue({ data: [], error: null }),
     });
 
-    const { findByText } = render(<AppSelector value="" onValueChange={mockOnValueChange} />, { wrapper: createWrapper() });
+    const { findByText } = renderWithQuery(<AppSelector value="" onValueChange={mockOnValueChange} />);
 
     expect(await findByText('Ingen aktive applikasjoner')).toBeInTheDocument();
   });
@@ -66,7 +69,7 @@ describe('AppSelector', () => {
       order: vi.fn().mockResolvedValue({ data: null, error: { message: 'Test error' } }),
     });
 
-    render(<AppSelector value="" onValueChange={mockOnValueChange} />, { wrapper: createWrapper() });
+    renderWithQuery(<AppSelector value="" onValueChange={mockOnValueChange} />);
 
     await vi.waitFor(() => {
       expect(consoleErrorSpy).toHaveBeenCalled();
