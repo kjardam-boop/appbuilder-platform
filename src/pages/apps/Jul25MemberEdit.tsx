@@ -230,26 +230,56 @@ export default function Jul25MemberEdit() {
                 {customArrival && customDeparture && customLocation && (
                   <div 
                     className={cn(
-                      "flex items-start gap-3 p-3 rounded-lg border-2",
+                      "flex items-start justify-between gap-3 p-3 rounded-lg border-2",
                       customLocation === 'Jajabo' 
                         ? "bg-green-50 border-green-300" 
                         : "bg-amber-50 border-amber-300"
                     )}
                   >
-                    <div className="w-5 h-5 rounded border-2 bg-primary flex items-center justify-center text-white">
-                      ✓
+                    <div className="flex items-start gap-3">
+                      <div className="w-5 h-5 rounded border-2 bg-primary flex items-center justify-center text-white">✓</div>
+                      <div>
+                        <Label className="font-semibold flex items-center gap-2">
+                          <MapPin className={cn(
+                            "h-4 w-4",
+                            customLocation === 'Jajabo' ? "text-green-700" : "text-amber-700"
+                          )} />
+                          {customLocation} {customLocation === 'Jajabo' ? '(Nøtterøy)' : '(Nissedal)'} - Egendefinert
+                        </Label>
+                        <p className="text-sm text-muted-foreground">
+                          {format(customArrival, "dd. MMM")} - {format(customDeparture, "dd. MMM yyyy")}
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <Label className="font-semibold flex items-center gap-2">
-                        <MapPin className={cn(
-                          "h-4 w-4",
-                          customLocation === 'Jajabo' ? "text-green-700" : "text-amber-700"
-                        )} />
-                        {customLocation} {customLocation === 'Jajabo' ? '(Nøtterøy)' : '(Nissedal)'} - Egendefinert
-                      </Label>
-                      <p className="text-sm text-muted-foreground">
-                        {format(customArrival, "dd. MMM")} - {format(customDeparture, "dd. MMM yyyy")}
-                      </p>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => {
+                          if (!member) return;
+                          if (window.confirm('Slette denne egendefinerte perioden?')) {
+                            updateMember.mutate(
+                              {
+                                id: member.id,
+                                arrival_date: null,
+                                departure_date: null,
+                                custom_period_location: null,
+                              },
+                              {
+                                onSuccess: () => {
+                                  // Clear local state so UI updates immediately
+                                  setCustomArrival(undefined);
+                                  setCustomDeparture(undefined);
+                                  setCustomLocation(undefined);
+                                },
+                              }
+                            );
+                          }
+                        }}
+                        title="Slett egendefinert periode"
+                      >
+                        <Trash2 className="h-3 w-3" /> Slett
+                      </Button>
                     </div>
                   </div>
                 )}
