@@ -185,6 +185,98 @@ export type Database = {
         }
         Relationships: []
       }
+      app_integration_patterns: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          description: string | null
+          difficulty_level: string | null
+          documentation_url: string | null
+          estimated_setup_minutes: number | null
+          id: string
+          is_featured: boolean | null
+          key: string
+          name: string
+          pattern_type: string
+          required_capabilities: string[] | null
+          source_product_id: string | null
+          target_product_id: string | null
+          trigger_event: string | null
+          updated_at: string
+          usage_count: number | null
+          workflow_template: Json | null
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          difficulty_level?: string | null
+          documentation_url?: string | null
+          estimated_setup_minutes?: number | null
+          id?: string
+          is_featured?: boolean | null
+          key: string
+          name: string
+          pattern_type: string
+          required_capabilities?: string[] | null
+          source_product_id?: string | null
+          target_product_id?: string | null
+          trigger_event?: string | null
+          updated_at?: string
+          usage_count?: number | null
+          workflow_template?: Json | null
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          difficulty_level?: string | null
+          documentation_url?: string | null
+          estimated_setup_minutes?: number | null
+          id?: string
+          is_featured?: boolean | null
+          key?: string
+          name?: string
+          pattern_type?: string
+          required_capabilities?: string[] | null
+          source_product_id?: string | null
+          target_product_id?: string | null
+          trigger_event?: string | null
+          updated_at?: string
+          usage_count?: number | null
+          workflow_template?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_integration_patterns_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "app_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "app_integration_patterns_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "app_categories_tree"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "app_integration_patterns_source_product_id_fkey"
+            columns: ["source_product_id"]
+            isOneToOne: false
+            referencedRelation: "app_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "app_integration_patterns_target_product_id_fkey"
+            columns: ["target_product_id"]
+            isOneToOne: false
+            referencedRelation: "app_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       app_integrations: {
         Row: {
           app_product_id: string
@@ -219,6 +311,59 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "app_integrations_app_product_id_fkey"
+            columns: ["app_product_id"]
+            isOneToOne: false
+            referencedRelation: "app_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      app_product_mcp_actions: {
+        Row: {
+          app_product_id: string
+          created_at: string
+          documentation_url: string | null
+          example_payload: Json | null
+          id: string
+          is_active: boolean | null
+          mcp_action_key: string
+          operation: string
+          required_scopes: string[] | null
+          requires_auth: boolean | null
+          resource_type: string
+          updated_at: string
+        }
+        Insert: {
+          app_product_id: string
+          created_at?: string
+          documentation_url?: string | null
+          example_payload?: Json | null
+          id?: string
+          is_active?: boolean | null
+          mcp_action_key: string
+          operation: string
+          required_scopes?: string[] | null
+          requires_auth?: boolean | null
+          resource_type: string
+          updated_at?: string
+        }
+        Update: {
+          app_product_id?: string
+          created_at?: string
+          documentation_url?: string | null
+          example_payload?: Json | null
+          id?: string
+          is_active?: boolean | null
+          mcp_action_key?: string
+          operation?: string
+          required_scopes?: string[] | null
+          requires_auth?: boolean | null
+          resource_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_product_mcp_actions_app_product_id_fkey"
             columns: ["app_product_id"]
             isOneToOne: false
             referencedRelation: "app_products"
@@ -2033,33 +2178,51 @@ export type Database = {
       partner_certifications: {
         Row: {
           app_product_id: string
+          badge_url: string | null
           certification_date: string | null
           certification_level: string | null
+          certification_url: string | null
+          competency_level: string | null
           created_at: string
+          expires_at: string | null
           id: string
           notes: string | null
           partner_company_id: string
           updated_at: string
+          verified_at: string | null
+          verified_by: string | null
         }
         Insert: {
           app_product_id: string
+          badge_url?: string | null
           certification_date?: string | null
           certification_level?: string | null
+          certification_url?: string | null
+          competency_level?: string | null
           created_at?: string
+          expires_at?: string | null
           id?: string
           notes?: string | null
           partner_company_id: string
           updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Update: {
           app_product_id?: string
+          badge_url?: string | null
           certification_date?: string | null
           certification_level?: string | null
+          certification_url?: string | null
+          competency_level?: string | null
           created_at?: string
+          expires_at?: string | null
           id?: string
           notes?: string | null
           partner_company_id?: string
           updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Relationships: [
           {
@@ -2957,6 +3120,63 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      vendor_partnerships: {
+        Row: {
+          contact_email: string | null
+          created_at: string
+          description: string | null
+          expires_at: string | null
+          id: string
+          partner_vendor_id: string
+          partnership_type: string
+          started_at: string
+          status: string | null
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          contact_email?: string | null
+          created_at?: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          partner_vendor_id: string
+          partnership_type: string
+          started_at?: string
+          status?: string | null
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          contact_email?: string | null
+          created_at?: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          partner_vendor_id?: string
+          partnership_type?: string
+          started_at?: string
+          status?: string | null
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_partnerships_partner_vendor_id_fkey"
+            columns: ["partner_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "app_vendors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_partnerships_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "app_vendors"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

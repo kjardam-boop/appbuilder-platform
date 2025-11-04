@@ -59,6 +59,8 @@ const adminNavItems = [
       { title: "Secrets & Signing", url: "/admin/mcp/secrets", icon: Shield },
       { title: "Observability", url: "/admin/mcp/observability", icon: Plug },
       { title: "Compatibility", url: "/admin/compatibility", icon: Package },
+      { title: "Categories", url: "/admin/categories", icon: Package },
+      { title: "Tenant Systems", url: "/admin/tenant-systems", icon: Building2 },
     ],
   },
   {
