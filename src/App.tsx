@@ -61,6 +61,7 @@ import Jul25MemberEdit from "./pages/apps/Jul25MemberEdit";
 import McpPolicy from "./pages/admin/McpPolicy";
 import McpWorkflows from "./pages/admin/McpWorkflows";
 import McpSecrets from "./pages/admin/McpSecrets";
+import McpObservability from "./pages/admin/McpObservability";
 
 const queryClient = new QueryClient();
 
@@ -122,6 +123,7 @@ const App = () => (
               <Route path="mcp/policy" element={<McpPolicy />} />
               <Route path="mcp/workflows" element={<McpWorkflows />} />
               <Route path="mcp/secrets" element={<McpSecrets />} />
+              <Route path="mcp/observability" element={<McpObservability />} />
             </Route>
             
             {/* Legacy admin routes - redirect to new structure */}

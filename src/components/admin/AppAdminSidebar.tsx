@@ -57,6 +57,7 @@ const adminNavItems = [
       { title: "Policy Configuration", url: "/admin/mcp/policy", icon: Shield },
       { title: "Workflow Mappings", url: "/admin/mcp/workflows", icon: Plug },
       { title: "Secrets & Signing", url: "/admin/mcp/secrets", icon: Shield },
+      { title: "Observability", url: "/admin/mcp/observability", icon: Plug },
     ],
   },
   {
