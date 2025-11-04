@@ -34,7 +34,7 @@ const initialCapabilities: CapabilityInput[] = [
     domain_tables: [],
     hooks: ["useAIGeneration", "useAIChat", "useFieldAssist"],
     database_migrations: [],
-    documentation_url: "https://docs.lovable.dev/features/ai",
+    documentation_path: "docs/capabilities/ai-generation.md",
   },
   {
     key: "task-management",
@@ -59,6 +59,7 @@ const initialCapabilities: CapabilityInput[] = [
     domain_tables: ["tasks", "task_checklist_items", "task_categories"],
     hooks: ["useTasks", "useChecklistItems"],
     database_migrations: [],
+    documentation_path: "docs/capabilities/task-management.md",
   },
   {
     key: "company-management",
@@ -107,7 +108,7 @@ const initialCapabilities: CapabilityInput[] = [
     domain_tables: ["invitations"],
     hooks: [],
     database_migrations: [],
-    documentation_url: "https://docs.lovable.dev/features/authentication",
+    documentation_path: "docs/capabilities/invitation-system.md",
   },
   {
     key: "brreg-integration",

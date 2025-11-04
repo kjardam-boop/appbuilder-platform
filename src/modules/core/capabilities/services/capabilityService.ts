@@ -1,6 +1,27 @@
 /**
- * Capability Service
- * Manages capability catalog operations
+ * @module CapabilityService
+ * @description Service for managing platform capabilities - reusable features, integrations, and services
+ * that can be enabled for tenants or used in application definitions.
+ * 
+ * @example
+ * ```typescript
+ * // List all active capabilities
+ * const capabilities = await CapabilityService.listCapabilities({ is_active: true });
+ * 
+ * // Get a specific capability
+ * const aiCapability = await CapabilityService.getCapability("ai-generation");
+ * 
+ * // Create a new capability
+ * await CapabilityService.createCapability({
+ *   key: "custom-integration",
+ *   name: "Custom Integration",
+ *   category: "Integration",
+ *   description: "Custom integration with external service",
+ *   scope: "tenant"
+ * });
+ * ```
+ * 
+ * @see docs/capabilities/README.md
  */
 
 import { supabase } from "@/integrations/supabase/client";
@@ -13,7 +34,19 @@ import type {
 
 export class CapabilityService {
   /**
-   * List all capabilities with optional filters
+   * List all capabilities with optional filtering
+   * 
+   * @param filters - Optional filters for category, scope, search query, tags, and active status
+   * @returns Array of capabilities matching the filters
+   * 
+   * @example
+   * ```typescript
+   * // Get all AI capabilities
+   * const aiCaps = await CapabilityService.listCapabilities({ category: "AI" });
+   * 
+   * // Search capabilities
+   * const results = await CapabilityService.listCapabilities({ query: "integration" });
+   * ```
    */
   static async listCapabilities(filters?: CapabilityFilters): Promise<Capability[]> {
     let query = supabase
@@ -62,7 +95,19 @@ export class CapabilityService {
   }
 
   /**
-   * Get single capability by ID or key
+   * Get a single capability by ID or key
+   * 
+   * @param idOrKey - Capability UUID or unique key (e.g., "ai-generation")
+   * @returns Capability object or null if not found
+   * 
+   * @example
+   * ```typescript
+   * // By key
+   * const capability = await CapabilityService.getCapability("ai-generation");
+   * 
+   * // By UUID
+   * const capability = await CapabilityService.getCapability("123e4567-e89b-12d3-a456-426614174000");
+   * ```
    */
   static async getCapability(idOrKey: string): Promise<Capability | null> {
     // Check if it looks like a UUID
@@ -105,6 +150,7 @@ export class CapabilityService {
         dependencies: input.dependencies || [],
         demo_url: input.demo_url || null,
         documentation_url: input.documentation_url || null,
+        documentation_path: input.documentation_path || null,
         icon_name: input.icon_name || null,
         tags: input.tags || [],
         frontend_files: input.frontend_files || [],

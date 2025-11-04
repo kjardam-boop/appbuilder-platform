@@ -443,6 +443,7 @@ export type Database = {
           demo_url: string | null
           dependencies: string[] | null
           description: string | null
+          documentation_path: string | null
           documentation_url: string | null
           domain_tables: string[] | null
           estimated_dev_hours: number | null
@@ -468,6 +469,7 @@ export type Database = {
           demo_url?: string | null
           dependencies?: string[] | null
           description?: string | null
+          documentation_path?: string | null
           documentation_url?: string | null
           domain_tables?: string[] | null
           estimated_dev_hours?: number | null
@@ -493,6 +495,7 @@ export type Database = {
           demo_url?: string | null
           dependencies?: string[] | null
           description?: string | null
+          documentation_path?: string | null
           documentation_url?: string | null
           domain_tables?: string[] | null
           estimated_dev_hours?: number | null

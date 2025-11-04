@@ -38,6 +38,7 @@ export interface Capability {
   // Demo
   demo_url: string | null;
   documentation_url: string | null;
+  documentation_path: string | null; // Path to markdown file (e.g., "docs/capabilities/ai-generation.md")
   icon_name: string | null;
   
   // Tags for search
@@ -171,6 +172,7 @@ export interface CapabilityInput {
   dependencies?: string[];
   demo_url?: string;
   documentation_url?: string;
+  documentation_path?: string; // Path to markdown documentation file
   icon_name?: string;
   tags?: string[];
   code_reference?: string;

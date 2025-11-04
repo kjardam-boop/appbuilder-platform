@@ -12,7 +12,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, ExternalLink, Package, Tag, Building2, Code, Database, FileCode, Webhook } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MarkdownViewer } from "@/components/ui/markdown-viewer";
+import { ArrowLeft, ExternalLink, Package, Tag, Building2, Code, Database, FileCode, Webhook, BookOpen } from "lucide-react";
 import * as Icons from "lucide-react";
 import { LucideIcon } from "lucide-react";
 import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
@@ -119,17 +121,30 @@ export default function CapabilityDetailsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Description */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Description</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">
-                {capability.description || "No description available"}
-              </p>
-            </CardContent>
-          </Card>
+          {/* Documentation Tabs */}
+          <Tabs defaultValue="overview" className="w-full">
+            <TabsList>
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              {capability.documentation_path && (
+                <TabsTrigger value="docs">
+                  <BookOpen className="mr-2 h-4 w-4" />
+                  Documentation
+                </TabsTrigger>
+              )}
+            </TabsList>
+            
+            <TabsContent value="overview" className="space-y-6">
+              {/* Description */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Description</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">
+                    {capability.description || "No description available"}
+                  </p>
+                </CardContent>
+              </Card>
 
           {/* Dependencies */}
           {capability.dependencies.length > 0 && (
@@ -294,34 +309,43 @@ export default function CapabilityDetailsPage() {
             </>
           )}
 
-          {/* Version History */}
-          {versions && versions.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Version History</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {versions.map((version) => (
-                    <div key={version.id} className="border-l-2 border-primary pl-4">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Badge variant="outline">v{version.version}</Badge>
-                        {version.breaking_changes && (
-                          <Badge variant="destructive">Breaking Changes</Badge>
-                        )}
-                      </div>
-                      {version.changelog && (
-                        <p className="text-sm text-muted-foreground">{version.changelog}</p>
-                      )}
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Released: {new Date(version.released_at).toLocaleDateString()}
-                      </p>
+              {/* Version History */}
+              {versions && versions.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Version History</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {versions.map((version) => (
+                        <div key={version.id} className="border-l-2 border-primary pl-4">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge variant="outline">v{version.version}</Badge>
+                            {version.breaking_changes && (
+                              <Badge variant="destructive">Breaking Changes</Badge>
+                            )}
+                          </div>
+                          {version.changelog && (
+                            <p className="text-sm text-muted-foreground">{version.changelog}</p>
+                          )}
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Released: {new Date(version.released_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+            
+            {/* Documentation Tab */}
+            {capability.documentation_path && (
+              <TabsContent value="docs">
+                <MarkdownViewer markdownPath={capability.documentation_path} />
+              </TabsContent>
+            )}
+          </Tabs>
         </div>
 
         {/* Sidebar */}
