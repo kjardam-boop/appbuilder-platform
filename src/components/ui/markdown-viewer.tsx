@@ -114,9 +114,9 @@ export function MarkdownViewer({
     // Horizontal rules
     html = html.replace(/^---$/gim, '<hr class="my-8 border-border" />');
 
-    // Headers with more spacing
+    // Headers with consistent spacing
     html = html.replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold mt-8 mb-4">$1</h3>');
-    html = html.replace(/^## (.*$)/gim, '<h2 class="text-xl font-semibold mt-16 mb-6 pt-1 pb-2 border-b border-border">$1</h2>');
+    html = html.replace(/^## (.*$)/gim, '<h2 class="text-xl font-semibold mt-10 mb-5 pb-2 border-b border-border">$1</h2>');
     html = html.replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold mb-8">$1</h1>');
 
     // Code blocks
@@ -133,11 +133,18 @@ export function MarkdownViewer({
     // Links
     html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-primary hover:underline">$1</a>');
 
-    // Lists
-    html = html.replace(/^\- (.*$)/gim, '<li class="ml-4 list-disc">$1</li>');
-    html = html.replace(/(<li.*<\/li>)/s, '<ul class="space-y-1 my-4">$1</ul>');
+    // Lists - group consecutive "- " lines into a single <ul>
+    html = html.replace(/(?:^|\n)(- .+(?:\n- .+)*)/g, (match) => {
+      const items = match
+        .trim()
+        .split('\n')
+        .filter((l) => l.trim().startsWith('- '))
+        .map((l) => l.replace(/^- (.*)/, '<li class="ml-6 list-disc">$1</li>'))
+        .join('');
+      return `\n<ul class="my-6 space-y-1">${items}</ul>\n`;
+    });
 
-    // Paragraphs
+    // Paragraphs (preserve blank lines between blocks)
     html = html.split('\n\n').map(para => {
       if (para.startsWith('<')) return para; // Skip HTML elements
       return `<p class="my-3 leading-relaxed">${para}</p>`;
