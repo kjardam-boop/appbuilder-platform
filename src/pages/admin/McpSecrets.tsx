@@ -208,15 +208,16 @@ export default function McpSecrets() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Get tenant from user_roles
-      const { data: roles, error: rolesError } = await supabase
+      // Get tenant from user_roles (choose first if multiple)
+      const { data: rolesList, error: rolesError } = await supabase
         .from('user_roles')
         .select('scope_id')
         .eq('user_id', user.id)
         .eq('scope_type', 'tenant')
-        .maybeSingle();
+        .limit(1);
 
-      if (rolesError || !roles?.scope_id) {
+      const tenantId = rolesList?.[0]?.scope_id;
+      if (rolesError || !tenantId) {
         throw new Error("Tenant not found. Please contact support.");
       }
 
@@ -229,7 +230,7 @@ export default function McpSecrets() {
             "Content-Type": "application/json",
             "X-Request-Id": crypto.randomUUID(),
           },
-          body: JSON.stringify({ token, tenantId: roles.scope_id }),
+          body: JSON.stringify({ token, tenantId }),
         }
       );
       if (!response.ok) {
