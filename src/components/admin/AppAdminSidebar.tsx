@@ -44,7 +44,7 @@ const adminNavItems = [
     title: "Content Management",
     items: [
       { title: "Industries", url: "/admin/industries", icon: Briefcase },
-      { title: "Applications", url: "/admin/applications", icon: Package },
+      { title: "App Catalog", url: "/admin/apps", icon: Package },
       { title: "Capabilities", url: "/admin/capabilities", icon: Package },
     ],
   },

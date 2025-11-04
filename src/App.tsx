@@ -47,6 +47,8 @@ import SupplierScoringPage from "./pages/SupplierScoringPage";
 import ArchivedResources from "./pages/ArchivedResources";
 import NotFound from "./pages/NotFound";
 import AppsPage from "./pages/AppsPage";
+import AppCatalog from "./pages/admin/AppCatalog";
+import TenantAppsPage from "./pages/admin/TenantAppsPage";
 import Jul25App from "./pages/apps/Jul25App";
 import Jul25FamilyAdmin from "./pages/apps/Jul25FamilyAdmin";
 import Jul25MemberEdit from "./pages/apps/Jul25MemberEdit";
@@ -100,6 +102,8 @@ const App = () => (
               <Route path="database" element={<AdminSeed />} />
               <Route path="integrations" element={<AdminSettings />} />
               <Route path="security" element={<AdminSettings />} />
+              <Route path="apps" element={<AppCatalog />} />
+              <Route path="tenants/:tenantId/apps" element={<TenantAppsPage />} />
             </Route>
             
             {/* Legacy admin routes - redirect to new structure */}
