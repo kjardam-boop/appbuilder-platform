@@ -14,6 +14,72 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_definitions: {
+        Row: {
+          app_type: string
+          capabilities: string[] | null
+          created_at: string
+          description: string | null
+          domain_tables: string[]
+          extension_points: Json | null
+          hooks: Json | null
+          icon_name: string
+          id: string
+          integration_requirements: Json | null
+          is_active: boolean
+          key: string
+          modules: string[] | null
+          name: string
+          routes: string[] | null
+          schema_version: string
+          shared_tables: string[] | null
+          ui_components: Json | null
+          updated_at: string
+        }
+        Insert: {
+          app_type: string
+          capabilities?: string[] | null
+          created_at?: string
+          description?: string | null
+          domain_tables?: string[]
+          extension_points?: Json | null
+          hooks?: Json | null
+          icon_name?: string
+          id?: string
+          integration_requirements?: Json | null
+          is_active?: boolean
+          key: string
+          modules?: string[] | null
+          name: string
+          routes?: string[] | null
+          schema_version?: string
+          shared_tables?: string[] | null
+          ui_components?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          app_type?: string
+          capabilities?: string[] | null
+          created_at?: string
+          description?: string | null
+          domain_tables?: string[]
+          extension_points?: Json | null
+          hooks?: Json | null
+          icon_name?: string
+          id?: string
+          integration_requirements?: Json | null
+          is_active?: boolean
+          key?: string
+          modules?: string[] | null
+          name?: string
+          routes?: string[] | null
+          schema_version?: string
+          shared_tables?: string[] | null
+          ui_components?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       app_integrations: {
         Row: {
           app_product_id: string
@@ -167,41 +233,117 @@ export type Database = {
           },
         ]
       }
-      applications: {
+      app_versions: {
         Row: {
-          created_at: string | null
-          description: string | null
-          icon_name: string | null
+          app_definition_id: string
+          breaking_changes: boolean | null
+          changelog: string | null
+          deprecated_at: string | null
+          end_of_life_at: string | null
           id: string
-          is_active: boolean | null
-          key: string
-          name: string
-          tenant_id: string
-          updated_at: string | null
+          manifest_url: string | null
+          migrations: Json | null
+          released_at: string
+          version: string
         }
         Insert: {
-          created_at?: string | null
-          description?: string | null
-          icon_name?: string | null
+          app_definition_id: string
+          breaking_changes?: boolean | null
+          changelog?: string | null
+          deprecated_at?: string | null
+          end_of_life_at?: string | null
           id?: string
-          is_active?: boolean | null
-          key: string
-          name: string
-          tenant_id: string
-          updated_at?: string | null
+          manifest_url?: string | null
+          migrations?: Json | null
+          released_at?: string
+          version: string
         }
         Update: {
-          created_at?: string | null
-          description?: string | null
-          icon_name?: string | null
+          app_definition_id?: string
+          breaking_changes?: boolean | null
+          changelog?: string | null
+          deprecated_at?: string | null
+          end_of_life_at?: string | null
           id?: string
-          is_active?: boolean | null
-          key?: string
-          name?: string
-          tenant_id?: string
-          updated_at?: string | null
+          manifest_url?: string | null
+          migrations?: Json | null
+          released_at?: string
+          version?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "app_versions_app_definition_id_fkey"
+            columns: ["app_definition_id"]
+            isOneToOne: false
+            referencedRelation: "app_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      applications: {
+        Row: {
+          app_definition_id: string
+          channel: string
+          config: Json | null
+          created_at: string
+          id: string
+          installed_at: string
+          installed_version: string
+          is_active: boolean
+          last_migration_at: string | null
+          last_migration_version: string | null
+          last_updated_at: string | null
+          migration_status: string | null
+          overrides: Json | null
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          app_definition_id: string
+          channel?: string
+          config?: Json | null
+          created_at?: string
+          id?: string
+          installed_at?: string
+          installed_version: string
+          is_active?: boolean
+          last_migration_at?: string | null
+          last_migration_version?: string | null
+          last_updated_at?: string | null
+          migration_status?: string | null
+          overrides?: Json | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          app_definition_id?: string
+          channel?: string
+          config?: Json | null
+          created_at?: string
+          id?: string
+          installed_at?: string
+          installed_version?: string
+          is_active?: boolean
+          last_migration_at?: string | null
+          last_migration_version?: string | null
+          last_updated_at?: string | null
+          migration_status?: string | null
+          overrides?: Json | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "applications_app_definition_id_fkey"
+            columns: ["app_definition_id"]
+            isOneToOne: false
+            referencedRelation: "app_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       audit_logs: {
         Row: {
@@ -2158,6 +2300,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      tenant_generated_apps: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          icon_name: string | null
+          id: string
+          is_active: boolean | null
+          key: string
+          name: string
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          icon_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          key: string
+          name: string
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          icon_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          key?: string
+          name?: string
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       tenant_integrations: {
         Row: {
