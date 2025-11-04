@@ -1,0 +1,6 @@
+{
+  "send_gmail_on_project_create": "/webhook/send-gmail",
+  "sync_vendor_catalog": "/webhook/sync-vendors",
+  "notify_project_update": "/webhook/notify-project",
+  "process_supplier_evaluation": "/webhook/process-evaluation"
+}

@@ -6,6 +6,9 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.1';
 import { corsHeaders } from '../_shared/cors.ts';
 
+// Import workflow config
+import workflowConfig from './n8n.workflows.json' with { type: 'json' };
+
 // Structured logging helper
 const log = (level: string, msg: string, meta: Record<string, any> = {}) => {
   console.log(JSON.stringify({ level, msg, timestamp: new Date().toISOString(), ...meta }));
@@ -179,6 +182,8 @@ Deno.serve(async (req) => {
       return await handleResourceRequest(supabase, ctx, path, url, req.method);
     } else if (path.startsWith('actions/')) {
       return await handleActionRequest(supabase, ctx, path, url, req, idempotencyKey);
+    } else if (path.startsWith('integrations/n8n/')) {
+      return await handleIntegrationRequest(supabase, ctx, path, url, req);
     }
 
     logEvent('warn', 'mcp.route.notfound', { request_id: requestId, path });
@@ -1266,4 +1271,548 @@ function getSearchFields(type: string): string[] {
     application: ['name', 'key'],
   };
   return searchMap[type] || ['name'];
+}
+
+// ============================================================================
+// INTEGRATION REGISTRY
+// ============================================================================
+
+/**
+ * Resolve webhook URL for n8n workflow
+ */
+function resolveN8nWebhook(workflowKey: string): string | null {
+  const baseUrl = Deno.env.get('N8N_BASE_URL');
+  if (!baseUrl) {
+    console.error('[IntegrationRegistry] N8N_BASE_URL not configured');
+    return null;
+  }
+
+  const path = workflowConfig[workflowKey as keyof typeof workflowConfig];
+  if (!path) {
+    console.warn('[IntegrationRegistry] Unknown workflow key:', workflowKey);
+    return null;
+  }
+
+  return `${baseUrl}${path}`;
+}
+
+// ============================================================================
+// INTEGRATION HANDLERS
+// ============================================================================
+
+/**
+ * Handle integration requests (n8n trigger and callback)
+ */
+async function handleIntegrationRequest(
+  supabase: any,
+  ctx: any,
+  path: string,
+  url: URL,
+  req: Request
+): Promise<Response> {
+  const startTime = Date.now();
+
+  // POST /integrations/n8n/callback
+  if (path === 'integrations/n8n/callback' && req.method === 'POST') {
+    return await handleN8nCallback(supabase, req, ctx.request_id);
+  }
+
+  // POST /integrations/n8n/:workflowKey/trigger
+  const triggerMatch = path.match(/^integrations\/n8n\/([^\/]+)\/trigger$/);
+  if (triggerMatch && req.method === 'POST') {
+    const workflowKey = triggerMatch[1];
+    return await handleN8nTrigger(supabase, ctx, workflowKey, req, startTime);
+  }
+
+  const latency = Date.now() - startTime;
+  return errorResponse('NOT_FOUND', 'Integration endpoint not found', 404, ctx.request_id, ctx.tenant_id, latency);
+}
+
+/**
+ * Trigger n8n workflow
+ */
+async function handleN8nTrigger(
+  supabase: any,
+  ctx: any,
+  workflowKey: string,
+  req: Request,
+  startTime: number
+): Promise<Response> {
+  try {
+    // Parse request body
+    const body = await req.json();
+    const { action, input } = body;
+
+    if (!action || typeof action !== 'string') {
+      const latency = Date.now() - startTime;
+      return errorResponse('VALIDATION_ERROR', 'Missing or invalid "action" field', 400, ctx.request_id, ctx.tenant_id, latency);
+    }
+
+    // Check if workflow exists
+    const webhookUrl = resolveN8nWebhook(workflowKey);
+    if (!webhookUrl) {
+      const latency = Date.now() - startTime;
+      logEvent('error', 'mcp.integration.trigger.error', {
+        request_id: ctx.request_id,
+        tenant_id: ctx.tenant_id,
+        workflow_key: workflowKey,
+        error: 'Workflow not found',
+      });
+      return errorResponse('INTEGRATION_NOT_FOUND', `Workflow "${workflowKey}" not found`, 404, ctx.request_id, ctx.tenant_id, latency);
+    }
+
+    // Enforce policy: user must be allowed to execute the action
+    const policyResult = evaluateDslPolicy(ctx, {
+      actionName: action,
+      method: 'POST',
+    });
+    
+    if (policyResult.decision === 'denied') {
+      const latency = Date.now() - startTime;
+      logEvent('warn', 'mcp.integration.policy.denied', {
+        request_id: ctx.request_id,
+        tenant_id: ctx.tenant_id,
+        user_id: ctx.user_id,
+        roles: ctx.roles.join(','),
+        action,
+        workflow_key: workflowKey,
+        reason: policyResult.reason,
+      });
+      return errorResponse('UNAUTHORIZED', policyResult.reason || 'Action not allowed', 403, ctx.request_id, ctx.tenant_id, latency);
+    }
+
+    const idempotencyKey = req.headers.get('Idempotency-Key');
+
+    // Trigger the workflow
+    const result = await triggerN8nWorkflow(supabase, webhookUrl, {
+      tenantId: ctx.tenant_id,
+      userId: ctx.user_id,
+      roles: ctx.roles,
+      requestId: ctx.request_id,
+      workflowKey,
+      action,
+      input: input || {},
+      idempotencyKey: idempotencyKey || undefined,
+    });
+
+    const latency = Date.now() - startTime;
+
+    if (result.ok) {
+      return successResponse(result.data, 200, ctx.request_id, ctx.tenant_id, latency);
+    } else {
+      const statusCode = result.error?.code === 'INTEGRATION_NOT_FOUND' ? 404 : 502;
+      return errorResponse(result.error!.code, result.error!.message, statusCode, ctx.request_id, ctx.tenant_id, latency);
+    }
+  } catch (error) {
+    const latency = Date.now() - startTime;
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logEvent('error', 'mcp.integration.trigger.error', {
+      request_id: ctx.request_id,
+      tenant_id: ctx.tenant_id,
+      error: errorMessage,
+      latency_ms: latency,
+    });
+    return errorResponse('INTERNAL_ERROR', 'Failed to trigger integration', 500, ctx.request_id, ctx.tenant_id, latency);
+  }
+}
+
+/**
+ * Handle n8n callback
+ */
+async function handleN8nCallback(
+  supabase: any,
+  req: Request,
+  requestId: string
+): Promise<Response> {
+  const startTime = Date.now();
+
+  try {
+    // Validate callback token
+    const callbackToken = req.headers.get('X-Callback-Token');
+    const expectedToken = Deno.env.get('N8N_CALLBACK_TOKEN');
+
+    if (!expectedToken || callbackToken !== expectedToken) {
+      const latency = Date.now() - startTime;
+      logEvent('warn', 'mcp.integration.callback.unauthorized', {
+        request_id: requestId,
+        has_token: !!callbackToken,
+      });
+      return errorResponse('CALLBACK_UNAUTHORIZED', 'Invalid callback token', 403, requestId, undefined, latency);
+    }
+
+    // Parse callback data
+    const callbackData = await req.json();
+    const { request_id, run_id, status, external_run_id, result, error } = callbackData;
+
+    if (!status || !['succeeded', 'failed'].includes(status)) {
+      const latency = Date.now() - startTime;
+      return errorResponse('VALIDATION_ERROR', 'Invalid or missing "status" field', 400, requestId, undefined, latency);
+    }
+
+    // Process the callback
+    const processResult = await processN8nCallback(supabase, {
+      request_id,
+      run_id,
+      status,
+      external_run_id,
+      result,
+      error,
+    });
+
+    const latency = Date.now() - startTime;
+
+    if (processResult.ok) {
+      return successResponse({}, 200, requestId, undefined, latency);
+    } else {
+      return errorResponse(
+        processResult.error!.code,
+        processResult.error!.message,
+        400,
+        requestId,
+        undefined,
+        latency
+      );
+    }
+  } catch (error) {
+    const latency = Date.now() - startTime;
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logEvent('error', 'mcp.integration.callback.error', {
+      request_id: requestId,
+      error: errorMessage,
+      latency_ms: latency,
+    });
+    return errorResponse('INTERNAL_ERROR', 'Failed to process callback', 500, requestId, undefined, latency);
+  }
+}
+
+/**
+ * Trigger n8n workflow with retry logic
+ */
+async function triggerN8nWorkflow(
+  supabase: any,
+  webhookUrl: string,
+  options: {
+    tenantId: string;
+    userId?: string;
+    roles: string[];
+    requestId: string;
+    workflowKey: string;
+    action: string;
+    input: Record<string, any>;
+    idempotencyKey?: string;
+  }
+): Promise<{
+  ok: boolean;
+  data?: any;
+  error?: { code: string; message: string };
+  runId?: string;
+  status?: 'succeeded' | 'in_progress' | 'failed';
+}> {
+  const {
+    tenantId,
+    userId,
+    roles,
+    requestId,
+    workflowKey,
+    action,
+    input,
+    idempotencyKey,
+  } = options;
+
+  const execStartTime = Date.now();
+
+  // Create integration_run record
+  const { data: runRecord, error: insertError } = await supabase
+    .from('integration_run')
+    .insert({
+      tenant_id: tenantId,
+      provider: 'n8n',
+      workflow_key: workflowKey,
+      request_id: requestId,
+      action_name: action,
+      status: 'started',
+      idempotency_key: idempotencyKey,
+    })
+    .select()
+    .single();
+
+  if (insertError) {
+    console.error('[N8nService] Failed to create integration_run:', insertError);
+    return {
+      ok: false,
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'Failed to create integration run record',
+      },
+    };
+  }
+
+  const runId = runRecord.id;
+
+  logEvent('info', 'mcp.integration.trigger.start', {
+    request_id: requestId,
+    tenant_id: tenantId,
+    user_id: userId,
+    workflow_key: workflowKey,
+    action,
+    run_id: runId,
+  });
+
+  // Prepare payload for n8n
+  const payload = {
+    context: {
+      tenant_id: tenantId,
+      user_id: userId,
+      roles,
+      request_id: requestId,
+    },
+    action,
+    input,
+    idempotency_key: idempotencyKey || null,
+  };
+
+  // Trigger n8n with retry logic
+  let lastError: any = null;
+  const maxRetries = 2;
+  const backoffMs = [250, 750];
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tenant-Id': tenantId,
+          'X-Request-Id': requestId,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const httpStatus = response.status;
+      const latencyMs = Date.now() - execStartTime;
+
+      // Handle 202 Accepted (async)
+      if (httpStatus === 202) {
+        await supabase
+          .from('integration_run')
+          .update({
+            status: 'in_progress',
+            http_status: httpStatus,
+          })
+          .eq('id', runId);
+
+        logEvent('info', 'mcp.integration.trigger.success', {
+          request_id: requestId,
+          tenant_id: tenantId,
+          workflow_key: workflowKey,
+          run_id: runId,
+          http_status: httpStatus,
+          latency_ms: latencyMs,
+          async: true,
+        });
+
+        return {
+          ok: true,
+          data: { status: 'in_progress', run_id: runId },
+          runId,
+          status: 'in_progress',
+        };
+      }
+
+      // Handle 2xx success
+      if (httpStatus >= 200 && httpStatus < 300) {
+        const responseData = await response.json().catch(() => ({}));
+
+        await supabase
+          .from('integration_run')
+          .update({
+            status: 'succeeded',
+            http_status: httpStatus,
+            finished_at: new Date().toISOString(),
+            response_json: responseData,
+          })
+          .eq('id', runId);
+
+        logEvent('info', 'mcp.integration.trigger.success', {
+          request_id: requestId,
+          tenant_id: tenantId,
+          workflow_key: workflowKey,
+          run_id: runId,
+          http_status: httpStatus,
+          latency_ms: latencyMs,
+        });
+
+        return {
+          ok: true,
+          data: responseData,
+          runId,
+          status: 'succeeded',
+        };
+      }
+
+      // Handle 4xx/5xx errors
+      const errorText = await response.text().catch(() => 'Unknown error');
+
+      await supabase
+        .from('integration_run')
+        .update({
+          status: 'failed',
+          http_status: httpStatus,
+          finished_at: new Date().toISOString(),
+          error_message: errorText,
+        })
+        .eq('id', runId);
+
+      logEvent('error', 'mcp.integration.trigger.error', {
+        request_id: requestId,
+        tenant_id: tenantId,
+        workflow_key: workflowKey,
+        run_id: runId,
+        http_status: httpStatus,
+        error: errorText,
+        latency_ms: latencyMs,
+      });
+
+      return {
+        ok: false,
+        error: {
+          code: 'INTEGRATION_ERROR',
+          message: `n8n workflow failed with status ${httpStatus}: ${errorText}`,
+        },
+        runId,
+        status: 'failed',
+      };
+    } catch (err: any) {
+      lastError = err;
+
+      // Retry on network errors
+      if (attempt < maxRetries) {
+        console.warn(`[N8nService] Attempt ${attempt + 1} failed, retrying...`, err.message);
+        await new Promise((resolve) => setTimeout(resolve, backoffMs[attempt]));
+        continue;
+      }
+    }
+  }
+
+  // All retries exhausted
+  const errorMessage = lastError?.message || 'Network error';
+
+  await supabase
+    .from('integration_run')
+    .update({
+      status: 'failed',
+      finished_at: new Date().toISOString(),
+      error_message: errorMessage,
+    })
+    .eq('id', runId);
+
+  logEvent('error', 'mcp.integration.trigger.error', {
+    request_id: requestId,
+    tenant_id: tenantId,
+    workflow_key: workflowKey,
+    run_id: runId,
+    error: errorMessage,
+    latency_ms: Date.now() - execStartTime,
+  });
+
+  return {
+    ok: false,
+    error: {
+      code: 'INTEGRATION_ERROR',
+      message: `Failed to trigger n8n workflow after ${maxRetries + 1} attempts: ${errorMessage}`,
+    },
+    runId,
+    status: 'failed',
+  };
+}
+
+/**
+ * Process n8n callback
+ */
+async function processN8nCallback(
+  supabase: any,
+  callbackData: {
+    request_id?: string;
+    run_id?: string;
+    status: 'succeeded' | 'failed';
+    external_run_id?: string;
+    result?: any;
+    error?: { message: string; code?: string };
+  }
+): Promise<{ ok: boolean; error?: { code: string; message: string } }> {
+  const { request_id, run_id, status, external_run_id, result, error } = callbackData;
+
+  logEvent('info', 'mcp.integration.callback.received', {
+    request_id,
+    run_id,
+    status,
+  });
+
+  // Locate integration_run record
+  let query = supabase.from('integration_run').select('*');
+
+  if (run_id) {
+    query = query.eq('id', run_id);
+  } else if (request_id) {
+    query = query.eq('request_id', request_id);
+  } else {
+    return {
+      ok: false,
+      error: {
+        code: 'CALLBACK_UPDATE_ERROR',
+        message: 'Either run_id or request_id must be provided',
+      },
+    };
+  }
+
+  const { data: runRecords, error: fetchError } = await query;
+
+  if (fetchError || !runRecords || runRecords.length === 0) {
+    console.error('[N8nService] Integration run not found:', { run_id, request_id });
+    return {
+      ok: false,
+      error: {
+        code: 'CALLBACK_UPDATE_ERROR',
+        message: 'Integration run not found',
+      },
+    };
+  }
+
+  const runRecord = runRecords[0];
+
+  // Update the record
+  const updateData: any = {
+    status,
+    finished_at: new Date().toISOString(),
+  };
+
+  if (external_run_id) {
+    updateData.external_run_id = external_run_id;
+  }
+
+  if (status === 'succeeded' && result) {
+    updateData.response_json = result;
+  }
+
+  if (status === 'failed' && error) {
+    updateData.error_message = error.message;
+  }
+
+  const { error: updateError } = await supabase
+    .from('integration_run')
+    .update(updateData)
+    .eq('id', runRecord.id);
+
+  if (updateError) {
+    console.error('[N8nService] Failed to update integration_run:', updateError);
+    return {
+      ok: false,
+      error: {
+        code: 'CALLBACK_UPDATE_ERROR',
+        message: 'Failed to update integration run',
+      },
+    };
+  }
+
+  return { ok: true };
 }

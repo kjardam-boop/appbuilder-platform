@@ -1114,6 +1114,57 @@ export type Database = {
         }
         Relationships: []
       }
+      integration_run: {
+        Row: {
+          action_name: string | null
+          error_message: string | null
+          external_run_id: string | null
+          finished_at: string | null
+          http_status: number | null
+          id: string
+          idempotency_key: string | null
+          provider: string
+          request_id: string | null
+          response_json: Json | null
+          started_at: string
+          status: string
+          tenant_id: string
+          workflow_key: string
+        }
+        Insert: {
+          action_name?: string | null
+          error_message?: string | null
+          external_run_id?: string | null
+          finished_at?: string | null
+          http_status?: number | null
+          id?: string
+          idempotency_key?: string | null
+          provider: string
+          request_id?: string | null
+          response_json?: Json | null
+          started_at?: string
+          status?: string
+          tenant_id: string
+          workflow_key: string
+        }
+        Update: {
+          action_name?: string | null
+          error_message?: string | null
+          external_run_id?: string | null
+          finished_at?: string | null
+          http_status?: number | null
+          id?: string
+          idempotency_key?: string | null
+          provider?: string
+          request_id?: string | null
+          response_json?: Json | null
+          started_at?: string
+          status?: string
+          tenant_id?: string
+          workflow_key?: string
+        }
+        Relationships: []
+      }
       integration_usage_logs: {
         Row: {
           action: string
@@ -1497,6 +1548,7 @@ export type Database = {
           http_method: string | null
           id: string
           idempotency_key: string | null
+          integration_run_id: string | null
           payload_json: Json | null
           policy_result: Json | null
           request_id: string | null
@@ -1517,6 +1569,7 @@ export type Database = {
           http_method?: string | null
           id?: string
           idempotency_key?: string | null
+          integration_run_id?: string | null
           payload_json?: Json | null
           policy_result?: Json | null
           request_id?: string | null
@@ -1537,6 +1590,7 @@ export type Database = {
           http_method?: string | null
           id?: string
           idempotency_key?: string | null
+          integration_run_id?: string | null
           payload_json?: Json | null
           policy_result?: Json | null
           request_id?: string | null
@@ -1548,7 +1602,15 @@ export type Database = {
           user_agent?: string | null
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "mcp_action_log_integration_run_id_fkey"
+            columns: ["integration_run_id"]
+            isOneToOne: false
+            referencedRelation: "integration_run"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       opportunities: {
         Row: {
