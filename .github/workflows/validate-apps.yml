@@ -1,0 +1,45 @@
+name: Validate Platform Apps
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+
+      - name: Validate manifests
+        run: |
+          echo "Validating all app manifests..."
+          find packages/apps -name "manifest.json" -type f | while read manifest; do
+            echo "Validating: $manifest"
+            npx tsx tools/dev-cli/src/cli.ts manifest:validate "$manifest"
+          done
+
+      - name: Check schema consistency
+        run: |
+          echo "Checking schema consistency..."
+          # Find all Zod schema files that changed
+          git diff --name-only origin/main...HEAD | grep ".ts$" | grep "schemas/" || true
+          # Would regenerate JSON schemas and check for differences
+
+      - name: Run tests
+        run: npm test

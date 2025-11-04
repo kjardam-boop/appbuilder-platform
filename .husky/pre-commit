@@ -1,0 +1,21 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "Running pre-commit checks..."
+
+# Run lint and typecheck
+npm run lint || exit 1
+npm run type-check || exit 1
+
+# Validate changed manifests
+echo "Validating app manifests..."
+CHANGED_MANIFESTS=$(git diff --cached --name-only --diff-filter=ACM | grep "manifest.json" || true)
+
+if [ -n "$CHANGED_MANIFESTS" ]; then
+  for manifest in $CHANGED_MANIFESTS; do
+    echo "Validating: $manifest"
+    npx tsx tools/dev-cli/src/cli.ts manifest:validate "$manifest" || exit 1
+  done
+fi
+
+echo "✓ Pre-commit checks passed"
