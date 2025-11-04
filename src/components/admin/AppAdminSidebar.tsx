@@ -20,6 +20,8 @@ import {
   Briefcase,
   Package,
   Plug,
+  Server,
+  Archive,
 } from "lucide-react";
 
 const adminNavItems = [
@@ -45,6 +47,7 @@ const adminNavItems = [
     items: [
       { title: "Industries", url: "/admin/industries", icon: Briefcase },
       { title: "App Catalog", url: "/admin/apps", icon: Package },
+      { title: "External Systems", url: "/admin/applications", icon: Server },
       { title: "Capabilities", url: "/admin/capabilities", icon: Package },
     ],
   },
@@ -54,6 +57,7 @@ const adminNavItems = [
       { title: "Integrations", url: "/admin/integrations", icon: Plug },
       { title: "Security", url: "/admin/security", icon: Shield },
       { title: "Seed Database", url: "/admin/database", icon: Database },
+      { title: "Archived Resources", url: "/admin/archived", icon: Archive },
     ],
   },
 ];

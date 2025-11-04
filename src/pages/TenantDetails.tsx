@@ -179,10 +179,18 @@ export default function TenantDetails() {
             </p>
           </div>
         </div>
-        <Button>
-          <Settings className="mr-2 h-4 w-4" />
-          Innstillinger
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <Link to={`/admin/tenants/${tenantId}/apps`}>
+              <Package className="mr-2 h-4 w-4" />
+              Administrer Apps
+            </Link>
+          </Button>
+          <Button>
+            <Settings className="mr-2 h-4 w-4" />
+            Innstillinger
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
