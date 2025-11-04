@@ -18,7 +18,23 @@ const initialCapabilities: CapabilityInput[] = [
     dependencies: [],
     tags: ["ai", "text", "automation", "gemini", "gpt"],
     icon_name: "Sparkles",
-    code_reference: "src/modules/core/ai",
+    frontend_files: [
+      "src/modules/core/ai/components/AIChatInterface.tsx",
+      "src/modules/core/ai/components/AIGenerationButton.tsx",
+      "src/modules/core/ai/hooks/useAIGeneration.ts",
+      "src/modules/core/ai/hooks/useAIChat.ts",
+      "src/modules/core/ai/hooks/useFieldAssist.ts",
+      "src/modules/core/ai/services/aiService.ts",
+    ],
+    backend_files: [
+      "supabase/functions/generate-text/index.ts",
+      "supabase/functions/field-chat-assist/index.ts",
+      "supabase/functions/ai-assistant/index.ts",
+    ],
+    domain_tables: [],
+    hooks: ["useAIGeneration", "useAIChat", "useFieldAssist"],
+    database_migrations: [],
+    documentation_url: "https://docs.lovable.dev/features/ai",
   },
   {
     key: "task-management",
@@ -31,7 +47,18 @@ const initialCapabilities: CapabilityInput[] = [
     dependencies: [],
     tags: ["tasks", "productivity", "collaboration"],
     icon_name: "CheckSquare",
-    code_reference: "src/modules/core/tasks",
+    frontend_files: [
+      "src/modules/core/tasks/components/TaskCard.tsx",
+      "src/modules/core/tasks/components/TaskDialog.tsx",
+      "src/modules/core/tasks/components/ContextTaskButton.tsx",
+      "src/modules/core/tasks/hooks/useTasks.ts",
+      "src/modules/core/tasks/hooks/useChecklistItems.ts",
+      "src/modules/core/tasks/services/taskService.ts",
+    ],
+    backend_files: [],
+    domain_tables: ["tasks", "task_checklist_items", "task_categories"],
+    hooks: ["useTasks", "useChecklistItems"],
+    database_migrations: [],
   },
   {
     key: "company-management",
@@ -44,7 +71,20 @@ const initialCapabilities: CapabilityInput[] = [
     dependencies: [],
     tags: ["companies", "contacts", "crm"],
     icon_name: "Building2",
-    code_reference: "src/modules/core/company",
+    frontend_files: [
+      "src/modules/core/company/components/CompanyCard.tsx",
+      "src/modules/core/company/components/CompanySelector.tsx",
+      "src/modules/core/company/hooks/useCompany.ts",
+      "src/modules/core/company/hooks/useCompanySearch.ts",
+      "src/modules/core/company/services/companyService.ts",
+    ],
+    backend_files: [
+      "supabase/functions/brreg-lookup/index.ts",
+      "supabase/functions/brreg-search/index.ts",
+    ],
+    domain_tables: ["companies", "company_metadata", "company_interactions"],
+    hooks: ["useCompany", "useCompanySearch", "useCompanyInteractions"],
+    database_migrations: [],
   },
   {
     key: "invitation-system",
@@ -57,7 +97,17 @@ const initialCapabilities: CapabilityInput[] = [
     dependencies: [],
     tags: ["auth", "email", "onboarding"],
     icon_name: "Mail",
-    code_reference: "supabase/functions/send-user-invitation",
+    frontend_files: [
+      "src/components/Company/InviteContactDialog.tsx",
+    ],
+    backend_files: [
+      "supabase/functions/send-user-invitation/index.ts",
+      "supabase/functions/send-supplier-invitation/index.ts",
+    ],
+    domain_tables: ["invitations"],
+    hooks: [],
+    database_migrations: [],
+    documentation_url: "https://docs.lovable.dev/features/authentication",
   },
   {
     key: "brreg-integration",
@@ -70,7 +120,21 @@ const initialCapabilities: CapabilityInput[] = [
     dependencies: [],
     tags: ["integration", "norway", "company-data", "brreg"],
     icon_name: "Database",
-    code_reference: "src/modules/core/integrations/adapters/brreg",
+    frontend_files: [
+      "src/modules/core/integrations/adapters/brreg/BrregAdapter.ts",
+    ],
+    backend_files: [
+      "supabase/functions/brreg-lookup/index.ts",
+      "supabase/functions/brreg-search/index.ts",
+      "supabase/functions/brreg-enhanced-lookup/index.ts",
+      "supabase/functions/brreg-company-details/index.ts",
+      "supabase/functions/brreg-batch-lookup/index.ts",
+      "supabase/functions/sync-brreg-companies/index.ts",
+    ],
+    domain_tables: [],
+    hooks: [],
+    database_migrations: [],
+    demo_url: "https://data.brreg.no/",
   },
   {
     key: "project-management",
@@ -83,7 +147,16 @@ const initialCapabilities: CapabilityInput[] = [
     dependencies: ["task-management"],
     tags: ["projects", "collaboration", "planning"],
     icon_name: "FolderKanban",
-    code_reference: "src/modules/core/project",
+    frontend_files: [
+      "src/modules/core/project/components/SupplierCard.tsx",
+      "src/modules/core/project/hooks/useProject.ts",
+      "src/modules/core/project/hooks/useUserProjects.ts",
+      "src/modules/core/project/services/projectService.ts",
+    ],
+    backend_files: [],
+    domain_tables: ["projects", "project_suppliers", "project_members"],
+    hooks: ["useProject", "useUserProjects", "useProjectSuppliers"],
+    database_migrations: [],
   },
   {
     key: "opportunity-pipeline",
@@ -96,7 +169,17 @@ const initialCapabilities: CapabilityInput[] = [
     dependencies: ["company-management"],
     tags: ["crm", "sales", "pipeline"],
     icon_name: "TrendingUp",
-    code_reference: "src/modules/core/opportunity",
+    frontend_files: [
+      "src/modules/core/opportunity/components/OpportunityCard.tsx",
+      "src/modules/core/opportunity/components/OpportunityDialog.tsx",
+      "src/modules/core/opportunity/hooks/useOpportunities.ts",
+      "src/modules/core/opportunity/hooks/useSalesForecast.ts",
+      "src/modules/core/opportunity/services/opportunityService.ts",
+    ],
+    backend_files: [],
+    domain_tables: ["opportunities", "opportunity_products"],
+    hooks: ["useOpportunities", "useSalesForecast"],
+    database_migrations: [],
   },
   {
     key: "document-management",
@@ -109,7 +192,15 @@ const initialCapabilities: CapabilityInput[] = [
     dependencies: [],
     tags: ["documents", "files", "storage"],
     icon_name: "FileText",
-    code_reference: "src/modules/core/document",
+    frontend_files: [
+      "src/modules/core/document/hooks/useProjectDocuments.ts",
+      "src/modules/core/document/hooks/useEvaluationDocuments.ts",
+      "src/modules/core/document/services/documentService.ts",
+    ],
+    backend_files: [],
+    domain_tables: ["documents"],
+    hooks: ["useProjectDocuments", "useEvaluationDocuments"],
+    database_migrations: [],
   },
   {
     key: "calendar-view",
@@ -122,6 +213,13 @@ const initialCapabilities: CapabilityInput[] = [
     dependencies: [],
     tags: ["ui", "calendar", "visualization"],
     icon_name: "Calendar",
+    frontend_files: [
+      "src/components/ui/calendar.tsx",
+    ],
+    backend_files: [],
+    domain_tables: [],
+    hooks: [],
+    database_migrations: [],
   },
   {
     key: "presence-tracking",
@@ -134,6 +232,14 @@ const initialCapabilities: CapabilityInput[] = [
     dependencies: [],
     tags: ["tracking", "events", "attendance"],
     icon_name: "UserCheck",
+    frontend_files: [
+      "src/hooks/useJul25FamilyPeriods.ts",
+      "src/hooks/useJul25MemberCustomPeriods.ts",
+    ],
+    backend_files: [],
+    domain_tables: ["jul25_family_periods", "jul25_member_custom_periods", "jul25_member_periods"],
+    hooks: ["useJul25FamilyPeriods", "useJul25MemberCustomPeriods"],
+    database_migrations: [],
   },
   {
     key: "christmas-theme",
@@ -146,6 +252,14 @@ const initialCapabilities: CapabilityInput[] = [
     dependencies: [],
     tags: ["theme", "christmas", "ui", "seasonal"],
     icon_name: "Sparkles",
+    frontend_files: [
+      "src/pages/apps/Jul25App.tsx",
+      "src/pages/apps/Jul25FamilyAdmin.tsx",
+    ],
+    backend_files: [],
+    domain_tables: ["jul25_families", "jul25_family_members", "jul25_tasks", "jul25_christmas_words"],
+    hooks: ["useJul25Families", "useJul25Tasks"],
+    database_migrations: [],
   },
 ];
 
@@ -161,14 +275,16 @@ export async function seedCapabilities(): Promise<void> {
       const existing = await CapabilityService.getCapability(cap.key);
       
       if (existing) {
-        console.log(`[SeedCapabilities] Skipping existing: ${cap.key}`);
-        continue;
+        // Update existing with new details
+        await CapabilityService.updateCapability(existing.id, cap);
+        console.log(`[SeedCapabilities] Updated: ${cap.key}`);
+      } else {
+        // Create new capability
+        await CapabilityService.createCapability(cap);
+        console.log(`[SeedCapabilities] Created: ${cap.key}`);
       }
-
-      await CapabilityService.createCapability(cap);
-      console.log(`[SeedCapabilities] Created: ${cap.key}`);
     } catch (error) {
-      console.error(`[SeedCapabilities] Error creating ${cap.key}:`, error);
+      console.error(`[SeedCapabilities] Error with ${cap.key}:`, error);
     }
   }
 
