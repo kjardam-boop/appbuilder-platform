@@ -2755,6 +2755,42 @@ export type Database = {
         }
         Relationships: []
       }
+      role_definitions: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          role: Database["public"]["Enums"]["app_role"]
+          scope_type: Database["public"]["Enums"]["role_scope"]
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          role: Database["public"]["Enums"]["app_role"]
+          scope_type: Database["public"]["Enums"]["role_scope"]
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          scope_type?: Database["public"]["Enums"]["role_scope"]
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       role_permissions: {
         Row: {
           action_key: string

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -8,14 +8,16 @@ import { usePermissions, useRolePermissions, usePermissionImportExport, useBulkP
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
-const ROLES_BY_SCOPE = {
-  platform: ['platform_owner', 'platform_support', 'platform_auditor'] as AppRole[],
-  tenant: ['tenant_owner', 'tenant_admin', 'security_admin', 'data_protection'] as AppRole[],
-  company: ['integration_service'] as AppRole[],
-  project: ['project_owner', 'analyst', 'contributor', 'approver', 'viewer', 'external_reviewer'] as AppRole[],
-  app: ['app_admin', 'app_user'] as AppRole[],
-};
+interface RoleDefinition {
+  role: AppRole;
+  scope_type: 'platform' | 'tenant' | 'company' | 'project' | 'app';
+  name: string;
+  description: string;
+  sort_order: number;
+}
 
 const RoleConfiguration = () => {
   const navigate = useNavigate();
@@ -24,6 +26,35 @@ const RoleConfiguration = () => {
   const { data: permissionMatrix, updatePermissions, isUpdating } = useRolePermissions(selectedRole);
   const { exportPermissions, importPermissions, isExporting, isImporting } = usePermissionImportExport();
   const { bulkToggle, isLoading: isBulkLoading } = useBulkPermissions(selectedRole);
+
+  // Fetch role definitions from database
+  const { data: roleDefinitions, isLoading: rolesLoading } = useQuery({
+    queryKey: ['role-definitions'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('role_definitions')
+        .select('*')
+        .eq('is_active', true)
+        .order('sort_order');
+      
+      if (error) throw error;
+      return data as RoleDefinition[];
+    },
+  });
+
+  // Group roles by scope
+  const rolesByScope = useMemo(() => {
+    if (!roleDefinitions) return {};
+    
+    const grouped: Record<string, AppRole[]> = {};
+    roleDefinitions.forEach(def => {
+      if (!grouped[def.scope_type]) {
+        grouped[def.scope_type] = [];
+      }
+      grouped[def.scope_type].push(def.role);
+    });
+    return grouped;
+  }, [roleDefinitions]);
 
   console.log('RoleConfiguration Debug:', {
     selectedRole,
@@ -74,7 +105,7 @@ const RoleConfiguration = () => {
     bulkToggle({ actionKey, enable, resourceKeys });
   };
 
-  if (resources.isLoading || actions.isLoading) {
+  if (resources.isLoading || actions.isLoading || rolesLoading) {
     return <div className="p-8">Laster...</div>;
   }
 
@@ -126,7 +157,7 @@ const RoleConfiguration = () => {
           <TabsTrigger value="app">App</TabsTrigger>
         </TabsList>
 
-        {Object.entries(ROLES_BY_SCOPE).map(([scope, roles]) => (
+        {Object.entries(rolesByScope).map(([scope, roles]) => (
           <TabsContent key={scope} value={scope} className="space-y-4">
             <div className="flex gap-2 flex-wrap">
               {roles.map(role => (
