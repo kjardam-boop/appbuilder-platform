@@ -1,20 +1,24 @@
 /**
  * Tenant Secrets Service
  * Manages tenant-specific secret values for integrations
+ * 
+ * NOTE: This manages API keys/URLs stored in tenant_integrations.credentials
+ * For HMAC signing secrets, see mcpTenantSecretService.ts
  */
 
 import { supabase } from "@/integrations/supabase/client";
+import { getActiveSecret } from '@/modules/core/mcp/services/mcpTenantSecretService';
 
 export interface TenantSecrets {
   N8N_MCP_BASE_URL?: string;
   N8N_MCP_API_KEY?: string;
+  N8N_MCP_SIGNING_SECRET?: string; // Retrieved from mcp_tenant_secret
   [key: string]: string | undefined;
 }
 
 /**
  * Get tenant secrets for a specific namespace
- * Note: In production, this should fetch from a secure secrets store
- * For now, we'll use tenant_integrations credentials field
+ * Includes API keys/URLs from tenant_integrations + HMAC signing secret
  */
 export async function getTenantSecrets(
   tenantId: string,
@@ -38,7 +42,20 @@ export async function getTenantSecrets(
       throw error;
     }
 
-    return (data?.credentials || {}) as TenantSecrets;
+    const secrets = (data?.credentials || {}) as TenantSecrets;
+
+    // Try to fetch HMAC signing secret from mcp_tenant_secret
+    try {
+      const signingSecret = await getActiveSecret(tenantId, namespace);
+      if (signingSecret) {
+        secrets.N8N_MCP_SIGNING_SECRET = signingSecret.secret;
+      }
+    } catch (err) {
+      // No signing secret configured - that's OK, signing is optional
+      console.log(`[TenantSecrets] No signing secret for tenant ${tenantId}, namespace ${namespace}`);
+    }
+
+    return secrets;
   } catch (error) {
     console.error('[TenantSecrets] Error fetching secrets:', error);
     return {};

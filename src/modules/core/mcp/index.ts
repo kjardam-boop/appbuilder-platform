@@ -15,6 +15,10 @@ export { McpDslPolicyService } from './services/mcpDslPolicyService';
 export { McpActionRegistryService } from './services/mcpActionRegistryService';
 export * from './services/tenantPolicyService';
 export * from './services/tenantWorkflowService';
+export * from './services/mcpTenantSecretService';
+
+// Utilities
+export * from './utils/hmacSign';
 
 // Policy
 export { DEFAULT_POLICY } from './policy/defaultPolicy';

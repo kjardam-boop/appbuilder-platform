@@ -1,7 +1,9 @@
 /**
  * MCP Client
- * HTTP client for calling n8n MCP Server
+ * HTTP client for calling n8n MCP Server with optional HMAC signing
  */
+
+import { signPayload } from '@/modules/core/mcp/utils/hmacSign';
 
 export interface McpToolListResponse {
   ok: boolean;
@@ -33,11 +35,18 @@ export class McpClient {
   private baseUrl: string;
   private apiKey: string;
   private tenantId: string;
+  private signingSecret?: string;
 
-  constructor(baseUrl: string, apiKey: string, tenantId: string = "unknown") {
+  constructor(
+    baseUrl: string, 
+    apiKey: string, 
+    tenantId: string = "unknown",
+    signingSecret?: string
+  ) {
     this.baseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
     this.apiKey = apiKey;
     this.tenantId = tenantId;
+    this.signingSecret = signingSecret;
   }
 
   /**
@@ -91,17 +100,39 @@ export class McpClient {
   }
 
   /**
-   * Invoke a tool on the MCP server
+   * Invoke a tool on the MCP server with optional HMAC signing
    */
   async invoke<T = any>(
     tool: string,
     params?: Record<string, any>
   ): Promise<McpInvokeResponse<T>> {
     try {
+      const body = JSON.stringify({ tool, params });
+      const headers = { ...this.getHeaders() };
+      const requestId = crypto.randomUUID();
+      
+      headers['X-Request-Id'] = requestId;
+
+      // Add HMAC signature if signing secret is configured
+      if (this.signingSecret) {
+        const signature = await signPayload(this.signingSecret, body);
+        headers['X-MCP-Signature'] = signature;
+        headers['X-MCP-Tenant'] = this.tenantId;
+
+        console.log(JSON.stringify({
+          level: 'info',
+          msg: 'mcp.secret.used_outbound',
+          tenant_id: this.tenantId,
+          tool,
+          request_id: requestId,
+          signed: true,
+        }));
+      }
+
       const response = await fetch(`${this.baseUrl}/invoke`, {
         method: 'POST',
-        headers: this.getHeaders(),
-        body: JSON.stringify({ tool, params }),
+        headers,
+        body,
       });
 
       if (!response.ok) {

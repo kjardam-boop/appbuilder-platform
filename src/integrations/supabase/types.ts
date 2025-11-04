@@ -1696,6 +1696,42 @@ export type Database = {
         }
         Relationships: []
       }
+      mcp_tenant_secret: {
+        Row: {
+          created_at: string
+          created_by: string
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          provider: string
+          rotated_at: string | null
+          secret: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          provider: string
+          rotated_at?: string | null
+          secret: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          provider?: string
+          rotated_at?: string | null
+          secret?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
       mcp_tenant_workflow_map: {
         Row: {
           created_at: string

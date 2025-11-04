@@ -9,6 +9,7 @@ import type { McpToolListResponse, McpInvokeResponse } from './mcpClient';
 export interface N8nMcpConfig {
   baseUrl: string;
   apiKey: string;
+  signingSecret?: string;
 }
 
 export interface N8nMcpAdapter {
@@ -24,7 +25,12 @@ export function createN8nMcpAdapter(
   config: N8nMcpConfig,
   tenantId?: string
 ): N8nMcpAdapter {
-  const client = new McpClient(config.baseUrl, config.apiKey, tenantId);
+  const client = new McpClient(
+    config.baseUrl, 
+    config.apiKey, 
+    tenantId,
+    config.signingSecret
+  );
 
   return {
     id: 'n8n-mcp',

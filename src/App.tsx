@@ -60,6 +60,7 @@ import Jul25FamilyAdmin from "./pages/apps/Jul25FamilyAdmin";
 import Jul25MemberEdit from "./pages/apps/Jul25MemberEdit";
 import McpPolicy from "./pages/admin/McpPolicy";
 import McpWorkflows from "./pages/admin/McpWorkflows";
+import McpSecrets from "./pages/admin/McpSecrets";
 
 const queryClient = new QueryClient();
 
@@ -120,6 +121,7 @@ const App = () => (
               <Route path="tenants/:tenantId/apps/catalog" element={<TenantAppCatalog />} />
               <Route path="mcp/policy" element={<McpPolicy />} />
               <Route path="mcp/workflows" element={<McpWorkflows />} />
+              <Route path="mcp/secrets" element={<McpSecrets />} />
             </Route>
             
             {/* Legacy admin routes - redirect to new structure */}
