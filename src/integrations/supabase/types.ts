@@ -59,6 +59,66 @@ export type Database = {
           },
         ]
       }
+      app_categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          documentation_url: string | null
+          icon_name: string | null
+          id: string
+          is_active: boolean | null
+          key: string
+          name: string
+          parent_key: string | null
+          slug: string
+          sort_order: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          documentation_url?: string | null
+          icon_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          key: string
+          name: string
+          parent_key?: string | null
+          slug: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          documentation_url?: string | null
+          icon_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          key?: string
+          name?: string
+          parent_key?: string | null
+          slug?: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_categories_parent_key_fkey"
+            columns: ["parent_key"]
+            isOneToOne: false
+            referencedRelation: "app_categories"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "app_categories_parent_key_fkey"
+            columns: ["parent_key"]
+            isOneToOne: false
+            referencedRelation: "app_categories_tree"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
       app_definitions: {
         Row: {
           app_type: string
@@ -172,6 +232,7 @@ export type Database = {
           api_docs_url: string | null
           api_keys: boolean | null
           app_types: string[] | null
+          category_id: string | null
           compliances: string[] | null
           created_at: string
           deployment_models: string[]
@@ -214,6 +275,7 @@ export type Database = {
           api_docs_url?: string | null
           api_keys?: boolean | null
           app_types?: string[] | null
+          category_id?: string | null
           compliances?: string[] | null
           created_at?: string
           deployment_models?: string[]
@@ -256,6 +318,7 @@ export type Database = {
           api_docs_url?: string | null
           api_keys?: boolean | null
           app_types?: string[] | null
+          category_id?: string | null
           compliances?: string[] | null
           created_at?: string
           deployment_models?: string[]
@@ -294,6 +357,20 @@ export type Database = {
           zapier_app?: boolean | null
         }
         Relationships: [
+          {
+            foreignKeyName: "app_products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "app_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "app_products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "app_categories_tree"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "app_products_vendor_id_fkey"
             columns: ["vendor_id"]
@@ -2883,7 +2960,37 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      app_categories_tree: {
+        Row: {
+          description: string | null
+          icon_name: string | null
+          id: string | null
+          is_active: boolean | null
+          key: string | null
+          name: string | null
+          parent_key: string | null
+          parent_name: string | null
+          product_count: number | null
+          slug: string | null
+          sort_order: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_categories_parent_key_fkey"
+            columns: ["parent_key"]
+            isOneToOne: false
+            referencedRelation: "app_categories"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "app_categories_parent_key_fkey"
+            columns: ["parent_key"]
+            isOneToOne: false
+            referencedRelation: "app_categories_tree"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
     }
     Functions: {
       admin_has_platform_role: {
