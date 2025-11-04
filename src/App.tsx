@@ -46,6 +46,7 @@ import SupplierAuth from "./pages/SupplierAuth";
 import SupplierScoringPage from "./pages/SupplierScoringPage";
 import ArchivedResources from "./pages/ArchivedResources";
 import NotFound from "./pages/NotFound";
+import AppsPage from "./pages/AppsPage";
 import Jul25App from "./pages/apps/Jul25App";
 import Jul25FamilyAdmin from "./pages/apps/Jul25FamilyAdmin";
 import Jul25MemberEdit from "./pages/apps/Jul25MemberEdit";
@@ -134,6 +135,7 @@ const App = () => (
             <Route path="/supplier/scoring/:projectId/:supplierId" element={<SupplierScoringPage />} />
             
             {/* Customer Apps */}
+            <Route path="/apps" element={<AppsPage />} />
             <Route path="/apps/jul25" element={<Jul25App />} />
             <Route path="/apps/jul25/admin" element={<Jul25FamilyAdmin />} />
             <Route path="/apps/jul25/member/:memberId" element={<Jul25MemberEdit />} />
