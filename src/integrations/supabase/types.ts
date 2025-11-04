@@ -435,14 +435,19 @@ export type Database = {
       capabilities: {
         Row: {
           app_definition_id: string | null
+          backend_files: string[] | null
           category: string
           created_at: string | null
           current_version: string
+          database_migrations: string[] | null
           demo_url: string | null
           dependencies: string[] | null
           description: string | null
           documentation_url: string | null
+          domain_tables: string[] | null
           estimated_dev_hours: number | null
+          frontend_files: string[] | null
+          hooks: string[] | null
           icon_name: string | null
           id: string
           is_active: boolean | null
@@ -455,14 +460,19 @@ export type Database = {
         }
         Insert: {
           app_definition_id?: string | null
+          backend_files?: string[] | null
           category: string
           created_at?: string | null
           current_version?: string
+          database_migrations?: string[] | null
           demo_url?: string | null
           dependencies?: string[] | null
           description?: string | null
           documentation_url?: string | null
+          domain_tables?: string[] | null
           estimated_dev_hours?: number | null
+          frontend_files?: string[] | null
+          hooks?: string[] | null
           icon_name?: string | null
           id?: string
           is_active?: boolean | null
@@ -475,14 +485,19 @@ export type Database = {
         }
         Update: {
           app_definition_id?: string | null
+          backend_files?: string[] | null
           category?: string
           created_at?: string | null
           current_version?: string
+          database_migrations?: string[] | null
           demo_url?: string | null
           dependencies?: string[] | null
           description?: string | null
           documentation_url?: string | null
+          domain_tables?: string[] | null
           estimated_dev_hours?: number | null
+          frontend_files?: string[] | null
+          hooks?: string[] | null
           icon_name?: string | null
           id?: string
           is_active?: boolean | null

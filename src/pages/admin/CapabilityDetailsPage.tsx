@@ -12,12 +12,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, ExternalLink, Package, Tag, Building2 } from "lucide-react";
+import { ArrowLeft, ExternalLink, Package, Tag, Building2, Code, Database, FileCode, Webhook } from "lucide-react";
 import * as Icons from "lucide-react";
 import { LucideIcon } from "lucide-react";
+import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
 
 export default function CapabilityDetailsPage() {
   const { capabilityId } = useParams<{ capabilityId: string }>();
+  const { isPlatformAdmin, isLoading: isPlatformAdminLoading } = usePlatformAdmin();
 
   const { data: capability, isLoading } = useQuery({
     queryKey: ["capability", capabilityId],
@@ -180,6 +182,116 @@ export default function CapabilityDetailsPage() {
                 </div>
               </CardContent>
             </Card>
+          )}
+
+          {/* Technical Implementation - Only for Platform Admins */}
+          {isPlatformAdmin && (
+            <>
+              {/* Frontend Files */}
+              {capability.frontend_files && capability.frontend_files.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Code className="h-5 w-5" />
+                      Frontend Files
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-1">
+                      {capability.frontend_files.map((file) => (
+                        <code key={file} className="block text-xs font-mono">
+                          {file}
+                        </code>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Backend Files */}
+              {capability.backend_files && capability.backend_files.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <FileCode className="h-5 w-5" />
+                      Backend Files
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-1">
+                      {capability.backend_files.map((file) => (
+                        <code key={file} className="block text-xs font-mono">
+                          {file}
+                        </code>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Domain Tables */}
+              {capability.domain_tables && capability.domain_tables.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Database className="h-5 w-5" />
+                      Domain Tables
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2">
+                      {capability.domain_tables.map((table) => (
+                        <Badge key={table} variant="default" className="font-mono text-xs">
+                          {table}
+                        </Badge>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Hooks */}
+              {capability.hooks && capability.hooks.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Webhook className="h-5 w-5" />
+                      Hooks
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2">
+                      {capability.hooks.map((hook) => (
+                        <Badge key={hook} variant="secondary" className="font-mono text-xs">
+                          {hook}
+                        </Badge>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Database Migrations */}
+              {capability.database_migrations && capability.database_migrations.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Database className="h-5 w-5" />
+                      Database Migrations
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-1">
+                      {capability.database_migrations.map((migration) => (
+                        <code key={migration} className="block text-xs font-mono">
+                          {migration}
+                        </code>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </>
           )}
 
           {/* Version History */}

@@ -41,6 +41,13 @@ export interface Capability {
   // Tags for search
   tags: string[];
   
+  // Technical implementation details (visible to platform admins)
+  frontend_files: string[]; // Frontend file paths
+  backend_files: string[]; // Backend file paths (edge functions, etc)
+  hooks: string[]; // Hook identifiers
+  domain_tables: string[]; // Database tables used
+  database_migrations: string[]; // Migration file references
+  
   created_at: string;
   updated_at: string;
   
@@ -165,4 +172,9 @@ export interface CapabilityInput {
   icon_name?: string;
   tags?: string[];
   code_reference?: string;
+  frontend_files?: string[];
+  backend_files?: string[];
+  hooks?: string[];
+  domain_tables?: string[];
+  database_migrations?: string[];
 }

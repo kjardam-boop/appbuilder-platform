@@ -107,6 +107,11 @@ export class CapabilityService {
         documentation_url: input.documentation_url || null,
         icon_name: input.icon_name || null,
         tags: input.tags || [],
+        frontend_files: input.frontend_files || [],
+        backend_files: input.backend_files || [],
+        hooks: input.hooks || [],
+        domain_tables: input.domain_tables || [],
+        database_migrations: input.database_migrations || [],
       }])
       .select()
       .single();
