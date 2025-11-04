@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
 
       const { data: secrets, error } = await supabaseClient
         .from('mcp_tenant_secret')
-        .select('id, provider, is_active, created_at, rotated_at, expires_at, created_by')
+        .select('id, tenant_id, provider, is_active, created_at, rotated_at, expires_at, created_by')
         .eq('tenant_id', tenantId)
         .eq('provider', provider)
         .order('created_at', { ascending: false });

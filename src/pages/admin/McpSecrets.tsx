@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +18,7 @@ import {
   Eye,
   EyeOff
 } from "lucide-react";
+import { resolveTenantIdForReveal } from "@/pages/admin/mcp/utils";
 import {
   Table,
   TableBody,
@@ -52,6 +53,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 interface McpSecret {
   id: string;
   provider: string;
+  tenant_id?: string;
   is_active: boolean;
   created_at: string;
   rotated_at?: string;
@@ -208,17 +210,22 @@ export default function McpSecrets() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Get tenant from user_roles (choose first if multiple)
-      const { data: rolesList, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('scope_id')
-        .eq('user_id', user.id)
-        .eq('scope_type', 'tenant')
-        .limit(1);
+      // Prefer tenant from secrets payload (server-selected), fallback to first tenant role
+      const tenantIdFromSecrets = (secrets[0] as McpSecret | undefined)?.tenant_id;
 
-      const tenantId = rolesList?.[0]?.scope_id;
-      if (rolesError || !tenantId) {
-        throw new Error("Tenant not found. Please contact support.");
+      let tenantId = tenantIdFromSecrets;
+      if (!tenantId) {
+        const { data: rolesList, error: rolesError } = await supabase
+          .from('user_roles')
+          .select('scope_id')
+          .eq('user_id', user.id)
+          .eq('scope_type', 'tenant')
+          .order('created_at', { ascending: true })
+          .limit(1);
+        tenantId = resolveTenantIdForReveal(secrets as McpSecret[], rolesList as any);
+        if (rolesError || !tenantId) {
+          throw new Error("Tenant not found. Please contact support.");
+        }
       }
 
       const response = await fetch(
