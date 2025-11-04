@@ -1496,6 +1496,8 @@ export type Database = {
           id: string
           idempotency_key: string | null
           payload_json: Json | null
+          policy_result: Json | null
+          request_id: string | null
           result_json: Json | null
           status: string
           tenant_id: string
@@ -1509,6 +1511,8 @@ export type Database = {
           id?: string
           idempotency_key?: string | null
           payload_json?: Json | null
+          policy_result?: Json | null
+          request_id?: string | null
           result_json?: Json | null
           status: string
           tenant_id: string
@@ -1522,6 +1526,8 @@ export type Database = {
           id?: string
           idempotency_key?: string | null
           payload_json?: Json | null
+          policy_result?: Json | null
+          request_id?: string | null
           result_json?: Json | null
           status?: string
           tenant_id?: string

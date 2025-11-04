@@ -1,0 +1,246 @@
+{
+  "version": "1.0.0",
+  "protocol": "mcp",
+  "resources": [
+    {
+      "type": "company",
+      "operations": ["list", "get"],
+      "searchFields": ["name", "org_number"],
+      "description": "Companies in the system"
+    },
+    {
+      "type": "supplier",
+      "operations": ["list", "get"],
+      "searchFields": ["name", "org_number"],
+      "description": "Approved suppliers (companies with is_approved_supplier=true)"
+    },
+    {
+      "type": "project",
+      "operations": ["list", "get"],
+      "searchFields": ["title", "description"],
+      "description": "Projects (tenant-scoped)"
+    },
+    {
+      "type": "task",
+      "operations": ["list", "get"],
+      "searchFields": ["title", "description"],
+      "description": "Tasks (tenant-scoped)"
+    },
+    {
+      "type": "external_system",
+      "operations": ["list", "get"],
+      "searchFields": ["name", "vendor"],
+      "description": "External systems/app products"
+    },
+    {
+      "type": "application",
+      "operations": ["list", "get"],
+      "searchFields": ["name", "key"],
+      "description": "Tenant applications"
+    }
+  ],
+  "actions": [
+    {
+      "name": "create_project",
+      "description": "Create a new project",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project name (required)"
+          },
+          "description": {
+            "type": "string",
+            "description": "Project description (optional)"
+          },
+          "customerCompanyId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Customer company ID (optional)"
+          },
+          "tags": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Project tags (optional)"
+          }
+        },
+        "required": ["name"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "phase": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "list_projects",
+      "description": "List all projects for the current tenant",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 25,
+            "description": "Maximum number of results"
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "projects": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "string", "format": "uuid" },
+                "title": { "type": "string" },
+                "phase": { "type": "string" },
+                "created_at": { "type": "string", "format": "date-time" }
+              }
+            }
+          },
+          "count": { "type": "number" },
+          "total": { "type": "number" }
+        }
+      }
+    },
+    {
+      "name": "assign_task",
+      "description": "Assign a task to a user",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Task title (required)"
+          },
+          "description": {
+            "type": "string",
+            "description": "Task description (optional)"
+          },
+          "assigned_to": {
+            "type": "string",
+            "format": "uuid",
+            "description": "User ID to assign to (optional, defaults to current user)"
+          },
+          "entity_type": {
+            "type": "string",
+            "enum": ["project", "company", "opportunity"],
+            "description": "Entity type (required)"
+          },
+          "entity_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Entity ID (required)"
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["low", "medium", "high", "urgent"],
+            "default": "medium",
+            "description": "Task priority (optional)"
+          },
+          "due_date": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Due date (optional)"
+          }
+        },
+        "required": ["title", "entity_type", "entity_id"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "taskId": { "type": "string", "format": "uuid" },
+          "title": { "type": "string" },
+          "assigned_to": { "type": "string", "format": "uuid" },
+          "status": { "type": "string" },
+          "priority": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "search_companies",
+      "description": "Search companies in the database",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Search query (name or org_number)"
+          },
+          "limit": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 25,
+            "description": "Maximum number of results"
+          }
+        },
+        "required": ["query"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "companies": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "string", "format": "uuid" },
+                "name": { "type": "string" },
+                "org_number": { "type": "string" },
+                "industry_code": { "type": "string" },
+                "employees": { "type": "number" }
+              }
+            }
+          },
+          "count": { "type": "number" },
+          "total": { "type": "number" }
+        }
+      }
+    },
+    {
+      "name": "evaluate_supplier",
+      "description": "Evaluate a supplier (demo implementation)",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "supplierId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Supplier ID (required)"
+          },
+          "criteria": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Evaluation criteria (optional)"
+          }
+        },
+        "required": ["supplierId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "supplierId": { "type": "string", "format": "uuid" },
+          "score": { "type": "number" },
+          "reason": { "type": "string" },
+          "criteria": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "evaluated_at": { "type": "string", "format": "date-time" }
+        }
+      }
+    }
+  ]
+}

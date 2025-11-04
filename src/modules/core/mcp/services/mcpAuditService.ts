@@ -21,25 +21,51 @@ export class McpAuditService {
     idempotencyKey?: string
   ): Promise<void> {
     try {
+      const logEntry = {
+        tenant_id: ctx.tenant_id,
+        user_id: ctx.user_id,
+        action_name: actionName,
+        payload_json: payload,
+        result_json: result,
+        status,
+        error_message: errorMessage,
+        duration_ms: durationMs,
+        idempotency_key: idempotencyKey,
+        request_id: ctx.request_id,
+        policy_result: null, // Will be used in Step 2+
+      };
+
       const { error } = await supabase
         .from('mcp_action_log')
-        .insert({
-          tenant_id: ctx.tenant_id,
-          user_id: ctx.user_id,
-          action_name: actionName,
-          payload_json: payload,
-          result_json: result,
-          status,
-          error_message: errorMessage,
-          duration_ms: durationMs,
-          idempotency_key: idempotencyKey,
-        });
+        .insert(logEntry);
 
       if (error) {
-        console.error('[McpAuditService] Failed to log action:', error);
+        console.error(JSON.stringify({
+          level: 'error',
+          msg: 'mcp.audit.failed',
+          request_id: ctx.request_id,
+          tenant_id: ctx.tenant_id,
+          action: actionName,
+          error: error.message
+        }));
+      } else {
+        console.log(JSON.stringify({
+          level: 'info',
+          msg: 'mcp.audit.logged',
+          request_id: ctx.request_id,
+          tenant_id: ctx.tenant_id,
+          action: actionName,
+          latency_ms: durationMs,
+          status
+        }));
       }
     } catch (err) {
-      console.error('[McpAuditService] Exception logging action:', err);
+      console.error(JSON.stringify({
+        level: 'error',
+        msg: 'mcp.audit.exception',
+        request_id: ctx.request_id,
+        error: String(err)
+      }));
     }
   }
 

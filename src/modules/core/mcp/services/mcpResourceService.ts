@@ -4,7 +4,14 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
-import { McpContext, McpListParams, McpListResponse, McpResourceType } from '../types/mcp.types';
+import { 
+  McpContext, 
+  McpResourceType, 
+  McpListParams, 
+  McpListResponse,
+  VALID_RESOURCE_TYPES,
+  McpCursor
+} from '../types/mcp.types';
 
 export class McpResourceService {
   /**
@@ -15,57 +22,109 @@ export class McpResourceService {
     type: McpResourceType,
     params: McpListParams = {}
   ): Promise<McpListResponse<any>> {
-    const { q, limit = 25, cursor } = params;
-    const effectiveLimit = Math.min(limit, 100); // Max 100 items
-
-    try {
-      const tableName = this.getTableName(type);
-      const baseQuery = supabase.from(tableName as any).select('*');
-      
-      let query: any = baseQuery;
-
-      // For tenant-scoped tables, add tenant filter
-      if (type === 'project' || type === 'task' || type === 'application') {
-        query = query.eq('tenant_id', ctx.tenant_id);
-      }
-
-      query = query.limit(effectiveLimit + 1); // Fetch one extra to check if there are more
-
-      // Apply search filter if provided
-      if (q && type === 'company') {
-        query = query.ilike('name', `%${q}%`);
-      } else if (q && type === 'project') {
-        query = query.ilike('title', `%${q}%`);
-      }
-
-      // Apply cursor-based pagination
-      if (cursor) {
-        query = query.lt('created_at', cursor);
-      }
-
-      query = query.order('created_at', { ascending: false });
-
-      const { data, error } = await query;
-
-      if (error) {
-        console.error(`[McpResourceService] Error listing ${type}:`, error);
-        return { items: [], hasMore: false };
-      }
-
-      const items = data || [];
-      const hasMore = items.length > effectiveLimit;
-      const returnItems = hasMore ? items.slice(0, effectiveLimit) : items;
-      const nextCursor = hasMore && returnItems.length > 0 ? returnItems[returnItems.length - 1]?.created_at : undefined;
-
-      return {
-        items: returnItems,
-        cursor: nextCursor,
-        hasMore,
-      };
-    } catch (err) {
-      console.error(`[McpResourceService] Exception listing ${type}:`, err);
-      return { items: [], hasMore: false };
+    // Validate resource type against whitelist
+    if (!VALID_RESOURCE_TYPES.includes(type as any)) {
+      throw new Error(`Invalid resource type: ${type}. Valid types: ${VALID_RESOURCE_TYPES.join(', ')}`);
     }
+
+    const { q, limit = 25, cursor } = params;
+    const safeLimit = Math.min(limit, 100);
+
+    const tableName = this.getTableName(type);
+    let query = supabase.from(tableName as any).select('*');
+
+    // Apply tenant isolation for relevant types
+    if (['project', 'task', 'application'].includes(type)) {
+      query = query.eq('tenant_id', ctx.tenant_id);
+    }
+
+    // Apply supplier filter
+    if (type === 'supplier') {
+      query = query.eq('is_approved_supplier', true);
+    }
+
+    // Apply cursor-based pagination (decode cursor if provided)
+    if (cursor) {
+      try {
+        const decodedCursor: McpCursor = JSON.parse(
+          Buffer.from(cursor, 'base64').toString('utf-8')
+        );
+        query = query
+          .or(`id.gt.${decodedCursor.id},and(id.eq.${decodedCursor.id},created_at.gt.${decodedCursor.created_at})`);
+      } catch (err) {
+        throw new Error('Invalid cursor format');
+      }
+    }
+
+    // Apply search filter (documented fields per resource type)
+    if (q) {
+      const searchFields = this.getSearchFields(type);
+      const searchConditions = searchFields.map(field => `${field}.ilike.%${q}%`).join(',');
+      query = query.or(searchConditions);
+    }
+
+    // Apply limit + 1 to check for more results
+    query = query
+      .order('created_at', { ascending: true })
+      .order('id', { ascending: true })
+      .limit(safeLimit + 1);
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error(JSON.stringify({
+        level: 'error',
+        msg: 'mcp.resource.list.failed',
+        request_id: ctx.request_id,
+        tenant_id: ctx.tenant_id,
+        type,
+        error: error.message
+      }));
+      throw new Error(`Failed to list ${type}: ${error.message}`);
+    }
+
+    const items = (data || []) as any[];
+    const hasMore = items.length > safeLimit;
+    const results = hasMore ? items.slice(0, safeLimit) : items;
+    
+    // Create nextCursor as base64-encoded JSON with id + created_at
+    const nextCursor = hasMore && results.length > 0 
+      ? Buffer.from(JSON.stringify({
+          id: results[results.length - 1]?.id,
+          created_at: results[results.length - 1]?.created_at
+        })).toString('base64')
+      : undefined;
+
+    console.log(JSON.stringify({
+      level: 'info',
+      msg: 'mcp.resource.list',
+      request_id: ctx.request_id,
+      tenant_id: ctx.tenant_id,
+      type,
+      count: results.length,
+      hasMore
+    }));
+
+    return {
+      items: results,
+      cursor: nextCursor,
+      hasMore,
+    };
+  }
+
+  /**
+   * Get searchable fields for a resource type
+   */
+  private static getSearchFields(type: McpResourceType): string[] {
+    const searchFieldsMap: Record<McpResourceType, string[]> = {
+      company: ['name', 'org_number'],
+      supplier: ['name', 'org_number'],
+      project: ['title', 'description'],
+      task: ['title', 'description'],
+      external_system: ['name', 'vendor'],
+      application: ['name', 'key'],
+    };
+    return searchFieldsMap[type] || ['name'];
   }
 
   /**
@@ -76,29 +135,45 @@ export class McpResourceService {
     type: McpResourceType,
     id: string
   ): Promise<any | null> {
-    try {
-      const tableName = this.getTableName(type);
-      const baseQuery = supabase.from(tableName as any).select('*').eq('id', id);
-      
-      let query: any = baseQuery;
-
-      // For tenant-scoped tables, add tenant filter
-      if (type === 'project' || type === 'task' || type === 'application') {
-        query = query.eq('tenant_id', ctx.tenant_id);
-      }
-
-      const { data, error } = await query.maybeSingle();
-
-      if (error) {
-        console.error(`[McpResourceService] Error getting ${type} ${id}:`, error);
-        return null;
-      }
-
-      return data;
-    } catch (err) {
-      console.error(`[McpResourceService] Exception getting ${type} ${id}:`, err);
-      return null;
+    // Validate resource type against whitelist
+    if (!VALID_RESOURCE_TYPES.includes(type as any)) {
+      throw new Error(`Invalid resource type: ${type}. Valid types: ${VALID_RESOURCE_TYPES.join(', ')}`);
     }
+
+    const tableName = this.getTableName(type);
+    let query = supabase.from(tableName as any).select('*').eq('id', id);
+
+    // Apply tenant isolation for relevant types
+    if (['project', 'task', 'application'].includes(type)) {
+      query = query.eq('tenant_id', ctx.tenant_id);
+    }
+
+    const { data, error } = await query.maybeSingle();
+
+    if (error) {
+      console.error(JSON.stringify({
+        level: 'error',
+        msg: 'mcp.resource.get.failed',
+        request_id: ctx.request_id,
+        tenant_id: ctx.tenant_id,
+        type,
+        id,
+        error: error.message
+      }));
+      throw new Error(`Failed to get ${type}: ${error.message}`);
+    }
+
+    console.log(JSON.stringify({
+      level: 'info',
+      msg: 'mcp.resource.get',
+      request_id: ctx.request_id,
+      tenant_id: ctx.tenant_id,
+      type,
+      id,
+      found: !!data
+    }));
+
+    return data;
   }
 
   /**

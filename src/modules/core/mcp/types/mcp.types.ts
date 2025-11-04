@@ -32,6 +32,24 @@ export interface McpActionLog {
   error_message?: string;
   duration_ms?: number;
   idempotency_key?: string;
+  request_id?: string;
+  policy_result?: any;
+  created_at: string;
+}
+
+export const VALID_RESOURCE_TYPES = [
+  'company',
+  'supplier',
+  'project',
+  'task',
+  'external_system',
+  'application'
+] as const;
+
+export type ValidResourceType = typeof VALID_RESOURCE_TYPES[number];
+
+export interface McpCursor {
+  id: string;
   created_at: string;
 }
 
