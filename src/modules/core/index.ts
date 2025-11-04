@@ -30,6 +30,9 @@ export * from './project';
 // Tasks
 export * from './tasks';
 
+// MCP (Model Context Protocol) Server
+export * from './mcp';
+
 // Export auth and user modules separately to avoid conflicts
 export { AUTH_MODULE } from './auth';
 export { USER_MODULE } from './user';

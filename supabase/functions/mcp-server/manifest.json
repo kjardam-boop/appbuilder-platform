@@ -1,0 +1,52 @@
+{
+  "version": "1.0.0",
+  "protocol": "mcp",
+  "resources": [
+    {
+      "type": "company",
+      "operations": ["list", "get"]
+    },
+    {
+      "type": "supplier",
+      "operations": ["list", "get"]
+    },
+    {
+      "type": "project",
+      "operations": ["list", "get"]
+    },
+    {
+      "type": "task",
+      "operations": ["list", "get"]
+    },
+    {
+      "type": "external_system",
+      "operations": ["list", "get"]
+    },
+    {
+      "type": "application",
+      "operations": ["list", "get"]
+    }
+  ],
+  "actions": [
+    {
+      "name": "create_project",
+      "description": "Create a new project"
+    },
+    {
+      "name": "assign_task",
+      "description": "Assign a task to a user"
+    },
+    {
+      "name": "evaluate_supplier",
+      "description": "Evaluate a supplier (demo implementation)"
+    },
+    {
+      "name": "list_projects",
+      "description": "List all projects for the current tenant"
+    },
+    {
+      "name": "search_companies",
+      "description": "Search companies in the database"
+    }
+  ]
+}

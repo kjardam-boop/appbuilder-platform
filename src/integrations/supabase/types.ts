@@ -1487,6 +1487,48 @@ export type Database = {
           },
         ]
       }
+      mcp_action_log: {
+        Row: {
+          action_name: string
+          created_at: string
+          duration_ms: number | null
+          error_message: string | null
+          id: string
+          idempotency_key: string | null
+          payload_json: Json | null
+          result_json: Json | null
+          status: string
+          tenant_id: string
+          user_id: string | null
+        }
+        Insert: {
+          action_name: string
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          idempotency_key?: string | null
+          payload_json?: Json | null
+          result_json?: Json | null
+          status: string
+          tenant_id: string
+          user_id?: string | null
+        }
+        Update: {
+          action_name?: string
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          idempotency_key?: string | null
+          payload_json?: Json | null
+          result_json?: Json | null
+          status?: string
+          tenant_id?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       opportunities: {
         Row: {
           actual_close_date: string | null
