@@ -111,10 +111,13 @@ export function MarkdownViewer({
     // Basic markdown parsing
     let html = md;
 
-    // Headers
-    html = html.replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold mt-6 mb-3">$1</h3>');
-    html = html.replace(/^## (.*$)/gim, '<h2 class="text-xl font-semibold mt-8 mb-4">$1</h2>');
-    html = html.replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold mb-6">$1</h1>');
+    // Horizontal rules
+    html = html.replace(/^---$/gim, '<hr class="my-8 border-border" />');
+
+    // Headers with more spacing
+    html = html.replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold mt-8 mb-4">$1</h3>');
+    html = html.replace(/^## (.*$)/gim, '<h2 class="text-xl font-semibold mt-10 mb-5 pb-2 border-b border-border">$1</h2>');
+    html = html.replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold mb-8">$1</h1>');
 
     // Code blocks
     html = html.replace(/```(\w+)?\n([\s\S]*?)```/gim, (_, lang, code) => {
