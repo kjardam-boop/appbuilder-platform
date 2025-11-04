@@ -99,10 +99,10 @@ const SEED_PRODUCTS: SeedData[] = [
       "slug": "adobe-creative-cloud",
       "vendorSlug": "adobe",
       "app_types": [
-        "Creative"
+        "CMS"
       ],
       "deployment_models": [
-        "Cloud"
+        "SaaS"
       ],
       "target_industries": [
         "Design",
