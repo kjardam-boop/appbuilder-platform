@@ -168,64 +168,130 @@ export type Database = {
       }
       app_products: {
         Row: {
+          ai_plugins: boolean | null
+          api_docs_url: string | null
+          api_keys: boolean | null
           app_types: string[] | null
           compliances: string[] | null
           created_at: string
           deployment_models: string[]
           description: string | null
+          dual_region: boolean | null
+          email_parse: boolean | null
+          eu_data_residency: boolean | null
+          event_subscriptions: boolean | null
+          file_export: boolean | null
+          gdpr_statement_url: string | null
+          graphql: boolean | null
           id: string
+          ip_allowlist: boolean | null
           localizations: string[] | null
           market_segments: string[] | null
+          mcp_connector: boolean | null
           modules_supported: string[] | null
+          n8n_node: boolean | null
           name: string
+          oauth2: boolean | null
+          pipedream_support: boolean | null
           pricing_model: string | null
+          privacy_risk_level: string | null
+          rate_limits: Json | null
+          rest_api: boolean | null
+          scim: boolean | null
           short_name: string | null
           slug: string
+          sso: boolean | null
           status: string
           target_industries: string[] | null
           updated_at: string
           vendor_id: string
+          webhooks: boolean | null
           website: string | null
+          zapier_app: boolean | null
         }
         Insert: {
+          ai_plugins?: boolean | null
+          api_docs_url?: string | null
+          api_keys?: boolean | null
           app_types?: string[] | null
           compliances?: string[] | null
           created_at?: string
           deployment_models?: string[]
           description?: string | null
+          dual_region?: boolean | null
+          email_parse?: boolean | null
+          eu_data_residency?: boolean | null
+          event_subscriptions?: boolean | null
+          file_export?: boolean | null
+          gdpr_statement_url?: string | null
+          graphql?: boolean | null
           id?: string
+          ip_allowlist?: boolean | null
           localizations?: string[] | null
           market_segments?: string[] | null
+          mcp_connector?: boolean | null
           modules_supported?: string[] | null
+          n8n_node?: boolean | null
           name: string
+          oauth2?: boolean | null
+          pipedream_support?: boolean | null
           pricing_model?: string | null
+          privacy_risk_level?: string | null
+          rate_limits?: Json | null
+          rest_api?: boolean | null
+          scim?: boolean | null
           short_name?: string | null
           slug: string
+          sso?: boolean | null
           status?: string
           target_industries?: string[] | null
           updated_at?: string
           vendor_id: string
+          webhooks?: boolean | null
           website?: string | null
+          zapier_app?: boolean | null
         }
         Update: {
+          ai_plugins?: boolean | null
+          api_docs_url?: string | null
+          api_keys?: boolean | null
           app_types?: string[] | null
           compliances?: string[] | null
           created_at?: string
           deployment_models?: string[]
           description?: string | null
+          dual_region?: boolean | null
+          email_parse?: boolean | null
+          eu_data_residency?: boolean | null
+          event_subscriptions?: boolean | null
+          file_export?: boolean | null
+          gdpr_statement_url?: string | null
+          graphql?: boolean | null
           id?: string
+          ip_allowlist?: boolean | null
           localizations?: string[] | null
           market_segments?: string[] | null
+          mcp_connector?: boolean | null
           modules_supported?: string[] | null
+          n8n_node?: boolean | null
           name?: string
+          oauth2?: boolean | null
+          pipedream_support?: boolean | null
           pricing_model?: string | null
+          privacy_risk_level?: string | null
+          rate_limits?: Json | null
+          rest_api?: boolean | null
+          scim?: boolean | null
           short_name?: string | null
           slug?: string
+          sso?: boolean | null
           status?: string
           target_industries?: string[] | null
           updated_at?: string
           vendor_id?: string
+          webhooks?: boolean | null
           website?: string | null
+          zapier_app?: boolean | null
         }
         Relationships: [
           {
@@ -240,6 +306,8 @@ export type Database = {
       app_vendors: {
         Row: {
           company_id: string
+          contact_url: string | null
+          country: string | null
           created_at: string
           description: string | null
           id: string
@@ -250,6 +318,8 @@ export type Database = {
         }
         Insert: {
           company_id: string
+          contact_url?: string | null
+          country?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -260,6 +330,8 @@ export type Database = {
         }
         Update: {
           company_id?: string
+          contact_url?: string | null
+          country?: string | null
           created_at?: string
           description?: string | null
           id?: string
