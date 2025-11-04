@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTenantIsolation } from "@/hooks/useTenantIsolation";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,7 +16,16 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { ForceGraph2D } from "react-force-graph";
+import ReactFlow, {
+  Node,
+  Edge,
+  Background,
+  Controls,
+  MiniMap,
+  useNodesState,
+  useEdgesState,
+} from "reactflow";
+import "reactflow/dist/style.css";
 
 interface GraphNode {
   id: string;
@@ -48,7 +57,9 @@ export default function IntegrationGraph() {
   const [showSoft, setShowSoft] = useState(true);
   const [showRisk, setShowRisk] = useState(true);
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
-  const graphRef = useRef<any>();
+  
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
   // Fetch graph data
   const { data: graphData, isLoading, refetch } = useQuery({
@@ -67,23 +78,52 @@ export default function IntegrationGraph() {
     enabled: !!tenantId,
   });
 
-  // Transform data for react-force-graph
-  const graphDataFormatted = {
-    nodes: (graphData?.nodes || [])
+  // Transform data for ReactFlow
+  useMemo(() => {
+    if (!graphData) return;
+
+    const flowNodes: Node[] = (graphData.nodes || [])
       .filter((n) => showSoft || !n.soft)
-      .map((n) => ({
-        ...n,
+      .map((n, idx) => ({
         id: n.id,
-        name: n.label,
-        val: n.type === "app" ? 20 : n.type === "system" ? 15 : 10,
-      })),
-    links: (graphData?.edges || []).map((e) => ({
+        type: "default",
+        data: { 
+          label: n.label,
+          ...n,
+        },
+        position: { 
+          x: (idx % 5) * 250, 
+          y: Math.floor(idx / 5) * 150 
+        },
+        style: {
+          background: getNodeColor(n),
+          color: "#fff",
+          border: showRisk && (n.status === "risk" || n.status === "missing") 
+            ? "3px solid #ef4444" 
+            : "1px solid #94a3b8",
+          borderRadius: "8px",
+          padding: "10px",
+          fontSize: "12px",
+          opacity: n.soft ? 0.6 : 1,
+        },
+      }));
+
+    const flowEdges: Edge[] = (graphData.edges || []).map((e) => ({
+      id: e.id,
       source: e.source,
       target: e.target,
-      type: e.type,
-      status: e.status,
-    })),
-  };
+      type: "smoothstep",
+      animated: e.status === "recommended",
+      style: {
+        stroke: getLinkColor(e),
+        strokeWidth: 2,
+      },
+      label: e.type,
+    }));
+
+    setNodes(flowNodes);
+    setEdges(flowEdges);
+  }, [graphData, showSoft, showRisk]);
 
   const handleExport = async () => {
     try {
@@ -143,8 +183,8 @@ export default function IntegrationGraph() {
     return "#94a3b8";
   };
 
-  const handleNodeClick = useCallback((node: any) => {
-    setSelectedNode(node);
+  const handleNodeClick = useCallback((_event: any, node: Node) => {
+    setSelectedNode(node.data as GraphNode);
   }, []);
 
   return (
@@ -261,61 +301,23 @@ export default function IntegrationGraph() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="w-full h-[600px] border rounded-lg overflow-hidden bg-slate-950">
-              <ForceGraph2D
-                ref={graphRef}
-                graphData={graphDataFormatted}
-                nodeLabel="name"
-                nodeColor={getNodeColor}
-                linkColor={getLinkColor}
-                linkDirectionalArrowLength={3}
-                linkDirectionalArrowRelPos={1}
+            <div className="w-full h-[600px] border rounded-lg overflow-hidden">
+              <ReactFlow
+                nodes={nodes}
+                edges={edges}
+                onNodesChange={onNodesChange}
+                onEdgesChange={onEdgesChange}
                 onNodeClick={handleNodeClick}
-                nodeCanvasObject={(node: any, ctx, globalScale) => {
-                  const label = node.name;
-                  const fontSize = 12 / globalScale;
-                  ctx.font = `${fontSize}px Sans-Serif`;
-                  
-                  const size = node.val || 10;
-                  
-                  // Draw circle
-                  ctx.beginPath();
-                  ctx.arc(node.x, node.y, size, 0, 2 * Math.PI);
-                  ctx.fillStyle = getNodeColor(node);
-                  ctx.fill();
-                  
-                  // Soft node styling
-                  if (node.soft) {
-                    ctx.globalAlpha = 0.5;
-                  }
-                  
-                  // Risk border
-                  if (showRisk && (node.status === "risk" || node.status === "missing")) {
-                    ctx.strokeStyle = "#ef4444";
-                    ctx.lineWidth = 3 / globalScale;
-                    ctx.stroke();
-                  }
-                  
-                  ctx.globalAlpha = 1;
-                  
-                  // Draw label
-                  ctx.textAlign = "center";
-                  ctx.textBaseline = "middle";
-                  ctx.fillStyle = "#fff";
-                  ctx.fillText(label, node.x, node.y + size + fontSize);
-                  
-                  // Draw badges
-                  if (node.badges && node.badges.length > 0) {
-                    ctx.fillStyle = "#94a3b8";
-                    ctx.font = `${fontSize * 0.8}px Sans-Serif`;
-                    ctx.fillText(
-                      node.badges.join(" "),
-                      node.x,
-                      node.y + size + fontSize * 2
-                    );
-                  }
-                }}
-              />
+                fitView
+                attributionPosition="bottom-left"
+              >
+                <Background />
+                <Controls />
+                <MiniMap 
+                  nodeColor={(node) => getNodeColor(node.data)}
+                  maskColor="rgba(0, 0, 0, 0.1)"
+                />
+              </ReactFlow>
             </div>
           </CardContent>
         </Card>
