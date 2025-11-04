@@ -66,6 +66,7 @@ import Compatibility from "./pages/admin/Compatibility";
 import Categories from "./pages/admin/Categories";
 import TenantSystems from "./pages/admin/TenantSystems";
 import IntegrationRecommendations from "./pages/admin/IntegrationRecommendations";
+import IntegrationGraph from "./pages/admin/IntegrationGraph";
 
 const queryClient = new QueryClient();
 
@@ -132,6 +133,7 @@ const App = () => (
               <Route path="categories" element={<Categories />} />
               <Route path="tenant-systems" element={<TenantSystems />} />
               <Route path="integration-recommendations" element={<IntegrationRecommendations />} />
+              <Route path="integration-graph" element={<IntegrationGraph />} />
             </Route>
             
             {/* Legacy admin routes - redirect to new structure */}
