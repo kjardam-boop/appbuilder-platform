@@ -9,7 +9,9 @@ export type CapabilityCategory =
   | "UI Component" 
   | "Business Logic"
   | "Authentication"
-  | "Data Management";
+  | "Data Management"
+  | "Security"
+  | "Platform";
 
 export type CapabilityScope = "platform" | "app-specific";
 
