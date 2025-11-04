@@ -2,11 +2,12 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, Download, Upload } from "lucide-react";
+import { Shield, Download, Upload, CheckSquare, XSquare, Activity } from "lucide-react";
 import { AppRole, ROLE_LABELS } from "@/modules/core/user/types/role.types";
-import { usePermissions, useRolePermissions, usePermissionImportExport } from "@/modules/core/permissions";
+import { usePermissions, useRolePermissions, usePermissionImportExport, useBulkPermissions } from "@/modules/core/permissions";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 const ROLES_BY_SCOPE = {
   platform: ['platform_owner', 'platform_support', 'platform_auditor'] as AppRole[],
@@ -17,10 +18,12 @@ const ROLES_BY_SCOPE = {
 };
 
 const RoleConfiguration = () => {
+  const navigate = useNavigate();
   const [selectedRole, setSelectedRole] = useState<AppRole>('platform_owner');
   const { resources, actions } = usePermissions();
   const { data: permissionMatrix, updatePermissions, isUpdating } = useRolePermissions(selectedRole);
   const { exportPermissions, importPermissions, isExporting, isImporting } = usePermissionImportExport();
+  const { bulkToggle, isLoading: isBulkLoading } = useBulkPermissions(selectedRole);
 
   console.log('RoleConfiguration Debug:', {
     selectedRole,
@@ -64,6 +67,11 @@ const RoleConfiguration = () => {
     input.click();
   };
 
+  const handleBulkToggle = (actionKey: string, enable: boolean) => {
+    const resourceKeys = resources.data?.map(r => r.key) || [];
+    bulkToggle({ actionKey, enable, resourceKeys });
+  };
+
   if (resources.isLoading || actions.isLoading) {
     return <div className="p-8">Laster...</div>;
   }
@@ -78,6 +86,14 @@ const RoleConfiguration = () => {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/admin/permissions/health')}
+          >
+            <Activity className="h-4 w-4 mr-2" />
+            Tilgangshelse
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -135,10 +151,41 @@ const RoleConfiguration = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
+                  {/* Header row with bulk actions */}
                   <div className="grid grid-cols-[200px_1fr] gap-4 border-b pb-2">
                     <div className="font-semibold">Ressurs</div>
-                    <div className="font-semibold">Tilganger</div>
+                    <div className="flex gap-4 flex-wrap">
+                      {actions.data?.map(action => (
+                        <div key={action.key} className="flex flex-col gap-1 min-w-[120px]">
+                          <span className="font-semibold text-sm">{action.name}</span>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 px-2 text-xs"
+                              onClick={() => handleBulkToggle(action.key, true)}
+                              disabled={isBulkLoading || isUpdating}
+                              title={`Velg alle ${action.name}`}
+                            >
+                              <CheckSquare className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 px-2 text-xs"
+                              onClick={() => handleBulkToggle(action.key, false)}
+                              disabled={isBulkLoading || isUpdating}
+                              title={`Fjern alle ${action.name}`}
+                            >
+                              <XSquare className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
+
+                  {/* Resource rows */}
                   {resources.data?.map(resource => (
                     <div key={resource.key} className="grid grid-cols-[200px_1fr] gap-4 items-center">
                       <div>
@@ -149,11 +196,11 @@ const RoleConfiguration = () => {
                         {actions.data?.map(action => {
                           const hasPermission = permissionMatrix?.permissions[resource.key]?.includes(action.key) || false;
                           return (
-                            <label key={action.key} className="flex items-center gap-2 cursor-pointer">
+                            <label key={action.key} className="flex items-center gap-2 cursor-pointer min-w-[120px]">
                               <Checkbox
                                 checked={hasPermission}
                                 onCheckedChange={() => handleTogglePermission(resource.key, action.key, hasPermission)}
-                                disabled={isUpdating}
+                                disabled={isUpdating || isBulkLoading}
                               />
                               <span className="text-sm">{action.name}</span>
                             </label>

@@ -6,6 +6,7 @@
 export * from './types/permission.types';
 export * from './services/permissionService';
 export * from './services/seedPermissions';
+export * from './services/permissionMigrationService';
 export * from './hooks/usePermissions';
 
 export const PERMISSIONS_MODULE = {

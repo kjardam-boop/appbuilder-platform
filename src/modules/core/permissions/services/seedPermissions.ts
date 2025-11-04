@@ -53,6 +53,38 @@ const CORE_ACTIONS: ActionDefinition[] = [
   { key: "import", name: "Importer", description: "Importere data" },
 ];
 
+/**
+ * Role templates - standard permissions per rolle
+ */
+const ROLE_TEMPLATES: Record<string, string[]> = {
+  // Platform roles
+  platform_owner: ["admin", "create", "read", "update", "delete", "list", "export", "import"],
+  platform_support: ["read", "list", "export"],
+  platform_auditor: ["read", "list"],
+  
+  // Tenant roles
+  tenant_owner: ["admin", "create", "read", "update", "delete", "list", "export", "import"],
+  tenant_admin: ["create", "read", "update", "delete", "list", "export"],
+  security_admin: ["read", "update", "list"],
+  data_protection: ["read", "export", "delete", "list"],
+  
+  // Company roles
+  integration_service: ["create", "read", "update", "list"],
+  supplier_user: ["read", "update"],
+  
+  // Project roles
+  project_owner: ["admin", "create", "read", "update", "delete", "list", "export"],
+  analyst: ["create", "read", "update", "list", "export"],
+  contributor: ["read", "update", "list"],
+  approver: ["read", "update", "list"],
+  viewer: ["read", "list"],
+  external_reviewer: ["read"],
+  
+  // App roles
+  app_admin: ["admin", "create", "read", "update", "delete", "list"],
+  app_user: ["read", "update", "list"],
+};
+
 export class PermissionSeedService {
   /**
    * Seed all core resources
@@ -205,5 +237,73 @@ export class PermissionSeedService {
         app.description || "Application"
       );
     }
+  }
+
+  /**
+   * Apply standard permissions for a role to a resource
+   */
+  static async applyRoleTemplate(
+    role: string,
+    resourceKey: string
+  ): Promise<void> {
+    const actions = ROLE_TEMPLATES[role] || [];
+    
+    if (actions.length === 0) {
+      console.log(`[PermissionSeed] No template for role: ${role}`);
+      return;
+    }
+
+    // Slett eksisterende permissions
+    await supabase
+      .from("role_permissions")
+      .delete()
+      .eq("role", role as any)
+      .eq("resource_key", resourceKey);
+
+    // Insert nye permissions basert på template
+    const { error } = await supabase
+      .from("role_permissions")
+      .insert(
+        actions.map(actionKey => ({
+          role: role as any,
+          resource_key: resourceKey,
+          action_key: actionKey,
+          allowed: true,
+        }))
+      );
+
+    if (error) {
+      console.error(`[PermissionSeed] Error applying template for ${role}:`, error);
+    } else {
+      console.log(`[PermissionSeed] ✓ Applied template for ${role} on ${resourceKey}`);
+    }
+  }
+
+  /**
+   * Apply templates to all resources for all roles
+   */
+  static async applyAllTemplates(): Promise<void> {
+    console.log("[PermissionSeed] Applying all role templates...");
+
+    // Hent alle ressurser
+    const { data: resources, error: resourceError } = await supabase
+      .from("permission_resources")
+      .select("key")
+      .eq("is_active", true);
+
+    if (resourceError) {
+      console.error("[PermissionSeed] Error fetching resources:", resourceError);
+      return;
+    }
+
+    // For hver rolle i templates
+    for (const [role, _actions] of Object.entries(ROLE_TEMPLATES)) {
+      // For hver ressurs
+      for (const resource of resources || []) {
+        await this.applyRoleTemplate(role, resource.key);
+      }
+    }
+
+    console.log("[PermissionSeed] ✓ All templates applied!");
   }
 }

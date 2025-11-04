@@ -410,6 +410,11 @@ export default function AdminSeed() {
                   <li>• New resources (capability, app_definition, app_vendor, industry)</li>
                   <li>• CRUD actions + admin/export/import</li>
                 </ul>
+                <Alert className="mt-4">
+                  <AlertDescription>
+                    <strong>Viktig:</strong> Etter seeding, gå til <a href="/admin/permissions/health" className="underline">Tilgangshelse</a> for å anvende standard templates på alle roller.
+                  </AlertDescription>
+                </Alert>
               </div>
 
               <Button 

@@ -33,6 +33,7 @@ import AppVendorAdmin from "./pages/AppVendorAdmin";
 import SystemVendorsPage from "./pages/SystemVendorsPage";
 import RoleManagement from "./pages/RoleManagement";
 import RoleConfiguration from "./pages/admin/RoleConfiguration";
+import PermissionHealth from "./pages/admin/PermissionHealth";
 import CompaniesHub from "./pages/CompaniesHub";
 import CompanySearch from "./pages/CompanySearch";
 import CompanyDetails from "./pages/CompanyDetails";
@@ -97,6 +98,7 @@ const App = () => (
               <Route path="users" element={<UserManagement />} />
               <Route path="roles" element={<RoleManagement />} />
               <Route path="roles/config" element={<RoleConfiguration />} />
+              <Route path="permissions/health" element={<PermissionHealth />} />
               <Route path="companies" element={<AdminCompanies />} />
               <Route path="archived" element={<ArchivedResources />} />
               <Route path="settings" element={<AdminSettings />} />
