@@ -52,6 +52,13 @@ const adminNavItems = [
     ],
   },
   {
+    title: "Integrations (MCP)",
+    items: [
+      { title: "Policy Configuration", url: "/admin/mcp/policy", icon: Shield },
+      { title: "Workflow Mappings", url: "/admin/mcp/workflows", icon: Plug },
+    ],
+  },
+  {
     title: "Operations",
     items: [
       { title: "Integrations", url: "/admin/integrations", icon: Plug },

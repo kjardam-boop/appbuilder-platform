@@ -12,9 +12,14 @@ export { McpResourceService } from './services/mcpResourceService';
 export { McpAuditService } from './services/mcpAuditService';
 export { McpPolicyService } from './services/mcpPolicyService';
 export { McpDslPolicyService } from './services/mcpDslPolicyService';
+export * from './services/tenantPolicyService';
+export * from './services/tenantWorkflowService';
 
 // Policy
 export { DEFAULT_POLICY } from './policy/defaultPolicy';
+
+// Validation
+export * from './validation/schemas';
 
 // Actions
 export { createProjectAction, listProjectsAction } from './actions/projectActions';

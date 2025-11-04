@@ -1612,6 +1612,81 @@ export type Database = {
           },
         ]
       }
+      mcp_tenant_policy: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          policy_json: Json
+          source: string
+          tenant_id: string
+          updated_at: string
+          version: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          policy_json: Json
+          source?: string
+          tenant_id: string
+          updated_at?: string
+          version?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          policy_json?: Json
+          source?: string
+          tenant_id?: string
+          updated_at?: string
+          version?: string
+        }
+        Relationships: []
+      }
+      mcp_tenant_workflow_map: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          provider: string
+          tenant_id: string
+          updated_at: string
+          webhook_path: string
+          workflow_key: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          provider?: string
+          tenant_id: string
+          updated_at?: string
+          webhook_path: string
+          workflow_key: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          provider?: string
+          tenant_id?: string
+          updated_at?: string
+          webhook_path?: string
+          workflow_key?: string
+        }
+        Relationships: []
+      }
       opportunities: {
         Row: {
           actual_close_date: string | null
