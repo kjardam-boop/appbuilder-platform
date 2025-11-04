@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { TenantAppInstall, AppConfig, AppOverrides } from "../types/appRegistry.types";
 import { AppRegistryService } from "./appRegistryService";
 import { CompatibilityService } from "./compatibilityService";
+import { McpActionRegistryService } from "../../mcp/services/mcpActionRegistryService";
 
 export class TenantAppsService {
   /**
@@ -58,6 +59,22 @@ export class TenantAppsService {
       .maybeSingle();
 
     if (error) throw error;
+    
+    // Register MCP actions if defined in manifest
+    if (definition.mcp_actions && definition.mcp_actions.length > 0) {
+      try {
+        await McpActionRegistryService.registerTenantActions(
+          tenantId,
+          appKey,
+          definition.mcp_actions,
+          'system'
+        );
+      } catch (regError) {
+        console.error('Failed to register MCP actions during install:', regError);
+        // Don't fail the install, just log the error
+      }
+    }
+    
     return data as TenantAppInstall;
   }
 
@@ -95,6 +112,22 @@ export class TenantAppsService {
       .maybeSingle();
 
     if (error) throw error;
+    
+    // Re-register MCP actions for new version
+    const definition = await AppRegistryService.getDefinitionByKey(appKey);
+    if (definition.mcp_actions && definition.mcp_actions.length > 0) {
+      try {
+        await McpActionRegistryService.registerTenantActions(
+          tenantId,
+          appKey,
+          definition.mcp_actions,
+          userId || 'system'
+        );
+      } catch (regError) {
+        console.error('Failed to register MCP actions during update:', regError);
+      }
+    }
+    
     return data as TenantAppInstall;
   }
 
@@ -213,5 +246,12 @@ export class TenantAppsService {
       .eq('key', appKey);
 
     if (error) throw error;
+    
+    // Disable MCP actions for this app
+    try {
+      await McpActionRegistryService.disableTenantAppActions(tenantId, appKey);
+    } catch (regError) {
+      console.error('Failed to disable MCP actions during uninstall:', regError);
+    }
   }
 }

@@ -12,6 +12,7 @@ export { McpResourceService } from './services/mcpResourceService';
 export { McpAuditService } from './services/mcpAuditService';
 export { McpPolicyService } from './services/mcpPolicyService';
 export { McpDslPolicyService } from './services/mcpDslPolicyService';
+export { McpActionRegistryService } from './services/mcpActionRegistryService';
 export * from './services/tenantPolicyService';
 export * from './services/tenantWorkflowService';
 

@@ -28,6 +28,14 @@ export interface IntegrationRequirements {
   required_external_systems?: string[];
 }
 
+export interface McpActionManifest {
+  key: string;
+  description?: string;
+  version: string;
+  inputSchema?: any;
+  outputSchema?: any;
+}
+
 export interface AppDefinition {
   id: string;
   key: string;
@@ -48,6 +56,7 @@ export interface AppDefinition {
   ui_components: UIComponent[];
   capabilities: string[];
   integration_requirements: IntegrationRequirements;
+  mcp_actions?: McpActionManifest[];
 }
 
 export interface AppVersion {

@@ -13,6 +13,14 @@ export interface Migration {
   rollback_sql?: string;
 }
 
+export interface McpActionManifest {
+  key: string;
+  description?: string;
+  version: string;
+  inputSchema?: any; // JSON Schema
+  outputSchema?: any; // JSON Schema
+}
+
 export interface AppManifest {
   key: string;
   name: string;
@@ -24,6 +32,7 @@ export interface AppManifest {
   capabilities?: string[];
   integration_requirements?: IntegrationRequirements;
   migrations?: Migration[];
+  mcp_actions?: McpActionManifest[];
 }
 
 // Zod schemas
@@ -52,6 +61,14 @@ const migrationSchema = z.object({
   rollback_sql: z.string().optional(),
 });
 
+const mcpActionSchema = z.object({
+  key: z.string().regex(/^[a-z0-9_-]+$/),
+  description: z.string().optional(),
+  version: z.string().regex(/^\d+\.\d+\.\d+$/),
+  inputSchema: z.any().optional(),
+  outputSchema: z.any().optional(),
+});
+
 export const appManifestSchema = z.object({
   key: z.string().regex(/^[a-z0-9-]+$/),
   name: z.string().min(1),
@@ -63,4 +80,5 @@ export const appManifestSchema = z.object({
   capabilities: z.array(z.string()).optional(),
   integration_requirements: integrationRequirementsSchema.optional(),
   migrations: z.array(migrationSchema).optional(),
+  mcp_actions: z.array(mcpActionSchema).optional(),
 });

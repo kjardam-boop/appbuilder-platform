@@ -18,7 +18,8 @@ export class McpAuditService {
     status: McpActionStatus,
     durationMs: number,
     errorMessage?: string,
-    idempotencyKey?: string
+    idempotencyKey?: string,
+    registryFqAction?: string
   ): Promise<void> {
     try {
       const logEntry = {
@@ -32,6 +33,7 @@ export class McpAuditService {
         duration_ms: durationMs,
         idempotency_key: idempotencyKey,
         request_id: ctx.request_id,
+        registry_fq_action: registryFqAction,
         policy_result: null, // Will be used in Step 2+
       };
 

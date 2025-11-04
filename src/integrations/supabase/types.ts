@@ -1551,6 +1551,7 @@ export type Database = {
           integration_run_id: string | null
           payload_json: Json | null
           policy_result: Json | null
+          registry_fq_action: string | null
           request_id: string | null
           resource_id: string | null
           resource_type: string | null
@@ -1572,6 +1573,7 @@ export type Database = {
           integration_run_id?: string | null
           payload_json?: Json | null
           policy_result?: Json | null
+          registry_fq_action?: string | null
           request_id?: string | null
           resource_id?: string | null
           resource_type?: string | null
@@ -1593,6 +1595,7 @@ export type Database = {
           integration_run_id?: string | null
           payload_json?: Json | null
           policy_result?: Json | null
+          registry_fq_action?: string | null
           request_id?: string | null
           resource_id?: string | null
           resource_type?: string | null
@@ -1611,6 +1614,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      mcp_action_registry: {
+        Row: {
+          action_key: string
+          app_key: string
+          created_at: string
+          created_by: string
+          description: string | null
+          enabled: boolean
+          fq_action: string
+          id: string
+          input_schema: Json | null
+          output_schema: Json | null
+          tenant_id: string
+          version: string
+        }
+        Insert: {
+          action_key: string
+          app_key: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          enabled?: boolean
+          fq_action: string
+          id?: string
+          input_schema?: Json | null
+          output_schema?: Json | null
+          tenant_id: string
+          version: string
+        }
+        Update: {
+          action_key?: string
+          app_key?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          enabled?: boolean
+          fq_action?: string
+          id?: string
+          input_schema?: Json | null
+          output_schema?: Json | null
+          tenant_id?: string
+          version?: string
+        }
+        Relationships: []
       }
       mcp_tenant_policy: {
         Row: {

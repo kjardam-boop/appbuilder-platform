@@ -129,6 +129,10 @@ export class McpDslPolicyService {
 
   /**
    * Check if a field value matches the rule specification
+   * Supports:
+   * - Exact match
+   * - Wildcard (*)
+   * - Namespaced actions (app.action format)
    */
   private static fieldMatches(ruleValue: string | string[], actualValue: string): boolean {
     const allowed = Array.isArray(ruleValue) ? ruleValue : [ruleValue];
@@ -138,8 +142,27 @@ export class McpDslPolicyService {
       return true;
     }
 
-    // Exact match
-    return allowed.includes(actualValue);
+    // Check each allowed pattern
+    for (const pattern of allowed) {
+      // Exact match
+      if (pattern === actualValue) {
+        return true;
+      }
+      
+      // Namespaced action match (e.g., "erp-screening.*" matches "erp-screening.create_scorecard")
+      if (pattern.includes('.') && actualValue.includes('.')) {
+        const [patternApp, patternAction] = pattern.split('.');
+        const [actualApp, actualAction] = actualValue.split('.');
+        
+        if (patternApp === actualApp) {
+          if (patternAction === '*' || patternAction === actualAction) {
+            return true;
+          }
+        }
+      }
+    }
+
+    return false;
   }
 
   /**
