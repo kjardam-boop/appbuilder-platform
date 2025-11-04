@@ -18,12 +18,19 @@ export type {
   AppChannel,
   InstallStatus,
   ExtensionType,
+  AppHook,
+  UIComponent,
+  IntegrationRequirements,
+  MigrationStatus,
 } from "./types/appRegistry.types";
 
 export {
   appConfigSchema,
   appOverridesSchema,
 } from "./types/appRegistry.types";
+
+export type { AppManifest, Migration } from "./types/manifest.types";
+export { appManifestSchema } from "./types/manifest.types";
 
 // Application Types
 export type {
@@ -47,6 +54,7 @@ export type {
   AppStatus,
   IntegrationType,
   ProjectAppStage,
+  UseCase,
 } from "./types/application.types";
 
 export type {
@@ -89,6 +97,8 @@ export { VendorService } from "./services/vendorService";
 export { PartnerCertificationService } from "./services/partnerCertificationService";
 export { ERPExtensionService } from "./services/erpExtensionService";
 export { seedApplications } from "./services/seedApplications";
+export { ManifestLoader } from "./services/manifestLoader";
+export { ObservabilityService } from "./services/observabilityService";
 
 // App Registry Hooks
 export {
@@ -119,11 +129,15 @@ export {
   useCertifiedPartners,
   usePartnerCertifications,
   useAddCertification,
+  useAppProductsByCapability,
+  useAppProductsByUseCase,
+  useMcpReference,
 } from "./hooks/useApplications";
 
 export { useSKUs, useCreateSKU, useDeleteSKU } from "./hooks/useSKUs";
 export { useCompanyApps, useCreateCompanyApp, useDeleteCompanyApp } from "./hooks/useCompanyApps";
 export { useApplicationGeneration } from "./hooks/useApplicationGeneration";
+export { useAppUsageStats } from "./hooks/useObservability";
 
 // Components
 export { AppProductCard } from "./components/AppProductCard";
