@@ -340,13 +340,18 @@ Deno.serve(async (req) => {
 
     // POST /reveal
     if (req.method === 'POST' && action === 'reveal') {
-      const { token } = await req.json();
+      const { token, tenantId: requestTenantId } = await req.json();
+      const finalTenantId = requestTenantId || tenantId;
+      
+      if (!finalTenantId) {
+        throw new Error('TENANT_NOT_FOUND');
+      }
 
       // Check rate limit
-      const rateLimitOk = await checkRateLimit(supabaseClient, tenantId, user.id, 'reveal');
+      const rateLimitOk = await checkRateLimit(supabaseClient, finalTenantId, user.id, 'reveal');
       if (!rateLimitOk) {
         await logSecretAction(supabaseClient, {
-          tenantId,
+          tenantId: finalTenantId,
           userId: user.id,
           action: 'reveal',
           provider: 'n8n',
@@ -360,11 +365,11 @@ Deno.serve(async (req) => {
       }
 
       // Consume reveal token from database
-      const secret = await consumeRevealToken(supabaseClient, token, tenantId, user.id);
+      const secret = await consumeRevealToken(supabaseClient, token, finalTenantId, user.id);
 
       if (!secret) {
         await logSecretAction(supabaseClient, {
-          tenantId,
+          tenantId: finalTenantId,
           userId: user.id,
           action: 'reveal',
           provider: 'n8n',
@@ -378,7 +383,7 @@ Deno.serve(async (req) => {
       }
 
       await logSecretAction(supabaseClient, {
-        tenantId,
+        tenantId: finalTenantId,
         userId: user.id,
         action: 'reveal',
         provider: 'n8n',

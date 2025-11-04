@@ -209,14 +209,16 @@ export default function McpSecrets() {
       if (!user) throw new Error("Not authenticated");
 
       // Get tenant from user_roles
-      const { data: roles } = await supabase
+      const { data: roles, error: rolesError } = await supabase
         .from('user_roles')
         .select('scope_id')
         .eq('user_id', user.id)
         .eq('scope_type', 'tenant')
-        .single();
+        .maybeSingle();
 
-      if (!roles) throw new Error("No tenant found");
+      if (rolesError || !roles?.scope_id) {
+        throw new Error("Tenant not found. Please contact support.");
+      }
 
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-mcp-secrets/reveal`,
@@ -230,7 +232,10 @@ export default function McpSecrets() {
           body: JSON.stringify({ token, tenantId: roles.scope_id }),
         }
       );
-      if (!response.ok) throw new Error("Token expired or invalid");
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Token expired or invalid");
+      }
       return response.json();
     },
     onSuccess: (data) => {
