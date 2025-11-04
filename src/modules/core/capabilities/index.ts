@@ -39,6 +39,10 @@ export {
 // Components
 export { CapabilityCard } from "./components/CapabilityCard";
 export { CapabilityBrowser } from "./components/CapabilityBrowser";
+export { AppCapabilityDrawer } from "./components/AppCapabilityDrawer";
+
+// Services
+export { AppCapabilityService } from "./services/appCapabilityService";
 
 // Module metadata
 export const CAPABILITIES_MODULE = {

@@ -25,6 +25,7 @@ import AdminQuestions from "./pages/AdminQuestions";
 import AdminSeed from "./pages/AdminSeed";
 import AdminCompanies from "./pages/admin/AdminCompanies";
 import CapabilityCatalog from "./pages/CapabilityCatalog";
+import CapabilityDetailsPage from "./pages/admin/CapabilityDetailsPage";
 import IndustryAdmin from "./pages/IndustryAdmin";
 import ApplicationsPage from "./pages/ApplicationsPage";
 import AppProductDetails from "./pages/AppProductDetails";
@@ -103,6 +104,7 @@ const App = () => (
               <Route path="applications" element={<ApplicationsPage />} />
               <Route path="applications/new" element={<ApplicationCreate />} />
               <Route path="capabilities" element={<CapabilityCatalog />} />
+              <Route path="capabilities/:capabilityId" element={<CapabilityDetailsPage />} />
               <Route path="database" element={<AdminSeed />} />
               <Route path="integrations" element={<AdminSettings />} />
               <Route path="security" element={<AdminSettings />} />

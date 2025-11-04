@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_capability_usage: {
+        Row: {
+          app_definition_id: string
+          capability_id: string
+          config_schema: Json | null
+          created_at: string
+          id: string
+          is_required: boolean
+          updated_at: string
+        }
+        Insert: {
+          app_definition_id: string
+          capability_id: string
+          config_schema?: Json | null
+          created_at?: string
+          id?: string
+          is_required?: boolean
+          updated_at?: string
+        }
+        Update: {
+          app_definition_id?: string
+          capability_id?: string
+          config_schema?: Json | null
+          created_at?: string
+          id?: string
+          is_required?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_capability_usage_app_definition_id_fkey"
+            columns: ["app_definition_id"]
+            isOneToOne: false
+            referencedRelation: "app_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "app_capability_usage_capability_id_fkey"
+            columns: ["capability_id"]
+            isOneToOne: false
+            referencedRelation: "capabilities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       app_definitions: {
         Row: {
           app_type: string
@@ -389,6 +434,7 @@ export type Database = {
       }
       capabilities: {
         Row: {
+          app_definition_id: string | null
           category: string
           created_at: string | null
           current_version: string
@@ -403,10 +449,12 @@ export type Database = {
           key: string
           name: string
           price_per_month: number | null
+          scope: string
           tags: string[] | null
           updated_at: string | null
         }
         Insert: {
+          app_definition_id?: string | null
           category: string
           created_at?: string | null
           current_version?: string
@@ -421,10 +469,12 @@ export type Database = {
           key: string
           name: string
           price_per_month?: number | null
+          scope?: string
           tags?: string[] | null
           updated_at?: string | null
         }
         Update: {
+          app_definition_id?: string | null
           category?: string
           created_at?: string | null
           current_version?: string
@@ -439,10 +489,19 @@ export type Database = {
           key?: string
           name?: string
           price_per_month?: number | null
+          scope?: string
           tags?: string[] | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "capabilities_app_definition_id_fkey"
+            columns: ["app_definition_id"]
+            isOneToOne: false
+            referencedRelation: "app_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       capability_versions: {
         Row: {

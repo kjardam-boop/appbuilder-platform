@@ -9,12 +9,14 @@ import { Button } from "@/components/ui/button";
 import { Capability } from "../types/capability.types";
 import * as Icons from "lucide-react";
 import { LucideIcon } from "lucide-react";
+import { Building2 } from "lucide-react";
 
 interface CapabilityCardProps {
   capability: Capability;
   onSelect?: (capability: Capability) => void;
   isSelected?: boolean;
   showPrice?: boolean;
+  onClick?: () => void;
 }
 
 export function CapabilityCard({
@@ -22,11 +24,15 @@ export function CapabilityCard({
   onSelect,
   isSelected,
   showPrice = true,
+  onClick,
 }: CapabilityCardProps) {
   const Icon = (capability.icon_name && Icons[capability.icon_name as keyof typeof Icons]) as LucideIcon || Icons.Box;
 
   return (
-    <Card className={isSelected ? "border-primary" : ""}>
+    <Card 
+      className={`${isSelected ? "border-primary" : ""} ${onClick ? "cursor-pointer hover:border-primary/50 transition-colors" : ""}`}
+      onClick={onClick}
+    >
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
@@ -40,7 +46,12 @@ export function CapabilityCard({
               </CardDescription>
             </div>
           </div>
-          <Badge variant="secondary">{capability.category}</Badge>
+          <div className="flex flex-col gap-1 items-end">
+            <Badge variant="secondary">{capability.category}</Badge>
+            {capability.scope === "app-specific" && (
+              <Badge variant="outline" className="text-xs">App-Specific</Badge>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -48,12 +59,25 @@ export function CapabilityCard({
           {capability.description || "No description available"}
         </p>
 
+        {/* Usage count for platform capabilities */}
+        {capability.scope === "platform" && capability.usage_count !== undefined && capability.usage_count > 0 && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Building2 className="h-3 w-3" />
+            <span>Used by {capability.usage_count} app(s)</span>
+          </div>
+        )}
+
         <div className="flex flex-wrap gap-1">
-          {capability.tags.map((tag) => (
+          {capability.tags.slice(0, 3).map((tag) => (
             <Badge key={tag} variant="outline" className="text-xs">
               {tag}
             </Badge>
           ))}
+          {capability.tags.length > 3 && (
+            <Badge variant="outline" className="text-xs">
+              +{capability.tags.length - 3}
+            </Badge>
+          )}
         </div>
 
         {showPrice && capability.price_per_month !== null && (
@@ -69,15 +93,12 @@ export function CapabilityCard({
           </p>
         )}
 
-        {capability.dependencies.length > 0 && (
-          <div className="text-xs text-muted-foreground">
-            Avhengigheter: {capability.dependencies.join(", ")}
-          </div>
-        )}
-
         {onSelect && (
           <Button
-            onClick={() => onSelect(capability)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect(capability);
+            }}
             variant={isSelected ? "secondary" : "default"}
             className="w-full"
             size="sm"

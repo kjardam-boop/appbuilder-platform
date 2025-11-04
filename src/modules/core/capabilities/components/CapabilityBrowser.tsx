@@ -6,11 +6,13 @@
 import { useState } from "react";
 import { useCapabilities } from "../hooks/useCapabilities";
 import { CapabilityCard } from "./CapabilityCard";
+import { AppCapabilityDrawer } from "./AppCapabilityDrawer";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Capability, CapabilityCategory } from "../types/capability.types";
 import { Search } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const CATEGORIES: CapabilityCategory[] = [
   "AI",
@@ -34,12 +36,21 @@ export function CapabilityBrowser({
 }: CapabilityBrowserProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [category, setCategory] = useState<CapabilityCategory | "all">("all");
+  const [scope, setScope] = useState<"all" | "platform" | "app-specific">("all");
+  const [selectedCapability, setSelectedCapability] = useState<Capability | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const { data: capabilities, isLoading } = useCapabilities({
     query: searchQuery || undefined,
     category: category !== "all" ? category : undefined,
+    scope: scope !== "all" ? scope : undefined,
     isActive: true,
   });
+
+  const handleCardClick = (capability: Capability) => {
+    setSelectedCapability(capability);
+    setDrawerOpen(true);
+  };
 
   if (isLoading) {
     return (
@@ -60,7 +71,7 @@ export function CapabilityBrowser({
   return (
     <div className="space-y-6">
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
+      <div className="flex flex-col gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -70,19 +81,30 @@ export function CapabilityBrowser({
             className="pl-9"
           />
         </div>
-        <Select value={category} onValueChange={(v) => setCategory(v as any)}>
-          <SelectTrigger className="w-full sm:w-48">
-            <SelectValue placeholder="Kategori" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Alle kategorier</SelectItem>
-            {CATEGORIES.map((cat) => (
-              <SelectItem key={cat} value={cat}>
-                {cat}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        
+        <div className="flex flex-col sm:flex-row gap-4">
+          <Select value={category} onValueChange={(v) => setCategory(v as any)}>
+            <SelectTrigger className="w-full sm:w-48">
+              <SelectValue placeholder="Kategori" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Alle kategorier</SelectItem>
+              {CATEGORIES.map((cat) => (
+                <SelectItem key={cat} value={cat}>
+                  {cat}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Tabs value={scope} onValueChange={(v) => setScope(v as any)} className="w-full sm:w-auto">
+            <TabsList>
+              <TabsTrigger value="all">Alle</TabsTrigger>
+              <TabsTrigger value="platform">Platform</TabsTrigger>
+              <TabsTrigger value="app-specific">App-Specific</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
       </div>
 
       {/* Results */}
@@ -95,6 +117,7 @@ export function CapabilityBrowser({
               onSelect={onSelect}
               isSelected={selectedIds.includes(capability.id)}
               showPrice={showPrice}
+              onClick={() => handleCardClick(capability)}
             />
           ))}
         </div>
@@ -104,6 +127,12 @@ export function CapabilityBrowser({
           <p className="text-sm mt-1">Prøv å justere søkekriteriene</p>
         </div>
       )}
+
+      <AppCapabilityDrawer
+        capability={selectedCapability}
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+      />
     </div>
   );
 }

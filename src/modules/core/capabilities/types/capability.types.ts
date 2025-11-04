@@ -11,12 +11,18 @@ export type CapabilityCategory =
   | "Authentication"
   | "Data Management";
 
+export type CapabilityScope = "platform" | "app-specific";
+
 export interface Capability {
   id: string;
   key: string; // e.g., "ai-text-generation"
   name: string;
   description: string | null;
   category: CapabilityCategory;
+  
+  // Scope
+  scope: CapabilityScope;
+  app_definition_id: string | null; // Only for app-specific capabilities
   
   // Versioning
   current_version: string;
@@ -37,6 +43,9 @@ export interface Capability {
   
   created_at: string;
   updated_at: string;
+  
+  // Relations (populated)
+  usage_count?: number; // How many apps use this capability
 }
 
 export interface CapabilityVersion {
@@ -118,11 +127,26 @@ export interface CustomerAppProject {
   updated_at: string;
 }
 
+export interface AppCapabilityUsage {
+  id: string;
+  app_definition_id: string;
+  capability_id: string;
+  is_required: boolean;
+  config_schema: Record<string, any> | null;
+  created_at: string;
+  updated_at: string;
+  
+  // Populated
+  capability?: Capability;
+}
+
 export interface CapabilityFilters {
   category?: CapabilityCategory;
   query?: string;
   tags?: string[];
   isActive?: boolean;
+  scope?: CapabilityScope;
+  appDefinitionId?: string;
 }
 
 export interface CapabilityInput {
@@ -130,6 +154,8 @@ export interface CapabilityInput {
   name: string;
   description?: string;
   category: CapabilityCategory;
+  scope?: CapabilityScope;
+  app_definition_id?: string | null;
   current_version?: string;
   estimated_dev_hours?: number;
   price_per_month?: number;

@@ -11,15 +11,26 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Package, Settings, History } from "lucide-react";
 import { AppRegistryService } from "@/modules/core/applications/services/appRegistryService";
+import { AppCapabilityService, CapabilityCard, AppCapabilityDrawer } from "@/modules/core/capabilities";
+import { useState } from "react";
+import type { Capability } from "@/modules/core/capabilities";
 
 export default function AppDefinitionDetails() {
   const { appKey } = useParams<{ appKey: string }>();
   const navigate = useNavigate();
+  const [selectedCapability, setSelectedCapability] = useState<Capability | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const { data: appDef, isLoading } = useQuery({
     queryKey: ["app-definition", appKey],
     queryFn: () => AppRegistryService.getDefinitionByKey(appKey!),
     enabled: !!appKey,
+  });
+
+  const { data: capabilities } = useQuery({
+    queryKey: ["app-capabilities", appDef?.id],
+    queryFn: () => AppCapabilityService.getCapabilitiesForApp(appDef!.id),
+    enabled: !!appDef?.id,
   });
 
   if (isLoading) {
@@ -135,15 +146,24 @@ export default function AppDefinitionDetails() {
           </CardContent>
         </Card>
 
-        {appDef.capabilities && appDef.capabilities.length > 0 && (
+        {capabilities && capabilities.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle>Capabilities</CardTitle>
+              <CardTitle>Capabilities ({capabilities.length})</CardTitle>
+              <CardDescription>Reusable features used by this app</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-wrap gap-2">
-                {appDef.capabilities.map((cap) => (
-                  <Badge key={cap}>{cap}</Badge>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {capabilities.map((cap) => (
+                  <CapabilityCard
+                    key={cap.id}
+                    capability={cap}
+                    showPrice={false}
+                    onClick={() => {
+                      setSelectedCapability(cap);
+                      setDrawerOpen(true);
+                    }}
+                  />
                 ))}
               </div>
             </CardContent>
@@ -209,6 +229,12 @@ export default function AppDefinitionDetails() {
           </Card>
         )}
       </div>
+
+      <AppCapabilityDrawer
+        capability={selectedCapability}
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+      />
     </div>
   );
 }

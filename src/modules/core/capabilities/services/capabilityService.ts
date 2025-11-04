@@ -18,11 +18,22 @@ export class CapabilityService {
   static async listCapabilities(filters?: CapabilityFilters): Promise<Capability[]> {
     let query = supabase
       .from("capabilities")
-      .select("*")
+      .select(`
+        *,
+        usage_count:app_capability_usage(count)
+      `)
       .order("name");
 
     if (filters?.category) {
       query = query.eq("category", filters.category);
+    }
+
+    if (filters?.scope) {
+      query = query.eq("scope", filters.scope);
+    }
+
+    if (filters?.appDefinitionId) {
+      query = query.eq("app_definition_id", filters.appDefinitionId);
     }
 
     if (filters?.query) {
@@ -42,7 +53,12 @@ export class CapabilityService {
     const { data, error } = await query;
 
     if (error) throw error;
-    return (data || []) as Capability[];
+    
+    // Transform usage_count from array to number
+    return (data || []).map(cap => ({
+      ...cap,
+      usage_count: Array.isArray(cap.usage_count) ? cap.usage_count.length : 0,
+    })) as Capability[];
   }
 
   /**
@@ -81,6 +97,8 @@ export class CapabilityService {
         name: input.name,
         description: input.description || null,
         category: input.category,
+        scope: input.scope || "platform",
+        app_definition_id: input.app_definition_id || null,
         current_version: input.current_version || "1.0.0",
         estimated_dev_hours: input.estimated_dev_hours || null,
         price_per_month: input.price_per_month || null,
