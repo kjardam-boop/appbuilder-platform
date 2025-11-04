@@ -8,6 +8,7 @@ import { seedAppDefinitions } from "@/modules/core/applications/services/seedApp
 import { seedTenants } from "@/modules/core/tenant/services/seedTenants";
 import { seedCapabilities } from "@/modules/core/capabilities";
 import { seedIndustries } from "@/modules/core/industry/services/seedIndustries";
+import { PermissionSeedService } from "@/modules/core/permissions/services/seedPermissions";
 import { toast } from "sonner";
 import Header from "@/components/Dashboard/Header";
 
@@ -18,6 +19,7 @@ export default function AdminSeed() {
     tenants: false,
     capabilities: false,
     industries: false,
+    permissions: false,
   });
   const [results, setResults] = useState({
     applications: null as "success" | "error" | null,
@@ -25,6 +27,7 @@ export default function AdminSeed() {
     tenants: null as "success" | "error" | null,
     capabilities: null as "success" | "error" | null,
     industries: null as "success" | "error" | null,
+    permissions: null as "success" | "error" | null,
   });
 
   const handleSeedApplications = async () => {
@@ -112,7 +115,25 @@ export default function AdminSeed() {
     }
   };
 
+  const handleSeedPermissions = async () => {
+    setIsSeeding(prev => ({ ...prev, permissions: true }));
+    setResults(prev => ({ ...prev, permissions: null }));
+
+    try {
+      await PermissionSeedService.seedAll();
+      setResults(prev => ({ ...prev, permissions: "success" }));
+      toast.success("Permissions seeded successfully!");
+    } catch (error) {
+      console.error("Seed error:", error);
+      setResults(prev => ({ ...prev, permissions: "error" }));
+      toast.error("Failed to seed permissions");
+    } finally {
+      setIsSeeding(prev => ({ ...prev, permissions: false }));
+    }
+  };
+
   const handleSeedAll = async () => {
+    await handleSeedPermissions(); // First!
     await handleSeedIndustries();
     await handleSeedApplications();
     await handleSeedPlatformApps();
@@ -350,6 +371,61 @@ export default function AdminSeed() {
                   <>
                     <Package className="mr-2 h-4 w-4" />
                     Seed Capabilities
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                Seed Permissions
+              </CardTitle>
+              <CardDescription>
+                Populate permission resources and actions for role management
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {results.permissions && (
+                <Alert variant={results.permissions === "success" ? "default" : "destructive"}>
+                  {results.permissions === "success" ? (
+                    <CheckCircle className="h-4 w-4" />
+                  ) : (
+                    <AlertCircle className="h-4 w-4" />
+                  )}
+                  <AlertDescription>
+                    {results.permissions === "success"
+                      ? "Permissions seeded successfully!"
+                      : "Failed to seed permissions. Check console for details."}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              <div>
+                <p className="text-sm text-muted-foreground mb-4">Includes:</p>
+                <ul className="text-sm space-y-1 text-muted-foreground ml-4">
+                  <li>• Core resources (company, project, document, etc.)</li>
+                  <li>• New resources (capability, app_definition, app_vendor, industry)</li>
+                  <li>• CRUD actions + admin/export/import</li>
+                </ul>
+              </div>
+
+              <Button 
+                onClick={handleSeedPermissions}
+                disabled={isSeeding.permissions}
+                className="w-full"
+              >
+                {isSeeding.permissions ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Seeding Permissions...
+                  </>
+                ) : (
+                  <>
+                    <Package className="mr-2 h-4 w-4" />
+                    Seed Permissions
                   </>
                 )}
               </Button>
