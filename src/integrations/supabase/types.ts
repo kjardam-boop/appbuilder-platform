@@ -2664,6 +2664,8 @@ export type Database = {
         | "viewer"
         | "app_admin"
         | "app_user"
+        | "supplier"
+        | "external_partner"
       project_phase_enum:
         | "as_is"
         | "to_be"
@@ -2811,6 +2813,8 @@ export const Constants = {
         "viewer",
         "app_admin",
         "app_user",
+        "supplier",
+        "external_partner",
       ],
       project_phase_enum: [
         "as_is",

@@ -97,3 +97,12 @@ export interface McpListResponse<T> {
   cursor?: string;
   hasMore: boolean;
 }
+
+export type McpPolicyDecision = 'allowed' | 'denied' | 'skipped';
+
+export interface McpPolicyResult {
+  decision: McpPolicyDecision;
+  reason?: string;
+  checked_roles: string[];
+  checked_at: string;
+}

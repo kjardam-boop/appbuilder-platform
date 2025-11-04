@@ -10,6 +10,7 @@ export * from './types/mcp.types';
 export { McpActionService } from './services/mcpActionService';
 export { McpResourceService } from './services/mcpResourceService';
 export { McpAuditService } from './services/mcpAuditService';
+export { McpPolicyService } from './services/mcpPolicyService';
 
 // Actions
 export { createProjectAction, listProjectsAction } from './actions/projectActions';

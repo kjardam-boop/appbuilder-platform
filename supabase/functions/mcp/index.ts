@@ -94,16 +94,27 @@ Deno.serve(async (req) => {
       return errorResponse('FORBIDDEN', 'X-User-Id does not match authenticated user', 403);
     }
 
+    // Create per-request role cache
+    const roleCache = new Map<string, string[]>();
+
+    // Load roles from database
+    const roles = await loadUserRoles(supabase, userId || user.id, tenantId, roleCache);
+
     // Build context
     const ctx = {
       tenant_id: tenantId,
       user_id: userId || user.id,
-      roles: [], // TODO: fetch from user_roles table
+      roles,
       request_id: requestId,
       timestamp: new Date().toISOString(),
     };
 
-    log('info', 'mcp.context', { request_id: requestId, tenant_id: tenantId, user_id: ctx.user_id });
+    log('info', 'mcp.context', {
+      request_id: requestId,
+      tenant_id: tenantId,
+      user_id: ctx.user_id,
+      roles: roles.join(',')
+    });
 
     // Route to handlers
     if (path.startsWith('resources/')) {
@@ -128,6 +139,152 @@ Deno.serve(async (req) => {
 });
 
 /**
+ * Load user roles for tenant from database
+ * Uses per-request cache to avoid multiple DB calls
+ */
+async function loadUserRoles(
+  supabase: any,
+  userId: string,
+  tenantId: string,
+  cache: Map<string, string[]>
+): Promise<string[]> {
+  const cacheKey = `${userId}:${tenantId}`;
+
+  if (cache.has(cacheKey)) {
+    return cache.get(cacheKey)!;
+  }
+
+  try {
+    const { data, error } = await supabase.rpc('get_user_roles', {
+      _user_id: userId,
+      _tenant_id: tenantId
+    });
+
+    if (error) {
+      log('error', 'mcp.roles.load_error', {
+        user_id: userId,
+        tenant_id: tenantId,
+        error: error.message
+      });
+      return [];
+    }
+
+    const roles = data || [];
+    cache.set(cacheKey, roles);
+
+    log('info', 'mcp.roles.loaded', {
+      user_id: userId,
+      tenant_id: tenantId,
+      roles: roles.join(',')
+    });
+
+    return roles;
+  } catch (err) {
+    log('error', 'mcp.roles.exception', {
+      user_id: userId,
+      tenant_id: tenantId,
+      error: String(err)
+    });
+    return [];
+  }
+}
+
+/**
+ * Check resource access policy
+ * Returns whether access is allowed and optional reason
+ */
+function checkResourcePolicy(
+  ctx: any,
+  resourceType: string,
+  operation: 'list' | 'get'
+): { allowed: boolean; reason?: string } {
+  const roles = ctx.roles || [];
+
+  // Full access roles
+  if (roles.some((r: string) => ['platform_owner', 'tenant_owner', 'tenant_admin'].includes(r))) {
+    return { allowed: true };
+  }
+
+  // Project-level roles can read all resources
+  if (roles.some((r: string) => ['project_owner', 'analyst', 'contributor', 'viewer'].includes(r))) {
+    return { allowed: true };
+  }
+
+  // Supplier can only read supplier resources (ownership check in data layer)
+  if (roles.includes('supplier') && resourceType === 'supplier' && operation === 'get') {
+    return { allowed: true, reason: 'Supplier can read own data' };
+  }
+
+  // External partner can read company and external_system
+  if (roles.includes('external_partner')) {
+    if (['company', 'external_system'].includes(resourceType)) {
+      return { allowed: true };
+    }
+  }
+
+  return {
+    allowed: false,
+    reason: `No role in [${roles.join(', ')}] has permission to ${operation} ${resourceType}`
+  };
+}
+
+/**
+ * Check action execution policy
+ * Returns whether access is allowed and optional reason
+ */
+function checkActionPolicy(
+  ctx: any,
+  actionName: string
+): { allowed: boolean; reason?: string } {
+  const roles = ctx.roles || [];
+
+  // Full access roles
+  if (roles.some((r: string) => ['platform_owner', 'tenant_owner', 'tenant_admin'].includes(r))) {
+    return { allowed: true };
+  }
+
+  // Project managers can create projects and assign tasks
+  if (roles.some((r: string) => ['project_owner', 'analyst'].includes(r))) {
+    if (['create_project', 'assign_task', 'list_projects', 'search_companies'].includes(actionName)) {
+      return { allowed: true };
+    }
+  }
+
+  // Contributors can assign tasks and list projects
+  if (roles.includes('contributor')) {
+    if (['assign_task', 'list_projects'].includes(actionName)) {
+      return { allowed: true };
+    }
+  }
+
+  // Viewers (read-only)
+  if (roles.includes('viewer')) {
+    if (['list_projects', 'search_companies'].includes(actionName)) {
+      return { allowed: true };
+    }
+  }
+
+  // Suppliers can evaluate themselves
+  if (roles.includes('supplier')) {
+    if (actionName === 'evaluate_supplier') {
+      return { allowed: true, reason: 'Supplier can evaluate own data' };
+    }
+  }
+
+  // External partners can search companies
+  if (roles.includes('external_partner')) {
+    if (actionName === 'search_companies') {
+      return { allowed: true };
+    }
+  }
+
+  return {
+    allowed: false,
+    reason: `No role in [${roles.join(', ')}] has permission to execute ${actionName}`
+  };
+}
+
+/**
  * Handle resource requests (GET /resources/:type or /resources/:type/:id)
  */
 async function handleResourceRequest(
@@ -149,7 +306,22 @@ async function handleResourceRequest(
   const validTypes = ['company', 'supplier', 'project', 'task', 'external_system', 'application'];
   if (!validTypes.includes(type)) {
     log('warn', 'mcp.resource.invalid_type', { request_id: ctx.request_id, type });
-    return errorResponse('VALIDATION_ERROR', `Invalid resource type. Valid types: ${validTypes.join(', ')}`, 400);
+    return errorResponse('INVALID_RESOURCE', `Invalid resource type. Valid types: ${validTypes.join(', ')}`, 400);
+  }
+
+  // Check policy before data access
+  const policyCheck = checkResourcePolicy(ctx, type, id ? 'get' : 'list');
+  if (!policyCheck.allowed) {
+    log('warn', 'mcp.policy.denied', {
+      request_id: ctx.request_id,
+      tenant_id: ctx.tenant_id,
+      user_id: ctx.user_id,
+      resource_type: type,
+      operation: id ? 'get' : 'list',
+      reason: policyCheck.reason,
+      roles: ctx.roles.join(',')
+    });
+    return errorResponse('UNAUTHORIZED', policyCheck.reason || 'Insufficient permissions', 403);
   }
 
   if (id) {
@@ -213,9 +385,18 @@ async function listResources(supabase: any, ctx: any, type: string, params: any)
     query = query.eq('tenant_id', ctx.tenant_id);
   }
 
-  // Apply supplier filter
+  // Apply supplier filter and ownership check
   if (type === 'supplier') {
     query = query.eq('is_approved_supplier', true);
+    // TODO: Implement supplier ownership check via company_id
+    // If ctx.roles includes 'supplier', filter by ctx.user.company_id
+    if (ctx.roles.includes('supplier')) {
+      log('warn', 'mcp.supplier.ownership_check_needed', {
+        request_id: ctx.request_id,
+        user_id: ctx.user_id,
+        note: 'Supplier ownership filtering not yet implemented'
+      });
+    }
   }
 
   // Decode and apply cursor
@@ -286,6 +467,16 @@ async function getResource(supabase: any, ctx: any, type: string, id: string) {
     query = query.eq('tenant_id', ctx.tenant_id);
   }
 
+  // TODO: Implement supplier ownership check via company_id
+  if (type === 'supplier' && ctx.roles.includes('supplier')) {
+    log('warn', 'mcp.supplier.ownership_check_needed', {
+      request_id: ctx.request_id,
+      user_id: ctx.user_id,
+      resource_id: id,
+      note: 'Supplier ownership check not yet implemented'
+    });
+  }
+
   const { data, error } = await query.maybeSingle();
 
   if (error) {
@@ -343,6 +534,42 @@ async function executeAction(
     }
   }
 
+  // Check policy before execution
+  const policyCheck = checkActionPolicy(ctx, actionName);
+  if (!policyCheck.allowed) {
+    const policyResult = {
+      decision: 'denied',
+      reason: policyCheck.reason,
+      checked_roles: ctx.roles,
+      checked_at: new Date().toISOString()
+    };
+
+    // Log denied action
+    await logAction(
+      supabase,
+      ctx,
+      actionName,
+      params,
+      null,
+      'error',
+      0,
+      policyCheck.reason || 'Policy denied',
+      idempotencyKey,
+      policyResult
+    );
+
+    log('warn', 'mcp.policy.denied', {
+      request_id: ctx.request_id,
+      tenant_id: ctx.tenant_id,
+      user_id: ctx.user_id,
+      action: actionName,
+      reason: policyCheck.reason,
+      roles: ctx.roles.join(',')
+    });
+
+    throw new Error(policyCheck.reason || 'Insufficient permissions');
+  }
+
   try {
     let result;
 
@@ -369,8 +596,15 @@ async function executeAction(
 
     const duration = Date.now() - startTime;
 
-    // Log action
-    await logAction(supabase, ctx, actionName, params, result, 'success', duration, null, idempotencyKey);
+    // Build policy result for successful execution
+    const policyResult = {
+      decision: 'allowed',
+      checked_roles: ctx.roles,
+      checked_at: new Date().toISOString()
+    };
+
+    // Log action with policy result
+    await logAction(supabase, ctx, actionName, params, result, 'success', duration, null, idempotencyKey, policyResult);
 
     log('info', 'mcp.action', {
       request_id: ctx.request_id,
@@ -385,8 +619,15 @@ async function executeAction(
   } catch (error) {
     const duration = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : String(error);
+
+    // Build policy result for error case
+    const policyResult = {
+      decision: 'allowed',
+      checked_roles: ctx.roles,
+      checked_at: new Date().toISOString()
+    };
     
-    await logAction(supabase, ctx, actionName, params, null, 'error', duration, errorMessage, idempotencyKey);
+    await logAction(supabase, ctx, actionName, params, null, 'error', duration, errorMessage, idempotencyKey, policyResult);
 
     log('error', 'mcp.action.error', {
       request_id: ctx.request_id,
@@ -401,7 +642,7 @@ async function executeAction(
 }
 
 /**
- * Log action to mcp_action_log
+ * Log action to mcp_action_log with policy result
  */
 async function logAction(
   supabase: any,
@@ -412,7 +653,8 @@ async function logAction(
   status: string,
   durationMs: number,
   errorMessage: string | null,
-  idempotencyKey?: string | null
+  idempotencyKey?: string | null,
+  policyResult?: any
 ) {
   await supabase.from('mcp_action_log').insert({
     tenant_id: ctx.tenant_id,
@@ -425,7 +667,11 @@ async function logAction(
     duration_ms: durationMs,
     idempotency_key: idempotencyKey,
     request_id: ctx.request_id,
-    policy_result: null, // Will be used in Step 2+
+    policy_result: policyResult || {
+      decision: 'allowed',
+      checked_roles: ctx.roles || [],
+      checked_at: new Date().toISOString()
+    },
   });
 }
 
