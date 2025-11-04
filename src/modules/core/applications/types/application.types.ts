@@ -112,6 +112,8 @@ export const appVendorSchema = z.object({
   org_number: z.string().optional().or(z.literal("")),
   website: z.string().url("Ugyldig URL").optional().or(z.literal("")),
   description: z.string().max(2000).optional().or(z.literal("")),
+  country: z.string().max(100).optional().or(z.literal("")),
+  contact_url: z.string().url("Ugyldig URL").optional().or(z.literal("")),
 });
 
 export const appProductSchema = z.object({
@@ -119,6 +121,7 @@ export const appProductSchema = z.object({
   short_name: z.string().max(50).optional().or(z.literal("")),
   slug: z.string().min(1, "Slug er påkrevd").regex(/^[a-z0-9-]+$/, "Slug må være kebab-case"),
   vendor_id: z.string().uuid("Ugyldig leverandør-ID"),
+  category_id: z.string().uuid().optional().or(z.literal("")), // New: FK to app_categories
   app_types: z.array(z.enum(["ERP", "CRM", "EmailSuite", "HRPayroll", "BI", "iPaaS", "CMS", "eCommerce", "WMS", "TMS", "PLM", "MES", "ITSM", "IAM", "RPA", "ProjectMgmt", "ServiceMgmt"])).min(1, "Minst én applikasjonstype er påkrevd"),
   deployment_models: z.array(z.enum(["SaaS", "Hosted", "On-premises", "Hybrid"])).min(1, "Minst én deployment-modell er påkrevd"),
   target_industries: z.array(z.string()).optional(),
@@ -142,6 +145,31 @@ export const appProductSchema = z.object({
     pipedream: z.boolean().optional(),
     zapier: z.boolean().optional(),
   }).optional(),
+  // Integration capabilities (from DB schema)
+  rest_api: z.boolean().optional(),
+  graphql: z.boolean().optional(),
+  webhooks: z.boolean().optional(),
+  oauth2: z.boolean().optional(),
+  api_keys: z.boolean().optional(),
+  event_subscriptions: z.boolean().optional(),
+  n8n_node: z.boolean().optional(),
+  zapier_app: z.boolean().optional(),
+  pipedream_support: z.boolean().optional(),
+  mcp_connector: z.boolean().optional(),
+  sso: z.boolean().optional(),
+  scim: z.boolean().optional(),
+  ai_plugins: z.boolean().optional(),
+  email_parse: z.boolean().optional(),
+  file_export: z.boolean().optional(),
+  ip_allowlist: z.boolean().optional(),
+  rate_limits: z.record(z.any()).optional(),
+  // Compliance
+  eu_data_residency: z.boolean().optional(),
+  dual_region: z.boolean().optional(),
+  gdpr_statement_url: z.string().url("Ugyldig URL").optional().or(z.literal("")),
+  privacy_risk_level: z.enum(["low", "medium", "high"]).optional(),
+  // Documentation
+  api_docs_url: z.string().url("Ugyldig URL").optional().or(z.literal("")),
 });
 
 export const skuSchema = z.object({

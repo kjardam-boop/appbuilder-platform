@@ -9,27 +9,60 @@ import type { AppProductInput } from "../types/application.types";
 
 type SeedSKU = { edition_name: string; code?: string; notes?: string };
 interface SeedData {
-  vendor: { name: string; slug: string; website?: string; org_number?: string };
-  product: Omit<AppProductInput, "vendor_id"> & { vendorSlug: string };
+  vendor: { 
+    name: string; 
+    slug: string; 
+    website?: string; 
+    org_number?: string;
+    country?: string;
+    contact_url?: string;
+  };
+  product: Omit<AppProductInput, "vendor_id"> & { 
+    vendorSlug: string;
+    category_id?: string; // Now using category FK instead of app_types array
+  };
   skus?: SeedSKU[];
 }
 
 const SEED_PRODUCTS: SeedData[] = [
   // ERP Systems
   {
-    vendor: { name: "Visma", slug: "visma", website: "https://www.visma.no", org_number: "932753700" },
+    vendor: { 
+      name: "Visma", 
+      slug: "visma", 
+      website: "https://www.visma.no", 
+      org_number: "932753700",
+      country: "Norway",
+      contact_url: "https://www.visma.no/kontakt"
+    },
     product: {
       name: "Visma.net ERP",
       short_name: "Visma.net",
       slug: "visma-net-erp",
       vendorSlug: "visma",
-      app_types: ["ERP"],
+      app_types: ["ERP"], // Will be migrated to category
       deployment_models: ["SaaS"],
       target_industries: ["Handel", "Service", "Bygg"],
       market_segments: ["SMB", "Midmarket"],
       localizations: ["Norge", "Sverige", "Danmark"],
       status: "Active",
       website: "https://www.visma.net",
+      // Integration capabilities
+      rest_api: true,
+      webhooks: true,
+      oauth2: true,
+      api_keys: true,
+      n8n_node: true,
+      zapier_app: true,
+      pipedream_support: true,
+      // Compliance
+      eu_data_residency: true,
+      dual_region: true,
+      sso: true,
+      scim: true,
+      gdpr_statement_url: "https://www.visma.no/gdpr",
+      privacy_risk_level: "low",
+      api_docs_url: "https://www.visma.net/developer/api",
     },
     skus: [
       { edition_name: "Standard", code: "VISMA-NET-STD" },
@@ -38,7 +71,13 @@ const SEED_PRODUCTS: SeedData[] = [
     ],
   },
   {
-    vendor: { name: "SAP", slug: "sap", website: "https://www.sap.com" },
+    vendor: { 
+      name: "SAP", 
+      slug: "sap", 
+      website: "https://www.sap.com",
+      country: "Germany",
+      contact_url: "https://www.sap.com/contact"
+    },
     product: {
       name: "SAP S/4HANA Cloud",
       short_name: "S/4HANA Cloud",
@@ -49,6 +88,19 @@ const SEED_PRODUCTS: SeedData[] = [
       market_segments: ["Enterprise"],
       status: "Active",
       website: "https://www.sap.com/s4hana",
+      rest_api: true,
+      webhooks: true,
+      oauth2: true,
+      graphql: false,
+      n8n_node: true,
+      mcp_connector: true,
+      eu_data_residency: true,
+      dual_region: true,
+      sso: true,
+      scim: true,
+      gdpr_statement_url: "https://www.sap.com/gdpr",
+      privacy_risk_level: "low",
+      api_docs_url: "https://api.sap.com",
     },
     skus: [
       { edition_name: "Public Cloud", code: "SAP-S4H-PUBLIC" },
@@ -145,7 +197,13 @@ const SEED_PRODUCTS: SeedData[] = [
     },
   },
   {
-    vendor: { name: "HubSpot", slug: "hubspot", website: "https://www.hubspot.com" },
+    vendor: { 
+      name: "HubSpot", 
+      slug: "hubspot", 
+      website: "https://www.hubspot.com",
+      country: "USA",
+      contact_url: "https://www.hubspot.com/contact"
+    },
     product: {
       name: "HubSpot CRM",
       short_name: "HubSpot",
@@ -156,6 +214,21 @@ const SEED_PRODUCTS: SeedData[] = [
       market_segments: ["SMB", "Enterprise"],
       status: "Active",
       website: "https://www.hubspot.com",
+      rest_api: true,
+      webhooks: true,
+      oauth2: true,
+      api_keys: true,
+      event_subscriptions: true,
+      n8n_node: true,
+      zapier_app: true,
+      pipedream_support: true,
+      mcp_connector: true,
+      sso: true,
+      scim: true,
+      ai_plugins: true,
+      gdpr_statement_url: "https://www.hubspot.com/data-privacy/gdpr",
+      privacy_risk_level: "medium",
+      api_docs_url: "https://developers.hubspot.com/docs/api",
     },
   },
   {
@@ -351,6 +424,8 @@ export async function seedApplications(tenantId?: string): Promise<void> {
           name: company.name,
           org_number: company.org_number,
           website: company.website || v.website || null,
+          country: v.country || null,
+          contact_url: v.contact_url || null,
         });
       }
 
