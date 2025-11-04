@@ -28,8 +28,10 @@ const RoleConfiguration = () => {
   console.log('RoleConfiguration Debug:', {
     selectedRole,
     resourcesLoading: resources.isLoading,
+    resourceCount: resources.data?.length,
     resourcesData: resources.data,
     actionsLoading: actions.isLoading,
+    actionsCount: actions.data?.length,
     actionsData: actions.data,
     permissionMatrix,
   });
