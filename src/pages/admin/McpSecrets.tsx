@@ -235,7 +235,8 @@ export default function McpSecrets() {
       );
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Token expired or invalid");
+        const errorMessage = errorData.error?.message || errorData.error?.code || "Token expired or invalid";
+        throw new Error(errorMessage);
       }
       return response.json();
     },
