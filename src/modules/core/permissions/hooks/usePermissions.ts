@@ -100,53 +100,64 @@ export const useBulkPermissions = (role: AppRole) => {
       resourceKeys: string[] 
     }) => {
       // Hent eksisterende permissions for denne rollen
-      const { data: existingPerms } = await supabase
+      const { data: existingPerms, error: fetchError } = await supabase
         .from('role_permissions')
         .select('*')
         .eq('role', role as any)
         .in('resource_key', resourceKeys);
 
-      // Bygg oppdateringer
-      const updates = [];
-      for (const resourceKey of resourceKeys) {
-        const existingActions = existingPerms
-          ?.filter(p => p.resource_key === resourceKey)
-          .map(p => p.action_key) || [];
-
-        const hasAction = existingActions.includes(actionKey);
-
-        if (enable && !hasAction) {
-          // Legg til action
-          updates.push({
-            role: role as any,
-            resource_key: resourceKey,
-            action_key: actionKey,
-            allowed: true,
-          });
-        } else if (!enable && hasAction) {
-          // Fjern action - vi må slette den
-          await supabase
-            .from('role_permissions')
-            .delete()
-            .eq('role', role as any)
-            .eq('resource_key', resourceKey)
-            .eq('action_key', actionKey);
-        }
+      if (fetchError) {
+        console.error('Error fetching existing permissions:', fetchError);
+        throw fetchError;
       }
 
-      // Bulk insert for nye permissions
-      if (updates.length > 0) {
+      if (enable) {
+        // Legg til action for alle ressurser som ikke har den
+        const updates = [];
+        for (const resourceKey of resourceKeys) {
+          const existingActions = existingPerms
+            ?.filter(p => p.resource_key === resourceKey)
+            .map(p => p.action_key) || [];
+
+          const hasAction = existingActions.includes(actionKey);
+
+          if (!hasAction) {
+            updates.push({
+              role: role as any,
+              resource_key: resourceKey,
+              action_key: actionKey,
+              allowed: true,
+            });
+          }
+        }
+
+        if (updates.length > 0) {
+          const { error } = await supabase
+            .from('role_permissions')
+            .insert(updates);
+
+          if (error) {
+            console.error('Error inserting permissions:', error);
+            throw error;
+          }
+        }
+      } else {
+        // Fjern action fra alle ressurser
         const { error } = await supabase
           .from('role_permissions')
-          .upsert(updates, {
-            onConflict: 'role,resource_key,action_key',
-          });
+          .delete()
+          .eq('role', role as any)
+          .eq('action_key', actionKey)
+          .in('resource_key', resourceKeys);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error deleting permissions:', error);
+          throw error;
+        }
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['rolePermissions', role] });
+      queryClient.invalidateQueries({ queryKey: ['role-permissions', role] });
       toast.success('Bulk-endring utført');
     },
     onError: (error) => {

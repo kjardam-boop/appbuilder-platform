@@ -152,12 +152,12 @@ const RoleConfiguration = () => {
               <CardContent>
                 <div className="space-y-4">
                   {/* Header row with bulk actions */}
-                  <div className="grid grid-cols-[200px_1fr] gap-4 border-b pb-2">
-                    <div className="font-semibold">Ressurs</div>
-                    <div className="flex gap-4 flex-wrap">
+                  <div className="border-b pb-2">
+                    <div className="grid gap-4 items-center" style={{ gridTemplateColumns: `200px repeat(${actions.data?.length || 0}, minmax(100px, 1fr))` }}>
+                      <div className="font-semibold">Ressurs</div>
                       {actions.data?.map(action => (
-                        <div key={action.key} className="flex flex-col gap-1 min-w-[120px]">
-                          <span className="font-semibold text-sm">{action.name}</span>
+                        <div key={action.key} className="flex flex-col gap-1 items-center">
+                          <span className="font-semibold text-sm text-center">{action.name}</span>
                           <div className="flex gap-1">
                             <Button
                               variant="ghost"
@@ -187,26 +187,23 @@ const RoleConfiguration = () => {
 
                   {/* Resource rows */}
                   {resources.data?.map(resource => (
-                    <div key={resource.key} className="grid grid-cols-[200px_1fr] gap-4 items-center">
+                    <div key={resource.key} className="grid gap-4 items-center py-2 border-b last:border-b-0" style={{ gridTemplateColumns: `200px repeat(${actions.data?.length || 0}, minmax(100px, 1fr))` }}>
                       <div>
                         <div className="font-medium">{resource.name}</div>
                         <div className="text-xs text-muted-foreground">{resource.description}</div>
                       </div>
-                      <div className="flex gap-4 flex-wrap">
-                        {actions.data?.map(action => {
-                          const hasPermission = permissionMatrix?.permissions[resource.key]?.includes(action.key) || false;
-                          return (
-                            <label key={action.key} className="flex items-center gap-2 cursor-pointer min-w-[120px]">
-                              <Checkbox
-                                checked={hasPermission}
-                                onCheckedChange={() => handleTogglePermission(resource.key, action.key, hasPermission)}
-                                disabled={isUpdating || isBulkLoading}
-                              />
-                              <span className="text-sm">{action.name}</span>
-                            </label>
-                          );
-                        })}
-                      </div>
+                      {actions.data?.map(action => {
+                        const hasPermission = permissionMatrix?.permissions[resource.key]?.includes(action.key) || false;
+                        return (
+                          <div key={action.key} className="flex items-center justify-center">
+                            <Checkbox
+                              checked={hasPermission}
+                              onCheckedChange={() => handleTogglePermission(resource.key, action.key, hasPermission)}
+                              disabled={isUpdating || isBulkLoading}
+                            />
+                          </div>
+                        );
+                      })}
                     </div>
                   ))}
                 </div>
