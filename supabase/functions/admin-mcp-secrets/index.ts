@@ -1,40 +1,18 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { signPayload } from '../_shared/hmac.ts';
+import { createRevealToken, consumeRevealToken } from './revealTokenService.ts';
+import { logSecretAction } from './auditLogger.ts';
+import { checkRateLimit } from './rateLimiter.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-request-id',
 };
 
-interface SecretRevealToken {
-  secret: string;
-  expires_at: string;
-  views_remaining: number;
-}
-
-const revealTokens = new Map<string, SecretRevealToken>();
-
-// Cleanup expired tokens every 5 minutes
-setInterval(() => {
-  const now = new Date();
-  for (const [token, data] of revealTokens.entries()) {
-    if (new Date(data.expires_at) < now || data.views_remaining <= 0) {
-      revealTokens.delete(token);
-    }
-  }
-}, 5 * 60 * 1000);
-
 function generateSecret(): string {
   const bytes = new Uint8Array(32);
   crypto.getRandomValues(bytes);
   return btoa(String.fromCharCode(...bytes));
-}
-
-function generateRevealToken(secret: string): string {
-  const token = crypto.randomUUID();
-  const expires_at = new Date(Date.now() + 30 * 60 * 1000).toISOString(); // 30 min
-  revealTokens.set(token, { secret, expires_at, views_remaining: 1 });
-  return token;
 }
 
 Deno.serve(async (req) => {
@@ -43,6 +21,9 @@ Deno.serve(async (req) => {
   }
 
   const requestId = req.headers.get('x-request-id') || crypto.randomUUID();
+  const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0] || 
+                    req.headers.get('x-real-ip') || 'unknown';
+  const userAgent = req.headers.get('user-agent') || 'unknown';
 
   try {
     const supabaseClient = createClient(
@@ -113,6 +94,23 @@ Deno.serve(async (req) => {
     if (req.method === 'POST' && action === 'create') {
       const { provider = 'n8n' } = await req.json();
 
+      // Check rate limit
+      const rateLimitOk = await checkRateLimit(supabaseClient, tenantId, user.id, 'create');
+      if (!rateLimitOk) {
+        await logSecretAction(supabaseClient, {
+          tenantId,
+          userId: user.id,
+          action: 'create',
+          provider,
+          requestId,
+          ipAddress,
+          userAgent,
+          success: false,
+          errorMessage: 'Rate limit exceeded',
+        });
+        throw new Error('RATE_LIMIT_EXCEEDED');
+      }
+
       // Deactivate old secrets
       await supabaseClient
         .from('mcp_tenant_secret')
@@ -138,9 +136,42 @@ Deno.serve(async (req) => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        await logSecretAction(supabaseClient, {
+          tenantId,
+          userId: user.id,
+          action: 'create',
+          provider,
+          requestId,
+          ipAddress,
+          userAgent,
+          success: false,
+          errorMessage: error.message,
+        });
+        throw error;
+      }
 
-      const revealToken = generateRevealToken(secret);
+      // Create reveal token in database
+      const revealToken = await createRevealToken(
+        supabaseClient,
+        newSecret.id,
+        tenantId,
+        user.id,
+        'create',
+        ipAddress
+      );
+
+      await logSecretAction(supabaseClient, {
+        tenantId,
+        userId: user.id,
+        action: 'create',
+        secretId: newSecret.id,
+        provider,
+        requestId,
+        ipAddress,
+        userAgent,
+        success: true,
+      });
 
       console.log(JSON.stringify({
         level: 'info',
@@ -165,6 +196,23 @@ Deno.serve(async (req) => {
     // POST /rotate
     if (req.method === 'POST' && action === 'rotate') {
       const { provider = 'n8n' } = await req.json();
+
+      // Check rate limit
+      const rateLimitOk = await checkRateLimit(supabaseClient, tenantId, user.id, 'rotate');
+      if (!rateLimitOk) {
+        await logSecretAction(supabaseClient, {
+          tenantId,
+          userId: user.id,
+          action: 'rotate',
+          provider,
+          requestId,
+          ipAddress,
+          userAgent,
+          success: false,
+          errorMessage: 'Rate limit exceeded',
+        });
+        throw new Error('RATE_LIMIT_EXCEEDED');
+      }
 
       // Mark old secret as rotated
       await supabaseClient
@@ -191,9 +239,42 @@ Deno.serve(async (req) => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        await logSecretAction(supabaseClient, {
+          tenantId,
+          userId: user.id,
+          action: 'rotate',
+          provider,
+          requestId,
+          ipAddress,
+          userAgent,
+          success: false,
+          errorMessage: error.message,
+        });
+        throw error;
+      }
 
-      const revealToken = generateRevealToken(secret);
+      // Create reveal token in database
+      const revealToken = await createRevealToken(
+        supabaseClient,
+        newSecret.id,
+        tenantId,
+        user.id,
+        'rotate',
+        ipAddress
+      );
+
+      await logSecretAction(supabaseClient, {
+        tenantId,
+        userId: user.id,
+        action: 'rotate',
+        secretId: newSecret.id,
+        provider,
+        requestId,
+        ipAddress,
+        userAgent,
+        success: true,
+      });
 
       console.log(JSON.stringify({
         level: 'info',
@@ -227,6 +308,18 @@ Deno.serve(async (req) => {
 
       if (error) throw error;
 
+      await logSecretAction(supabaseClient, {
+        tenantId,
+        userId: user.id,
+        action: 'deactivate',
+        secretId,
+        provider: 'n8n',
+        requestId,
+        ipAddress,
+        userAgent,
+        success: true,
+      });
+
       console.log(JSON.stringify({
         level: 'info',
         msg: 'mcp.secret.admin.deactivated',
@@ -248,23 +341,52 @@ Deno.serve(async (req) => {
     // POST /reveal
     if (req.method === 'POST' && action === 'reveal') {
       const { token } = await req.json();
-      const revealData = revealTokens.get(token);
 
-      if (!revealData) {
+      // Check rate limit
+      const rateLimitOk = await checkRateLimit(supabaseClient, tenantId, user.id, 'reveal');
+      if (!rateLimitOk) {
+        await logSecretAction(supabaseClient, {
+          tenantId,
+          userId: user.id,
+          action: 'reveal',
+          provider: 'n8n',
+          requestId,
+          ipAddress,
+          userAgent,
+          success: false,
+          errorMessage: 'Rate limit exceeded',
+        });
+        throw new Error('RATE_LIMIT_EXCEEDED');
+      }
+
+      // Consume reveal token from database
+      const secret = await consumeRevealToken(supabaseClient, token, tenantId, user.id);
+
+      if (!secret) {
+        await logSecretAction(supabaseClient, {
+          tenantId,
+          userId: user.id,
+          action: 'reveal',
+          provider: 'n8n',
+          requestId,
+          ipAddress,
+          userAgent,
+          success: false,
+          errorMessage: 'Invalid or expired token',
+        });
         throw new Error('INVALID_OR_EXPIRED_TOKEN');
       }
 
-      if (new Date(revealData.expires_at) < new Date() || revealData.views_remaining <= 0) {
-        revealTokens.delete(token);
-        throw new Error('TOKEN_EXPIRED');
-      }
-
-      const secret = revealData.secret;
-      revealData.views_remaining--;
-
-      if (revealData.views_remaining <= 0) {
-        revealTokens.delete(token);
-      }
+      await logSecretAction(supabaseClient, {
+        tenantId,
+        userId: user.id,
+        action: 'reveal',
+        provider: 'n8n',
+        requestId,
+        ipAddress,
+        userAgent,
+        success: true,
+      });
 
       return new Response(
         JSON.stringify({
@@ -447,7 +569,8 @@ Deno.serve(async (req) => {
       'TOKEN_EXPIRED': 400,
       'WORKFLOW_KEY_REQUIRED': 400,
       'NO_ACTIVE_SECRET': 404,
-      'WORKFLOW_NOT_CONFIGURED': 404
+      'WORKFLOW_NOT_CONFIGURED': 404,
+      'RATE_LIMIT_EXCEEDED': 429
     };
 
     return new Response(

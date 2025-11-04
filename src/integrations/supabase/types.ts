@@ -1999,6 +1999,140 @@ export type Database = {
         }
         Relationships: []
       }
+      mcp_rate_limits: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          request_count: number
+          tenant_id: string
+          updated_at: string
+          user_id: string
+          window_start: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          request_count?: number
+          tenant_id: string
+          updated_at?: string
+          user_id: string
+          window_start: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          request_count?: number
+          tenant_id?: string
+          updated_at?: string
+          user_id?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
+      mcp_reveal_tokens: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          ip_address: string | null
+          last_used_at: string | null
+          max_uses: number
+          purpose: string
+          secret_id: string
+          tenant_id: string
+          token_hash: string
+          user_id: string
+          uses_count: number
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          id?: string
+          ip_address?: string | null
+          last_used_at?: string | null
+          max_uses?: number
+          purpose: string
+          secret_id: string
+          tenant_id: string
+          token_hash: string
+          user_id: string
+          uses_count?: number
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          ip_address?: string | null
+          last_used_at?: string | null
+          max_uses?: number
+          purpose?: string
+          secret_id?: string
+          tenant_id?: string
+          token_hash?: string
+          user_id?: string
+          uses_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mcp_reveal_tokens_secret_id_fkey"
+            columns: ["secret_id"]
+            isOneToOne: false
+            referencedRelation: "mcp_tenant_secret"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mcp_secret_audit: {
+        Row: {
+          action: string
+          created_at: string
+          error_message: string | null
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          provider: string
+          request_id: string
+          secret_id: string | null
+          success: boolean
+          tenant_id: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          provider: string
+          request_id: string
+          secret_id?: string | null
+          success: boolean
+          tenant_id: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          provider?: string
+          request_id?: string
+          secret_id?: string | null
+          success?: boolean
+          tenant_id?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       mcp_tenant_policy: {
         Row: {
           created_at: string

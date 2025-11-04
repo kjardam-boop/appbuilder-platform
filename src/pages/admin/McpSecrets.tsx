@@ -74,6 +74,8 @@ export default function McpSecrets() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showRotateDialog, setShowRotateDialog] = useState(false);
   const [deactivateId, setDeactivateId] = useState<string | null>(null);
+  const [showRevealDialog, setShowRevealDialog] = useState(false);
+  const [secretVisible, setSecretVisible] = useState(false);
   
   // Test states
   const [testPayload, setTestPayload] = useState("");
@@ -203,6 +205,19 @@ export default function McpSecrets() {
   const revealMutation = useMutation({
     mutationFn: async (token: string) => {
       const { data: { session } } = await supabase.auth.getSession();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Get tenant from user_roles
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('scope_id')
+        .eq('user_id', user.id)
+        .eq('scope_type', 'tenant')
+        .single();
+
+      if (!roles) throw new Error("No tenant found");
+
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-mcp-secrets/reveal`,
         {
@@ -212,7 +227,7 @@ export default function McpSecrets() {
             "Content-Type": "application/json",
             "X-Request-Id": crypto.randomUUID(),
           },
-          body: JSON.stringify({ token }),
+          body: JSON.stringify({ token, tenantId: roles.scope_id }),
         }
       );
       if (!response.ok) throw new Error("Token expired or invalid");
@@ -220,10 +235,16 @@ export default function McpSecrets() {
     },
     onSuccess: (data) => {
       setRevealedSecret(data.data.secret);
-      setTimeout(() => {
-        setRevealedSecret(null);
-        setRevealToken(null);
-      }, 30000); // Auto-hide after 30s
+      setSecretVisible(true);
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to reveal secret",
+        description: error.message,
+        variant: "destructive",
+      });
+      setShowRevealDialog(false);
+      setRevealToken(null);
     },
   });
 
