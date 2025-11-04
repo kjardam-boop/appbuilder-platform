@@ -141,7 +141,7 @@ export function MarkdownViewer({
     html = html.split('\n\n').map(para => {
       if (para.startsWith('<')) return para; // Skip HTML elements
       return `<p class="my-3 leading-relaxed">${para}</p>`;
-    }).join('');
+    }).join('\n\n');
 
     return html;
   };
