@@ -10,6 +10,24 @@ export type AppChannel = "stable" | "canary" | "pinned";
 export type InstallStatus = "active" | "installing" | "updating" | "failed" | "disabled";
 export type ExtensionType = "component" | "function" | "adapter" | "hook";
 
+export interface AppHook {
+  key: string;
+  type: 'event' | 'filter' | 'action';
+  description?: string;
+}
+
+export interface UIComponent {
+  key: string;
+  path: string;
+  type: 'page' | 'widget' | 'modal';
+}
+
+export interface IntegrationRequirements {
+  requires_email?: boolean;
+  requires_calendar?: boolean;
+  required_external_systems?: string[];
+}
+
 export interface AppDefinition {
   id: string;
   key: string;
@@ -24,6 +42,12 @@ export interface AppDefinition {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  domain_tables: string[];
+  shared_tables: string[];
+  hooks: AppHook[];
+  ui_components: UIComponent[];
+  capabilities: string[];
+  integration_requirements: IntegrationRequirements;
 }
 
 export interface AppVersion {
@@ -38,6 +62,8 @@ export interface AppVersion {
   deprecated_at: string | null;
   end_of_life_at: string | null;
 }
+
+export type MigrationStatus = 'current' | 'pending_migration' | 'migrating' | 'failed';
 
 export interface TenantAppInstall {
   id: string;
@@ -57,6 +83,9 @@ export interface TenantAppInstall {
   updated_by: string | null;
   created_at: string;
   updated_at: string;
+  migration_status: MigrationStatus;
+  migration_error?: string | null;
+  last_migration_check?: string | null;
   app_definition?: AppDefinition;
 }
 

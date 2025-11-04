@@ -17,6 +17,12 @@ export interface AppVendor extends BaseEntity {
   description: string | null;
 }
 
+export interface UseCase {
+  key: string;
+  description: string;
+  industry_specific?: boolean;
+}
+
 export interface AppProduct extends BaseEntity {
   name: string;
   short_name: string | null;
@@ -33,6 +39,14 @@ export interface AppProduct extends BaseEntity {
   status: AppStatus;
   website: string | null;
   description: string | null;
+  capabilities?: string[];
+  use_cases?: UseCase[];
+  mcp_reference?: string | null;
+  integration_providers?: {
+    n8n?: boolean;
+    pipedream?: boolean;
+    zapier?: boolean;
+  };
   vendor?: AppVendor;
   skus?: SKU[];
   erp_extension?: ERPExtension;
@@ -116,6 +130,18 @@ export const appProductSchema = z.object({
   status: z.enum(["Active", "Legacy"]).default("Active"),
   website: z.string().url("Ugyldig URL").optional().or(z.literal("")),
   description: z.string().max(2000).optional().or(z.literal("")),
+  capabilities: z.array(z.string()).optional(),
+  use_cases: z.array(z.object({
+    key: z.string(),
+    description: z.string(),
+    industry_specific: z.boolean().optional(),
+  })).optional(),
+  mcp_reference: z.string().nullable().optional(),
+  integration_providers: z.object({
+    n8n: z.boolean().optional(),
+    pipedream: z.boolean().optional(),
+    zapier: z.boolean().optional(),
+  }).optional(),
 });
 
 export const skuSchema = z.object({

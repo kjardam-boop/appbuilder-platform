@@ -148,6 +148,52 @@ export default function ApplicationsPage() {
                       ))}
                     </div>
                   )}
+
+                  {/* NEW: Capabilities */}
+                  {product.capabilities && product.capabilities.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Capabilities</p>
+                      <div className="flex flex-wrap gap-1">
+                        {product.capabilities.map((cap) => (
+                          <Badge key={cap} variant="outline" className="text-xs">
+                            {cap}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* NEW: MCP Reference */}
+                  {product.mcp_reference && (
+                    <div className="text-xs">
+                      <span className="font-medium">MCP:</span>{' '}
+                      <code className="bg-muted px-1 py-0.5 rounded text-xs">{product.mcp_reference}</code>
+                    </div>
+                  )}
+
+                  {/* NEW: Integration Providers */}
+                  {product.integration_providers && Object.keys(product.integration_providers).length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Integration Support</p>
+                      <div className="flex gap-2">
+                        {product.integration_providers.n8n && <Badge variant="secondary" className="text-xs">n8n</Badge>}
+                        {product.integration_providers.pipedream && <Badge variant="secondary" className="text-xs">Pipedream</Badge>}
+                        {product.integration_providers.zapier && <Badge variant="secondary" className="text-xs">Zapier</Badge>}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* NEW: Use Cases */}
+                  {product.use_cases && product.use_cases.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Use Cases</p>
+                      <ul className="text-xs space-y-1">
+                        {product.use_cases.slice(0, 2).map((uc) => (
+                          <li key={uc.key}>• {uc.description}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </Link>

@@ -103,7 +103,92 @@ function AppCard({ app }: { app: any }) {
             <Badge variant="outline">{app.app_type}</Badge>
           </div>
 
-          {app.modules.length > 0 && (
+          {/* NEW: Domain Tables */}
+          {app.domain_tables && app.domain_tables.length > 0 && (
+            <div className="text-sm">
+              <span className="font-medium">Domain Tables:</span>
+              <div className="flex flex-wrap gap-1 mt-1">
+                {app.domain_tables.map((table: string) => (
+                  <Badge key={table} variant="outline" className="text-xs font-mono">
+                    {table}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* NEW: Shared Tables */}
+          {app.shared_tables && app.shared_tables.length > 0 && (
+            <div className="text-sm">
+              <span className="font-medium">Shared Tables:</span>
+              <div className="flex flex-wrap gap-1 mt-1">
+                {app.shared_tables.map((table: string) => (
+                  <Badge key={table} variant="secondary" className="text-xs font-mono">
+                    {table}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* NEW: Hooks */}
+          {app.hooks && app.hooks.length > 0 && (
+            <div className="text-sm">
+              <span className="font-medium">Hooks:</span>
+              <div className="flex flex-wrap gap-1 mt-1">
+                {app.hooks.map((hook: any) => (
+                  <Badge key={hook.key} variant="outline" className="text-xs">
+                    {hook.key} ({hook.type})
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* NEW: UI Components */}
+          {app.ui_components && app.ui_components.length > 0 && (
+            <div className="text-sm">
+              <span className="font-medium">UI Components:</span>
+              <div className="flex flex-wrap gap-1 mt-1">
+                {app.ui_components.map((comp: any) => (
+                  <Badge key={comp.key} variant="secondary" className="text-xs">
+                    {comp.key}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* NEW: Capabilities */}
+          {app.capabilities && app.capabilities.length > 0 && (
+            <div className="text-sm">
+              <span className="font-medium">Capabilities:</span>
+              <div className="flex flex-wrap gap-1 mt-1">
+                {app.capabilities.map((cap: string) => (
+                  <Badge key={cap} className="text-xs">
+                    {cap}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* NEW: Integration Requirements */}
+          {app.integration_requirements && Object.keys(app.integration_requirements).length > 0 && (
+            <div className="text-sm">
+              <span className="font-medium">Requires:</span>
+              <div className="flex gap-2 mt-1">
+                {app.integration_requirements.requires_email && (
+                  <Badge variant="secondary" className="text-xs">Email</Badge>
+                )}
+                {app.integration_requirements.requires_calendar && (
+                  <Badge variant="secondary" className="text-xs">Calendar</Badge>
+                )}
+              </div>
+            </div>
+          )}
+
+          {app.modules && app.modules.length > 0 && (
             <div className="text-sm">
               <span className="font-medium">Modules:</span>
               <div className="flex flex-wrap gap-1 mt-1">

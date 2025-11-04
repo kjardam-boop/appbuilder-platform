@@ -313,4 +313,60 @@ export class ApplicationService {
     if (error) throw error;
     return (data || []) as AppProduct[];
   }
+
+  /**
+   * Get external systems by capability
+   */
+  static async getByCapability(capability: string): Promise<AppProduct[]> {
+    const { data, error } = await (supabase as any)
+      .from('app_products')
+      .select('*, vendor:app_vendors(*)')
+      .contains('capabilities', [capability])
+      .eq('status', 'Active');
+    
+    if (error) throw error;
+    return data as AppProduct[];
+  }
+
+  /**
+   * Get external systems by use case
+   */
+  static async getByUseCase(useCaseKey: string): Promise<AppProduct[]> {
+    const { data, error } = await (supabase as any)
+      .from('app_products')
+      .select('*, vendor:app_vendors(*)')
+      .filter('use_cases', 'cs', JSON.stringify([{ key: useCaseKey }]))
+      .eq('status', 'Active');
+    
+    if (error) throw error;
+    return data as AppProduct[];
+  }
+
+  /**
+   * Get MCP reference for integration
+   */
+  static async getMcpReference(productId: string): Promise<string | null> {
+    const { data, error } = await (supabase as any)
+      .from('app_products')
+      .select('mcp_reference')
+      .eq('id', productId)
+      .maybeSingle();
+    
+    if (error) throw error;
+    return data?.mcp_reference || null;
+  }
+
+  /**
+   * Get supported integration providers
+   */
+  static async getSupportedIntegrationProviders(productId: string): Promise<Record<string, boolean>> {
+    const { data, error } = await (supabase as any)
+      .from('app_products')
+      .select('integration_providers')
+      .eq('id', productId)
+      .maybeSingle();
+    
+    if (error) throw error;
+    return data?.integration_providers || {};
+  }
 }

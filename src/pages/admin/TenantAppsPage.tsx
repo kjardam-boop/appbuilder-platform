@@ -17,8 +17,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { useState } from "react";
-import { Settings, Upload, Package } from "lucide-react";
+import { Settings, Upload, Package, AlertTriangle } from "lucide-react";
 import type { TenantAppInstall } from "@/modules/core/applications/types/appRegistry.types";
 
 export default function TenantAppsPage() {
@@ -88,6 +89,27 @@ export default function TenantAppsPage() {
                   {app.install_status}
                 </Badge>
               </CardTitle>
+              
+              {/* NEW: Migration Status Alert */}
+              {app.migration_status === 'pending_migration' && (
+                <Alert variant="destructive" className="mt-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>Migration Required</AlertTitle>
+                  <AlertDescription>
+                    This app requires database migration to upgrade. Domain tables have changed.
+                  </AlertDescription>
+                </Alert>
+              )}
+              
+              {app.migration_status === 'failed' && (
+                <Alert variant="destructive" className="mt-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>Migration Failed</AlertTitle>
+                  <AlertDescription>
+                    {app.migration_error || 'Unknown error during migration'}
+                  </AlertDescription>
+                </Alert>
+              )}
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
@@ -101,6 +123,15 @@ export default function TenantAppsPage() {
                     <div>
                       <Badge variant="outline">{app.channel}</Badge>
                     </div>
+                  </div>
+                </div>
+                
+                <div className="text-sm">
+                  <span className="font-medium">Status:</span>
+                  <div className="mt-1">
+                    <Badge variant={app.migration_status === 'current' ? 'default' : 'secondary'}>
+                      {app.migration_status}
+                    </Badge>
                   </div>
                 </div>
 
@@ -127,7 +158,12 @@ export default function TenantAppsPage() {
                     <Settings className="mr-2 h-3 w-3" />
                     Configure
                   </Button>
-                  <Button variant="outline" size="sm" className="flex-1">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex-1"
+                    disabled={app.migration_status !== 'current'}
+                  >
                     <Upload className="mr-2 h-3 w-3" />
                     Update
                   </Button>

@@ -158,3 +158,36 @@ export function useAddCertification() {
     },
   });
 }
+
+/**
+ * Get app products by capability
+ */
+export function useAppProductsByCapability(capability: string) {
+  return useQuery({
+    queryKey: ["app-products-by-capability", capability],
+    queryFn: () => ApplicationService.getByCapability(capability),
+    enabled: !!capability,
+  });
+}
+
+/**
+ * Get app products by use case
+ */
+export function useAppProductsByUseCase(useCaseKey: string) {
+  return useQuery({
+    queryKey: ["app-products-by-usecase", useCaseKey],
+    queryFn: () => ApplicationService.getByUseCase(useCaseKey),
+    enabled: !!useCaseKey,
+  });
+}
+
+/**
+ * Get MCP reference for a product
+ */
+export function useMcpReference(productId: string) {
+  return useQuery({
+    queryKey: ["app-product-mcp", productId],
+    queryFn: () => ApplicationService.getMcpReference(productId),
+    enabled: !!productId,
+  });
+}

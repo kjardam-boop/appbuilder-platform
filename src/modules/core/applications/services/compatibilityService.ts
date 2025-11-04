@@ -98,6 +98,28 @@ export class CompatibilityService {
         }
       }
 
+      // 7. NEW: Check if migration is needed
+      const { ManifestLoader } = await import('./manifestLoader');
+      const needsMigration = await ManifestLoader.checkMigrationNeeded(
+        tenantId,
+        appKey,
+        targetVersion
+      );
+      
+      if (needsMigration) {
+        warnings.push('This upgrade requires database migration for domain_tables changes');
+        
+        // Set migration_status
+        await (supabase as any)
+          .from('applications')
+          .update({
+            migration_status: 'pending_migration',
+            last_migration_check: new Date().toISOString()
+          })
+          .eq('tenant_id', tenantId)
+          .eq('key', appKey);
+      }
+
     } catch (error) {
       reasons.push(`Compatibility check failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
