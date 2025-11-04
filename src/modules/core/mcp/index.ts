@@ -11,6 +11,10 @@ export { McpActionService } from './services/mcpActionService';
 export { McpResourceService } from './services/mcpResourceService';
 export { McpAuditService } from './services/mcpAuditService';
 export { McpPolicyService } from './services/mcpPolicyService';
+export { McpDslPolicyService } from './services/mcpDslPolicyService';
+
+// Policy
+export { DEFAULT_POLICY } from './policy/defaultPolicy';
 
 // Actions
 export { createProjectAction, listProjectsAction } from './actions/projectActions';

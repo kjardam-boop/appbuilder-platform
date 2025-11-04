@@ -105,4 +105,18 @@ export interface McpPolicyResult {
   reason?: string;
   checked_roles: string[];
   checked_at: string;
+  matched_rule?: McpPolicyRule;
 }
+
+export type McpPolicyRule = {
+  role: string | string[];
+  resource?: string | string[];
+  action?: string | string[];
+  effect: 'allow' | 'deny';
+  conditions?: {
+    tenantMatch?: boolean;
+    ownerOnly?: boolean;
+  };
+};
+
+export type McpPolicySet = McpPolicyRule[];

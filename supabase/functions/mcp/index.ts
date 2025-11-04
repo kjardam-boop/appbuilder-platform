@@ -326,98 +326,193 @@ async function loadSupplierCompanies(
   }
 }
 
+// Import DSL policy evaluation (inline for edge function)
+// Note: In production, this would be imported from a shared module
+
+type McpPolicyRule = {
+  role: string | string[];
+  resource?: string | string[];
+  action?: string | string[];
+  effect: 'allow' | 'deny';
+  conditions?: {
+    tenantMatch?: boolean;
+    ownerOnly?: boolean;
+  };
+};
+
+type McpPolicySet = McpPolicyRule[];
+
+const DEFAULT_POLICY: McpPolicySet = [
+  // Platform admins
+  { role: ['platform_owner', 'platform_support'], effect: 'allow' },
+  // Tenant admins
+  { role: ['tenant_owner', 'tenant_admin'], effect: 'allow' },
+  // Project manager read resources
+  { role: ['project_owner', 'analyst'], resource: '*', action: ['list', 'get'], effect: 'allow' },
+  // Project manager limited writes
+  { role: ['project_owner', 'analyst'], action: ['create_project', 'assign_task', 'list_projects', 'search_companies'], effect: 'allow' },
+  // Contributor limited actions
+  { role: 'contributor', action: ['assign_task', 'list_projects'], effect: 'allow' },
+  // Viewer read-only
+  { role: 'viewer', action: ['list_projects', 'search_companies'], effect: 'allow' },
+  { role: 'viewer', action: ['list', 'get'], effect: 'allow' },
+  // Supplier read only their own supplier record
+  { role: 'supplier', resource: 'supplier', action: ['get'], effect: 'allow', conditions: { ownerOnly: true } },
+  { role: 'supplier', action: ['evaluate_supplier'], effect: 'allow', conditions: { ownerOnly: true } },
+  // External partner read metadata
+  { role: 'external_partner', resource: ['company', 'external_system'], action: ['list', 'get'], effect: 'allow' },
+  { role: 'external_partner', action: ['search_companies'], effect: 'allow' },
+  // Default deny
+  { role: '*', effect: 'deny' }
+];
+
+// DSL Policy Evaluator
+function evaluateDslPolicy(
+  ctx: any,
+  evalCtx: { resourceType?: string; resourceId?: string; actionName?: string; method?: string },
+  policySet: McpPolicySet = DEFAULT_POLICY
+): any {
+  const roles = ctx.roles || [];
+
+  // Step 1: Check DENY rules first
+  for (const rule of policySet) {
+    if (rule.effect === 'deny') {
+      if (ruleMatches(rule, roles, evalCtx)) {
+        logEvent('info', 'mcp.policy.dsl.applied', {
+          request_id: ctx.request_id,
+          roles,
+          resource_type: evalCtx.resourceType,
+          action: evalCtx.actionName,
+          matched_rule: rule,
+          decision: 'denied',
+        });
+        return {
+          decision: 'denied',
+          reason: `Deny rule matched for roles: ${roles.join(', ')}`,
+          checked_roles: roles,
+          checked_at: new Date().toISOString(),
+          matched_rule: rule,
+        };
+      }
+    }
+  }
+
+  // Step 2: Check ALLOW rules
+  for (const rule of policySet) {
+    if (rule.effect === 'allow') {
+      if (ruleMatches(rule, roles, evalCtx)) {
+        logEvent('info', 'mcp.policy.dsl.applied', {
+          request_id: ctx.request_id,
+          roles,
+          resource_type: evalCtx.resourceType,
+          action: evalCtx.actionName,
+          matched_rule: rule,
+          decision: 'allowed',
+        });
+        return {
+          decision: 'allowed',
+          reason: 'Allow rule matched',
+          checked_roles: roles,
+          checked_at: new Date().toISOString(),
+          matched_rule: rule,
+        };
+      }
+    }
+  }
+
+  // Step 3: Default deny
+  logEvent('info', 'mcp.policy.dsl.applied', {
+    request_id: ctx.request_id,
+    roles,
+    resource_type: evalCtx.resourceType,
+    action: evalCtx.actionName,
+    matched_rule: null,
+    decision: 'denied',
+  });
+  return {
+    decision: 'denied',
+    reason: `No matching allow rule for roles: ${roles.join(', ')}`,
+    checked_roles: roles,
+    checked_at: new Date().toISOString(),
+  };
+}
+
+function ruleMatches(
+  rule: McpPolicyRule,
+  userRoles: string[],
+  evalCtx: { resourceType?: string; actionName?: string }
+): boolean {
+  // Check role match
+  if (!roleMatches(rule.role, userRoles)) {
+    return false;
+  }
+
+  // Check resource match
+  if (rule.resource && evalCtx.resourceType) {
+    if (!fieldMatches(rule.resource, evalCtx.resourceType)) {
+      return false;
+    }
+  }
+
+  // Check action match
+  if (rule.action && evalCtx.actionName) {
+    if (!fieldMatches(rule.action, evalCtx.actionName)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function roleMatches(ruleRole: string | string[], userRoles: string[]): boolean {
+  const requiredRoles = Array.isArray(ruleRole) ? ruleRole : [ruleRole];
+  if (requiredRoles.includes('*')) return true;
+  return requiredRoles.some(role => userRoles.includes(role));
+}
+
+function fieldMatches(ruleValue: string | string[], actualValue: string): boolean {
+  const allowed = Array.isArray(ruleValue) ? ruleValue : [ruleValue];
+  if (allowed.includes('*')) return true;
+  return allowed.includes(actualValue);
+}
+
 /**
- * Check resource access policy
- * Returns whether access is allowed and optional reason
+ * Check resource access policy using DSL
+ * Returns whether access is allowed and policy result with matched rule
  */
 function checkResourcePolicy(
   ctx: any,
   resourceType: string,
   operation: 'list' | 'get'
-): { allowed: boolean; reason?: string } {
-  const roles = ctx.roles || [];
-
-  // Full access roles
-  if (roles.some((r: string) => ['platform_owner', 'tenant_owner', 'tenant_admin'].includes(r))) {
-    return { allowed: true };
-  }
-
-  // Project-level roles can read all resources
-  if (roles.some((r: string) => ['project_owner', 'analyst', 'contributor', 'viewer'].includes(r))) {
-    return { allowed: true };
-  }
-
-  // Supplier can only read supplier resources (ownership check in data layer)
-  if (roles.includes('supplier') && resourceType === 'supplier' && operation === 'get') {
-    return { allowed: true, reason: 'Supplier can read own data' };
-  }
-
-  // External partner can read company and external_system
-  if (roles.includes('external_partner')) {
-    if (['company', 'external_system'].includes(resourceType)) {
-      return { allowed: true };
-    }
-  }
+): { allowed: boolean; policyResult: any } {
+  const policyResult = evaluateDslPolicy(ctx, {
+    resourceType,
+    actionName: operation,
+    method: 'GET',
+  });
 
   return {
-    allowed: false,
-    reason: `No role in [${roles.join(', ')}] has permission to ${operation} ${resourceType}`
+    allowed: policyResult.decision === 'allowed',
+    policyResult,
   };
 }
 
 /**
- * Check action execution policy
- * Returns whether access is allowed and optional reason
+ * Check action execution policy using DSL
+ * Returns whether access is allowed and policy result with matched rule
  */
 function checkActionPolicy(
   ctx: any,
   actionName: string
-): { allowed: boolean; reason?: string } {
-  const roles = ctx.roles || [];
-
-  // Full access roles
-  if (roles.some((r: string) => ['platform_owner', 'tenant_owner', 'tenant_admin'].includes(r))) {
-    return { allowed: true };
-  }
-
-  // Project managers can create projects and assign tasks
-  if (roles.some((r: string) => ['project_owner', 'analyst'].includes(r))) {
-    if (['create_project', 'assign_task', 'list_projects', 'search_companies'].includes(actionName)) {
-      return { allowed: true };
-    }
-  }
-
-  // Contributors can assign tasks and list projects
-  if (roles.includes('contributor')) {
-    if (['assign_task', 'list_projects'].includes(actionName)) {
-      return { allowed: true };
-    }
-  }
-
-  // Viewers (read-only)
-  if (roles.includes('viewer')) {
-    if (['list_projects', 'search_companies'].includes(actionName)) {
-      return { allowed: true };
-    }
-  }
-
-  // Suppliers can evaluate themselves
-  if (roles.includes('supplier')) {
-    if (actionName === 'evaluate_supplier') {
-      return { allowed: true, reason: 'Supplier can evaluate own data' };
-    }
-  }
-
-  // External partners can search companies
-  if (roles.includes('external_partner')) {
-    if (actionName === 'search_companies') {
-      return { allowed: true };
-    }
-  }
+): { allowed: boolean; policyResult: any } {
+  const policyResult = evaluateDslPolicy(ctx, {
+    actionName,
+    method: 'POST',
+  });
 
   return {
-    allowed: false,
-    reason: `No role in [${roles.join(', ')}] has permission to execute ${actionName}`
+    allowed: policyResult.decision === 'allowed',
+    policyResult,
   };
 }
 
@@ -481,21 +576,16 @@ async function handleResourceRequest(
       resource_type: type,
       resource_id: id,
       operation: id ? 'get' : 'list',
-      reason: policyCheck.reason,
+      reason: policyCheck.policyResult.reason,
       roles: ctx.roles.join(','),
+      matched_rule: policyCheck.policyResult.matched_rule,
       latency_ms: latency
     });
 
-    // Log to audit table
-    const policyResult = {
-      decision: 'denied',
-      reason: policyCheck.reason,
-      checked_roles: ctx.roles,
-      checked_at: new Date().toISOString()
-    };
-    await logResourceAudit(supabase, ctx, type, id, 'error', latency, 'POLICY_DENIED', policyCheck.reason, policyResult);
+    // Log to audit table with matched rule
+    await logResourceAudit(supabase, ctx, type, id, 'error', latency, 'POLICY_DENIED', policyCheck.policyResult.reason, policyCheck.policyResult);
 
-    return errorResponse('POLICY_DENIED', policyCheck.reason || 'Insufficient permissions', 403, ctx.request_id, ctx.tenant_id, latency);
+    return errorResponse('POLICY_DENIED', policyCheck.policyResult.reason || 'Insufficient permissions', 403, ctx.request_id, ctx.tenant_id, latency);
   }
 
   try {
@@ -849,24 +939,19 @@ async function executeAction(
   const policyCheck = checkActionPolicy(ctx, actionName);
   if (!policyCheck.allowed) {
     const latency = Date.now() - startTime;
-    const policyResult = {
-      decision: 'denied',
-      reason: policyCheck.reason,
-      checked_roles: ctx.roles,
-      checked_at: new Date().toISOString()
-    };
 
     logEvent('warn', 'mcp.policy.denied', {
       request_id: ctx.request_id,
       tenant_id: ctx.tenant_id,
       user_id: ctx.user_id,
       action: actionName,
-      reason: policyCheck.reason,
+      reason: policyCheck.policyResult.reason,
       roles: ctx.roles.join(','),
+      matched_rule: policyCheck.policyResult.matched_rule,
       latency_ms: latency
     });
 
-    // Log denied action with error code
+    // Log denied action with error code and matched rule
     await logAction(
       supabase,
       ctx,
@@ -875,13 +960,13 @@ async function executeAction(
       null,
       'error',
       latency,
-      policyCheck.reason || 'Policy denied',
+      policyCheck.policyResult.reason || 'Policy denied',
       idempotencyKey,
-      policyResult,
+      policyCheck.policyResult,
       'POLICY_DENIED'
     );
 
-    throw new Error(policyCheck.reason || 'Insufficient permissions');
+    throw new Error(policyCheck.policyResult.reason || 'Insufficient permissions');
   }
 
   try {
