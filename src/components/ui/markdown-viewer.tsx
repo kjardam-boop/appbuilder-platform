@@ -116,7 +116,7 @@ export function MarkdownViewer({
 
     // Headers with more spacing
     html = html.replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold mt-8 mb-4">$1</h3>');
-    html = html.replace(/^## (.*$)/gim, '<h2 class="text-xl font-semibold mt-10 mb-5 pb-2 border-b border-border">$1</h2>');
+    html = html.replace(/^## (.*$)/gim, '<h2 class="text-xl font-semibold mt-16 mb-5 pb-2 border-b border-border">$1</h2>');
     html = html.replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold mb-8">$1</h1>');
 
     // Code blocks
