@@ -12,7 +12,7 @@ export class RuntimeLoader {
    */
   static async loadAppContext(tenantId: string, appKey: string): Promise<AppContext> {
     // 1. Get base app definition + install
-    const { data: install, error } = await supabase
+    const { data: install, error } = await (supabase as any)
       .from('applications')
       .select(`
         *,
@@ -20,7 +20,7 @@ export class RuntimeLoader {
       `)
       .eq('tenant_id', tenantId)
       .eq('key', appKey)
-      .single();
+      .maybeSingle();
 
     if (error || !install) {
       throw new Error(`App '${appKey}' not installed for tenant`);
@@ -31,7 +31,7 @@ export class RuntimeLoader {
     }
 
     // 2. Get extensions
-    const { data: extensions } = await supabase
+    const { data: extensions } = await (supabase as any)
       .from('tenant_app_extensions')
       .select('*')
       .eq('tenant_id', tenantId)
@@ -62,14 +62,14 @@ export class RuntimeLoader {
     appDefinitionId: string,
     extensionKey: string
   ): Promise<{ module: any; config: Record<string, any> } | null> {
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from('tenant_app_extensions')
       .select('implementation_url, config')
       .eq('tenant_id', tenantId)
       .eq('app_definition_id', appDefinitionId)
       .eq('extension_key', extensionKey)
       .eq('is_active', true)
-      .single();
+      .maybeSingle();
 
     if (!data) return null;
 
@@ -99,14 +99,14 @@ export class RuntimeLoader {
     appDefinitionId: string,
     extensionKey: string
   ): Promise<TenantAppExtension | null> {
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from('tenant_app_extensions')
       .select('*')
       .eq('tenant_id', tenantId)
       .eq('app_definition_id', appDefinitionId)
       .eq('extension_key', extensionKey)
       .eq('is_active', true)
-      .single();
+      .maybeSingle();
 
     return data;
   }

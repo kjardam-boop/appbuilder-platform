@@ -12,14 +12,14 @@ export class DeploymentService {
    */
   static async promoteToStable(appKey: string, version: string) {
     // 1. Check canary health
-    const { data: canaryInstalls } = await supabase
+    const { data: canaryInstalls } = await (supabase as any)
       .from('applications')
       .select('*')
       .eq('key', appKey)
       .eq('channel', 'canary')
       .eq('installed_version', version);
 
-    const failedInstalls = canaryInstalls?.filter(i => i.install_status === 'failed');
+    const failedInstalls = canaryInstalls?.filter((i: any) => i.install_status === 'failed');
     if (failedInstalls && failedInstalls.length > 0) {
       throw new Error(`${failedInstalls.length} canary installs failed. Cannot promote to stable.`);
     }
@@ -44,7 +44,7 @@ export class DeploymentService {
     channel?: 'stable' | 'canary';
     tenantIds?: string[];
   }) {
-    let query = supabase
+    let query = (supabase as any)
       .from('applications')
       .update({ 
         installed_version: targetVersion, 
@@ -78,7 +78,7 @@ export class DeploymentService {
    * Get deployment status for an app
    */
   static async getDeploymentStatus(appKey: string) {
-    const { data: installs } = await supabase
+    const { data: installs } = await (supabase as any)
       .from('applications')
       .select('channel, installed_version, install_status, tenant_id')
       .eq('key', appKey)
@@ -98,9 +98,9 @@ export class DeploymentService {
     const byStatus: Record<string, number> = {};
 
     for (const install of installs) {
-      byChannel[install.channel] = (byChannel[install.channel] || 0) + 1;
-      byVersion[install.installed_version] = (byVersion[install.installed_version] || 0) + 1;
-      byStatus[install.install_status] = (byStatus[install.install_status] || 0) + 1;
+      byChannel[(install as any).channel] = (byChannel[(install as any).channel] || 0) + 1;
+      byVersion[(install as any).installed_version] = (byVersion[(install as any).installed_version] || 0) + 1;
+      byStatus[(install as any).install_status] = (byStatus[(install as any).install_status] || 0) + 1;
     }
 
     return {
@@ -129,7 +129,7 @@ export class DeploymentService {
 
     // Update tenants to canary channel with new version
     for (const update of updates) {
-      await supabase
+      await (supabase as any)
         .from('applications')
         .update(update)
         .eq('tenant_id', update.tenant_id)

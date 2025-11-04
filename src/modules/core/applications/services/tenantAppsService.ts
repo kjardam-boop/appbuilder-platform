@@ -38,7 +38,7 @@ export class TenantAppsService {
     const versions = await AppRegistryService.listVersions(appKey);
     const targetVersion = options?.version || versions[0]?.version || '1.0.0';
 
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('applications')
       .insert({
         tenant_id: tenantId,
@@ -55,7 +55,7 @@ export class TenantAppsService {
         is_active: true,
       })
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
     return data as TenantAppInstall;
@@ -81,7 +81,7 @@ export class TenantAppsService {
       throw new Error(`Cannot update: ${compatibility.reasons.join(', ')}`);
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('applications')
       .update({
         installed_version: targetVersion,
@@ -92,7 +92,7 @@ export class TenantAppsService {
       .eq('tenant_id', tenantId)
       .eq('key', appKey)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
     return data as TenantAppInstall;
@@ -102,7 +102,7 @@ export class TenantAppsService {
    * Set app configuration
    */
   static async setConfig(tenantId: string, appKey: string, config: AppConfig) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('applications')
       .update({ 
         config,
@@ -111,7 +111,7 @@ export class TenantAppsService {
       .eq('tenant_id', tenantId)
       .eq('key', appKey)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
     return data as TenantAppInstall;
@@ -121,7 +121,7 @@ export class TenantAppsService {
    * Set app overrides
    */
   static async setOverrides(tenantId: string, appKey: string, overrides: AppOverrides) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('applications')
       .update({ 
         overrides,
@@ -130,7 +130,7 @@ export class TenantAppsService {
       .eq('tenant_id', tenantId)
       .eq('key', appKey)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
     return data as TenantAppInstall;
@@ -140,7 +140,7 @@ export class TenantAppsService {
    * Change app channel
    */
   static async setChannel(tenantId: string, appKey: string, channel: 'stable' | 'canary' | 'pinned') {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('applications')
       .update({ 
         channel,
@@ -149,7 +149,7 @@ export class TenantAppsService {
       .eq('tenant_id', tenantId)
       .eq('key', appKey)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
     return data as TenantAppInstall;
@@ -159,7 +159,7 @@ export class TenantAppsService {
    * Get installed apps for tenant
    */
   static async listInstalled(tenantId: string) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('applications')
       .select(`
         *,
@@ -184,7 +184,7 @@ export class TenantAppsService {
    * Get single installed app
    */
   static async getInstalled(tenantId: string, appKey: string) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('applications')
       .select(`
         *,
@@ -192,7 +192,7 @@ export class TenantAppsService {
       `)
       .eq('tenant_id', tenantId)
       .eq('key', appKey)
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
     return data as TenantAppInstall;
@@ -202,7 +202,7 @@ export class TenantAppsService {
    * Uninstall app
    */
   static async uninstall(tenantId: string, appKey: string) {
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from('applications')
       .update({ 
         is_active: false,

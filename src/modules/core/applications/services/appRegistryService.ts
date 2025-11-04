@@ -11,7 +11,7 @@ export class AppRegistryService {
    * List all app definitions in the registry
    */
   static async listDefinitions(filters?: { app_type?: string; is_active?: boolean }) {
-    let query = supabase
+    let query = (supabase as any)
       .from('app_definitions')
       .select('*')
       .order('name');
@@ -32,11 +32,11 @@ export class AppRegistryService {
    * Get app definition by key
    */
   static async getDefinitionByKey(key: string) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('app_definitions')
       .select('*')
       .eq('key', key)
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
     return data as AppDefinition;
@@ -46,11 +46,11 @@ export class AppRegistryService {
    * Get app definition by ID
    */
   static async getDefinitionById(id: string) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('app_definitions')
       .select('*')
       .eq('id', id)
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
     return data as AppDefinition;
@@ -71,7 +71,7 @@ export class AppRegistryService {
   ) {
     const definition = await this.getDefinitionByKey(appKey);
 
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('app_versions')
       .insert({
         app_definition_id: definition.id,
@@ -82,7 +82,7 @@ export class AppRegistryService {
         manifest_url: manifest.manifest_url,
       })
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
     return data as AppVersion;
@@ -94,7 +94,7 @@ export class AppRegistryService {
   static async listVersions(appKey: string) {
     const definition = await this.getDefinitionByKey(appKey);
 
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('app_versions')
       .select('*')
       .eq('app_definition_id', definition.id)
@@ -119,7 +119,7 @@ export class AppRegistryService {
     const definition = await this.getDefinitionByKey(appKey);
 
     // Update all tenants on this channel to the new version
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from('applications')
       .update({ 
         installed_version: version,
@@ -135,11 +135,11 @@ export class AppRegistryService {
    * Create new app definition
    */
   static async createDefinition(definition: Omit<AppDefinition, 'id' | 'created_at' | 'updated_at'>) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('app_definitions')
       .insert(definition)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
     return data as AppDefinition;
@@ -149,7 +149,7 @@ export class AppRegistryService {
    * Update app definition
    */
   static async updateDefinition(id: string, updates: Partial<AppDefinition>) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('app_definitions')
       .update({
         ...updates,
@@ -157,7 +157,7 @@ export class AppRegistryService {
       })
       .eq('id', id)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
     return data as AppDefinition;

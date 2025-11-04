@@ -39,12 +39,12 @@ export class CompatibilityService {
         const versions = await AppRegistryService.listVersions(appKey);
         version = versions[0];
       } else {
-        const { data } = await supabase
+        const { data } = await (supabase as any)
           .from('app_versions')
           .select('*')
           .eq('app_definition_id', appDef.id)
           .eq('version', targetVersion)
-          .single();
+          .maybeSingle();
         
         version = data;
       }
@@ -55,15 +55,15 @@ export class CompatibilityService {
       }
 
       // 3. Check compatibility matrix
-      const { data: compat } = await supabase
+      const { data: compat } = await (supabase as any)
         .from('app_compatibility')
         .select('*')
         .eq('app_definition_id', appDef.id)
-        .single();
+        .maybeSingle();
 
       if (compat) {
         // Check incompatible apps
-        const { data: installedApps } = await supabase
+        const { data: installedApps } = await (supabase as any)
           .from('applications')
           .select('key, installed_version')
           .eq('tenant_id', tenantId)
@@ -72,7 +72,7 @@ export class CompatibilityService {
         const incompatible = (compat.incompatible_with as string[]) || [];
         for (const installed of installedApps || []) {
           const pattern = `${installed.key}@${installed.installed_version}`;
-          if (incompatible.some(i => pattern.match(new RegExp(i)))) {
+          if (incompatible.some((i: string) => pattern.match(new RegExp(i)))) {
             reasons.push(`Incompatible with ${installed.key}@${installed.installed_version}`);
           }
         }
@@ -125,17 +125,17 @@ export class CompatibilityService {
     }
 
     // Additional upgrade-specific checks
-    const { data: fromVersionData } = await supabase
+    const { data: fromVersionData } = await (supabase as any)
       .from('app_versions')
       .select('*')
       .eq('version', fromVersion)
-      .single();
+      .maybeSingle();
 
-    const { data: toVersionData } = await supabase
+    const { data: toVersionData } = await (supabase as any)
       .from('app_versions')
       .select('*')
       .eq('version', toVersion)
-      .single();
+      .maybeSingle();
 
     if (toVersionData?.breaking_changes && fromVersionData) {
       check.warnings.push('Upgrade contains breaking changes. Data migration may be required.');
