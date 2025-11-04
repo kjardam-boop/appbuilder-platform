@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Database, Users, Loader2, CheckCircle, AlertCircle, Package } from "lucide-react";
 import { seedApplications } from "@/modules/core/applications/services/seedApplications";
+import { seedAppDefinitions } from "@/modules/core/applications/services/seedAppDefinitions";
 import { seedTenants } from "@/modules/core/tenant/services/seedTenants";
 import { seedCapabilities } from "@/modules/core/capabilities";
 import { seedIndustries } from "@/modules/core/industry/services/seedIndustries";
@@ -13,12 +14,14 @@ import Header from "@/components/Dashboard/Header";
 export default function AdminSeed() {
   const [isSeeding, setIsSeeding] = useState({
     applications: false,
+    platformApps: false,
     tenants: false,
     capabilities: false,
     industries: false,
   });
   const [results, setResults] = useState({
     applications: null as "success" | "error" | null,
+    platformApps: null as "success" | "error" | null,
     tenants: null as "success" | "error" | null,
     capabilities: null as "success" | "error" | null,
     industries: null as "success" | "error" | null,
@@ -92,9 +95,27 @@ export default function AdminSeed() {
     }
   };
 
+  const handleSeedPlatformApps = async () => {
+    setIsSeeding(prev => ({ ...prev, platformApps: true }));
+    setResults(prev => ({ ...prev, platformApps: null }));
+
+    try {
+      await seedAppDefinitions();
+      setResults(prev => ({ ...prev, platformApps: "success" }));
+      toast.success("Platform Apps seeded successfully!");
+    } catch (error) {
+      console.error("Seed error:", error);
+      setResults(prev => ({ ...prev, platformApps: "error" }));
+      toast.error("Failed to seed Platform Apps");
+    } finally {
+      setIsSeeding(prev => ({ ...prev, platformApps: false }));
+    }
+  };
+
   const handleSeedAll = async () => {
     await handleSeedIndustries();
     await handleSeedApplications();
+    await handleSeedPlatformApps();
     await handleSeedCapabilities();
     await handleSeedTenants();
   };
@@ -217,6 +238,60 @@ export default function AdminSeed() {
                   <>
                     <Users className="mr-2 h-4 w-4" />
                     Seed Tenants
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                Seed Platform Apps
+              </CardTitle>
+              <CardDescription>
+                Populate app registry with built-in platform applications (jul25, etc.)
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {results.platformApps && (
+                <Alert variant={results.platformApps === "success" ? "default" : "destructive"}>
+                  {results.platformApps === "success" ? (
+                    <CheckCircle className="h-4 w-4" />
+                  ) : (
+                    <AlertCircle className="h-4 w-4" />
+                  )}
+                  <AlertDescription>
+                    {results.platformApps === "success"
+                      ? "Platform Apps seeded successfully!"
+                      : "Failed to seed Platform Apps. Check console for details."}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              <div>
+                <p className="text-sm text-muted-foreground mb-4">Includes:</p>
+                <ul className="text-sm space-y-1 text-muted-foreground ml-4">
+                  <li>• <strong>jul25:</strong> Christmas 2025 Planner (family coordination, calendar, tasks)</li>
+                  <li>• Domain tables, routes, modules, and extension points</li>
+                </ul>
+              </div>
+
+              <Button 
+                onClick={handleSeedPlatformApps}
+                disabled={isSeeding.platformApps}
+                className="w-full"
+              >
+                {isSeeding.platformApps ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Seeding Platform Apps...
+                  </>
+                ) : (
+                  <>
+                    <Package className="mr-2 h-4 w-4" />
+                    Seed Platform Apps
                   </>
                 )}
               </Button>

@@ -97,6 +97,7 @@ export { VendorService } from "./services/vendorService";
 export { PartnerCertificationService } from "./services/partnerCertificationService";
 export { ERPExtensionService } from "./services/erpExtensionService";
 export { seedApplications } from "./services/seedApplications";
+export { seedAppDefinitions } from "./services/seedAppDefinitions";
 export { ManifestLoader } from "./services/manifestLoader";
 export { ObservabilityService } from "./services/observabilityService";
 
