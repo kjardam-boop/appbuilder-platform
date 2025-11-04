@@ -1,9 +1,31 @@
 /**
  * Applications Module
  * Manages business applications (ERP, CRM, etc.) and vendor relationships
+ * Also includes App Registry for platform-level app management
  */
 
-// Types
+// App Registry Types
+export type {
+  AppDefinition,
+  AppVersion,
+  TenantAppInstall,
+  TenantAppExtension,
+  AppConfig,
+  AppOverrides,
+  AppContext,
+  CompatibilityCheck,
+  AppType as AppRegistryType,
+  AppChannel,
+  InstallStatus,
+  ExtensionType,
+} from "./types/appRegistry.types";
+
+export {
+  appConfigSchema,
+  appOverridesSchema,
+} from "./types/appRegistry.types";
+
+// Application Types
 export type {
   AppVendor,
   AppProduct,
@@ -54,14 +76,38 @@ export {
   INTEGRATION_TYPES,
 } from "./types/application.types";
 
-// Services
+// App Registry Services
+export { AppRegistryService } from "./services/appRegistryService";
+export { TenantAppsService } from "./services/tenantAppsService";
+export { CompatibilityService } from "./services/compatibilityService";
+export { RuntimeLoader } from "./services/runtimeLoader";
+export { DeploymentService } from "./services/deploymentService";
+
+// Application Services
 export { ApplicationService } from "./services/applicationService";
 export { VendorService } from "./services/vendorService";
 export { PartnerCertificationService } from "./services/partnerCertificationService";
 export { ERPExtensionService } from "./services/erpExtensionService";
 export { seedApplications } from "./services/seedApplications";
 
-// Hooks
+// App Registry Hooks
+export {
+  useAppDefinitions,
+  useAppDefinition,
+  useAppVersions,
+  useInstallApp,
+  useUpdateApp,
+  useUpdateAppConfig,
+  useUpdateAppOverrides,
+  useChangeAppChannel,
+  useUninstallApp,
+  useCompatibilityCheck,
+  useDeploymentStatus,
+  usePromoteToStable,
+  useRollback,
+} from "./hooks/useAppRegistry";
+
+// Application Hooks
 export {
   useAppProducts,
   useAppProduct,
