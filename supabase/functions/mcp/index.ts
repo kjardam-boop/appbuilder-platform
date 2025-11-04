@@ -12,18 +12,28 @@ const log = (level: string, msg: string, meta: Record<string, any> = {}) => {
 };
 
 // Standard error response
-const errorResponse = (code: string, message: string, status: number = 400) => {
+const errorResponse = (code: string, message: string, status: number = 400, requestId?: string) => {
+  const headers = { 
+    ...corsHeaders, 
+    'Content-Type': 'application/json',
+    ...(requestId ? { 'X-Request-Id': requestId } : {})
+  };
   return new Response(
     JSON.stringify({ ok: false, error: { code, message } }),
-    { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    { status, headers }
   );
 };
 
 // Standard success response
-const successResponse = (data: any, status: number = 200) => {
+const successResponse = (data: any, status: number = 200, requestId?: string) => {
+  const headers = { 
+    ...corsHeaders, 
+    'Content-Type': 'application/json',
+    ...(requestId ? { 'X-Request-Id': requestId } : {})
+  };
   return new Response(
     JSON.stringify({ ok: true, data }),
-    { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    { status, headers }
   );
 };
 
@@ -44,14 +54,18 @@ Deno.serve(async (req) => {
 
     // Health check (no auth required)
     if (path === 'health' || path === '') {
-      return successResponse({ status: 'ok', version: '1.0.0' });
+      return successResponse({ status: 'ok', version: '1.0.0' }, 200, requestId);
     }
 
     // Manifest endpoint (no auth required)
     if (path === 'manifest') {
       const manifest = await Deno.readTextFile('./manifest.json');
       return new Response(manifest, {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json',
+          'X-Request-Id': requestId
+        }
       });
     }
 
@@ -59,7 +73,7 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       log('warn', 'mcp.auth.missing', { request_id: requestId });
-      return errorResponse('UNAUTHORIZED', 'Missing Authorization header', 401);
+      return errorResponse('UNAUTHORIZED', 'Missing Authorization header', 401, requestId);
     }
 
     // Extract tenant and user from headers
@@ -69,7 +83,12 @@ Deno.serve(async (req) => {
 
     if (!tenantId) {
       log('warn', 'mcp.tenant.missing', { request_id: requestId });
-      return errorResponse('FORBIDDEN_TENANT', 'Missing X-Tenant-Id header', 403);
+      return errorResponse('FORBIDDEN_TENANT', 'Missing X-Tenant-Id header', 403, requestId);
+    }
+
+    if (!userId) {
+      log('warn', 'mcp.user.missing', { request_id: requestId });
+      return errorResponse('FORBIDDEN_TENANT', 'Missing X-User-Id header', 403, requestId);
     }
 
     // Initialize Supabase client
@@ -85,13 +104,13 @@ Deno.serve(async (req) => {
 
     if (authError || !user) {
       log('warn', 'mcp.auth.invalid', { request_id: requestId, error: authError?.message });
-      return errorResponse('UNAUTHORIZED', 'Invalid token', 401);
+      return errorResponse('UNAUTHORIZED', 'Invalid token', 401, requestId);
     }
 
     // Validate X-User-Id matches JWT user
-    if (userId && userId !== user.id) {
+    if (userId !== user.id) {
       log('warn', 'mcp.user.mismatch', { request_id: requestId, jwt_user: user.id, header_user: userId });
-      return errorResponse('FORBIDDEN', 'X-User-Id does not match authenticated user', 403);
+      return errorResponse('FORBIDDEN', 'X-User-Id does not match authenticated user', 403, requestId);
     }
 
     // Create per-request role cache
@@ -100,13 +119,14 @@ Deno.serve(async (req) => {
     // Load roles from database
     const roles = await loadUserRoles(supabase, userId || user.id, tenantId, roleCache);
 
-    // Build context
+    // Build context with cache reference
     const ctx = {
       tenant_id: tenantId,
       user_id: userId || user.id,
       roles,
       request_id: requestId,
       timestamp: new Date().toISOString(),
+      roleCache, // Include cache for supplier company lookups
     };
 
     log('info', 'mcp.context', {
@@ -124,7 +144,7 @@ Deno.serve(async (req) => {
     }
 
     log('warn', 'mcp.route.notfound', { request_id: requestId, path });
-    return errorResponse('NOT_FOUND', 'Endpoint not found', 404);
+    return errorResponse('NOT_FOUND', 'Endpoint not found', 404, requestId);
 
   } catch (error) {
     const duration = Date.now() - startTime;
@@ -134,7 +154,7 @@ Deno.serve(async (req) => {
       error: errorMessage, 
       latency_ms: duration 
     });
-    return errorResponse('INTERNAL_ERROR', 'Internal server error', 500);
+    return errorResponse('INTERNAL_ERROR', 'Internal server error', 500, requestId);
   }
 });
 
@@ -183,6 +203,55 @@ async function loadUserRoles(
     log('error', 'mcp.roles.exception', {
       user_id: userId,
       tenant_id: tenantId,
+      error: String(err)
+    });
+    return [];
+  }
+}
+
+/**
+ * Load company IDs where user has supplier role
+ * Returns array of company IDs for ownership filtering
+ */
+async function loadSupplierCompanies(
+  supabase: any,
+  userId: string,
+  cache: Map<string, string[]>
+): Promise<string[]> {
+  const cacheKey = `supplier:${userId}`;
+
+  if (cache.has(cacheKey)) {
+    return cache.get(cacheKey)!;
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('user_roles')
+      .select('scope_id')
+      .eq('user_id', userId)
+      .eq('scope_type', 'company')
+      .eq('role', 'supplier');
+
+    if (error) {
+      log('error', 'mcp.supplier.load_companies_error', {
+        user_id: userId,
+        error: error.message
+      });
+      return [];
+    }
+
+    const companyIds = (data || []).map((r: any) => r.scope_id).filter(Boolean);
+    cache.set(cacheKey, companyIds);
+
+    log('info', 'mcp.supplier.companies_loaded', {
+      user_id: userId,
+      company_count: companyIds.length
+    });
+
+    return companyIds;
+  } catch (err) {
+    log('error', 'mcp.supplier.load_companies_exception', {
+      user_id: userId,
       error: String(err)
     });
     return [];
@@ -295,7 +364,7 @@ async function handleResourceRequest(
   method: string
 ) {
   if (method !== 'GET') {
-    return errorResponse('METHOD_NOT_ALLOWED', 'Only GET is supported for resources', 405);
+    return errorResponse('METHOD_NOT_ALLOWED', 'Only GET is supported for resources', 405, ctx.request_id);
   }
 
   const parts = path.replace('resources/', '').split('/');
@@ -306,7 +375,7 @@ async function handleResourceRequest(
   const validTypes = ['company', 'supplier', 'project', 'task', 'external_system', 'application'];
   if (!validTypes.includes(type)) {
     log('warn', 'mcp.resource.invalid_type', { request_id: ctx.request_id, type });
-    return errorResponse('INVALID_RESOURCE', `Invalid resource type. Valid types: ${validTypes.join(', ')}`, 400);
+    return errorResponse('INVALID_RESOURCE', `Invalid resource type. Valid types: ${validTypes.join(', ')}`, 400, ctx.request_id);
   }
 
   // Check policy before data access
@@ -321,16 +390,16 @@ async function handleResourceRequest(
       reason: policyCheck.reason,
       roles: ctx.roles.join(',')
     });
-    return errorResponse('UNAUTHORIZED', policyCheck.reason || 'Insufficient permissions', 403);
+    return errorResponse('UNAUTHORIZED', policyCheck.reason || 'Insufficient permissions', 403, ctx.request_id);
   }
 
   if (id) {
     // GET single resource
     const resource = await getResource(supabase, ctx, type, id);
     if (!resource) {
-      return errorResponse('NOT_FOUND', `${type} not found`, 404);
+      return errorResponse('NOT_FOUND', `${type} not found`, 404, ctx.request_id);
     }
-    return successResponse(resource);
+    return successResponse(resource, 200, ctx.request_id);
   } else {
     // LIST resources
     const q = url.searchParams.get('q') || undefined;
@@ -338,7 +407,7 @@ async function handleResourceRequest(
     const cursor = url.searchParams.get('cursor') || undefined;
 
     const result = await listResources(supabase, ctx, type, { q, limit, cursor });
-    return successResponse(result);
+    return successResponse(result, 200, ctx.request_id);
   }
 }
 
@@ -354,7 +423,7 @@ async function handleActionRequest(
   idempotencyKey?: string | null
 ) {
   if (req.method !== 'POST') {
-    return errorResponse('METHOD_NOT_ALLOWED', 'Only POST is supported for actions', 405);
+    return errorResponse('METHOD_NOT_ALLOWED', 'Only POST is supported for actions', 405, ctx.request_id);
   }
 
   const actionName = path.replace('actions/', '');
@@ -363,11 +432,11 @@ async function handleActionRequest(
   try {
     params = await req.json();
   } catch {
-    return errorResponse('VALIDATION_ERROR', 'Invalid JSON in request body', 400);
+    return errorResponse('VALIDATION_ERROR', 'Invalid JSON in request body', 400, ctx.request_id);
   }
 
   const result = await executeAction(supabase, ctx, actionName, params, idempotencyKey);
-  return successResponse(result);
+  return successResponse(result, 200, ctx.request_id);
 }
 
 /**
@@ -388,13 +457,27 @@ async function listResources(supabase: any, ctx: any, type: string, params: any)
   // Apply supplier filter and ownership check
   if (type === 'supplier') {
     query = query.eq('is_approved_supplier', true);
-    // TODO: Implement supplier ownership check via company_id
-    // If ctx.roles includes 'supplier', filter by ctx.user.company_id
+    
+    // Enforce supplier ownership - suppliers can only see their own companies
     if (ctx.roles.includes('supplier')) {
-      log('warn', 'mcp.supplier.ownership_check_needed', {
+      const supplierCompanies = await loadSupplierCompanies(supabase, ctx.user_id, ctx.roleCache || new Map());
+      
+      if (supplierCompanies.length === 0) {
+        // Supplier has no associated companies - return empty result
+        log('info', 'mcp.supplier.no_companies', {
+          request_id: ctx.request_id,
+          user_id: ctx.user_id
+        });
+        return { items: [], cursor: undefined, hasMore: false };
+      }
+      
+      // Filter to only companies where user is a supplier
+      query = query.in('id', supplierCompanies);
+      
+      log('info', 'mcp.supplier.ownership_filtered', {
         request_id: ctx.request_id,
         user_id: ctx.user_id,
-        note: 'Supplier ownership filtering not yet implemented'
+        company_count: supplierCompanies.length
       });
     }
   }
@@ -467,13 +550,24 @@ async function getResource(supabase: any, ctx: any, type: string, id: string) {
     query = query.eq('tenant_id', ctx.tenant_id);
   }
 
-  // TODO: Implement supplier ownership check via company_id
+  // Enforce supplier ownership - suppliers can only access their own companies
   if (type === 'supplier' && ctx.roles.includes('supplier')) {
-    log('warn', 'mcp.supplier.ownership_check_needed', {
+    const supplierCompanies = await loadSupplierCompanies(supabase, ctx.user_id, ctx.roleCache || new Map());
+    
+    if (!supplierCompanies.includes(id)) {
+      log('warn', 'mcp.supplier.unauthorized_access', {
+        request_id: ctx.request_id,
+        user_id: ctx.user_id,
+        resource_id: id,
+        reason: 'Supplier does not have access to this company'
+      });
+      return null; // Return null to trigger 404/403 response
+    }
+    
+    log('info', 'mcp.supplier.ownership_verified', {
       request_id: ctx.request_id,
       user_id: ctx.user_id,
-      resource_id: id,
-      note: 'Supplier ownership check not yet implemented'
+      resource_id: id
     });
   }
 
