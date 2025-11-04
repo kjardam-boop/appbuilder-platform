@@ -36,9 +36,11 @@ export default function AppCatalog() {
             Platform-level app definitions og versjoner
           </p>
         </div>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Registrer ny app
+        <Button asChild>
+          <Link to="/admin/apps/new">
+            <Plus className="mr-2 h-4 w-4" />
+            Registrer ny app
+          </Link>
         </Button>
       </div>
 

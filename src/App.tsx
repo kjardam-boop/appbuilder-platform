@@ -48,6 +48,9 @@ import ArchivedResources from "./pages/ArchivedResources";
 import NotFound from "./pages/NotFound";
 import AppsPage from "./pages/AppsPage";
 import AppCatalog from "./pages/admin/AppCatalog";
+import AppDefinitionCreate from "./pages/admin/AppDefinitionCreate";
+import AppDefinitionDetails from "./pages/admin/AppDefinitionDetails";
+import AppVersionsPage from "./pages/admin/AppVersionsPage";
 import TenantAppsPage from "./pages/admin/TenantAppsPage";
 import Jul25App from "./pages/apps/Jul25App";
 import Jul25FamilyAdmin from "./pages/apps/Jul25FamilyAdmin";
@@ -103,6 +106,9 @@ const App = () => (
               <Route path="integrations" element={<AdminSettings />} />
               <Route path="security" element={<AdminSettings />} />
               <Route path="apps" element={<AppCatalog />} />
+              <Route path="apps/new" element={<AppDefinitionCreate />} />
+              <Route path="apps/:appKey" element={<AppDefinitionDetails />} />
+              <Route path="apps/:appKey/versions" element={<AppVersionsPage />} />
               <Route path="tenants/:tenantId/apps" element={<TenantAppsPage />} />
             </Route>
             
