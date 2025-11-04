@@ -148,15 +148,16 @@ export function UserList() {
         });
       }
 
-      // Load app names
+      // Load app names (join with app_definitions to get name)
       if (appIds.size > 0) {
         const { data: apps } = await supabase
           .from('applications')
-          .select('id, name')
+          .select('id, app_definition:app_definitions(name)')
           .in('id', Array.from(appIds));
         
         apps?.forEach(a => {
-          newScopeNames.apps[a.id] = a.name;
+          const appDef = a.app_definition as any;
+          newScopeNames.apps[a.id] = appDef?.name || 'Unknown App';
         });
       }
 
