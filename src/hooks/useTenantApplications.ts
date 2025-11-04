@@ -15,7 +15,7 @@ export const useTenantApplications = () => {
         .from('applications')
         .select(`
           *,
-          app_definition:app_definitions(
+          app_definition:app_definitions!applications_app_definition_id_fkey(
             key,
             name,
             app_type,
@@ -27,7 +27,7 @@ export const useTenantApplications = () => {
         `)
         .eq('tenant_id', context.tenant_id)
         .eq('is_active', true)
-        .order('name');
+        .order('installed_at', { ascending: false });
 
       if (error) throw error;
       return data as TenantAppInstall[];
