@@ -3,14 +3,14 @@
  * Prevents abuse of secret operations
  */
 
-import { SupabaseClient } from '@supabase/supabase-js';
+// Using 'any' for Supabase client to avoid Deno type resolution issues
 
 /**
  * Check rate limit for action
  * Returns true if allowed, false if exceeded
  */
 export async function checkRateLimit(
-  supabase: SupabaseClient,
+  supabase: any,
   tenantId: string,
   userId: string,
   action: string,

@@ -3,7 +3,7 @@
  * Logs all MCP secret operations for compliance
  */
 
-import { SupabaseClient } from '@supabase/supabase-js';
+// Using 'any' for Supabase client to avoid Deno type resolution issues
 
 export interface AuditLogEntry {
   tenantId: string;
@@ -23,7 +23,7 @@ export interface AuditLogEntry {
  * Log secret action to audit table
  */
 export async function logSecretAction(
-  supabase: SupabaseClient,
+  supabase: any,
   entry: AuditLogEntry
 ): Promise<void> {
   const { error } = await supabase.from('mcp_secret_audit').insert({
