@@ -1,84 +1,92 @@
-/**
- * Tenant Apps Page
- * Tenant-specific app management (installation, configuration, updates)
- */
-
-import { useParams } from "react-router-dom";
-import { useTenantApplications } from "@/hooks/useTenantApplications";
-import { 
-  useUpdateAppConfig, 
-  useChangeAppChannel,
-  useUpdateApp,
-} from "@/modules/core/applications/hooks/useAppRegistry";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { useState } from "react";
+import { useParams, Link } from "react-router-dom";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { useState } from "react";
-import { Settings, Upload, Package, AlertTriangle } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { useTenantApplications } from "@/hooks/useTenantApplications";
+import { useUpdateAppConfig, useChangeAppChannel, useUninstallApp } from "@/modules/core/applications/hooks/useAppRegistry";
+import { Loader2, Settings, Plus, Trash2 } from "lucide-react";
 import type { TenantAppInstall } from "@/modules/core/applications/types/appRegistry.types";
+import { UpdateAppDialog } from "@/components/Admin/UpdateAppDialog";
+import { toast } from "sonner";
 
 export default function TenantAppsPage() {
   const { tenantId } = useParams<{ tenantId: string }>();
   const { data: apps, isLoading } = useTenantApplications();
+  const updateConfigMutation = useUpdateAppConfig(tenantId!, "");
+  const changeChannelMutation = useChangeAppChannel(tenantId!, "");
+  const uninstallMutation = useUninstallApp(tenantId!);
+  
   const [selectedApp, setSelectedApp] = useState<TenantAppInstall | null>(null);
-  const [configJson, setConfigJson] = useState("");
-  const [overridesJson, setOverridesJson] = useState("");
-
-  const updateConfig = useUpdateAppConfig(tenantId!, selectedApp?.key || '');
-  const changeChannel = useChangeAppChannel(tenantId!, selectedApp?.key || '');
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-muted-foreground">Laster installerte apper...</div>
-      </div>
-    );
-  }
+  const [updateApp, setUpdateApp] = useState<TenantAppInstall | null>(null);
+  const [configJson, setConfigJson] = useState("{}");
+  const [overridesJson, setOverridesJson] = useState("{}");
+  const [channel, setChannel] = useState<"stable" | "canary" | "pinned">("stable");
 
   const handleOpenConfig = (app: TenantAppInstall) => {
     setSelectedApp(app);
-    setConfigJson(JSON.stringify(app.config, null, 2));
-    setOverridesJson(JSON.stringify(app.overrides, null, 2));
+    setConfigJson(JSON.stringify(app.config || {}, null, 2));
+    setOverridesJson(JSON.stringify(app.overrides || {}, null, 2));
+    setChannel(app.channel as "stable" | "canary" | "pinned");
   };
 
   const handleSaveConfig = async () => {
     if (!selectedApp) return;
-
+    
     try {
       const config = JSON.parse(configJson);
-      await updateConfig.mutateAsync(config);
+      await updateConfigMutation.mutateAsync(config);
+      toast.success("Configuration updated");
       setSelectedApp(null);
     } catch (error) {
-      console.error('Invalid JSON:', error);
+      toast.error("Invalid JSON configuration");
     }
   };
 
+  const handleUninstall = async (appKey: string) => {
+    if (!confirm("Are you sure you want to uninstall this app?")) return;
+    
+    try {
+      await uninstallMutation.mutateAsync({ appKey });
+      toast.success("App uninstalled");
+    } catch (error) {
+      toast.error("Failed to uninstall app");
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex justify-between items-center">
+    <div className="container mx-auto py-8">
+      <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold">Installerte Apper</h1>
-          <p className="text-muted-foreground mt-1">
-            Administrer tenant-spesifikke app-installasjoner
-          </p>
+          <h1 className="text-3xl font-bold mb-2">Installed Apps</h1>
+          <p className="text-muted-foreground">Manage applications for this tenant</p>
         </div>
-        <Button>
-          <Package className="mr-2 h-4 w-4" />
-          Installer ny app
-        </Button>
+        <Link to={`/admin/tenants/${tenantId}/apps/catalog`}>
+          <Button>
+            <Plus className="h-4 w-4 mr-2" />
+            Install new app
+          </Button>
+        </Link>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        {apps?.map(app => (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {apps?.map((app) => (
           <Card key={app.id}>
             <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>{app.name}</span>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xl">{app.name}</CardTitle>
                 <Badge 
                   variant={
                     app.install_status === 'active' ? 'default' : 
@@ -88,32 +96,14 @@ export default function TenantAppsPage() {
                 >
                   {app.install_status}
                 </Badge>
-              </CardTitle>
-              
-              {/* NEW: Migration Status Alert */}
-              {app.migration_status === 'pending_migration' && (
-                <Alert variant="destructive" className="mt-2">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertTitle>Migration Required</AlertTitle>
-                  <AlertDescription>
-                    This app requires database migration to upgrade. Domain tables have changed.
-                  </AlertDescription>
-                </Alert>
-              )}
-              
-              {app.migration_status === 'failed' && (
-                <Alert variant="destructive" className="mt-2">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertTitle>Migration Failed</AlertTitle>
-                  <AlertDescription>
-                    {app.migration_error || 'Unknown error during migration'}
-                  </AlertDescription>
-                </Alert>
-              )}
+              </div>
+              <CardDescription className="mt-2">
+                {app.description || 'No description available'}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-2 text-sm">
+                <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="font-medium">Version:</span>
                     <div className="text-muted-foreground">{app.installed_version}</div>
@@ -126,73 +116,80 @@ export default function TenantAppsPage() {
                   </div>
                 </div>
                 
-                <div className="text-sm">
-                  <span className="font-medium">Status:</span>
-                  <div className="mt-1">
-                    <Badge variant={app.migration_status === 'current' ? 'default' : 'secondary'}>
+                {app.migration_status && app.migration_status !== 'current' && (
+                  <div>
+                    <Badge variant={app.migration_status === 'pending_migration' ? 'destructive' : 'secondary'}>
                       {app.migration_status}
                     </Badge>
                   </div>
-                </div>
+                )}
 
-                {app.app_definition && (
+                {app.app_definition && (app.app_definition as any).modules && (
                   <div className="text-sm">
                     <span className="font-medium">Modules:</span>
                     <div className="flex flex-wrap gap-1 mt-1">
-                      {(app.app_definition as any).modules?.slice(0, 3).map((mod: string) => (
+                      {(app.app_definition as any).modules.slice(0, 3).map((mod: string) => (
                         <Badge key={mod} variant="secondary" className="text-xs">
                           {mod}
                         </Badge>
                       ))}
+                      {(app.app_definition as any).modules.length > 3 && (
+                        <Badge variant="secondary" className="text-xs">
+                          +{(app.app_definition as any).modules.length - 3} more
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 )}
-
-                <div className="flex gap-2 pt-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => handleOpenConfig(app)}
-                    className="flex-1"
-                  >
-                    <Settings className="mr-2 h-3 w-3" />
-                    Configure
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="flex-1"
-                    disabled={app.migration_status !== 'current'}
-                  >
-                    <Upload className="mr-2 h-3 w-3" />
-                    Update
-                  </Button>
-                </div>
               </div>
             </CardContent>
+            <CardFooter>
+              <div className="flex gap-2 w-full">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleOpenConfig(app)}
+                >
+                  <Settings className="h-4 w-4 mr-2" />
+                  Configure
+                </Button>
+                <Button 
+                  size="sm"
+                  onClick={() => setUpdateApp(app)}
+                >
+                  Update
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => handleUninstall(app.key)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardFooter>
           </Card>
         ))}
       </div>
 
-      {/* Config Dialog */}
       {selectedApp && (
         <Dialog open={!!selectedApp} onOpenChange={() => setSelectedApp(null)}>
           <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Configure {selectedApp.name}</DialogTitle>
               <DialogDescription>
-                Rediger konfigurasjon og overrides for denne appen
+                Edit app configuration and overrides
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-6">
-              {/* Channel Selector */}
               <div className="space-y-2">
                 <Label>Update Channel</Label>
                 <Select
-                  value={selectedApp.channel}
+                  value={channel}
                   onValueChange={(value) => {
-                    changeChannel.mutate(value as any);
+                    setChannel(value as "stable" | "canary" | "pinned");
+                    changeChannelMutation.mutate(value as "stable" | "canary" | "pinned");
                   }}
                 >
                   <SelectTrigger>
@@ -206,7 +203,6 @@ export default function TenantAppsPage() {
                 </Select>
               </div>
 
-              {/* Config Editor */}
               <div className="space-y-2">
                 <Label>Configuration (JSON)</Label>
                 <Textarea
@@ -217,7 +213,6 @@ export default function TenantAppsPage() {
                 />
               </div>
 
-              {/* Overrides Editor */}
               <div className="space-y-2">
                 <Label>Overrides (JSON)</Label>
                 <Textarea
@@ -228,17 +223,27 @@ export default function TenantAppsPage() {
                 />
               </div>
 
-              <div className="flex justify-end gap-2">
+              <DialogFooter>
                 <Button variant="outline" onClick={() => setSelectedApp(null)}>
                   Cancel
                 </Button>
-                <Button onClick={handleSaveConfig} disabled={updateConfig.isPending}>
-                  {updateConfig.isPending ? 'Lagrer...' : 'Save Configuration'}
+                <Button onClick={handleSaveConfig} disabled={updateConfigMutation.isPending}>
+                  {updateConfigMutation.isPending ? 'Saving...' : 'Save Configuration'}
                 </Button>
-              </div>
+              </DialogFooter>
             </div>
           </DialogContent>
         </Dialog>
+      )}
+
+      {updateApp && tenantId && (
+        <UpdateAppDialog
+          tenantId={tenantId}
+          appKey={updateApp.key}
+          currentVersion={updateApp.installed_version}
+          open={!!updateApp}
+          onOpenChange={(open) => !open && setUpdateApp(null)}
+        />
       )}
     </div>
   );

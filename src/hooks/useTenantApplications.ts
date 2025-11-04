@@ -36,6 +36,37 @@ export const useTenantApplications = () => {
   });
 };
 
+export const useTenantApplicationsByTenantId = (tenantId?: string) => {
+  return useQuery({
+    queryKey: ['tenant-applications', tenantId],
+    queryFn: async () => {
+      if (!tenantId) throw new Error('No tenant id');
+
+      const { data, error } = await (supabase as any)
+        .from('applications')
+        .select(`
+          *,
+          app_definition:app_definitions!applications_app_definition_id_fkey(
+            key,
+            name,
+            app_type,
+            routes,
+            modules,
+            extension_points,
+            schema_version
+          )
+        `)
+        .eq('tenant_id', tenantId)
+        .eq('is_active', true)
+        .order('installed_at', { ascending: false });
+
+      if (error) throw error;
+      return data as TenantAppInstall[];
+    },
+    enabled: !!tenantId,
+  });
+};
+
 export const useTenantApplication = (appKey: string) => {
   const context = useTenantContext();
 

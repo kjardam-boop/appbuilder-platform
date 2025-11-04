@@ -52,6 +52,7 @@ import AppDefinitionCreate from "./pages/admin/AppDefinitionCreate";
 import AppDefinitionDetails from "./pages/admin/AppDefinitionDetails";
 import AppVersionsPage from "./pages/admin/AppVersionsPage";
 import TenantAppsPage from "./pages/admin/TenantAppsPage";
+import TenantAppCatalog from "./pages/admin/TenantAppCatalog";
 import Jul25App from "./pages/apps/Jul25App";
 import Jul25FamilyAdmin from "./pages/apps/Jul25FamilyAdmin";
 import Jul25MemberEdit from "./pages/apps/Jul25MemberEdit";
@@ -110,6 +111,7 @@ const App = () => (
               <Route path="apps/:appKey" element={<AppDefinitionDetails />} />
               <Route path="apps/:appKey/versions" element={<AppVersionsPage />} />
               <Route path="tenants/:tenantId/apps" element={<TenantAppsPage />} />
+              <Route path="tenants/:tenantId/apps/catalog" element={<TenantAppCatalog />} />
             </Route>
             
             {/* Legacy admin routes - redirect to new structure */}

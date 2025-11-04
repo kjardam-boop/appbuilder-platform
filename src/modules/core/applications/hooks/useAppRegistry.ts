@@ -128,8 +128,8 @@ export function useUninstallApp(tenantId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (appKey: string) =>
-      TenantAppsService.uninstall(tenantId, appKey),
+    mutationFn: (params: { appKey: string }) =>
+      TenantAppsService.uninstall(tenantId, params.appKey),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tenant-applications', tenantId] });
       toast.success('App avinstallert');
