@@ -65,6 +65,7 @@ import McpObservability from "./pages/admin/McpObservability";
 import Compatibility from "./pages/admin/Compatibility";
 import Categories from "./pages/admin/Categories";
 import TenantSystems from "./pages/admin/TenantSystems";
+import IntegrationRecommendations from "./pages/admin/IntegrationRecommendations";
 
 const queryClient = new QueryClient();
 
@@ -130,6 +131,7 @@ const App = () => (
               <Route path="compatibility" element={<Compatibility />} />
               <Route path="categories" element={<Categories />} />
               <Route path="tenant-systems" element={<TenantSystems />} />
+              <Route path="integration-recommendations" element={<IntegrationRecommendations />} />
             </Route>
             
             {/* Legacy admin routes - redirect to new structure */}

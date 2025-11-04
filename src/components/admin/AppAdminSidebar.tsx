@@ -22,6 +22,7 @@ import {
   Plug,
   Server,
   Archive,
+  Sparkles,
 } from "lucide-react";
 
 const adminNavItems = [
@@ -61,6 +62,7 @@ const adminNavItems = [
       { title: "Compatibility", url: "/admin/compatibility", icon: Package },
       { title: "Categories", url: "/admin/categories", icon: Package },
       { title: "Tenant Systems", url: "/admin/tenant-systems", icon: Building2 },
+      { title: "Recommendations", url: "/admin/integration-recommendations", icon: Sparkles },
     ],
   },
   {

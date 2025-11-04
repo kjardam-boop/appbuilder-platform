@@ -1408,6 +1408,51 @@ export type Database = {
         }
         Relationships: []
       }
+      integration_recommendation: {
+        Row: {
+          app_key: string
+          breakdown: Json
+          created_at: string
+          explain: Json
+          id: string
+          provider: string
+          score: number
+          suggestions: Json | null
+          system_product_id: string
+          tenant_id: string
+          updated_at: string
+          workflow_key: string | null
+        }
+        Insert: {
+          app_key: string
+          breakdown: Json
+          created_at?: string
+          explain: Json
+          id?: string
+          provider: string
+          score: number
+          suggestions?: Json | null
+          system_product_id: string
+          tenant_id: string
+          updated_at?: string
+          workflow_key?: string | null
+        }
+        Update: {
+          app_key?: string
+          breakdown?: Json
+          created_at?: string
+          explain?: Json
+          id?: string
+          provider?: string
+          score?: number
+          suggestions?: Json | null
+          system_product_id?: string
+          tenant_id?: string
+          updated_at?: string
+          workflow_key?: string | null
+        }
+        Relationships: []
+      }
       integration_run: {
         Row: {
           action_name: string | null
