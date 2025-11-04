@@ -11,35 +11,67 @@ const log = (level: string, msg: string, meta: Record<string, any> = {}) => {
   console.log(JSON.stringify({ level, msg, timestamp: new Date().toISOString(), ...meta }));
 };
 
-// Standard error response
-const errorResponse = (code: string, message: string, status: number = 400, requestId?: string) => {
-  const headers = { 
-    ...corsHeaders, 
+// Structured event logging for observability
+const logEvent = (level: string, event: string, payload: Record<string, any> = {}) => {
+  console.log(JSON.stringify({ 
+    level, 
+    event, 
+    timestamp: new Date().toISOString(), 
+    ...payload 
+  }));
+};
+
+// Enhanced response headers with observability metadata
+const buildResponseHeaders = (requestId: string, tenantId?: string, latencyMs?: number) => {
+  return {
+    ...corsHeaders,
     'Content-Type': 'application/json',
-    ...(requestId ? { 'X-Request-Id': requestId } : {})
+    'X-Request-Id': requestId,
+    ...(tenantId ? { 'X-Tenant-Id': tenantId } : {}),
+    ...(latencyMs !== undefined ? { 'X-Latency-Ms': String(latencyMs) } : {})
   };
+};
+
+// Standard error response
+const errorResponse = (
+  code: string, 
+  message: string, 
+  status: number = 400, 
+  requestId?: string,
+  tenantId?: string,
+  latencyMs?: number
+) => {
   return new Response(
     JSON.stringify({ ok: false, error: { code, message } }),
-    { status, headers }
+    { 
+      status, 
+      headers: buildResponseHeaders(requestId || crypto.randomUUID(), tenantId, latencyMs)
+    }
   );
 };
 
 // Standard success response
-const successResponse = (data: any, status: number = 200, requestId?: string) => {
-  const headers = { 
-    ...corsHeaders, 
-    'Content-Type': 'application/json',
-    ...(requestId ? { 'X-Request-Id': requestId } : {})
-  };
+const successResponse = (
+  data: any, 
+  status: number = 200, 
+  requestId?: string,
+  tenantId?: string,
+  latencyMs?: number
+) => {
   return new Response(
     JSON.stringify({ ok: true, data }),
-    { status, headers }
+    { 
+      status, 
+      headers: buildResponseHeaders(requestId || crypto.randomUUID(), tenantId, latencyMs)
+    }
   );
 };
 
 Deno.serve(async (req) => {
-  const requestId = crypto.randomUUID();
+  // Accept X-Request-Id from client or generate new UUID
+  const requestId = req.headers.get('X-Request-Id') || crypto.randomUUID();
   const startTime = Date.now();
+  const userAgent = req.headers.get('User-Agent') || null;
 
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -50,22 +82,25 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     const path = url.pathname.replace('/mcp/', '').replace('/mcp', '');
 
-    log('info', 'mcp.request', { request_id: requestId, method: req.method, path });
+    logEvent('info', 'mcp.request.received', { 
+      request_id: requestId, 
+      method: req.method, 
+      path,
+      user_agent: userAgent
+    });
 
     // Health check (no auth required)
     if (path === 'health' || path === '') {
-      return successResponse({ status: 'ok', version: '1.0.0' }, 200, requestId);
+      const latency = Date.now() - startTime;
+      return successResponse({ status: 'ok', version: '1.0.0' }, 200, requestId, undefined, latency);
     }
 
     // Manifest endpoint (no auth required)
     if (path === 'manifest') {
+      const latency = Date.now() - startTime;
       const manifest = await Deno.readTextFile('./manifest.json');
       return new Response(manifest, {
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json',
-          'X-Request-Id': requestId
-        }
+        headers: buildResponseHeaders(requestId, undefined, latency)
       });
     }
 
@@ -127,13 +162,16 @@ Deno.serve(async (req) => {
       request_id: requestId,
       timestamp: new Date().toISOString(),
       roleCache, // Include cache for supplier company lookups
+      user_agent: userAgent,
+      http_method: req.method,
     };
 
-    log('info', 'mcp.context', {
+    logEvent('info', 'mcp.context.built', {
       request_id: requestId,
       tenant_id: tenantId,
       user_id: ctx.user_id,
-      roles: roles.join(',')
+      roles: roles.join(','),
+      user_agent: userAgent
     });
 
     // Route to handlers
@@ -143,18 +181,48 @@ Deno.serve(async (req) => {
       return await handleActionRequest(supabase, ctx, path, url, req, idempotencyKey);
     }
 
-    log('warn', 'mcp.route.notfound', { request_id: requestId, path });
-    return errorResponse('NOT_FOUND', 'Endpoint not found', 404, requestId);
+    logEvent('warn', 'mcp.route.notfound', { request_id: requestId, path });
+    const latency = Date.now() - startTime;
+    return errorResponse('NOT_FOUND', 'Endpoint not found', 404, requestId, undefined, latency);
 
   } catch (error) {
-    const duration = Date.now() - startTime;
+    const latency = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : String(error);
-    log('error', 'mcp.error', { 
+    
+    logEvent('error', 'mcp.error.unhandled', { 
       request_id: requestId, 
       error: errorMessage, 
-      latency_ms: duration 
+      latency_ms: latency
     });
-    return errorResponse('INTERNAL_ERROR', 'Internal server error', 500, requestId);
+
+    // Try to log to audit table even on failure
+    try {
+      const tenantId = req.headers.get('X-Tenant-Id');
+      const userId = req.headers.get('X-User-Id');
+      if (tenantId && userId) {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+        const supabase = createClient(supabaseUrl, supabaseKey);
+        
+        await supabase.from('mcp_action_log').insert({
+          tenant_id: tenantId,
+          user_id: userId,
+          action_name: 'unknown',
+          status: 'error',
+          error_message: errorMessage,
+          error_code: 'INTERNAL_ERROR',
+          duration_ms: latency,
+          request_id: requestId,
+          http_method: req.method,
+          user_agent: userAgent,
+          policy_result: { decision: 'skipped', reason: 'Unhandled exception' },
+        });
+      }
+    } catch (auditError) {
+      log('error', 'mcp.audit.failed', { error: String(auditError) });
+    }
+
+    return errorResponse('INTERNAL_ERROR', 'Internal server error', 500, requestId, undefined, latency);
   }
 });
 
@@ -363,51 +431,145 @@ async function handleResourceRequest(
   url: URL,
   method: string
 ) {
+  const startTime = Date.now();
+  
   if (method !== 'GET') {
-    return errorResponse('METHOD_NOT_ALLOWED', 'Only GET is supported for resources', 405, ctx.request_id);
+    const latency = Date.now() - startTime;
+    return errorResponse('METHOD_NOT_ALLOWED', 'Only GET is supported for resources', 405, ctx.request_id, ctx.tenant_id, latency);
   }
 
   const parts = path.replace('resources/', '').split('/');
   const type = parts[0];
   const id = parts[1];
 
+  logEvent('info', 'mcp.resource.request', {
+    request_id: ctx.request_id,
+    tenant_id: ctx.tenant_id,
+    user_id: ctx.user_id,
+    resource_type: type,
+    resource_id: id || 'list',
+    operation: id ? 'get' : 'list'
+  });
+
   // Validate resource type
   const validTypes = ['company', 'supplier', 'project', 'task', 'external_system', 'application'];
   if (!validTypes.includes(type)) {
-    log('warn', 'mcp.resource.invalid_type', { request_id: ctx.request_id, type });
-    return errorResponse('INVALID_RESOURCE', `Invalid resource type. Valid types: ${validTypes.join(', ')}`, 400, ctx.request_id);
+    const latency = Date.now() - startTime;
+    
+    logEvent('warn', 'mcp.resource.invalid_type', { 
+      request_id: ctx.request_id, 
+      tenant_id: ctx.tenant_id,
+      type,
+      latency_ms: latency
+    });
+
+    // Log to audit table
+    await logResourceAudit(supabase, ctx, type, id, 'error', latency, 'INVALID_RESOURCE', `Invalid resource type: ${type}`);
+
+    return errorResponse('INVALID_RESOURCE', `Invalid resource type. Valid types: ${validTypes.join(', ')}`, 400, ctx.request_id, ctx.tenant_id, latency);
   }
 
   // Check policy before data access
   const policyCheck = checkResourcePolicy(ctx, type, id ? 'get' : 'list');
   if (!policyCheck.allowed) {
-    log('warn', 'mcp.policy.denied', {
+    const latency = Date.now() - startTime;
+
+    logEvent('warn', 'mcp.policy.denied', {
       request_id: ctx.request_id,
       tenant_id: ctx.tenant_id,
       user_id: ctx.user_id,
       resource_type: type,
+      resource_id: id,
       operation: id ? 'get' : 'list',
       reason: policyCheck.reason,
-      roles: ctx.roles.join(',')
+      roles: ctx.roles.join(','),
+      latency_ms: latency
     });
-    return errorResponse('UNAUTHORIZED', policyCheck.reason || 'Insufficient permissions', 403, ctx.request_id);
+
+    // Log to audit table
+    const policyResult = {
+      decision: 'denied',
+      reason: policyCheck.reason,
+      checked_roles: ctx.roles,
+      checked_at: new Date().toISOString()
+    };
+    await logResourceAudit(supabase, ctx, type, id, 'error', latency, 'POLICY_DENIED', policyCheck.reason, policyResult);
+
+    return errorResponse('POLICY_DENIED', policyCheck.reason || 'Insufficient permissions', 403, ctx.request_id, ctx.tenant_id, latency);
   }
 
-  if (id) {
-    // GET single resource
-    const resource = await getResource(supabase, ctx, type, id);
-    if (!resource) {
-      return errorResponse('NOT_FOUND', `${type} not found`, 404, ctx.request_id);
-    }
-    return successResponse(resource, 200, ctx.request_id);
-  } else {
-    // LIST resources
-    const q = url.searchParams.get('q') || undefined;
-    const limit = parseInt(url.searchParams.get('limit') || '25');
-    const cursor = url.searchParams.get('cursor') || undefined;
+  try {
+    if (id) {
+      // GET single resource
+      const resource = await getResource(supabase, ctx, type, id);
+      if (!resource) {
+        const latency = Date.now() - startTime;
+        
+        logEvent('info', 'mcp.resource.not_found', {
+          request_id: ctx.request_id,
+          tenant_id: ctx.tenant_id,
+          resource_type: type,
+          resource_id: id,
+          latency_ms: latency
+        });
 
-    const result = await listResources(supabase, ctx, type, { q, limit, cursor });
-    return successResponse(result, 200, ctx.request_id);
+        await logResourceAudit(supabase, ctx, type, id, 'error', latency, 'NOT_FOUND', `${type} not found`);
+        
+        return errorResponse('NOT_FOUND', `${type} not found`, 404, ctx.request_id, ctx.tenant_id, latency);
+      }
+
+      const latency = Date.now() - startTime;
+      
+      logEvent('info', 'mcp.resource.fetched', {
+        request_id: ctx.request_id,
+        tenant_id: ctx.tenant_id,
+        resource_type: type,
+        resource_id: id,
+        latency_ms: latency
+      });
+
+      await logResourceAudit(supabase, ctx, type, id, 'success', latency);
+
+      return successResponse(resource, 200, ctx.request_id, ctx.tenant_id, latency);
+    } else {
+      // LIST resources
+      const q = url.searchParams.get('q') || undefined;
+      const limit = parseInt(url.searchParams.get('limit') || '25');
+      const cursor = url.searchParams.get('cursor') || undefined;
+
+      const result = await listResources(supabase, ctx, type, { q, limit, cursor });
+      
+      const latency = Date.now() - startTime;
+
+      logEvent('info', 'mcp.resource.fetched', {
+        request_id: ctx.request_id,
+        tenant_id: ctx.tenant_id,
+        resource_type: type,
+        count: result.items.length,
+        has_more: result.hasMore,
+        latency_ms: latency
+      });
+
+      await logResourceAudit(supabase, ctx, type, null, 'success', latency);
+
+      return successResponse(result, 200, ctx.request_id, ctx.tenant_id, latency);
+    }
+  } catch (error) {
+    const latency = Date.now() - startTime;
+    const errorMessage = error instanceof Error ? error.message : String(error);
+
+    logEvent('error', 'mcp.resource.error', {
+      request_id: ctx.request_id,
+      tenant_id: ctx.tenant_id,
+      resource_type: type,
+      resource_id: id,
+      error: errorMessage,
+      latency_ms: latency
+    });
+
+    await logResourceAudit(supabase, ctx, type, id, 'error', latency, 'INTERNAL_ERROR', errorMessage);
+
+    return errorResponse('INTERNAL_ERROR', errorMessage, 500, ctx.request_id, ctx.tenant_id, latency);
   }
 }
 
@@ -422,8 +584,11 @@ async function handleActionRequest(
   req: Request,
   idempotencyKey?: string | null
 ) {
+  const startTime = Date.now();
+
   if (req.method !== 'POST') {
-    return errorResponse('METHOD_NOT_ALLOWED', 'Only POST is supported for actions', 405, ctx.request_id);
+    const latency = Date.now() - startTime;
+    return errorResponse('METHOD_NOT_ALLOWED', 'Only POST is supported for actions', 405, ctx.request_id, ctx.tenant_id, latency);
   }
 
   const actionName = path.replace('actions/', '');
@@ -432,11 +597,48 @@ async function handleActionRequest(
   try {
     params = await req.json();
   } catch {
-    return errorResponse('VALIDATION_ERROR', 'Invalid JSON in request body', 400, ctx.request_id);
+    const latency = Date.now() - startTime;
+    
+    logEvent('warn', 'mcp.action.validation_error', {
+      request_id: ctx.request_id,
+      tenant_id: ctx.tenant_id,
+      action: actionName,
+      error: 'Invalid JSON',
+      latency_ms: latency
+    });
+
+    return errorResponse('VALIDATION_ERROR', 'Invalid JSON in request body', 400, ctx.request_id, ctx.tenant_id, latency);
   }
 
-  const result = await executeAction(supabase, ctx, actionName, params, idempotencyKey);
-  return successResponse(result, 200, ctx.request_id);
+  try {
+    const result = await executeAction(supabase, ctx, actionName, params, idempotencyKey, startTime);
+    const latency = Date.now() - startTime;
+    return successResponse(result, 200, ctx.request_id, ctx.tenant_id, latency);
+  } catch (error) {
+    const latency = Date.now() - startTime;
+    const errorMessage = error instanceof Error ? error.message : String(error);
+
+    // Determine error code based on message
+    let errorCode = 'INTERNAL_ERROR';
+    if (errorMessage.includes('permission') || errorMessage.includes('Insufficient')) {
+      errorCode = 'POLICY_DENIED';
+    } else if (errorMessage.includes('not found')) {
+      errorCode = 'NOT_FOUND';
+    } else if (errorMessage.includes('validation') || errorMessage.includes('invalid')) {
+      errorCode = 'VALIDATION_ERROR';
+    }
+
+    logEvent('error', 'mcp.action.error', {
+      request_id: ctx.request_id,
+      tenant_id: ctx.tenant_id,
+      action: actionName,
+      error: errorMessage,
+      error_code: errorCode,
+      latency_ms: latency
+    });
+
+    return errorResponse(errorCode, errorMessage, 500, ctx.request_id, ctx.tenant_id, latency);
+  }
 }
 
 /**
@@ -602,9 +804,18 @@ async function executeAction(
   ctx: any,
   actionName: string,
   params: any,
-  idempotencyKey?: string | null
+  idempotencyKey?: string | null,
+  handlerStartTime?: number
 ) {
-  const startTime = Date.now();
+  const startTime = handlerStartTime || Date.now();
+
+  logEvent('info', 'mcp.action.start', {
+    request_id: ctx.request_id,
+    tenant_id: ctx.tenant_id,
+    user_id: ctx.user_id,
+    action: actionName,
+    idempotency_key: idempotencyKey
+  });
 
   // Check idempotency
   if (idempotencyKey) {
@@ -619,11 +830,17 @@ async function executeAction(
       .maybeSingle();
 
     if (existing) {
-      log('info', 'mcp.action.idempotent', {
+      const latency = Date.now() - startTime;
+
+      logEvent('info', 'mcp.action.duplicate', {
         request_id: ctx.request_id,
+        tenant_id: ctx.tenant_id,
         action: actionName,
-        idempotency_key: idempotencyKey
+        idempotency_key: idempotencyKey,
+        latency_ms: latency
       });
+
+      // Return cached result without re-execution
       return existing.result_json;
     }
   }
@@ -631,6 +848,7 @@ async function executeAction(
   // Check policy before execution
   const policyCheck = checkActionPolicy(ctx, actionName);
   if (!policyCheck.allowed) {
+    const latency = Date.now() - startTime;
     const policyResult = {
       decision: 'denied',
       reason: policyCheck.reason,
@@ -638,7 +856,17 @@ async function executeAction(
       checked_at: new Date().toISOString()
     };
 
-    // Log denied action
+    logEvent('warn', 'mcp.policy.denied', {
+      request_id: ctx.request_id,
+      tenant_id: ctx.tenant_id,
+      user_id: ctx.user_id,
+      action: actionName,
+      reason: policyCheck.reason,
+      roles: ctx.roles.join(','),
+      latency_ms: latency
+    });
+
+    // Log denied action with error code
     await logAction(
       supabase,
       ctx,
@@ -646,20 +874,12 @@ async function executeAction(
       params,
       null,
       'error',
-      0,
+      latency,
       policyCheck.reason || 'Policy denied',
       idempotencyKey,
-      policyResult
+      policyResult,
+      'POLICY_DENIED'
     );
-
-    log('warn', 'mcp.policy.denied', {
-      request_id: ctx.request_id,
-      tenant_id: ctx.tenant_id,
-      user_id: ctx.user_id,
-      action: actionName,
-      reason: policyCheck.reason,
-      roles: ctx.roles.join(',')
-    });
 
     throw new Error(policyCheck.reason || 'Insufficient permissions');
   }
@@ -688,7 +908,7 @@ async function executeAction(
         throw new Error(`Unknown action: ${actionName}`);
     }
 
-    const duration = Date.now() - startTime;
+    const latency = Date.now() - startTime;
 
     // Build policy result for successful execution
     const policyResult = {
@@ -697,46 +917,58 @@ async function executeAction(
       checked_at: new Date().toISOString()
     };
 
-    // Log action with policy result
-    await logAction(supabase, ctx, actionName, params, result, 'success', duration, null, idempotencyKey, policyResult);
-
-    log('info', 'mcp.action', {
+    logEvent('info', 'mcp.action.success', {
       request_id: ctx.request_id,
       tenant_id: ctx.tenant_id,
+      user_id: ctx.user_id,
       action: actionName,
-      latency_ms: duration,
-      status: 'success'
+      latency_ms: latency
     });
+
+    // Log action with policy result
+    await logAction(supabase, ctx, actionName, params, result, 'success', latency, null, idempotencyKey, policyResult, null);
 
     return result;
 
   } catch (error) {
-    const duration = Date.now() - startTime;
+    const latency = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : String(error);
+
+    // Determine error code
+    let errorCode = 'INTERNAL_ERROR';
+    if (errorMessage.includes('permission') || errorMessage.includes('Insufficient')) {
+      errorCode = 'POLICY_DENIED';
+    } else if (errorMessage.includes('not found')) {
+      errorCode = 'NOT_FOUND';
+    } else if (errorMessage.includes('validation')) {
+      errorCode = 'VALIDATION_ERROR';
+    }
 
     // Build policy result for error case
     const policyResult = {
-      decision: 'allowed',
+      decision: errorCode === 'POLICY_DENIED' ? 'denied' : 'allowed',
       checked_roles: ctx.roles,
       checked_at: new Date().toISOString()
     };
-    
-    await logAction(supabase, ctx, actionName, params, null, 'error', duration, errorMessage, idempotencyKey, policyResult);
 
-    log('error', 'mcp.action.error', {
+    logEvent('error', 'mcp.action.error', {
       request_id: ctx.request_id,
       tenant_id: ctx.tenant_id,
+      user_id: ctx.user_id,
       action: actionName,
-      latency_ms: duration,
-      error: errorMessage
+      error: errorMessage,
+      error_code: errorCode,
+      latency_ms: latency
     });
+    
+    await logAction(supabase, ctx, actionName, params, null, 'error', latency, errorMessage, idempotencyKey, policyResult, errorCode);
 
     throw error;
   }
 }
 
 /**
- * Log action to mcp_action_log with policy result
+ * Log action to mcp_action_log with full observability metadata
  */
 async function logAction(
   supabase: any,
@@ -748,25 +980,78 @@ async function logAction(
   durationMs: number,
   errorMessage: string | null,
   idempotencyKey?: string | null,
+  policyResult?: any,
+  errorCode?: string | null
+) {
+  try {
+    await supabase.from('mcp_action_log').insert({
+      tenant_id: ctx.tenant_id,
+      user_id: ctx.user_id,
+      action_name: actionName,
+      payload_json: payload,
+      result_json: result,
+      status,
+      error_message: errorMessage,
+      error_code: errorCode,
+      duration_ms: durationMs,
+      idempotency_key: idempotencyKey,
+      request_id: ctx.request_id,
+      http_method: ctx.http_method || 'POST',
+      user_agent: ctx.user_agent,
+      policy_result: policyResult || {
+        decision: 'allowed',
+        checked_roles: ctx.roles || [],
+        checked_at: new Date().toISOString()
+      },
+    });
+  } catch (error) {
+    log('error', 'mcp.audit.log_failed', { 
+      error: error instanceof Error ? error.message : String(error),
+      action: actionName 
+    });
+  }
+}
+
+/**
+ * Log resource access to mcp_action_log
+ */
+async function logResourceAudit(
+  supabase: any,
+  ctx: any,
+  resourceType: string,
+  resourceId: string | null | undefined,
+  status: string,
+  durationMs: number,
+  errorCode?: string | null,
+  errorMessage?: string | null,
   policyResult?: any
 ) {
-  await supabase.from('mcp_action_log').insert({
-    tenant_id: ctx.tenant_id,
-    user_id: ctx.user_id,
-    action_name: actionName,
-    payload_json: payload,
-    result_json: result,
-    status,
-    error_message: errorMessage,
-    duration_ms: durationMs,
-    idempotency_key: idempotencyKey,
-    request_id: ctx.request_id,
-    policy_result: policyResult || {
-      decision: 'allowed',
-      checked_roles: ctx.roles || [],
-      checked_at: new Date().toISOString()
-    },
-  });
+  try {
+    await supabase.from('mcp_action_log').insert({
+      tenant_id: ctx.tenant_id,
+      user_id: ctx.user_id,
+      action_name: resourceId ? `get_${resourceType}` : `list_${resourceType}`,
+      status,
+      error_message: errorMessage || null,
+      error_code: errorCode || null,
+      duration_ms: durationMs,
+      request_id: ctx.request_id,
+      http_method: ctx.http_method || 'GET',
+      resource_type: resourceType,
+      resource_id: resourceId || null,
+      user_agent: ctx.user_agent,
+      policy_result: policyResult || {
+        decision: 'allowed',
+        checked_roles: ctx.roles || [],
+        checked_at: new Date().toISOString()
+      },
+    });
+  } catch (error) {
+    log('error', 'mcp.audit.resource_log_failed', { 
+      error: error instanceof Error ? error.message : String(error),
+      resource_type: resourceType 
+    });
+  }
 }
 
 // Action implementations

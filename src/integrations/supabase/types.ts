@@ -1492,45 +1492,60 @@ export type Database = {
           action_name: string
           created_at: string
           duration_ms: number | null
+          error_code: string | null
           error_message: string | null
+          http_method: string | null
           id: string
           idempotency_key: string | null
           payload_json: Json | null
           policy_result: Json | null
           request_id: string | null
+          resource_id: string | null
+          resource_type: string | null
           result_json: Json | null
           status: string
           tenant_id: string
+          user_agent: string | null
           user_id: string | null
         }
         Insert: {
           action_name: string
           created_at?: string
           duration_ms?: number | null
+          error_code?: string | null
           error_message?: string | null
+          http_method?: string | null
           id?: string
           idempotency_key?: string | null
           payload_json?: Json | null
           policy_result?: Json | null
           request_id?: string | null
+          resource_id?: string | null
+          resource_type?: string | null
           result_json?: Json | null
           status: string
           tenant_id: string
+          user_agent?: string | null
           user_id?: string | null
         }
         Update: {
           action_name?: string
           created_at?: string
           duration_ms?: number | null
+          error_code?: string | null
           error_message?: string | null
+          http_method?: string | null
           id?: string
           idempotency_key?: string | null
           payload_json?: Json | null
           policy_result?: Json | null
           request_id?: string | null
+          resource_id?: string | null
+          resource_type?: string | null
           result_json?: Json | null
           status?: string
           tenant_id?: string
+          user_agent?: string | null
           user_id?: string | null
         }
         Relationships: []
