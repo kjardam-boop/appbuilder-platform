@@ -52,11 +52,34 @@ interface AppProject {
   deployed_to_production_at: string | null;
 }
 
+interface TenantUser {
+  user_id: string;
+  role: string;
+  profiles: {
+    email: string;
+    full_name: string | null;
+  };
+}
+
+interface TenantApplication {
+  id: string;
+  app_definition_id: string;
+  is_active: boolean;
+  installed_at: string;
+  app_definitions: {
+    name: string;
+    key: string;
+    icon_name: string;
+  };
+}
+
 export default function TenantDetails() {
   const { tenantId } = useParams();
   const [tenant, setTenant] = useState<TenantData | null>(null);
   const [company, setCompany] = useState<CompanyData | null>(null);
   const [appProjects, setAppProjects] = useState<AppProject[]>([]);
+  const [tenantUsers, setTenantUsers] = useState<TenantUser[]>([]);
+  const [tenantApplications, setTenantApplications] = useState<TenantApplication[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -100,6 +123,64 @@ export default function TenantDetails() {
 
       if (projectsError) throw projectsError;
       setAppProjects(projectsData || []);
+
+      // Load tenant users with roles
+      const { data: rolesData, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('user_id, role')
+        .eq('scope_type', 'tenant')
+        .eq('scope_id', tenantId);
+
+      if (rolesError) throw rolesError;
+
+      // Get unique user IDs
+      const userIds = [...new Set(rolesData?.map(r => r.user_id) || [])];
+      
+      if (userIds.length > 0) {
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('user_id, email, full_name')
+          .in('user_id', userIds);
+
+        if (profilesError) throw profilesError;
+
+        // Combine roles with profiles
+        const usersWithProfiles = rolesData?.map(role => {
+          const profile = profilesData?.find(p => p.user_id === role.user_id);
+          return {
+            user_id: role.user_id,
+            role: role.role,
+            profiles: profile ? {
+              email: profile.email || '',
+              full_name: profile.full_name
+            } : {
+              email: '',
+              full_name: null
+            }
+          };
+        }) || [];
+        
+        setTenantUsers(usersWithProfiles);
+      }
+
+      // Load tenant applications
+      const { data: appsData, error: appsError } = await supabase
+        .from('applications')
+        .select(`
+          id,
+          app_definition_id,
+          is_active,
+          installed_at,
+          app_definitions (
+            name,
+            key,
+            icon_name
+          )
+        `)
+        .eq('tenant_id', tenantId);
+
+      if (appsError) throw appsError;
+      setTenantApplications(appsData || []);
 
     } catch (error: any) {
       console.error('Error loading tenant details:', error);
@@ -315,8 +396,10 @@ export default function TenantDetails() {
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">-</div>
-                <p className="text-xs text-muted-foreground">Ikke implementert</p>
+                <div className="text-2xl font-bold">{tenantUsers.length}</div>
+                <p className="text-xs text-muted-foreground">
+                  {tenantUsers.filter(u => u.role.includes('admin')).length} administratorer
+                </p>
               </CardContent>
             </Card>
             <Card>
@@ -325,8 +408,10 @@ export default function TenantDetails() {
                 <Package className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">-</div>
-                <p className="text-xs text-muted-foreground">Ikke implementert</p>
+                <div className="text-2xl font-bold">{tenantApplications.length}</div>
+                <p className="text-xs text-muted-foreground">
+                  {tenantApplications.filter(a => a.is_active).length} aktive
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -451,16 +536,63 @@ export default function TenantDetails() {
           )}
         </TabsContent>
 
-        <TabsContent value="users">
-          <Card>
-            <CardContent className="pt-6 text-center">
-              <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Brukeradministrasjon</h3>
-              <p className="text-muted-foreground">
-                Brukeradministrasjon er ikke implementert ennå
-              </p>
-            </CardContent>
-          </Card>
+        <TabsContent value="users" className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold">Brukere</h2>
+              <p className="text-muted-foreground">Brukere med tilgang til denne tenanten</p>
+            </div>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Inviter bruker
+            </Button>
+          </div>
+
+          {tenantUsers.length === 0 ? (
+            <Card>
+              <CardContent className="pt-6 text-center">
+                <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Ingen brukere</h3>
+                <p className="text-muted-foreground mb-4">
+                  Denne tenanten har ingen brukere ennå
+                </p>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Inviter første bruker
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="space-y-4">
+                  {tenantUsers.map((user) => (
+                    <div
+                      key={user.user_id}
+                      className="flex items-center justify-between p-4 border rounded-lg"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                          <Users className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <div className="font-medium">
+                            {user.profiles?.full_name || 'Ikke angitt'}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {user.profiles?.email}
+                          </div>
+                        </div>
+                      </div>
+                      <Badge variant="secondary">
+                        {user.role}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
     </div>
