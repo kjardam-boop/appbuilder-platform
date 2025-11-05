@@ -44,6 +44,13 @@ export async function resolveTenantByHost(host: string): Promise<TenantConfig | 
       return tenant;
     }
 
+    // 4. Fallback to default tenant for preview/development environments
+    const defaultTenant = tenants.find(t => t.tenant_id === 'default');
+    if (defaultTenant) {
+      console.log(`[TenantResolver] Using default tenant for host: ${host}`);
+      return defaultTenant;
+    }
+
     console.error(`[TenantResolver] No tenant found for host: ${host}`);
     return null;
   } catch (error) {
