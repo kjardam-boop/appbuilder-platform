@@ -47,29 +47,50 @@ export async function resolveWebhook(
     return null;
   }
 
-  // 2. Fetch Base URL from tenant_integrations
-  const { data: integration, error: integrationError } = await supabase
-    .from('tenant_integrations')
-    .select('config')
-    .eq('tenant_id', tenantId)
-    .eq('adapter_id', provider)
-    .eq('is_active', true)
-    .maybeSingle();
+  // 2. Try to fetch Base URL from tenant_integrations with multiple adapter_id variants
+  const adapterCandidates = [provider, `${provider}_mcp`, `${provider}-mcp`];
+  let integrationConfig: any = null;
 
-  if (integrationError) {
-    console.error('[tenantWorkflowService] Error fetching integration config:', integrationError);
+  for (const adapterId of adapterCandidates) {
+    const { data: integ, error: integrationError } = await supabase
+      .from('tenant_integrations')
+      .select('config')
+      .eq('tenant_id', tenantId)
+      .eq('adapter_id', adapterId)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (integrationError) {
+      console.error('[tenantWorkflowService] Error fetching integration config:', integrationError);
+      // Try next candidate
+      continue;
+    }
+
+    if (integ?.config) {
+      integrationConfig = integ.config as any;
+      break;
+    }
   }
 
-  // 3. Extract base URL (prioritize database, fallback to env)
-  const baseUrl = (integration?.config as any)?.n8n_mcp_url || import.meta.env.VITE_N8N_BASE_URL;
-  
+  // 3. Extract base URL from known keys (fallback to env)
+  const baseUrl =
+    integrationConfig?.n8n_mcp_url ||
+    integrationConfig?.n8n_base_url ||
+    integrationConfig?.base_url ||
+    integrationConfig?.url ||
+    import.meta.env.VITE_N8N_BASE_URL;
+
   if (!baseUrl) {
     console.warn('[tenantWorkflowService] N8N Base URL not configured in database or environment');
     return null;
   }
 
-  // 4. Combine base URL with webhook path
-  const fullUrl = `${baseUrl}${mapping.webhook_path}`;
+  // 4. Combine base URL with webhook path (normalize slashes)
+  const normalizedBase = String(baseUrl).replace(/\/+$/, '');
+  const path = String(mapping.webhook_path || '');
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+
+  const fullUrl = `${normalizedBase}${normalizedPath}`;
   console.log(`[tenantWorkflowService] Resolved webhook URL: ${fullUrl}`);
   return fullUrl;
 }
