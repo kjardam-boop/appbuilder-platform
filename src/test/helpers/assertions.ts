@@ -304,3 +304,170 @@ export const expectItemCount = async (
 
   await waitFor(assertion, { timeout });
 };
+
+/**
+ * Asserts that a permission was granted (success state)
+ * @param permissionName - Name or description of the permission
+ * @param options - Configuration options
+ */
+export const expectPermissionGranted = async (
+  permissionName: string | RegExp,
+  options: {
+    successMessage?: string | RegExp;
+    timeout?: number;
+  } = {}
+) => {
+  const { successMessage, timeout = 3000 } = options;
+
+  const assertion = async () => {
+    // Look for success indicators
+    const successElements = [
+      ...screen.queryAllByText(/granted|tillåtet|godkänd/i),
+      ...screen.queryAllByRole("status", { name: /success/i }),
+      ...document.querySelectorAll('[data-permission-status="granted"]'),
+      ...document.querySelectorAll('[aria-label*="success"]'),
+    ];
+
+    expect(successElements.length).toBeGreaterThan(0);
+
+    // Verify permission name is mentioned
+    if (permissionName) {
+      expect(await screen.findByText(permissionName, { exact: false })).toBeInTheDocument();
+    }
+
+    // Verify custom success message if provided
+    if (successMessage) {
+      expect(await screen.findByText(successMessage, { exact: false })).toBeInTheDocument();
+    }
+
+    // Ensure no denial indicators are present
+    const denialElements = screen.queryAllByText(/denied|nektet|avslått/i);
+    expect(denialElements.length).toBe(0);
+  };
+
+  await waitFor(assertion, { timeout });
+};
+
+/**
+ * Asserts that a permission was denied (failure state)
+ * @param permissionName - Name or description of the permission
+ * @param options - Configuration options
+ */
+export const expectPermissionDenied = async (
+  permissionName: string | RegExp,
+  options: {
+    errorMessage?: string | RegExp;
+    timeout?: number;
+  } = {}
+) => {
+  const { errorMessage, timeout = 3000 } = options;
+
+  const assertion = async () => {
+    // Look for denial indicators
+    const denialElements = [
+      ...screen.queryAllByText(/denied|nektet|avslått|ikke tilgang|unauthorized/i),
+      ...screen.queryAllByRole("alert"),
+      ...document.querySelectorAll('[data-permission-status="denied"]'),
+      ...document.querySelectorAll('[aria-label*="error"]'),
+    ];
+
+    expect(denialElements.length).toBeGreaterThan(0);
+
+    // Verify permission name is mentioned if provided
+    if (permissionName) {
+      expect(await screen.findByText(permissionName, { exact: false })).toBeInTheDocument();
+    }
+
+    // Verify custom error message if provided
+    if (errorMessage) {
+      expect(await screen.findByText(errorMessage, { exact: false })).toBeInTheDocument();
+    }
+
+    // Ensure no success indicators are present
+    const successElements = screen.queryAllByText(/granted|tillåtet|godkänd/i);
+    expect(successElements.length).toBe(0);
+  };
+
+  await waitFor(assertion, { timeout });
+};
+
+/**
+ * Asserts that a role exists within a specific scope
+ * @param roleData - Role and scope information
+ * @param options - Configuration options
+ */
+export const expectRoleInScope = async (
+  roleData: {
+    role: string | RegExp;
+    scopeType: "platform" | "tenant" | "company" | "project" | "app";
+    scopeName?: string | RegExp;
+    scopeId?: string;
+    userId?: string;
+  },
+  options: {
+    shouldExist?: boolean;
+    timeout?: number;
+  } = {}
+) => {
+  const { shouldExist = true, timeout = 3000 } = options;
+
+  const assertion = async () => {
+    // Find elements containing the role
+    const roleElements = screen.queryAllByText(roleData.role, { exact: false });
+
+    if (shouldExist) {
+      expect(roleElements.length).toBeGreaterThan(0);
+
+      // Verify the role is associated with the correct scope type
+      const scopeTypeElements = screen.queryAllByText(
+        new RegExp(roleData.scopeType, "i"),
+        { exact: false }
+      );
+      expect(scopeTypeElements.length).toBeGreaterThan(0);
+
+      // Verify scope name if provided
+      if (roleData.scopeName) {
+        expect(await screen.findByText(roleData.scopeName, { exact: false })).toBeInTheDocument();
+      }
+
+      // Verify scope ID if provided
+      if (roleData.scopeId) {
+        const scopeIdElements = screen.queryAllByText(
+          new RegExp(roleData.scopeId),
+          { exact: false }
+        );
+        expect(scopeIdElements.length).toBeGreaterThan(0);
+      }
+
+      // Verify user ID if provided
+      if (roleData.userId) {
+        const userElements = screen.queryAllByText(
+          new RegExp(roleData.userId),
+          { exact: false }
+        );
+        expect(userElements.length).toBeGreaterThan(0);
+      }
+    } else {
+      // When shouldExist is false, verify the combination doesn't exist
+      if (roleData.scopeName) {
+        // Both role and scope should not appear together
+        const hasRoleAndScope = roleElements.some((roleEl) => {
+          const parent = roleEl.closest("tr, [data-role-row], [data-testid*='role']");
+          if (!parent) return false;
+          
+          const scopeNameStr = typeof roleData.scopeName === "string" 
+            ? roleData.scopeName 
+            : roleData.scopeName?.source || "";
+          
+          return parent.textContent?.includes(scopeNameStr);
+        });
+        
+        expect(hasRoleAndScope).toBe(false);
+      } else {
+        expect(roleElements.length).toBe(0);
+      }
+    }
+  };
+
+  await waitFor(assertion, { timeout });
+};

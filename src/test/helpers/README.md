@@ -481,6 +481,145 @@ await expectItemCount({ text: /Delete/ }, 3);
 
 ---
 
+### `expectPermissionGranted(permissionName, options?)`
+
+Asserts that a permission was successfully granted (success state).
+
+**Parameters:**
+- `permissionName`: Name or description of the permission (string or RegExp)
+- `options.successMessage`: Optional custom success message to verify (string or RegExp)
+- `options.timeout`: Timeout in ms (default: 3000)
+
+**Usage:**
+```typescript
+import { expectPermissionGranted } from '@/test/helpers';
+
+// Basic permission granted check
+await expectPermissionGranted('Create Projects');
+
+// With custom success message
+await expectPermissionGranted('Delete Users', {
+  successMessage: 'Permission granted successfully'
+});
+
+// With regex pattern
+await expectPermissionGranted(/admin.*access/i);
+
+// With custom timeout
+await expectPermissionGranted('Edit Settings', { timeout: 5000 });
+```
+
+**What it checks:**
+- Success indicators are present (granted, tillåtet, godkänd)
+- Permission name is displayed
+- Optional custom success message is shown
+- No denial indicators are present
+
+---
+
+### `expectPermissionDenied(permissionName, options?)`
+
+Asserts that a permission was denied (failure state).
+
+**Parameters:**
+- `permissionName`: Name or description of the permission (string or RegExp)
+- `options.errorMessage`: Optional custom error message to verify (string or RegExp)
+- `options.timeout`: Timeout in ms (default: 3000)
+
+**Usage:**
+```typescript
+import { expectPermissionDenied } from '@/test/helpers';
+
+// Basic permission denied check
+await expectPermissionDenied('Delete Company');
+
+// With custom error message
+await expectPermissionDenied('Access Admin Panel', {
+  errorMessage: 'You do not have permission to access this resource'
+});
+
+// With regex pattern
+await expectPermissionDenied(/unauthorized.*access/i);
+
+// With custom timeout
+await expectPermissionDenied('View Billing', { timeout: 5000 });
+```
+
+**What it checks:**
+- Denial indicators are present (denied, nektet, unauthorized)
+- Permission name is displayed
+- Optional custom error message is shown
+- No success indicators are present
+
+---
+
+### `expectRoleInScope(roleData, options?)`
+
+Asserts that a specific role exists within a given scope (platform, tenant, company, project, or app).
+
+**Parameters:**
+- `roleData.role`: Role name or pattern to verify (string or RegExp)
+- `roleData.scopeType`: Type of scope ("platform" | "tenant" | "company" | "project" | "app")
+- `roleData.scopeName`: Optional scope name to verify (string or RegExp)
+- `roleData.scopeId`: Optional scope ID to verify (string)
+- `roleData.userId`: Optional user ID associated with the role (string)
+- `options.shouldExist`: Whether role should exist (default: true)
+- `options.timeout`: Timeout in ms (default: 3000)
+
+**Usage:**
+```typescript
+import { expectRoleInScope } from '@/test/helpers';
+
+// Basic role in scope check
+await expectRoleInScope({
+  role: 'TenantAdmin',
+  scopeType: 'tenant',
+  scopeName: 'Acme Corp'
+});
+
+// With scope ID
+await expectRoleInScope({
+  role: 'ProjectOwner',
+  scopeType: 'project',
+  scopeName: 'Website Redesign',
+  scopeId: 'proj-123'
+});
+
+// With user ID
+await expectRoleInScope({
+  role: 'Analyst',
+  scopeType: 'company',
+  scopeName: 'Tech Solutions',
+  userId: 'user-456'
+});
+
+// Verify role does NOT exist in scope
+await expectRoleInScope(
+  {
+    role: 'SuperAdmin',
+    scopeType: 'tenant',
+    scopeName: 'Client Tenant'
+  },
+  { shouldExist: false }
+);
+
+// With regex patterns for flexible matching
+await expectRoleInScope({
+  role: /admin|owner/i,
+  scopeType: 'platform',
+  scopeName: /global|platform/i
+});
+```
+
+**What it checks:**
+- Role exists in the specified scope type
+- Optional scope name matches
+- Optional scope ID matches
+- Optional user ID is associated with the role
+- Can verify role does NOT exist (shouldExist: false)
+
+---
+
 ## Best Practices
 
 ### 1. Always Use Wrappers for Context
@@ -569,7 +708,8 @@ import {
   createRouterWrapper, 
   createMockRole,
   expectUserProfile,
-  expectScopeDisplay 
+  expectScopeDisplay,
+  expectRoleInScope
 } from '@/test/helpers';
 
 describe('Role Management', () => {
@@ -589,6 +729,64 @@ describe('Role Management', () => {
     // Assert
     await expectUserProfile({ name: 'Test User' });
     await expectScopeDisplay({ type: 'tenant', name: 'Test Tenant' });
+    await expectRoleInScope({
+      role: 'tenant_admin',
+      scopeType: 'tenant',
+      scopeName: 'Test Tenant'
+    });
+  });
+});
+```
+
+### Testing Permissions
+
+```typescript
+import { 
+  expectPermissionGranted,
+  expectPermissionDenied,
+  expectRoleInScope
+} from '@/test/helpers';
+
+describe('Permission System', () => {
+  it('grants permission to admin users', async () => {
+    await renderWithProviders(<PermissionManager />);
+    
+    // Grant permission action
+    const grantButton = screen.getByRole('button', { name: /grant/i });
+    await userEvent.click(grantButton);
+    
+    // Verify permission was granted
+    await expectPermissionGranted('Edit Projects', {
+      successMessage: 'Permission granted successfully'
+    });
+  });
+
+  it('denies permission to non-admin users', async () => {
+    // Mock non-admin user
+    vi.mocked(RoleService.hasRole).mockResolvedValue(false);
+    
+    await renderWithProviders(<RestrictedArea />);
+    
+    // Verify access denied
+    await expectPermissionDenied('Access Admin Panel', {
+      errorMessage: 'You do not have permission'
+    });
+  });
+
+  it('verifies role assignment in correct scope', async () => {
+    await renderWithProviders(<RoleAssignment />);
+    
+    // Assign role
+    const assignButton = screen.getByRole('button', { name: /assign/i });
+    await userEvent.click(assignButton);
+    
+    // Verify role exists in scope
+    await expectRoleInScope({
+      role: 'ProjectOwner',
+      scopeType: 'project',
+      scopeName: 'New Website',
+      userId: 'user-123'
+    });
   });
 });
 ```

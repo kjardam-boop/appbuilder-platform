@@ -22,4 +22,7 @@ export {
   expectStatistics,
   expectErrorMessage,
   expectItemCount,
+  expectPermissionGranted,
+  expectPermissionDenied,
+  expectRoleInScope,
 } from "./assertions";
