@@ -191,6 +191,155 @@ describe('RoleManagement - Integration Tests', () => {
     });
   });
 
+  describe('Scope Name Display', () => {
+    it('should fetch and display scope names for tenant roles', async () => {
+      const mockProfiles = [
+        {
+          user_id: 'user-tenant',
+          id: 'user-tenant',
+          full_name: 'Tenant Admin',
+          email: 'admin@tenant.com',
+          created_at: '2024-01-01T00:00:00Z',
+        },
+      ];
+
+      const mockTenantRoles: UserRoleRecord[] = [
+        createMockRole({
+          user_id: 'user-tenant',
+          role: 'tenant_admin',
+          scope_type: 'tenant',
+          scope_id: 'tenant-123',
+        }),
+      ];
+
+      vi.mocked(supabase.from).mockImplementation((table: string) => {
+        if (table === 'profiles') {
+          return {
+            select: vi.fn().mockResolvedValue({
+              data: mockProfiles,
+              error: null,
+            }),
+          } as any;
+        }
+        if (table === 'tenants') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            in: vi.fn().mockResolvedValue({
+              data: [{ id: 'tenant-123', name: 'Acme Corporation' }],
+              error: null,
+            }),
+          } as any;
+        }
+        return { select: vi.fn().mockResolvedValue({ data: [], error: null }) } as any;
+      });
+
+      vi.mocked(RoleService.getUserRoles).mockResolvedValue(mockTenantRoles);
+
+      const { findByText } = render(<RoleManagement />, { wrapper: createWrapper() });
+
+      expect(await findByText('Tenant Admin')).toBeInTheDocument();
+      expect(await findByText('Acme Corporation')).toBeInTheDocument();
+    });
+
+    it('should fetch and display scope names for company roles', async () => {
+      const mockProfiles = [
+        {
+          user_id: 'user-company',
+          id: 'user-company',
+          full_name: 'Company Manager',
+          email: 'manager@company.com',
+          created_at: '2024-01-01T00:00:00Z',
+        },
+      ];
+
+      const mockCompanyRoles: UserRoleRecord[] = [
+        createMockRole({
+          user_id: 'user-company',
+          role: 'tenant_admin',
+          scope_type: 'company',
+          scope_id: 'company-456',
+        }),
+      ];
+
+      vi.mocked(supabase.from).mockImplementation((table: string) => {
+        if (table === 'profiles') {
+          return {
+            select: vi.fn().mockResolvedValue({
+              data: mockProfiles,
+              error: null,
+            }),
+          } as any;
+        }
+        if (table === 'companies') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            in: vi.fn().mockResolvedValue({
+              data: [{ id: 'company-456', name: 'TechStart Inc' }],
+              error: null,
+            }),
+          } as any;
+        }
+        return { select: vi.fn().mockResolvedValue({ data: [], error: null }) } as any;
+      });
+
+      vi.mocked(RoleService.getUserRoles).mockResolvedValue(mockCompanyRoles);
+
+      const { findByText } = render(<RoleManagement />, { wrapper: createWrapper() });
+
+      expect(await findByText('Company Manager')).toBeInTheDocument();
+      expect(await findByText('TechStart Inc')).toBeInTheDocument();
+    });
+
+    it('should fetch and display scope names for project roles', async () => {
+      const mockProfiles = [
+        {
+          user_id: 'user-project',
+          id: 'user-project',
+          full_name: 'Project Lead',
+          email: 'lead@project.com',
+          created_at: '2024-01-01T00:00:00Z',
+        },
+      ];
+
+      const mockProjectRoles: UserRoleRecord[] = [
+        createMockRole({
+          user_id: 'user-project',
+          role: 'project_owner',
+          scope_type: 'project',
+          scope_id: 'project-789',
+        }),
+      ];
+
+      vi.mocked(supabase.from).mockImplementation((table: string) => {
+        if (table === 'profiles') {
+          return {
+            select: vi.fn().mockResolvedValue({
+              data: mockProfiles,
+              error: null,
+            }),
+          } as any;
+        }
+        if (table === 'customer_app_projects') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            in: vi.fn().mockResolvedValue({
+              data: [{ id: 'project-789', name: 'Project Phoenix' }],
+              error: null,
+            }),
+          } as any;
+        }
+        return { select: vi.fn().mockResolvedValue({ data: [], error: null }) } as any;
+      });
+
+      vi.mocked(RoleService.getUserRoles).mockResolvedValue(mockProjectRoles);
+
+      const { findByText } = render(<RoleManagement />, { wrapper: createWrapper() });
+
+      expect(await findByText('Project Lead')).toBeInTheDocument();
+      expect(await findByText('Project Phoenix')).toBeInTheDocument();
+    });
+  });
+
   describe('Different Scope Types', () => {
     it('should correctly display platform scope roles', async () => {
       const mockProfiles = [
