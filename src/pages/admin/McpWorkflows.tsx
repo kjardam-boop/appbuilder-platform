@@ -34,7 +34,8 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 
-const TENANT_ID = 'default-tenant'; // TODO: Get from context
+// Use first tenant from database (AG JACOBSEN CONSULTING)
+const TENANT_ID = 'd026a1b7-c230-453f-b20e-0364a0831d53';
 
 export default function McpWorkflows() {
   const { isAdmin, isLoading: isLoadingRole } = useAdminRole();
