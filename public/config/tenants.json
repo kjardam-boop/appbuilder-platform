@@ -1,9 +1,9 @@
 [
   {
-    "id": "default-tenant-001",
+    "id": "d026a1b7-c230-453f-b20e-0364a0831d53",
     "created_at": "2025-01-01T00:00:00.000Z",
     "updated_at": "2025-01-01T00:00:00.000Z",
-    "tenant_id": "default",
+    "tenant_id": "d026a1b7-c230-453f-b20e-0364a0831d53",
     "name": "Default Tenant",
     "host": "localhost",
     "subdomain": "default",
