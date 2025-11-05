@@ -12,3 +12,14 @@ export {
   createMockProfile,
   type MockRole,
 } from "./testSetup";
+
+export {
+  expectTableRow,
+  expectRoleBadge,
+  expectScopeDisplay,
+  expectLoadingState,
+  expectUserProfile,
+  expectStatistics,
+  expectErrorMessage,
+  expectItemCount,
+} from "./assertions";
