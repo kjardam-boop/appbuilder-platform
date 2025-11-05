@@ -16,9 +16,10 @@ import {
   deactivateWorkflowMap,
   resolveWebhook,
 } from '@/modules/core/mcp/services/tenantWorkflowService';
+import { getTenantSecrets, setTenantSecrets } from '@/modules/core/integrations/services/tenantSecrets';
 import { workflowMappingSchema } from '@/modules/core/mcp/validation/schemas';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, ExternalLink, Info } from 'lucide-react';
+import { AlertCircle, ExternalLink, Info, KeyRound } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -27,6 +28,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 
 const TENANT_ID = 'default-tenant'; // TODO: Get from context
 
@@ -42,10 +48,29 @@ export default function McpWorkflows() {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [testKey, setTestKey] = useState('');
   const [resolvedUrl, setResolvedUrl] = useState<string | null>(null);
+  const [secretsOpen, setSecretsOpen] = useState(false);
+  const [secrets, setSecrets] = useState({
+    N8N_MCP_BASE_URL: '',
+    N8N_MCP_API_KEY: '',
+    N8N_MCP_SIGNING_SECRET: '',
+  });
 
   const { data: workflows, isLoading } = useQuery({
     queryKey: ['mcp-workflows', TENANT_ID],
     queryFn: () => listWorkflows(TENANT_ID),
+  });
+
+  const { data: existingSecrets, isLoading: isLoadingSecrets } = useQuery({
+    queryKey: ['mcp-secrets', TENANT_ID],
+    queryFn: async () => {
+      const data = await getTenantSecrets(TENANT_ID, 'n8n');
+      setSecrets({
+        N8N_MCP_BASE_URL: data.N8N_MCP_BASE_URL || '',
+        N8N_MCP_API_KEY: data.N8N_MCP_API_KEY || '',
+        N8N_MCP_SIGNING_SECRET: data.N8N_MCP_SIGNING_SECRET || '',
+      });
+      return data;
+    },
   });
 
   const upsertMutation = useMutation({
@@ -78,6 +103,18 @@ export default function McpWorkflows() {
     },
     onError: (error) => {
       toast.error(`Failed to deactivate: ${error.message}`);
+    },
+  });
+
+  const saveSecretsMutation = useMutation({
+    mutationFn: () => setTenantSecrets(TENANT_ID, 'n8n', secrets),
+    onSuccess: () => {
+      toast.success('n8n secrets saved');
+      queryClient.invalidateQueries({ queryKey: ['mcp-secrets'] });
+      setSecretsOpen(false);
+    },
+    onError: (error) => {
+      toast.error(`Failed to save secrets: ${error.message}`);
     },
   });
 
@@ -135,13 +172,103 @@ export default function McpWorkflows() {
         </p>
       </div>
 
-      <Alert>
-        <Info className="h-4 w-4" />
-        <AlertDescription>
-          Secrets/signing are not configured yet. Do not store tokens here. This is
-          for webhook path configuration only.
-        </AlertDescription>
-      </Alert>
+      {/* n8n Secrets Configuration */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <KeyRound className="h-5 w-5" />
+                n8n Configuration
+              </CardTitle>
+              <CardDescription>
+                Configure n8n base URL, API key, and HMAC signing secret
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Collapsible open={secretsOpen} onOpenChange={setSecretsOpen}>
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" className="w-full">
+                {secretsOpen ? 'Hide' : 'Show'} Secrets Configuration
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-4 space-y-4">
+              {isLoadingSecrets ? (
+                <p className="text-sm text-muted-foreground">Loading secrets...</p>
+              ) : (
+                <>
+                  <Alert>
+                    <Info className="h-4 w-4" />
+                    <AlertDescription>
+                      <strong>Base URL</strong>: Din n8n webhook base URL (f.eks. https://jardam.app.n8n.cloud)<br />
+                      <strong>API Key</strong>: Valgfritt, brukes for direkte n8n API-kall<br />
+                      <strong>Signing Secret</strong>: HMAC secret for å signere requests (anbefalt for sikkerhet)
+                    </AlertDescription>
+                  </Alert>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="base_url">n8n Base URL *</Label>
+                    <Input
+                      id="base_url"
+                      placeholder="https://jardam.app.n8n.cloud"
+                      value={secrets.N8N_MCP_BASE_URL}
+                      onChange={(e) =>
+                        setSecrets({ ...secrets, N8N_MCP_BASE_URL: e.target.value })
+                      }
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Full base URL til din n8n-instans (uten webhook path)
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="api_key">n8n API Key (optional)</Label>
+                    <Input
+                      id="api_key"
+                      type="password"
+                      placeholder="n8n-api-key-..."
+                      value={secrets.N8N_MCP_API_KEY}
+                      onChange={(e) =>
+                        setSecrets({ ...secrets, N8N_MCP_API_KEY: e.target.value })
+                      }
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Valgfritt, brukes for direkte n8n API-kall
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="signing_secret">HMAC Signing Secret (optional)</Label>
+                    <Input
+                      id="signing_secret"
+                      type="password"
+                      placeholder="generer-en-sterk-secret..."
+                      value={secrets.N8N_MCP_SIGNING_SECRET}
+                      onChange={(e) =>
+                        setSecrets({ ...secrets, N8N_MCP_SIGNING_SECRET: e.target.value })
+                      }
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      HMAC secret for å signere webhook requests (anbefalt)
+                    </p>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-2">
+                    <Button
+                      onClick={() => saveSecretsMutation.mutate()}
+                      disabled={saveSecretsMutation.isPending || !secrets.N8N_MCP_BASE_URL}
+                    >
+                      Save Secrets
+                    </Button>
+                  </div>
+                </>
+              )}
+            </CollapsibleContent>
+          </Collapsible>
+        </CardContent>
+      </Card>
 
       {/* Test Resolution */}
       <Card>
