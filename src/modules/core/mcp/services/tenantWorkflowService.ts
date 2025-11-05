@@ -50,11 +50,12 @@ export async function resolveWebhook(
   // 2. Try to fetch Base URL from tenant_integrations with multiple adapter_id variants
   const adapterCandidates = [provider, `${provider}_mcp`, `${provider}-mcp`];
   let integrationConfig: any = null;
+  let integrationCreds: any = null;
 
   for (const adapterId of adapterCandidates) {
     const { data: integ, error: integrationError } = await supabase
       .from('tenant_integrations')
-      .select('config')
+      .select('config, credentials')
       .eq('tenant_id', tenantId)
       .eq('adapter_id', adapterId)
       .eq('is_active', true)
@@ -66,8 +67,9 @@ export async function resolveWebhook(
       continue;
     }
 
-    if (integ?.config) {
-      integrationConfig = integ.config as any;
+    if (integ?.config || integ?.credentials) {
+      integrationConfig = (integ.config as any) || null;
+      integrationCreds = (integ.credentials as any) || null;
       break;
     }
   }
@@ -78,6 +80,10 @@ export async function resolveWebhook(
     integrationConfig?.n8n_base_url ||
     integrationConfig?.base_url ||
     integrationConfig?.url ||
+    integrationCreds?.N8N_MCP_BASE_URL ||
+    integrationCreds?.N8N_BASE_URL ||
+    integrationCreds?.BASE_URL ||
+    integrationCreds?.URL ||
     import.meta.env.VITE_N8N_BASE_URL;
 
   if (!baseUrl) {
