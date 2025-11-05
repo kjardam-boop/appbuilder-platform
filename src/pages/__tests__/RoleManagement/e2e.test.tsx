@@ -1,10 +1,15 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, waitFor } from '@testing-library/react';
+import { render, waitFor, screen } from '@testing-library/react';
 import RoleManagement from '../../RoleManagement';
 import { supabase } from '@/integrations/supabase/client';
 import { RoleService } from '@/modules/core/user/services/roleService';
 import { UserRoleRecord } from '@/modules/core/user/types/role.types';
-import { createRouterWrapper, createMockRole as createBaseMockRole, mockSupabaseAuth } from '@/test/helpers';
+import { 
+  createRouterWrapper, 
+  createMockRole as createBaseMockRole,
+  expectUserProfile,
+  expectScopeDisplay
+} from '@/test/helpers';
 
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
@@ -144,16 +149,16 @@ describe('RoleManagement - E2E User Workflows', () => {
         return rolesByUser[userId] || [];
       });
 
-      const { findByText } = render(<RoleManagement />, { wrapper: createWrapper() });
+      render(<RoleManagement />, { wrapper: createWrapper() });
 
       // Verify all users are visible
-      expect(await findByText('Platform Owner')).toBeInTheDocument();
-      expect(await findByText('Tenant Admin')).toBeInTheDocument();
-      expect(await findByText('Project Owner')).toBeInTheDocument();
+      await expectUserProfile({ name: 'Platform Owner', email: 'owner@platform.com' });
+      await expectUserProfile({ name: 'Tenant Admin', email: 'admin@tenant1.com' });
+      await expectUserProfile({ name: 'Project Owner', email: 'owner@project.com' });
 
       // Verify scope names are resolved
-      expect(await findByText('Tenant One')).toBeInTheDocument();
-      expect(await findByText('Project Alpha')).toBeInTheDocument();
+      await expectScopeDisplay({ type: 'tenant', name: 'Tenant One' });
+      await expectScopeDisplay({ type: 'project', name: 'Project Alpha' });
 
       // Verify statistics show all roles
       await waitFor(() => {
@@ -256,21 +261,17 @@ describe('RoleManagement - E2E User Workflows', () => {
         return rolesByUser[userId] || [];
       });
 
-      const { findByText, queryByText } = render(<RoleManagement />, {
-        wrapper: createWrapper(),
-      });
+      render(<RoleManagement />, { wrapper: createWrapper() });
 
       // Verify tenant users are visible
-      expect(await findByText('Tenant Admin')).toBeInTheDocument();
-      expect(await findByText('Tenant Member')).toBeInTheDocument();
+      await expectUserProfile({ name: 'Tenant Admin', email: 'admin@tenant1.com' });
+      await expectUserProfile({ name: 'Tenant Member', email: 'member@tenant1.com' });
 
       // Verify tenant scope is resolved
-      expect(await findByText('Tenant One')).toBeInTheDocument();
+      await expectScopeDisplay({ type: 'tenant', name: 'Tenant One' });
 
       // Verify platform owner is NOT visible
-      await waitFor(() => {
-        expect(queryByText('Platform Owner')).not.toBeInTheDocument();
-      });
+      await expectUserProfile({ name: 'Platform Owner' }, { shouldExist: false });
     });
 
     it('should filter roles to only show tenant and its sub-scopes', async () => {
@@ -366,15 +367,15 @@ describe('RoleManagement - E2E User Workflows', () => {
 
       vi.mocked(RoleService.getUserRoles).mockResolvedValue(multiRoles);
 
-      const { findByText } = render(<RoleManagement />, { wrapper: createWrapper() });
+      render(<RoleManagement />, { wrapper: createWrapper() });
 
       // Verify all scope names are displayed
-      expect(await findByText('Tenant One')).toBeInTheDocument();
-      expect(await findByText('Company Alpha')).toBeInTheDocument();
-      expect(await findByText('Project Alpha')).toBeInTheDocument();
+      await expectScopeDisplay({ type: 'tenant', name: 'Tenant One' });
+      await expectScopeDisplay({ type: 'company', name: 'Company Alpha' });
+      await expectScopeDisplay({ type: 'project', name: 'Project Alpha' });
 
       // Verify user is displayed
-      expect(await findByText('Multi Role User')).toBeInTheDocument();
+      await expectUserProfile({ name: 'Multi Role User', email: 'multi@tenant1.com' });
     });
   });
 
@@ -441,19 +442,15 @@ describe('RoleManagement - E2E User Workflows', () => {
 
       vi.mocked(RoleService.getUserRoles).mockResolvedValue(projectRoles);
 
-      const { findByText, queryByText } = render(<RoleManagement />, {
-        wrapper: createWrapper(),
-      });
+      render(<RoleManagement />, { wrapper: createWrapper() });
 
       // Verify only own profile is visible
-      expect(await findByText('Project Owner')).toBeInTheDocument();
-      expect(await findByText('Project Alpha')).toBeInTheDocument();
+      await expectUserProfile({ name: 'Project Owner', email: 'owner@project.com' });
+      await expectScopeDisplay({ type: 'project', name: 'Project Alpha' });
 
       // Verify other users are NOT visible
-      await waitFor(() => {
-        expect(queryByText('Platform Owner')).not.toBeInTheDocument();
-        expect(queryByText('Tenant Admin')).not.toBeInTheDocument();
-      });
+      await expectUserProfile({ name: 'Platform Owner' }, { shouldExist: false });
+      await expectUserProfile({ name: 'Tenant Admin' }, { shouldExist: false });
     });
   });
 
@@ -471,10 +468,12 @@ describe('RoleManagement - E2E User Workflows', () => {
         }),
       } as any));
 
-      const { findByText } = render(<RoleManagement />, { wrapper: createWrapper() });
+      render(<RoleManagement />, { wrapper: createWrapper() });
 
       // Should still render the page structure
-      expect(await findByText('Totalt roller')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText('Totalt roller')).toBeInTheDocument();
+      });
     });
 
     it('should refresh data when user role changes', async () => {

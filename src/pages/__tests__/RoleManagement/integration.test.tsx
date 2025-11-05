@@ -4,7 +4,12 @@ import RoleManagement from '../../RoleManagement';
 import { supabase } from '@/integrations/supabase/client';
 import { RoleService } from '@/modules/core/user/services/roleService';
 import { UserRoleRecord } from '@/modules/core/user/types/role.types';
-import { createRouterWrapper, createMockRole as createBaseMockRole } from '@/test/helpers';
+import { 
+  createRouterWrapper, 
+  createMockRole as createBaseMockRole,
+  expectUserProfile,
+  expectScopeDisplay
+} from '@/test/helpers';
 
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: { from: vi.fn() },
@@ -81,13 +86,11 @@ describe('RoleManagement - Integration Tests', () => {
         return mockRoles[userId] || [];
       });
 
-      const { findByText } = render(<RoleManagement />, { wrapper: createWrapper() });
+      render(<RoleManagement />, { wrapper: createWrapper() });
 
       // Verify profiles are displayed
-      expect(await findByText('Alice Admin')).toBeInTheDocument();
-      expect(await findByText('Bob User')).toBeInTheDocument();
-      expect(await findByText('alice@example.com')).toBeInTheDocument();
-      expect(await findByText('bob@example.com')).toBeInTheDocument();
+      await expectUserProfile({ name: 'Alice Admin', email: 'alice@example.com' });
+      await expectUserProfile({ name: 'Bob User', email: 'bob@example.com' });
 
       // Verify RoleService was called for each user
       await waitFor(() => {
@@ -127,10 +130,10 @@ describe('RoleManagement - Integration Tests', () => {
 
       vi.mocked(RoleService.getUserRoles).mockResolvedValue(mockMultiRoles);
 
-      const { findByText } = render(<RoleManagement />, { wrapper: createWrapper() });
+      render(<RoleManagement />, { wrapper: createWrapper() });
 
       // Verify user is displayed
-      expect(await findByText('Multi Role User')).toBeInTheDocument();
+      await expectUserProfile({ name: 'Multi Role User', email: 'multi@example.com' });
 
       // Verify service was called
       await waitFor(() => {
@@ -163,11 +166,10 @@ describe('RoleManagement - Integration Tests', () => {
 
       vi.mocked(RoleService.getUserRoles).mockResolvedValue([]);
 
-      const { findByText } = render(<RoleManagement />, { wrapper: createWrapper() });
+      render(<RoleManagement />, { wrapper: createWrapper() });
 
       // Verify user is displayed
-      expect(await findByText('No Role User')).toBeInTheDocument();
-      expect(await findByText('norole@example.com')).toBeInTheDocument();
+      await expectUserProfile({ name: 'No Role User', email: 'norole@example.com' });
 
       // Verify service was called
       await waitFor(() => {
@@ -220,10 +222,10 @@ describe('RoleManagement - Integration Tests', () => {
 
       vi.mocked(RoleService.getUserRoles).mockResolvedValue(mockTenantRoles);
 
-      const { findByText } = render(<RoleManagement />, { wrapper: createWrapper() });
+      render(<RoleManagement />, { wrapper: createWrapper() });
 
-      expect(await findByText('Tenant Admin')).toBeInTheDocument();
-      expect(await findByText('Acme Corporation')).toBeInTheDocument();
+      await expectUserProfile({ name: 'Tenant Admin', email: 'admin@tenant.com' });
+      await expectScopeDisplay({ type: 'tenant', name: 'Acme Corporation' });
     });
 
     it('should fetch and display scope names for company roles', async () => {
@@ -269,10 +271,10 @@ describe('RoleManagement - Integration Tests', () => {
 
       vi.mocked(RoleService.getUserRoles).mockResolvedValue(mockCompanyRoles);
 
-      const { findByText } = render(<RoleManagement />, { wrapper: createWrapper() });
+      render(<RoleManagement />, { wrapper: createWrapper() });
 
-      expect(await findByText('Company Manager')).toBeInTheDocument();
-      expect(await findByText('TechStart Inc')).toBeInTheDocument();
+      await expectUserProfile({ name: 'Company Manager', email: 'manager@company.com' });
+      await expectScopeDisplay({ type: 'company', name: 'TechStart Inc' });
     });
 
     it('should fetch and display scope names for project roles', async () => {
@@ -318,10 +320,10 @@ describe('RoleManagement - Integration Tests', () => {
 
       vi.mocked(RoleService.getUserRoles).mockResolvedValue(mockProjectRoles);
 
-      const { findByText } = render(<RoleManagement />, { wrapper: createWrapper() });
+      render(<RoleManagement />, { wrapper: createWrapper() });
 
-      expect(await findByText('Project Lead')).toBeInTheDocument();
-      expect(await findByText('Project Phoenix')).toBeInTheDocument();
+      await expectUserProfile({ name: 'Project Lead', email: 'lead@project.com' });
+      await expectScopeDisplay({ type: 'project', name: 'Project Phoenix' });
     });
   });
 
@@ -355,9 +357,9 @@ describe('RoleManagement - Integration Tests', () => {
 
       vi.mocked(RoleService.getUserRoles).mockResolvedValue(mockPlatformRoles);
 
-      const { findByText } = render(<RoleManagement />, { wrapper: createWrapper() });
+      render(<RoleManagement />, { wrapper: createWrapper() });
 
-      expect(await findByText('Platform User')).toBeInTheDocument();
+      await expectUserProfile({ name: 'Platform User', email: 'platform@example.com' });
 
       await waitFor(() => {
         expect(RoleService.getUserRoles).toHaveBeenCalledWith('platform-user');
@@ -393,9 +395,9 @@ describe('RoleManagement - Integration Tests', () => {
 
       vi.mocked(RoleService.getUserRoles).mockResolvedValue(mockTenantRoles);
 
-      const { findByText } = render(<RoleManagement />, { wrapper: createWrapper() });
+      render(<RoleManagement />, { wrapper: createWrapper() });
 
-      expect(await findByText('Tenant User')).toBeInTheDocument();
+      await expectUserProfile({ name: 'Tenant User', email: 'tenant@example.com' });
 
       await waitFor(() => {
         expect(RoleService.getUserRoles).toHaveBeenCalledWith('tenant-user');
@@ -431,9 +433,9 @@ describe('RoleManagement - Integration Tests', () => {
 
       vi.mocked(RoleService.getUserRoles).mockResolvedValue(mockProjectRoles);
 
-      const { findByText } = render(<RoleManagement />, { wrapper: createWrapper() });
+      render(<RoleManagement />, { wrapper: createWrapper() });
 
-      expect(await findByText('Project User')).toBeInTheDocument();
+      await expectUserProfile({ name: 'Project User', email: 'project@example.com' });
 
       await waitFor(() => {
         expect(RoleService.getUserRoles).toHaveBeenCalledWith('project-user');
@@ -469,9 +471,9 @@ describe('RoleManagement - Integration Tests', () => {
 
       vi.mocked(RoleService.getUserRoles).mockResolvedValue(mockAppRoles);
 
-      const { findByText } = render(<RoleManagement />, { wrapper: createWrapper() });
+      render(<RoleManagement />, { wrapper: createWrapper() });
 
-      expect(await findByText('App User')).toBeInTheDocument();
+      await expectUserProfile({ name: 'App User', email: 'app@example.com' });
 
       await waitFor(() => {
         expect(RoleService.getUserRoles).toHaveBeenCalledWith('app-user');
@@ -524,16 +526,11 @@ describe('RoleManagement - Integration Tests', () => {
         return mockRoles[userId] || [];
       });
 
-      const { findByText } = render(<RoleManagement />, { wrapper: createWrapper() });
-
-      // Should show statistics cards
-      await waitFor(async () => {
-        expect(await findByText('Totalt roller')).toBeInTheDocument();
-      });
+      render(<RoleManagement />, { wrapper: createWrapper() });
 
       // Verify both users loaded
-      expect(await findByText('User One')).toBeInTheDocument();
-      expect(await findByText('User Two')).toBeInTheDocument();
+      await expectUserProfile({ name: 'User One', email: 'user1@example.com' });
+      await expectUserProfile({ name: 'User Two', email: 'user2@example.com' });
     });
   });
 
@@ -578,10 +575,10 @@ describe('RoleManagement - Integration Tests', () => {
 
       vi.mocked(RoleService.getUserRoles).mockRejectedValue(new Error('Failed to fetch roles'));
 
-      const { findByText } = render(<RoleManagement />, { wrapper: createWrapper() });
+      render(<RoleManagement />, { wrapper: createWrapper() });
 
       // User should still be displayed
-      expect(await findByText('User One')).toBeInTheDocument();
+      await expectUserProfile({ name: 'User One', email: 'user1@example.com' });
 
       // RoleService should have been called
       await waitFor(() => {
