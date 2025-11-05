@@ -45,10 +45,17 @@ export async function resolveTenantByHost(host: string): Promise<TenantConfig | 
     }
 
     // 4. Fallback to default tenant for preview/development environments
-    // Use a valid UUID for the default tenant
+    // Prefer configured "default" tenant from tenants.json if available
+    const configuredDefault = tenants.find(t => t.tenant_id === 'default');
+    if (configuredDefault) {
+      console.log(`[TenantResolver] Using configured default tenant for host: ${host}`);
+      return configuredDefault;
+    }
+
+    // As a last resort, synthesize a lightweight default tenant using string id "default"
     const defaultTenant: TenantConfig = {
-      id: '00000000-0000-0000-0000-000000000000',
-      tenant_id: '00000000-0000-0000-0000-000000000000',
+      id: 'default',
+      tenant_id: 'default',
       name: 'Default Tenant',
       host: host,
       enabled_modules: [],
@@ -56,8 +63,9 @@ export async function resolveTenantByHost(host: string): Promise<TenantConfig | 
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
-    console.log(`[TenantResolver] Using default tenant for host: ${host}`);
+    console.log(`[TenantResolver] Using synthetic default tenant for host: ${host}`);
     return defaultTenant;
+
 
     console.error(`[TenantResolver] No tenant found for host: ${host}`);
     return null;

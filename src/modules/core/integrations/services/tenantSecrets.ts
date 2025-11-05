@@ -31,18 +31,14 @@ export async function getTenantSecrets(
       .select("credentials")
       .eq("tenant_id", tenantId)
       .eq("adapter_id", `${namespace}-mcp`)
-      .single();
+      .maybeSingle();
 
     if (error) {
-      if (error.code === 'PGRST116') {
-        // Not found - return empty secrets
-        console.warn(`[TenantSecrets] No secrets found for tenant ${tenantId}, namespace ${namespace}`);
-        return {};
-      }
-      throw error;
+      console.error('[TenantSecrets] Error fetching secrets row:', error);
+      return {};
     }
 
-    const secrets = (data?.credentials || {}) as TenantSecrets;
+    const secrets = ((data?.credentials as any) || {}) as TenantSecrets;
 
     // Try to fetch HMAC signing secret from mcp_tenant_secret
     try {
