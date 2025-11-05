@@ -27,7 +27,8 @@ export async function resolveWebhook(
   provider: string,
   workflowKey: string
 ): Promise<string | null> {
-  const { data, error } = await supabase
+  // 1. Fetch webhook_path from workflow mapping
+  const { data: mapping, error: mappingError } = await supabase
     .from('mcp_tenant_workflow_map')
     .select('webhook_path')
     .eq('tenant_id', tenantId)
@@ -36,23 +37,41 @@ export async function resolveWebhook(
     .eq('is_active', true)
     .maybeSingle();
 
-  if (error) {
-    console.error('[tenantWorkflowService] Error resolving webhook:', error);
+  if (mappingError) {
+    console.error('[tenantWorkflowService] Error resolving webhook:', mappingError);
     return null;
   }
 
-  if (!data) {
+  if (!mapping) {
+    console.log(`[tenantWorkflowService] No mapping found for workflow: ${workflowKey}`);
     return null;
   }
 
-  // Compose full URL
-  const baseUrl = import.meta.env.VITE_N8N_BASE_URL;
+  // 2. Fetch Base URL from tenant_integrations
+  const { data: integration, error: integrationError } = await supabase
+    .from('tenant_integrations')
+    .select('config')
+    .eq('tenant_id', tenantId)
+    .eq('adapter_id', provider)
+    .eq('is_active', true)
+    .maybeSingle();
+
+  if (integrationError) {
+    console.error('[tenantWorkflowService] Error fetching integration config:', integrationError);
+  }
+
+  // 3. Extract base URL (prioritize database, fallback to env)
+  const baseUrl = (integration?.config as any)?.n8n_mcp_url || import.meta.env.VITE_N8N_BASE_URL;
+  
   if (!baseUrl) {
-    console.warn('[tenantWorkflowService] N8N_BASE_URL not configured');
+    console.warn('[tenantWorkflowService] N8N Base URL not configured in database or environment');
     return null;
   }
 
-  return `${baseUrl}${data.webhook_path}`;
+  // 4. Combine base URL with webhook path
+  const fullUrl = `${baseUrl}${mapping.webhook_path}`;
+  console.log(`[tenantWorkflowService] Resolved webhook URL: ${fullUrl}`);
+  return fullUrl;
 }
 
 /**
