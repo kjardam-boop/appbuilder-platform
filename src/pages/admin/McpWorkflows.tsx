@@ -165,40 +165,31 @@ export default function McpWorkflows() {
 
     setIsTestingTrigger(true);
     try {
-      // First resolve the URL
-      const url = await resolveWebhook(TENANT_ID, 'n8n', testKey);
-      
-      if (!url) {
-        toast.error('No mapping found for this workflow key');
+      // Call edge function instead of direct webhook
+      const { data, error } = await supabase.functions.invoke('trigger-n8n-workflow', {
+        body: {
+          workflowKey: testKey,
+          action: 'test_trigger',
+          input: {
+            test: true,
+            timestamp: new Date().toISOString(),
+            message: 'Test trigger from MCP Workflows admin',
+          },
+        },
+      });
+
+      if (error) {
+        toast.error(`Failed to trigger workflow: ${error.message}`);
+        console.error('Trigger error:', error);
         return;
       }
 
-      // Test payload
-      const testPayload = {
-        test: true,
-        timestamp: new Date().toISOString(),
-        workflow_key: testKey,
-        tenant_id: TENANT_ID,
-        message: 'Test trigger from MCP Workflows admin',
-      };
-
-      // Trigger the workflow
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(testPayload),
-      });
-
-      if (response.ok) {
-        const data = await response.json().catch(() => ({}));
-        toast.success('Workflow triggered successfully!');
+      if (data?.success) {
+        toast.success(`Workflow triggered! Run ID: ${data.runId}`);
         console.log('Workflow response:', data);
       } else {
-        const errorText = await response.text();
-        toast.error(`Workflow failed: ${response.status} ${response.statusText}`);
-        console.error('Workflow error:', errorText);
+        toast.error(data?.error || 'Unknown error');
+        console.error('Workflow error:', data);
       }
     } catch (error: any) {
       toast.error(`Failed to trigger workflow: ${error.message}`);

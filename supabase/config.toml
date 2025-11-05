@@ -1,1 +1,4 @@
 project_id = "lunsgsyeaqnalpdbkhyg"
+
+[functions.trigger-n8n-workflow]
+verify_jwt = true
