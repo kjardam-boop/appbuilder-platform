@@ -202,9 +202,11 @@ export default function McpWorkflows() {
                   <Alert>
                     <Info className="h-4 w-4" />
                     <AlertDescription>
-                      <strong>Base URL</strong>: Din n8n webhook base URL (f.eks. https://jardam.app.n8n.cloud)<br />
-                      <strong>API Key</strong>: Valgfritt, brukes for direkte n8n API-kall<br />
-                      <strong>Signing Secret</strong>: HMAC secret for å signere requests (anbefalt for sikkerhet)
+                      <strong>Hvorfor dele opp URL?</strong><br />
+                      • Base URL er felles for alle workflows på samme instans (f.eks. n8n, Pipedream)<br />
+                      • Hvis du har 10 workflows, lagrer du base URL ÉN gang i stedet for 10 ganger<br />
+                      • Enklere å bytte instans senere - endre base URL ett sted<br />
+                      • API keys og secrets følger instansen, ikke individuelle webhooks
                     </AlertDescription>
                   </Alert>
 
@@ -219,7 +221,8 @@ export default function McpWorkflows() {
                       }
                     />
                     <p className="text-xs text-muted-foreground">
-                      Full base URL til din n8n-instans (uten webhook path)
+                      Eksempel: Fra full URL <code className="text-xs">https://jardam.app.n8n.cloud/webhook/abc-123</code><br />
+                      → Base URL er: <code className="text-xs">https://jardam.app.n8n.cloud</code>
                     </p>
                   </div>
 
@@ -312,10 +315,20 @@ export default function McpWorkflows() {
               <DialogHeader>
                 <DialogTitle>Add/Edit Workflow Mapping</DialogTitle>
                 <DialogDescription>
-                  Configure a workflow key to webhook path mapping
+                  Del webhook URL i to deler: Base URL lagres i secrets-seksjonen, webhook path lagres her
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
+                <Alert>
+                  <Info className="h-4 w-4" />
+                  <AlertDescription className="text-xs">
+                    <strong>Eksempel:</strong> Full URL fra n8n:<br />
+                    <code>https://jardam.app.n8n.cloud/mcp-test/c816ea1e-9fc5-4de4-a0d2-3fcec1c9c7cb</code><br />
+                    → Base URL (sett i secrets): <code>https://jardam.app.n8n.cloud</code><br />
+                    → Webhook Path (sett her): <code>/mcp-test/c816ea1e-9fc5-4de4-a0d2-3fcec1c9c7cb</code>
+                  </AlertDescription>
+                </Alert>
+
                 <div className="space-y-2">
                   <Label htmlFor="workflow_key">Workflow Key</Label>
                   <Input
@@ -326,6 +339,9 @@ export default function McpWorkflows() {
                       setFormData({ ...formData, workflow_key: e.target.value })
                     }
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Beskrivende nøkkel for workflow (brukes i kode)
+                  </p>
                   {formErrors.workflow_key && (
                     <p className="text-xs text-destructive">{formErrors.workflow_key}</p>
                   )}
@@ -335,12 +351,15 @@ export default function McpWorkflows() {
                   <Label htmlFor="webhook_path">Webhook Path</Label>
                   <Input
                     id="webhook_path"
-                    placeholder="/webhook/send-gmail"
+                    placeholder="/mcp-test/c816ea1e-9fc5-4de4-a0d2-3fcec1c9c7cb"
                     value={formData.webhook_path}
                     onChange={(e) =>
                       setFormData({ ...formData, webhook_path: e.target.value })
                     }
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Path-delen av webhook URL (hele path inkl. UUID fra n8n)
+                  </p>
                   {formErrors.webhook_path && (
                     <p className="text-xs text-destructive">{formErrors.webhook_path}</p>
                   )}
