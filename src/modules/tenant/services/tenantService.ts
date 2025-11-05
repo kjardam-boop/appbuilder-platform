@@ -56,11 +56,32 @@ export async function getTenantByHost(host: string): Promise<TenantConfig | null
  */
 export async function getTenantById(tenantId: string): Promise<TenantConfig | null> {
   try {
-    const response = await fetch('/config/tenants.json');
-    const tenants: TenantConfig[] = await response.json();
-    
-    const tenant = tenants.find(t => t.tenant_id === tenantId);
-    return tenant || null;
+    const { data, error } = await supabase
+      .from('tenants')
+      .select('*')
+      .eq('id', tenantId)
+      .maybeSingle();
+
+    if (error) {
+      console.error('[TenantService] Error fetching tenant by ID:', error);
+      return null;
+    }
+    if (!data) return null;
+
+    const mapped: TenantConfig = {
+      id: data.id,
+      tenant_id: data.id,
+      name: data.name,
+      host: data.domain || '',
+      domain: data.domain || undefined,
+      subdomain: (data as any).slug || undefined,
+      enabled_modules: [],
+      custom_config: (data as any).settings || {},
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+    } as any;
+
+    return mapped;
   } catch (error) {
     console.error('[TenantService] Error fetching tenant by ID:', error);
     return null;

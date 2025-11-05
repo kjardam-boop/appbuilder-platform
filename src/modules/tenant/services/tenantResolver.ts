@@ -1,4 +1,5 @@
 import { TenantConfig } from "../types/tenant.types";
+import { supabase } from "@/integrations/supabase/client";
 
 /**
  * Tenant Resolver
@@ -11,61 +12,66 @@ import { TenantConfig } from "../types/tenant.types";
  */
 export async function resolveTenantByHost(host: string): Promise<TenantConfig | null> {
   try {
-    // Load tenant configurations
-    const response = await fetch('/config/tenants.json');
-    if (!response.ok) {
-      console.error('[TenantResolver] Failed to load tenants config');
-      return null;
+    const hostname = host.split(':')[0];
+
+    // 1) Exact custom domain match
+    const { data: byDomain, error: domainErr } = await supabase
+      .from('tenants')
+      .select('*')
+      .eq('domain', hostname)
+      .maybeSingle();
+
+    if (domainErr) {
+      console.error('[TenantResolver] Error querying tenants by domain:', domainErr);
     }
 
-    const tenants: TenantConfig[] = await response.json();
-
-    // 1. Try exact domain match first (custom domains)
-    let tenant = tenants.find(t => t.domain === host);
-    if (tenant) {
-      console.log(`[TenantResolver] Found tenant by custom domain: ${host} -> ${tenant.tenant_id}`);
-      return tenant;
+    if (byDomain) {
+      const mapped: TenantConfig = {
+        id: byDomain.id,
+        tenant_id: byDomain.id,
+        name: byDomain.name,
+        host: hostname,
+        domain: byDomain.domain || undefined,
+        subdomain: (byDomain as any).slug || undefined,
+        enabled_modules: [],
+        custom_config: (byDomain as any).settings || {},
+        created_at: byDomain.created_at,
+        updated_at: byDomain.updated_at,
+      } as any;
+      console.log(`[TenantResolver] Found tenant by domain: ${hostname} -> ${mapped.tenant_id}`);
+      return mapped;
     }
 
-    // 2. Try subdomain match (e.g., customer.platform.com)
-    const subdomain = extractSubdomain(host);
+    // 2) Subdomain -> slug mapping (e.g., slug.platform.com)
+    const subdomain = extractSubdomain(hostname);
     if (subdomain) {
-      tenant = tenants.find(t => t.subdomain === subdomain);
-      if (tenant) {
-        console.log(`[TenantResolver] Found tenant by subdomain: ${subdomain} -> ${tenant.tenant_id}`);
-        return tenant;
+      const { data: bySlug, error: slugErr } = await supabase
+        .from('tenants')
+        .select('*')
+        .eq('slug', subdomain)
+        .maybeSingle();
+
+      if (slugErr) {
+        console.error('[TenantResolver] Error querying tenants by slug:', slugErr);
+      }
+
+      if (bySlug) {
+        const mapped: TenantConfig = {
+          id: bySlug.id,
+          tenant_id: bySlug.id,
+          name: bySlug.name,
+          host: hostname,
+          domain: bySlug.domain || undefined,
+          subdomain: (bySlug as any).slug || undefined,
+          enabled_modules: [],
+          custom_config: (bySlug as any).settings || {},
+          created_at: bySlug.created_at,
+          updated_at: bySlug.updated_at,
+        } as any;
+        console.log(`[TenantResolver] Found tenant by slug: ${subdomain} -> ${mapped.tenant_id}`);
+        return mapped;
       }
     }
-
-    // 3. Fallback to legacy host field (for localhost/development)
-    tenant = tenants.find(t => t.host === host);
-    if (tenant) {
-      console.log(`[TenantResolver] Found tenant by legacy host: ${host} -> ${tenant.tenant_id}`);
-      return tenant;
-    }
-
-    // 4. Fallback to default tenant for preview/development environments
-    // Prefer configured "default" tenant from tenants.json if available
-    const configuredDefault = tenants.find(t => t.tenant_id === 'default');
-    if (configuredDefault) {
-      console.log(`[TenantResolver] Using configured default tenant for host: ${host}`);
-      return configuredDefault;
-    }
-
-    // As a last resort, synthesize a lightweight default tenant using string id "default"
-    const defaultTenant: TenantConfig = {
-      id: 'default',
-      tenant_id: 'default',
-      name: 'Default Tenant',
-      host: host,
-      enabled_modules: [],
-      custom_config: {},
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-    console.log(`[TenantResolver] Using synthetic default tenant for host: ${host}`);
-    return defaultTenant;
-
 
     console.error(`[TenantResolver] No tenant found for host: ${host}`);
     return null;
