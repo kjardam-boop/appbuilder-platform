@@ -1,11 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter } from 'react-router-dom';
 import RoleManagement from '../../RoleManagement';
 import { supabase } from '@/integrations/supabase/client';
 import { RoleService } from '@/modules/core/user/services/roleService';
 import { UserRoleRecord } from '@/modules/core/user/types/role.types';
+import { createRouterWrapper, createMockRole as createBaseMockRole, mockSupabaseAuth } from '@/test/helpers';
 
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
@@ -24,29 +23,15 @@ vi.mock('@/modules/core/user/services/roleService', () => ({
   },
 }));
 
-const createWrapper = () => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  });
-
-  return ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>{children}</BrowserRouter>
-    </QueryClientProvider>
-  );
-};
+const createWrapper = createRouterWrapper;
 
 const createMockRole = (overrides: Partial<UserRoleRecord>): UserRoleRecord => ({
-  id: 'role-1',
-  user_id: 'user-1',
-  role: 'platform_owner',
-  scope_type: 'platform',
-  scope_id: null,
-  granted_at: '2024-01-01T00:00:00Z',
-  granted_by: null,
+  ...createBaseMockRole({
+    role: 'platform_owner',
+    scope_type: 'platform',
+    scope_id: null,
+    granted_at: '2024-01-01T00:00:00Z',
+  }),
   created_at: '2024-01-01T00:00:00Z',
   updated_at: '2024-01-01T00:00:00Z',
   ...overrides,

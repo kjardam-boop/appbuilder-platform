@@ -67,8 +67,9 @@ export interface MockRole {
 
 /**
  * Creates a mock role object with sensible defaults
+ * Returns an object compatible with any role type
  */
-export const createMockRole = (overrides: Partial<MockRole> = {}): MockRole => {
+export const createMockRole = (overrides: Partial<MockRole> = {}): any => {
   return {
     id: `role-${Math.random().toString(36).substr(2, 9)}`,
     user_id: "test-user-id",

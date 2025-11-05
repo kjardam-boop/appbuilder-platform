@@ -3,6 +3,7 @@ import { renderHook } from "@testing-library/react";
 import { useAuth, AuthProvider } from "../useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import React from "react";
+import { mockSupabaseAuth } from "@/test/helpers";
 
 vi.mock("@/integrations/supabase/client");
 
