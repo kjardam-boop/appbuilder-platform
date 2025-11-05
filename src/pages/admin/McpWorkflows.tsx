@@ -50,6 +50,7 @@ export default function McpWorkflows() {
   const [testKey, setTestKey] = useState('');
   const [resolvedUrl, setResolvedUrl] = useState<string | null>(null);
   const [secretsOpen, setSecretsOpen] = useState(false);
+  const [isTestingTrigger, setIsTestingTrigger] = useState(false);
   const [secrets, setSecrets] = useState({
     N8N_MCP_BASE_URL: '',
     N8N_MCP_API_KEY: '',
@@ -153,6 +154,57 @@ export default function McpWorkflows() {
       toast.success('Webhook resolved successfully');
     } else {
       toast.error('No mapping found for this workflow key');
+    }
+  };
+
+  const handleTestTrigger = async () => {
+    if (!testKey) {
+      toast.error('Enter a workflow key to test');
+      return;
+    }
+
+    setIsTestingTrigger(true);
+    try {
+      // First resolve the URL
+      const url = await resolveWebhook(TENANT_ID, 'n8n', testKey);
+      
+      if (!url) {
+        toast.error('No mapping found for this workflow key');
+        return;
+      }
+
+      // Test payload
+      const testPayload = {
+        test: true,
+        timestamp: new Date().toISOString(),
+        workflow_key: testKey,
+        tenant_id: TENANT_ID,
+        message: 'Test trigger from MCP Workflows admin',
+      };
+
+      // Trigger the workflow
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(testPayload),
+      });
+
+      if (response.ok) {
+        const data = await response.json().catch(() => ({}));
+        toast.success('Workflow triggered successfully!');
+        console.log('Workflow response:', data);
+      } else {
+        const errorText = await response.text();
+        toast.error(`Workflow failed: ${response.status} ${response.statusText}`);
+        console.error('Workflow error:', errorText);
+      }
+    } catch (error: any) {
+      toast.error(`Failed to trigger workflow: ${error.message}`);
+      console.error('Trigger error:', error);
+    } finally {
+      setIsTestingTrigger(false);
     }
   };
 
@@ -285,17 +337,25 @@ export default function McpWorkflows() {
         <CardContent className="space-y-4">
           <div className="flex gap-2">
             <Input
-              placeholder="workflow_key"
+              placeholder="workflow_key (e.g. mcp-test)"
               value={testKey}
               onChange={(e) => setTestKey(e.target.value)}
             />
             <Button onClick={handleTestResolve} variant="outline">
               Resolve
             </Button>
+            <Button 
+              onClick={handleTestTrigger} 
+              disabled={isTestingTrigger || !testKey}
+              className="min-w-[120px]"
+            >
+              {isTestingTrigger ? 'Triggering...' : 'Test Trigger'}
+            </Button>
           </div>
           {resolvedUrl && (
-            <div className="p-3 bg-muted rounded-lg">
-              <p className="text-sm font-mono">{resolvedUrl}</p>
+            <div className="p-3 bg-muted rounded-lg space-y-2">
+              <p className="text-xs text-muted-foreground">Resolved URL:</p>
+              <p className="text-sm font-mono break-all">{resolvedUrl}</p>
             </div>
           )}
         </CardContent>
