@@ -186,9 +186,11 @@ export default function TenantDetails() {
               Administrer Apps
             </Link>
           </Button>
-          <Button>
-            <Settings className="mr-2 h-4 w-4" />
-            Innstillinger
+          <Button asChild>
+            <Link to={`/admin/tenants/${tenantId}/settings`}>
+              <Settings className="mr-2 h-4 w-4" />
+              Innstillinger
+            </Link>
           </Button>
         </div>
       </div>
