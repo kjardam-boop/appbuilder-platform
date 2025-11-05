@@ -10,9 +10,12 @@ import { Activity, Workflow, Link2 } from "lucide-react";
 import { McpActionLogsView } from "@/components/admin/mcp/McpActionLogsView";
 import { McpIntegrationRunsView } from "@/components/admin/mcp/McpIntegrationRunsView";
 import { McpCorrelateView } from "@/components/admin/mcp/McpCorrelateView";
+import { useTenantContext } from "@/hooks/useTenantContext";
 
 export default function McpObservability() {
   const [activeTab, setActiveTab] = useState("actions");
+  const tenantContext = useTenantContext();
+  const tenantId = tenantContext?.tenant_id;
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -47,7 +50,7 @@ export default function McpObservability() {
 
         <TabsContent value="integrations" className="space-y-4">
           <Card>
-            <McpIntegrationRunsView />
+            {tenantId && <McpIntegrationRunsView tenantId={tenantId} />}
           </Card>
         </TabsContent>
 

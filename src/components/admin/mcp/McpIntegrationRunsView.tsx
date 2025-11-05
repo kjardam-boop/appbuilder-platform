@@ -8,21 +8,30 @@ import { supabase } from "@/integrations/supabase/client";
 import { CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
+import { RefreshCw } from "lucide-react";
 
-export function McpIntegrationRunsView() {
-  const { data: runs, isLoading } = useQuery({
-    queryKey: ["integration-runs"],
+interface McpIntegrationRunsViewProps {
+  tenantId: string;
+}
+
+export function McpIntegrationRunsView({ tenantId }: McpIntegrationRunsViewProps) {
+  const { data: runs, isLoading, refetch } = useQuery({
+    queryKey: ["integration-runs", tenantId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("integration_run")
         .select("*")
+        .eq("tenant_id", tenantId)
         .order("started_at", { ascending: false })
         .limit(50);
 
       if (error) throw error;
       return data;
     },
+    refetchInterval: 5000, // Auto-refresh every 5 seconds
+    enabled: !!tenantId,
   });
 
   const getStatusBadge = (status: string) => {
@@ -36,8 +45,17 @@ export function McpIntegrationRunsView() {
 
   return (
     <>
-      <CardHeader>
-        <CardTitle>Integration Runs</CardTitle>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle>Integration Runs (Last 50)</CardTitle>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => refetch()}
+          disabled={isLoading}
+        >
+          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
       </CardHeader>
       <CardContent>
         {isLoading ? (

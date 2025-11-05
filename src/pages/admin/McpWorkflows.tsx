@@ -11,6 +11,7 @@ import { useAdminRole } from '@/modules/core/user';
 import { Navigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenantContext } from '@/hooks/useTenantContext';
+import { McpIntegrationRunsView } from '@/components/admin/mcp/McpIntegrationRunsView';
 import {
   listWorkflows,
   upsertWorkflowMap,
@@ -251,6 +252,11 @@ export default function McpWorkflows() {
           Configure workflow routing for integration triggers
         </p>
       </div>
+
+      {/* Integration Runs Log */}
+      <Card>
+        <McpIntegrationRunsView tenantId={tenantId} />
+      </Card>
 
       {/* n8n Secrets Configuration */}
       <Card>
