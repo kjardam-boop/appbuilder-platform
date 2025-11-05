@@ -10,6 +10,7 @@ interface TriggerRequest {
   action: string;
   input: Record<string, any>;
   idempotencyKey?: string;
+  tenantId?: string; // Allow UI to override tenant ID
 }
 
 interface N8nTriggerOptions {
@@ -376,20 +377,22 @@ Deno.serve(async (req) => {
       .select('role, scope_type, scope_id')
       .eq('user_id', user.id);
 
+    // Parse request body
+    const body: TriggerRequest = await req.json();
+    const { workflowKey, action, input, idempotencyKey, tenantId: requestTenantId } = body;
+
+    // Use tenant ID from request if provided, otherwise from user role
     const tenantRole = userRoles?.find(r => r.scope_type === 'tenant');
-    if (!tenantRole?.scope_id) {
+    const tenantId = requestTenantId || tenantRole?.scope_id;
+    
+    if (!tenantId) {
       return new Response(
         JSON.stringify({ error: 'No tenant found for user' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const tenantId = tenantRole.scope_id;
     const roles = userRoles?.map(r => r.role) || [];
-
-    // Parse request body
-    const body: TriggerRequest = await req.json();
-    const { workflowKey, action, input, idempotencyKey } = body;
 
     if (!workflowKey || !action) {
       return new Response(

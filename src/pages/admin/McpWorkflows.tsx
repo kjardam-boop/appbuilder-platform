@@ -165,9 +165,10 @@ export default function McpWorkflows() {
 
     setIsTestingTrigger(true);
     try {
-      // Call edge function instead of direct webhook
+      // Call edge function with correct tenant ID
       const { data, error } = await supabase.functions.invoke('trigger-n8n-workflow', {
         body: {
+          tenantId: TENANT_ID, // Pass hardcoded tenant ID
           workflowKey: testKey,
           action: 'test_trigger',
           input: {
