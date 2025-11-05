@@ -105,7 +105,7 @@ const RoleConfiguration = () => {
     bulkToggle({ actionKey, enable, resourceKeys });
   };
 
-  if (resources.isLoading || actions.isLoading || rolesLoading) {
+  if (resources.isLoading || actions.isLoading) {
     return <div className="p-8">Laster...</div>;
   }
 

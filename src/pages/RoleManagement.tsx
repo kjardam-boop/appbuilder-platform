@@ -162,7 +162,8 @@ const RoleManagement = () => {
       const usersWithRoles = await Promise.all(
         (profiles || []).map(async (profile) => {
           try {
-            const rolesByScope = await RoleService.getUserRolesByScope(profile.user_id);
+            const userId = (profile as any).user_id || (profile as any).id;
+            const rolesByScope = await RoleService.getUserRolesByScope(userId);
             
             // Collect scope IDs
             Object.entries(rolesByScope).forEach(([scopeType, roles]) => {
@@ -323,6 +324,7 @@ const RoleManagement = () => {
   const platformRoles = roleRowData.filter(r => r.scopeType === 'platform').length;
   const tenantRoles = roleRowData.filter(r => r.scopeType === 'tenant').length;
   const companyRoles = roleRowData.filter(r => r.scopeType === 'company').length;
+  const projectRoles = roleRowData.filter(r => r.scopeType === 'project').length;
 
   return (
     <div className="space-y-6 p-8">
@@ -382,6 +384,15 @@ const RoleManagement = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{companyRoles}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Prosjekt</CardTitle>
+            <FolderKanban className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{projectRoles}</div>
           </CardContent>
         </Card>
       </div>
