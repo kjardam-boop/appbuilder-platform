@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { useAdminRole } from '@/modules/core/user';
 import { Navigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { useTenantContext } from '@/hooks/useTenantContext';
 import {
   listWorkflows,
   upsertWorkflowMap,
@@ -34,11 +35,9 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 
-// Use first tenant from database (AG JACOBSEN CONSULTING)
-const TENANT_ID = 'd026a1b7-c230-453f-b20e-0364a0831d53';
-
 export default function McpWorkflows() {
   const { isAdmin, isLoading: isLoadingRole } = useAdminRole();
+  const tenantContext = useTenantContext();
   const queryClient = useQueryClient();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -57,15 +56,22 @@ export default function McpWorkflows() {
     N8N_MCP_SIGNING_SECRET: '',
   });
 
+  const tenantId = tenantContext?.tenant_id;
+
   const { data: workflows, isLoading } = useQuery({
-    queryKey: ['mcp-workflows', TENANT_ID],
-    queryFn: () => listWorkflows(TENANT_ID),
+    queryKey: ['mcp-workflows', tenantId],
+    queryFn: () => {
+      if (!tenantId) throw new Error('No tenant ID');
+      return listWorkflows(tenantId);
+    },
+    enabled: !!tenantId,
   });
 
   const { data: existingSecrets, isLoading: isLoadingSecrets } = useQuery({
-    queryKey: ['mcp-secrets', TENANT_ID],
+    queryKey: ['mcp-secrets', tenantId],
     queryFn: async () => {
-      const data = await getTenantSecrets(TENANT_ID, 'n8n');
+      if (!tenantId) throw new Error('No tenant ID');
+      const data = await getTenantSecrets(tenantId, 'n8n');
       setSecrets({
         N8N_MCP_BASE_URL: data.N8N_MCP_BASE_URL || '',
         N8N_MCP_API_KEY: data.N8N_MCP_API_KEY || '',
@@ -73,14 +79,16 @@ export default function McpWorkflows() {
       });
       return data;
     },
+    enabled: !!tenantId,
   });
 
   const upsertMutation = useMutation({
     mutationFn: async () => {
+      if (!tenantId) throw new Error('No tenant ID');
       const user = await supabase.auth.getUser();
       if (!user.data.user) throw new Error('Not authenticated');
 
-      return upsertWorkflowMap(TENANT_ID, {
+      return upsertWorkflowMap(tenantId, {
         ...formData,
         created_by: user.data.user.id,
       });
@@ -98,7 +106,10 @@ export default function McpWorkflows() {
   });
 
   const deactivateMutation = useMutation({
-    mutationFn: (id: string) => deactivateWorkflowMap(id, TENANT_ID),
+    mutationFn: (id: string) => {
+      if (!tenantId) throw new Error('No tenant ID');
+      return deactivateWorkflowMap(id, tenantId);
+    },
     onSuccess: () => {
       toast.success('Workflow deactivated');
       queryClient.invalidateQueries({ queryKey: ['mcp-workflows'] });
@@ -109,7 +120,10 @@ export default function McpWorkflows() {
   });
 
   const saveSecretsMutation = useMutation({
-    mutationFn: () => setTenantSecrets(TENANT_ID, 'n8n', secrets),
+    mutationFn: () => {
+      if (!tenantId) throw new Error('No tenant ID');
+      return setTenantSecrets(tenantId, 'n8n', secrets);
+    },
     onSuccess: () => {
       toast.success('n8n secrets saved');
       queryClient.invalidateQueries({ queryKey: ['mcp-secrets'] });
@@ -142,12 +156,16 @@ export default function McpWorkflows() {
   };
 
   const handleTestResolve = async () => {
+    if (!tenantId) {
+      toast.error('No tenant context available');
+      return;
+    }
     if (!testKey) {
       toast.error('Enter a workflow key to test');
       return;
     }
 
-    const url = await resolveWebhook(TENANT_ID, 'n8n', testKey);
+    const url = await resolveWebhook(tenantId, 'n8n', testKey);
     setResolvedUrl(url);
 
     if (url) {
@@ -158,6 +176,10 @@ export default function McpWorkflows() {
   };
 
   const handleTestTrigger = async () => {
+    if (!tenantId) {
+      toast.error('No tenant context available');
+      return;
+    }
     if (!testKey) {
       toast.error('Enter a workflow key to test');
       return;
@@ -165,10 +187,10 @@ export default function McpWorkflows() {
 
     setIsTestingTrigger(true);
     try {
-      // Call edge function with correct tenant ID
+      // Call edge function with tenant ID from context
       const { data, error } = await supabase.functions.invoke('trigger-n8n-workflow', {
         body: {
-          tenantId: TENANT_ID, // Pass hardcoded tenant ID
+          tenantId: tenantId,
           workflowKey: testKey,
           action: 'test_trigger',
           input: {
@@ -200,12 +222,25 @@ export default function McpWorkflows() {
     }
   };
 
-  if (isLoadingRole) {
+  if (isLoadingRole || !tenantContext) {
     return <div className="p-8">Loading...</div>;
   }
 
   if (!isAdmin) {
     return <Navigate to="/dashboard" replace />;
+  }
+
+  if (!tenantId) {
+    return (
+      <div className="p-8">
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            No tenant context found. Please make sure you're logged in and associated with a tenant.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
   }
 
   return (
