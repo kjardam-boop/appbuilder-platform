@@ -67,6 +67,7 @@ import Categories from "./pages/admin/Categories";
 import TenantSystems from "./pages/admin/TenantSystems";
 import IntegrationRecommendations from "./pages/admin/IntegrationRecommendations";
 import IntegrationGraph from "./pages/admin/IntegrationGraph";
+import TenantAdmin from "./pages/admin/TenantAdmin";
 
 const queryClient = new QueryClient();
 
@@ -102,7 +103,7 @@ const App = () => (
             {/* Admin Panel with sidebar */}
             <Route path="/admin" element={<AdminLayout><Admin /></AdminLayout>}>
               <Route index element={<AdminDashboard />} />
-              <Route path="tenants" element={<Tenants />} />
+              <Route path="tenants" element={<TenantAdmin />} />
               <Route path="tenants/:tenantId" element={<TenantDetails />} />
               <Route path="users" element={<UserManagement />} />
               <Route path="roles" element={<RoleManagement />} />

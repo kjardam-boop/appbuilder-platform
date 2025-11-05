@@ -36,7 +36,7 @@ const adminNavItems = [
   {
     title: "Platform Management",
     items: [
-      { title: "Tenants", url: "/admin/tenants", icon: Building2 },
+      { title: "Tenant Admin", url: "/admin/tenants", icon: Building2 },
       { title: "Users & Roles", url: "/admin/users", icon: Users },
       { title: "Role Overview", url: "/admin/roles", icon: Shield },
       { title: "Role Configuration", url: "/admin/roles/config", icon: Settings },
