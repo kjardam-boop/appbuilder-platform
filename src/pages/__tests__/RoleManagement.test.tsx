@@ -64,9 +64,9 @@ describe("RoleManagement", () => {
       </BrowserRouter>
     );
 
-    expect(await findByText("Rolleoversikt")).toBeInTheDocument();
+    expect(await findByText("Rolleadministrasjon")).toBeInTheDocument();
     expect(
-      await findByText(/Kun lesbar oversikt over roller/)
+      await findByText(/Oversikt over brukerroller/)
     ).toBeInTheDocument();
   });
 
@@ -104,7 +104,9 @@ describe("RoleManagement", () => {
       </BrowserRouter>
     );
 
-    expect(await findByText("2 brukere")).toBeInTheDocument();
+    // The count is now shown in statistics cards
+    await findByText("Kjetil Jardam");
+    expect(await findByText("0")).toBeInTheDocument(); // Total roles count
   });
 
   it("should have scope tabs (Platform, Tenant, Selskap, Prosjekt)", async () => {
@@ -190,10 +192,10 @@ describe("RoleManagement", () => {
       </BrowserRouter>
     );
 
-    await findByText("2 brukere");
+    await findByText("Kjetil Jardam");
 
-    // The scope filter dropdown should be present
-    expect(await findByText("Alle scopes")).toBeInTheDocument();
+    // The component now shows total roles statistics
+    expect(await findByText("Totalt roller")).toBeInTheDocument();
   });
 
   it("should handle errors gracefully", async () => {

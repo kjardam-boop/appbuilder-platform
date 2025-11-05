@@ -17,6 +17,7 @@ vi.mock('@/modules/core/applications/hooks/useAppRegistry', () => ({
   useUpdateAppConfig: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
   useChangeAppChannel: vi.fn(() => ({ mutate: vi.fn() })),
   useUpdateApp: vi.fn(),
+  useUninstallApp: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
 }));
 
 vi.mock('react-router-dom', async () => {

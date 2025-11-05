@@ -107,6 +107,43 @@ describe('TenantAppsService', () => {
 describe('CompatibilityService', () => {
   describe('preflight', () => {
     it('should pass for compatible versions', async () => {
+      // Mock Supabase responses for compatibility check
+      const { supabase } = require('@/integrations/supabase/client');
+      vi.mocked(supabase.from).mockImplementation((table: string) => {
+        if (table === 'app_definitions') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: { id: '1', key: 'jul25', name: 'Jul25', is_active: true },
+              error: null,
+            }),
+          } as any;
+        }
+        if (table === 'app_versions') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: { 
+                id: 'v1', 
+                version: '1.0.0', 
+                is_deprecated: false,
+                eol_date: null,
+                has_breaking_changes: false,
+                requires_migration: false
+              },
+              error: null,
+            }),
+          } as any;
+        }
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          order: vi.fn().mockResolvedValue({ data: [], error: null }),
+        } as any;
+      });
+
       const check = await CompatibilityService.preflight(
         'tenant-123',
         'jul25',

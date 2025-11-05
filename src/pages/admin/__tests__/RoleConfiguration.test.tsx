@@ -62,6 +62,29 @@ describe('RoleConfiguration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
+    // Mock Supabase for role_definitions query
+    const { supabase } = require('@/integrations/supabase/client');
+    vi.mocked(supabase.from).mockImplementation((table: string) => {
+      if (table === 'role_definitions') {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          order: vi.fn().mockResolvedValue({
+            data: [
+              { role: 'platform_owner', scope_type: 'platform', name: 'Platform Eier', description: 'Full plattform tilgang', sort_order: 1, is_active: true },
+              { role: 'tenant_owner', scope_type: 'tenant', name: 'Tenant Eier', description: 'Full tenant tilgang', sort_order: 2, is_active: true },
+            ],
+            error: null,
+          }),
+        } as any;
+      }
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockResolvedValue({ data: [], error: null }),
+      } as any;
+    });
+
     // Mock usePermissions
     vi.spyOn(usePermissionsModule, 'usePermissions').mockReturnValue({
       resources: { data: mockResources, isLoading: false },
