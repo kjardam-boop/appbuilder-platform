@@ -70,67 +70,53 @@ describe("RoleManagement", () => {
     ).toBeInTheDocument();
   });
 
-  it("should display users without roles", async () => {
-    const { findByText } = render(
-      <BrowserRouter>
-        <RoleManagement />
-      </BrowserRouter>
-    );
+it("should display empty state when no roles", async () => {
+  const { findByText } = render(
+    <BrowserRouter>
+      <RoleManagement />
+    </BrowserRouter>
+  );
 
-    expect(await findByText("Kjetil Jardam")).toBeInTheDocument();
-    expect(await findByText("kjardam@gmail.com")).toBeInTheDocument();
-    expect(await findByText("Kjetil Johan Jardam")).toBeInTheDocument();
-    expect(await findByText("kjetil@jardam.no")).toBeInTheDocument();
-  });
+  expect(await findByText("Ingen roller funnet")).toBeInTheDocument();
+  expect(await findByText(/unike brukere/)).toBeInTheDocument();
+});
 
-  it("should show 'Ingen roller i plattform' for users without platform roles", async () => {
-    const { findByText, getAllByText } = render(
-      <BrowserRouter>
-        <RoleManagement />
-      </BrowserRouter>
-    );
+it("should show empty message when no platform roles", async () => {
+  const { findByText } = render(
+    <BrowserRouter>
+      <RoleManagement />
+    </BrowserRouter>
+  );
 
-    await findByText("Kjetil Jardam");
+  expect(await findByText("Ingen roller funnet")).toBeInTheDocument();
+});
 
-    // Check that "Ingen roller i plattform" message appears
-    const noRolesMessages = getAllByText(/Ingen roller i plattform/i);
-    expect(noRolesMessages.length).toBeGreaterThan(0);
-  });
+it("should display role statistics", async () => {
+  const { findByText } = render(
+    <BrowserRouter>
+      <RoleManagement />
+    </BrowserRouter>
+  );
 
-  it("should display user count badge", async () => {
-    const { findByText } = render(
-      <BrowserRouter>
-        <RoleManagement />
-      </BrowserRouter>
-    );
+  expect(await findByText("Totalt roller")).toBeInTheDocument();
+});
 
-    // The count is now shown in statistics cards
-    await findByText("Kjetil Jardam");
-    expect(await findByText("0")).toBeInTheDocument(); // Total roles count
-  });
+it("should show scope summary cards (Plattform, Tenant, Selskap, Prosjekt)", async () => {
+  const { getAllByText } = render(
+    <BrowserRouter>
+      <RoleManagement />
+    </BrowserRouter>
+  );
 
-  it("should have scope tabs (Platform, Tenant, Selskap, Prosjekt)", async () => {
-    const { findByText, getAllByText } = render(
-      <BrowserRouter>
-        <RoleManagement />
-      </BrowserRouter>
-    );
-
-    await findByText("Kjetil Jardam");
-
-    // Check all tab labels exist
-    const plattformTabs = getAllByText("Plattform");
-    expect(plattformTabs.length).toBeGreaterThan(0);
-    
-    const tenantTabs = getAllByText("Tenant");
-    expect(tenantTabs.length).toBeGreaterThan(0);
-    
-    const selskapTabs = getAllByText("Selskap");
-    expect(selskapTabs.length).toBeGreaterThan(0);
-    
-    const prosjektTabs = getAllByText("Prosjekt");
-    expect(prosjektTabs.length).toBeGreaterThan(0);
-  });
+  const plattformLabels = getAllByText("Plattform");
+  expect(plattformLabels.length).toBeGreaterThan(0);
+  const tenantLabels = getAllByText("Tenant");
+  expect(tenantLabels.length).toBeGreaterThan(0);
+  const selskapLabels = getAllByText("Selskap");
+  expect(selskapLabels.length).toBeGreaterThan(0);
+  const prosjektLabels = getAllByText("Prosjekt");
+  expect(prosjektLabels.length).toBeGreaterThan(0);
+});
 
   it("should display users with platform roles", async () => {
     // Mock user with platform_owner role
@@ -161,16 +147,14 @@ describe("RoleManagement", () => {
       }
     );
 
-    const { findByText } = render(
-      <BrowserRouter>
-        <RoleManagement />
-      </BrowserRouter>
-    );
+const { findByText } = render(
+  <BrowserRouter>
+    <RoleManagement />
+  </BrowserRouter>
+);
 
-    await findByText("Kjetil Jardam");
-
-    // Check that the role badge appears
-    expect(await findByText("Platform Eier")).toBeInTheDocument();
+// Check that the role badge appears
+expect(await findByText("Platform Eier")).toBeInTheDocument();
   });
 
   it("should handle loading state", () => {
@@ -185,18 +169,15 @@ describe("RoleManagement", () => {
     // Skeleton elements should be present during initial load
   });
 
-  it("should filter users by scope", async () => {
-    const { findByText } = render(
-      <BrowserRouter>
-        <RoleManagement />
-      </BrowserRouter>
-    );
+it("should display statistics instead of per-user list", async () => {
+  const { findByText } = render(
+    <BrowserRouter>
+      <RoleManagement />
+    </BrowserRouter>
+  );
 
-    await findByText("Kjetil Jardam");
-
-    // The component now shows total roles statistics
-    expect(await findByText("Totalt roller")).toBeInTheDocument();
-  });
+  expect(await findByText("Totalt roller")).toBeInTheDocument();
+});
 
   it("should handle errors gracefully", async () => {
     // Mock Supabase error

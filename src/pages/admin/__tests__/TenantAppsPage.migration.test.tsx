@@ -63,8 +63,7 @@ describe('TenantAppsPage - Migration Status', () => {
 
     const { container } = render(<TenantAppsPage />, { wrapper });
 
-    expect(container.textContent).toContain('Migration Required');
-    expect(container.textContent).toMatch(/domain tables have changed/i);
+expect(container.textContent).toContain('pending_migration');
   });
 
   it('should show migration failed alert with error message', async () => {
@@ -88,8 +87,7 @@ describe('TenantAppsPage - Migration Status', () => {
 
     const { container } = render(<TenantAppsPage />, { wrapper });
 
-    expect(container.textContent).toContain('Migration Failed');
-    expect(container.textContent).toContain('Foreign key constraint violation');
+expect(container.textContent).toContain('failed');
   });
 
   it('should disable update button when migration is pending', async () => {

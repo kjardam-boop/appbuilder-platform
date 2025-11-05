@@ -5,9 +5,15 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router-dom';
 import RoleConfiguration from '../RoleConfiguration';
 import * as usePermissionsModule from '@/modules/core/permissions/hooks/usePermissions';
+import { supabase } from '@/integrations/supabase/client';
 
 // Mock the hooks
 vi.mock('@/modules/core/permissions/hooks/usePermissions');
+
+// Mock backend client
+vi.mock('@/integrations/supabase/client', () => ({
+  supabase: { from: vi.fn() },
+}));
 
 // Mock react-router-dom navigate
 const mockNavigate = vi.fn();
@@ -62,28 +68,27 @@ describe('RoleConfiguration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Mock Supabase for role_definitions query
-    const { supabase } = require('@/integrations/supabase/client');
-    vi.mocked(supabase.from).mockImplementation((table: string) => {
-      if (table === 'role_definitions') {
-        return {
-          select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockReturnThis(),
-          order: vi.fn().mockResolvedValue({
-            data: [
-              { role: 'platform_owner', scope_type: 'platform', name: 'Platform Eier', description: 'Full plattform tilgang', sort_order: 1, is_active: true },
-              { role: 'tenant_owner', scope_type: 'tenant', name: 'Tenant Eier', description: 'Full tenant tilgang', sort_order: 2, is_active: true },
-            ],
-            error: null,
-          }),
-        } as any;
-      }
-      return {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockResolvedValue({ data: [], error: null }),
-      } as any;
-    });
+// Mock Supabase for role_definitions query
+vi.mocked(supabase.from).mockImplementation((table: string) => {
+  if (table === 'role_definitions') {
+    return {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({
+        data: [
+          { role: 'platform_owner', scope_type: 'platform', name: 'Platform Eier', description: 'Full plattform tilgang', sort_order: 1, is_active: true },
+          { role: 'tenant_owner', scope_type: 'tenant', name: 'Tenant Eier', description: 'Full tenant tilgang', sort_order: 2, is_active: true },
+        ],
+        error: null,
+      }),
+    } as any;
+  }
+  return {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    order: vi.fn().mockResolvedValue({ data: [], error: null }),
+  } as any;
+});
 
     // Mock usePermissions
     vi.spyOn(usePermissionsModule, 'usePermissions').mockReturnValue({
