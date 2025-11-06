@@ -80,28 +80,26 @@ export async function resolveTenantByHost(host: string): Promise<TenantConfig | 
       console.log(`[TenantResolver] No exact match, falling back to platform tenant for: ${hostname}`);
       
       const { data: platformTenant, error: platformErr } = await supabase
-        .from('tenants')
-        .select('*')
-        .eq('is_platform_tenant', true)
-        .maybeSingle();
+        .rpc('get_platform_tenant');
       
       if (platformErr) {
         console.error('[TenantResolver] Error querying platform tenant:', platformErr);
       }
       
       if (platformTenant) {
+        const t: any = platformTenant as any;
         const mapped: TenantConfig = {
-          id: platformTenant.id,
-          tenant_id: platformTenant.id,
-          name: platformTenant.name,
+          id: t.id,
+          tenant_id: t.id,
+          name: t.name,
           host: hostname,
-          domain: platformTenant.domain || undefined,
-          subdomain: (platformTenant as any).slug || undefined,
+          domain: t.domain || undefined,
+          subdomain: t.slug || undefined,
           enabled_modules: [],
-          custom_config: (platformTenant as any).settings || {},
+          custom_config: t.settings || {},
           is_platform_tenant: true, // Always true for platform tenant
-          created_at: platformTenant.created_at,
-          updated_at: platformTenant.updated_at,
+          created_at: t.created_at,
+          updated_at: t.updated_at,
         } as any;
         console.log(`[TenantResolver] Using platform tenant as fallback -> ${mapped.tenant_id}`);
         return mapped;
@@ -171,7 +169,7 @@ export function isValidSubdomain(subdomain: string): boolean {
  * Check if hostname is a Lovable project domain
  */
 export function isLovableDomain(hostname: string): boolean {
-  return hostname.includes('lovableproject.com');
+  return hostname.includes('lovableproject.com') || hostname.includes('lovable.app');
 }
 
 /**

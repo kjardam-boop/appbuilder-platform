@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useAuth } from "@/modules/core/user";
+import { useAuth } from "@/modules/core/user/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 
 /**
