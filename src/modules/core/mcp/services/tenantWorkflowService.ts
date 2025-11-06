@@ -135,14 +135,13 @@ export async function upsertWorkflowMap(
 ): Promise<WorkflowMappingRow> {
   const provider = payload.provider || 'n8n';
 
-  // Check if mapping exists
+  // Check if mapping exists (regardless of is_active status)
   const { data: existing } = await supabase
     .from('mcp_tenant_workflow_map')
     .select('id')
     .eq('tenant_id', tenantId)
     .eq('provider', provider)
     .eq('workflow_key', payload.workflow_key)
-    .eq('is_active', true)
     .maybeSingle();
 
   if (existing) {
