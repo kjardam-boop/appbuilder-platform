@@ -361,6 +361,17 @@ export default function McpWorkflows() {
                       Save Secrets
                     </Button>
                   </div>
+                  
+                  {existingSecrets && (
+                    <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950/20">
+                      <Info className="h-4 w-4 text-blue-600" />
+                      <AlertDescription className="text-xs">
+                        <strong>HMAC Status:</strong> {existingSecrets.N8N_MCP_SIGNING_SECRET ? '✅ Aktivert (gjelder alle workflows)' : '⚪ Ikke konfigurert (webhooks uten signatur)'}
+                        <br />
+                        HMAC signing er valgfritt og gjelder alle workflows for denne tenant.
+                      </AlertDescription>
+                    </Alert>
+                  )}
                 </>
               )}
             </CollapsibleContent>
@@ -394,12 +405,17 @@ export default function McpWorkflows() {
               {isTestingTrigger ? 'Triggering...' : 'Test Trigger'}
             </Button>
           </div>
-          <Alert>
-            <Info className="h-4 w-4" />
-            <AlertDescription className="text-xs">
-              n8n tips: <br />
-              • Test-modus: URL-er som inneholder <code className="text-xs">/webhook-test/...</code> krever at du klikker <strong>Execute workflow</strong> i n8n før hver test (gjelder én request).<br />
-              • Produksjon: Sett workflow til <strong>Active</strong> og bruk <code className="text-xs">/webhook/...</code> i mappingen for vedvarende endepunkt.
+          <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950/20">
+            <Info className="h-4 w-4 text-amber-600" />
+            <AlertDescription className="text-xs space-y-2">
+              <div className="font-semibold text-amber-900 dark:text-amber-100">⚠️ n8n Test-modus krever 2-trinns prosess:</div>
+              <ol className="list-decimal ml-4 space-y-1">
+                <li><strong>FØRST:</strong> Klikk "Execute workflow" i n8n (webhook venter på én request)</li>
+                <li><strong>DERETTER:</strong> Klikk "Test Trigger" her (må gjøres umiddelbart)</li>
+              </ol>
+              <div className="pt-1 border-t border-amber-200">
+                <strong>Produksjon:</strong> Sett workflow til <strong>Active</strong> i n8n og bruk <code className="text-xs">/webhook/...</code> i mappingen.
+              </div>
             </AlertDescription>
           </Alert>
           {resolvedUrl && (
