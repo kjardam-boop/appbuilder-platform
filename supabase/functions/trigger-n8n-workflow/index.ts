@@ -272,6 +272,95 @@ async function triggerN8nWorkflow(
         continue; // try again without marking the run as failed yet
       }
 
+      // If n8n suggests GET, try method fallback once
+      if (httpStatus === 404 && /not registered for POST/i.test(errorText)) {
+        try {
+          const url = new URL(webhookUrl);
+          url.searchParams.set('action', action);
+          url.searchParams.set('request_id', requestId);
+          if (idempotencyKey) url.searchParams.set('idempotency_key', idempotencyKey);
+          // Encode payloads to avoid very long/unsafe URLs for unicode
+          url.searchParams.set('context_b64', btoa(unescape(encodeURIComponent(JSON.stringify(payload.context)))));
+          url.searchParams.set('input_b64', btoa(unescape(encodeURIComponent(JSON.stringify(input)))));
+
+          const getResp = await fetch(url.toString(), {
+            method: 'GET',
+            headers: {
+              'X-Tenant-Id': tenantId,
+              'X-Request-Id': requestId,
+            },
+          });
+
+          const getStatus = getResp.status;
+          const getLatencyMs = Date.now() - startTime;
+
+          if (getStatus === 202) {
+            await supabase
+              .from('integration_run')
+              .update({
+                status: 'in_progress',
+                http_status: getStatus,
+              })
+              .eq('id', runId);
+
+            console.log(JSON.stringify({
+              level: 'info',
+              event: 'mcp.integration.trigger.success',
+              request_id: requestId,
+              tenant_id: tenantId,
+              workflow_key: workflowKey,
+              run_id: runId,
+              http_status: getStatus,
+              latency_ms: getLatencyMs,
+              async: true,
+              method_fallback: 'GET',
+            }));
+
+            return {
+              ok: true,
+              data: { status: 'in_progress', run_id: runId },
+              runId,
+              status: 'in_progress',
+            };
+          }
+
+          if (getStatus >= 200 && getStatus < 300) {
+            const getData = await getResp.json().catch(() => ({}));
+
+            await supabase
+              .from('integration_run')
+              .update({
+                status: 'succeeded',
+                http_status: getStatus,
+                finished_at: new Date().toISOString(),
+                response_json: getData,
+              })
+              .eq('id', runId);
+
+            console.log(JSON.stringify({
+              level: 'info',
+              event: 'mcp.integration.trigger.success',
+              request_id: requestId,
+              tenant_id: tenantId,
+              workflow_key: workflowKey,
+              run_id: runId,
+              http_status: getStatus,
+              latency_ms: getLatencyMs,
+              method_fallback: 'GET',
+            }));
+
+            return {
+              ok: true,
+              data: getData,
+              runId,
+              status: 'succeeded',
+            };
+          }
+        } catch (fallbackErr) {
+          console.warn('[triggerN8nWorkflow] GET fallback failed:', (fallbackErr as any)?.message || fallbackErr);
+        }
+      }
+
       // Only mark as failed when we are not going to retry anymore
       await supabase
         .from('integration_run')
