@@ -135,13 +135,15 @@ export async function upsertWorkflowMap(
 ): Promise<WorkflowMappingRow> {
   const provider = payload.provider || 'n8n';
 
-  // Check if mapping exists (regardless of is_active status)
+  // Fetch the most recent mapping for this key (regardless of active state)
   const { data: existing } = await supabase
     .from('mcp_tenant_workflow_map')
     .select('id')
     .eq('tenant_id', tenantId)
     .eq('provider', provider)
     .eq('workflow_key', payload.workflow_key)
+    .order('updated_at', { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   if (existing) {
@@ -195,6 +197,26 @@ export async function deactivateWorkflowMap(id: string, tenantId: string): Promi
     console.error('[tenantWorkflowService] Error deactivating workflow:', error);
     throw error;
   }
+}
+
+/**
+ * Update a workflow mapping by id (partial update)
+ */
+export async function updateWorkflowMap(
+  id: string,
+  tenantId: string,
+  patch: Partial<Pick<WorkflowMappingRow, 'webhook_path' | 'description' | 'is_active'>>
+): Promise<WorkflowMappingRow> {
+  const { data, error } = await supabase
+    .from('mcp_tenant_workflow_map')
+    .update({ ...patch, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .eq('tenant_id', tenantId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
 }
 
 /**

@@ -19,6 +19,7 @@ import {
   deactivateWorkflowMap,
   resolveWebhook,
   deleteWorkflowMap,
+  updateWorkflowMap,
 } from '@/modules/core/mcp/services/tenantWorkflowService';
 import { getTenantSecrets, setTenantSecrets } from '@/modules/core/integrations/services/tenantSecrets';
 import { workflowMappingSchema } from '@/modules/core/mcp/validation/schemas';
@@ -302,21 +303,9 @@ export default function McpWorkflows() {
       toast.error('No tenant context available');
       return;
     }
-    const user = await supabase.auth.getUser();
-    if (!user.data.user) {
-      toast.error('Not authenticated');
-      return;
-    }
-    
+
     try {
-      await upsertWorkflowMap(tenantId, {
-        workflow_key: workflow.workflow_key,
-        webhook_path: workflow.webhook_path,
-        description: workflow.description || '',
-        provider: workflow.provider || 'n8n',
-        is_active: !workflow.is_active,
-        created_by: user.data.user.id,
-      });
+      await updateWorkflowMap(workflow.id, tenantId, { is_active: !workflow.is_active });
       toast.success(workflow.is_active ? 'Workflow deactivated' : 'Workflow activated');
       queryClient.invalidateQueries({ queryKey: ['mcp-workflows'] });
     } catch (error: any) {
