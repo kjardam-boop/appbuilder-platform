@@ -203,7 +203,16 @@ export default function McpWorkflows() {
       });
 
       if (error) {
-        toast.error(`Failed to trigger workflow: ${error.message}`);
+        const msg = String((error as any)?.message || 'Unknown error');
+        // n8n test-mode specific hint
+        if (msg.toLowerCase().includes('not registered') || msg.includes('404')) {
+          const hint = resolvedUrl?.includes('/webhook-test/')
+            ? "n8n test-modus: Klikk 'Execute workflow' i n8n før du tester (gjelder én request)."
+            : "Sett workflow til Active i n8n og bruk produksjons-URL (/webhook/...).";
+          toast.error(`n8n: Webhook ikke registrert. ${hint}`);
+        } else {
+          toast.error(`Failed to trigger workflow: ${msg}`);
+        }
         console.error('Trigger error:', error);
         return;
       }
@@ -385,6 +394,14 @@ export default function McpWorkflows() {
               {isTestingTrigger ? 'Triggering...' : 'Test Trigger'}
             </Button>
           </div>
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertDescription className="text-xs">
+              n8n tips: <br />
+              • Test-modus: URL-er som inneholder <code className="text-xs">/webhook-test/...</code> krever at du klikker <strong>Execute workflow</strong> i n8n før hver test (gjelder én request).<br />
+              • Produksjon: Sett workflow til <strong>Active</strong> og bruk <code className="text-xs">/webhook/...</code> i mappingen for vedvarende endepunkt.
+            </AlertDescription>
+          </Alert>
           {resolvedUrl && (
             <div className="p-3 bg-muted rounded-lg space-y-2">
               <p className="text-xs text-muted-foreground">Resolved URL:</p>
@@ -417,9 +434,9 @@ export default function McpWorkflows() {
                   <Info className="h-4 w-4" />
                   <AlertDescription className="text-xs">
                     <strong>Eksempel:</strong> Full URL fra n8n:<br />
-                    <code>https://jardam.app.n8n.cloud/mcp-test/c816ea1e-9fc5-4de4-a0d2-3fcec1c9c7cb</code><br />
+                    <code>https://jardam.app.n8n.cloud/webhook/87ccc87f-7f8d-4b7d-8e9a-a2c09a510f9b</code> (prod) eller <code>.../webhook-test/87ccc87f-7f8d-4b7d-8e9a-a2c09a510f9b</code> (test)<br />
                     → Base URL (sett i secrets): <code>https://jardam.app.n8n.cloud</code><br />
-                    → Webhook Path (sett her): <code>/mcp-test/c816ea1e-9fc5-4de4-a0d2-3fcec1c9c7cb</code>
+                    → Webhook Path (sett her): <code>/webhook/87ccc87f-7f8d-4b7d-8e9a-a2c09a510f9b</code> (prod) eller <code>/webhook-test/87ccc87f-7f8d-4b7d-8e9a-a2c09a510f9b</code> (test)
                   </AlertDescription>
                 </Alert>
 
