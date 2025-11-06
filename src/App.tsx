@@ -63,6 +63,7 @@ import McpPolicy from "./pages/admin/McpPolicy";
 import McpWorkflows from "./pages/admin/McpWorkflows";
 import McpSecrets from "./pages/admin/McpSecrets";
 import McpObservability from "./pages/admin/McpObservability";
+import AIMcpDemo from "./pages/admin/AIMcpDemo";
 import Compatibility from "./pages/admin/Compatibility";
 import Categories from "./pages/admin/Categories";
 import TenantSystems from "./pages/admin/TenantSystems";
@@ -131,6 +132,7 @@ const App = () => (
               <Route path="mcp/workflows" element={<McpWorkflows />} />
               <Route path="mcp/secrets" element={<McpSecrets />} />
               <Route path="mcp/observability" element={<McpObservability />} />
+              <Route path="ai/mcp-demo" element={<AIMcpDemo />} />
               <Route path="compatibility" element={<Compatibility />} />
               <Route path="categories" element={<Categories />} />
               <Route path="tenant-systems" element={<TenantSystems />} />

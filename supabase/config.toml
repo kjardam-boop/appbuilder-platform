@@ -1,4 +1,7 @@
 project_id = "lunsgsyeaqnalpdbkhyg"
 
 [functions.trigger-n8n-workflow]
-verify_jwt = true
+verify_jwt = false
+
+[functions.ai-mcp-chat]
+verify_jwt = false

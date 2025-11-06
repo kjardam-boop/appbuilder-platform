@@ -12,10 +12,12 @@ export { useAIChat } from './hooks/useAIChat';
 export { useAIGeneration } from './hooks/useAIGeneration';
 export { useFieldAssist } from './hooks/useFieldAssist';
 export { useAIAnalysis } from './hooks/useAIAnalysis';
+export { useAIMcpChat } from './hooks/useAIMcpChat';
 
 // Components
 export { AIChatInterface } from './components/AIChatInterface';
 export { AIGenerationButton } from './components/AIGenerationButton';
+export { AIMcpChatInterface } from '@/components/AI/AIMcpChatInterface';
 
 // Types
 export type {
@@ -31,7 +33,14 @@ export type {
   AIModel,
 } from './types/ai.types';
 
+export type {
+  AIMcpChatRequest,
+  AIMcpChatResponse,
+  McpTool,
+} from './types/mcp.types';
+
 export { AI_MODELS, AIError } from './types/ai.types';
+export { AVAILABLE_MCP_TOOLS } from './types/mcp.types';
 
 // Services
 export { AIService } from './services/aiService';
