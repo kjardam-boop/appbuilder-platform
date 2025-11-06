@@ -322,8 +322,8 @@ export const expectPermissionGranted = async (
   const assertion = async () => {
     // Look for success indicators
     const successElements = [
-      ...screen.queryAllByText(/granted|tillatt|tillåtet|godkänd/i),
-      ...screen.queryAllByRole("status", { name: /success/i }),
+      ...screen.queryAllByText(/granted|tillatt|tillat|tillåtet|godkänd|godkjent|innvilget/i),
+      ...screen.queryAllByRole("status", { name: /success|suksess/i }),
       ...document.querySelectorAll('[data-permission-status="granted"]'),
       ...document.querySelectorAll('[aria-label*="success"]'),
     ];
@@ -332,12 +332,14 @@ export const expectPermissionGranted = async (
 
     // Verify permission name is mentioned
     if (permissionName) {
-      expect(await screen.findByText(permissionName, { exact: false })).toBeInTheDocument();
+      const nameMatches = screen.queryAllByText(permissionName, { exact: false });
+      expect(nameMatches.length).toBeGreaterThan(0);
     }
 
     // Verify custom success message if provided
     if (successMessage) {
-      expect(await screen.findByText(successMessage, { exact: false })).toBeInTheDocument();
+      const successMatches = screen.queryAllByText(successMessage, { exact: false });
+      expect(successMatches.length).toBeGreaterThan(0);
     }
 
     // Ensure no denial indicators are present
@@ -375,16 +377,18 @@ export const expectPermissionDenied = async (
 
     // Verify permission name is mentioned if provided
     if (permissionName) {
-      expect(await screen.findByText(permissionName, { exact: false })).toBeInTheDocument();
+      const nameMatches = screen.queryAllByText(permissionName, { exact: false });
+      expect(nameMatches.length).toBeGreaterThan(0);
     }
 
     // Verify custom error message if provided
     if (errorMessage) {
-      expect(await screen.findByText(errorMessage, { exact: false })).toBeInTheDocument();
+      const errorMatches = screen.queryAllByText(errorMessage, { exact: false });
+      expect(errorMatches.length).toBeGreaterThan(0);
     }
 
     // Ensure no success indicators are present
-    const successElements = screen.queryAllByText(/granted|tillåtet|godkänd/i);
+    const successElements = screen.queryAllByText(/granted|tillatt|tillat|tillåtet|godkjent|godkänd|innvilget/i);
     expect(successElements.length).toBe(0);
   };
 
@@ -415,63 +419,41 @@ export const expectRoleInScope = async (
     // Find elements containing the role
     const roleElements = screen.queryAllByText(roleData.role, { exact: false });
 
+    const matchesInSameContext = roleElements.some((roleEl) => {
+      const parent = roleEl.closest("tr, [data-role-row], [data-testid*='role'], li, div");
+      if (!parent) return false;
+      const text = parent.textContent || "";
+
+      // Verify scope type in the same container
+      const scopeTypeRegex = new RegExp(`\\b${roleData.scopeType}\\b`, "i");
+      if (!scopeTypeRegex.test(text)) return false;
+
+      // Optional constraints
+      if (roleData.scopeName) {
+        const scopeNameMatch =
+          typeof roleData.scopeName === "string"
+            ? text.includes(roleData.scopeName)
+            : roleData.scopeName.test(text);
+        if (!scopeNameMatch) return false;
+      }
+
+      if (roleData.scopeId) {
+        if (!new RegExp(roleData.scopeId).test(text)) return false;
+      }
+
+      if (roleData.userId) {
+        if (!new RegExp(roleData.userId).test(text)) return false;
+      }
+
+      return true;
+    });
+
     if (shouldExist) {
       expect(roleElements.length).toBeGreaterThan(0);
-
-      // Verify the role is associated with the correct scope type
-      // Use word boundary to avoid matching substrings (e.g., "tenant" in "TenantAdmin")
-      const scopeTypeElements = screen.queryAllByText(
-        new RegExp(`\\b${roleData.scopeType}\\b`, "i"),
-        { exact: false }
-      );
-      expect(scopeTypeElements.length).toBeGreaterThan(0);
-
-      // Verify scope name if provided
-      if (roleData.scopeName) {
-        const scopeNameElements = screen.queryAllByText(roleData.scopeName, { exact: false });
-        expect(scopeNameElements.length).toBeGreaterThan(0);
-      }
-
-      // Verify scope ID if provided
-      if (roleData.scopeId) {
-        const scopeIdElements = screen.queryAllByText(
-          new RegExp(roleData.scopeId),
-          { exact: false }
-        );
-        expect(scopeIdElements.length).toBeGreaterThan(0);
-      }
-
-      // Verify user ID if provided
-      if (roleData.userId) {
-        const userElements = screen.queryAllByText(
-          new RegExp(roleData.userId),
-          { exact: false }
-        );
-        expect(userElements.length).toBeGreaterThan(0);
-      }
+      expect(matchesInSameContext).toBe(true);
     } else {
-      // When shouldExist is false, verify the combination doesn't exist
-      // Check if role and scope type appear together
-      const hasRoleAndScopeType = roleElements.some((roleEl) => {
-        const parent = roleEl.closest("tr, [data-role-row], [data-testid*='role'], div");
-        if (!parent) return false;
-        
-        const scopeTypeRegex = new RegExp(`\\b${roleData.scopeType}\\b`, "i");
-        const hasScopeType = scopeTypeRegex.test(parent.textContent || "");
-        
-        if (roleData.scopeName && hasScopeType) {
-          const scopeNameStr = typeof roleData.scopeName === "string" 
-            ? roleData.scopeName 
-            : roleData.scopeName?.source || "";
-          
-          const hasScopeName = parent.textContent?.includes(scopeNameStr);
-          return hasScopeName;
-        }
-        
-        return hasScopeType;
-      });
-      
-      expect(hasRoleAndScopeType).toBe(false);
+      // Ensure the combination does NOT exist in the same container
+      expect(matchesInSameContext).toBe(false);
     }
   };
 
