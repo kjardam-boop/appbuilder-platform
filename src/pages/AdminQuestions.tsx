@@ -15,6 +15,7 @@ const AdminQuestions = () => {
   const navigate = useNavigate();
   const { isAdmin, loading: adminLoading } = useCurrentUser();
   const [profile, setProfile] = useState<any>(null);
+  const [tenantId, setTenantId] = useState<string>("");
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -41,11 +42,14 @@ const AdminQuestions = () => {
     const db = supabase as any;
     const { data } = await db
       .from("profiles")
-      .select("full_name, email")
+      .select("full_name, email, tenant_id")
       .eq("id", user.id)
       .single();
 
     setProfile(data);
+    if (data?.tenant_id) {
+      setTenantId(data.tenant_id);
+    }
   };
 
   if (adminLoading || !isAdmin) {
@@ -109,7 +113,7 @@ const AdminQuestions = () => {
                         <h3 className="font-semibold">Mandat</h3>
                         <p className="text-sm text-muted-foreground">Definer prosjektets formål og rammer</p>
                       </div>
-                      <AIQuestionGenerator fieldKey="mandate" mode="company" onQuestionsGenerated={() => window.location.reload()} />
+                      <AIQuestionGenerator fieldKey="mandate" mode="company" onQuestionsGenerated={() => window.location.reload()} tenantId={tenantId} />
                     </div>
                     <QuestionManager fieldKey="mandate" />
                   </TabsContent>
@@ -120,7 +124,7 @@ const AdminQuestions = () => {
                         <h3 className="font-semibold">Krav</h3>
                         <p className="text-sm text-muted-foreground">Spesifiser krav til løsningen</p>
                       </div>
-                      <AIQuestionGenerator fieldKey="requirements" mode="company" onQuestionsGenerated={() => window.location.reload()} />
+                      <AIQuestionGenerator fieldKey="requirements" mode="company" onQuestionsGenerated={() => window.location.reload()} tenantId={tenantId} />
                     </div>
                     <QuestionManager fieldKey="requirements" />
                   </TabsContent>
@@ -131,7 +135,7 @@ const AdminQuestions = () => {
                         <h3 className="font-semibold">Invitasjon til tilbudsinnhenting</h3>
                         <p className="text-sm text-muted-foreground">Beskriv prosjektet for leverandører</p>
                       </div>
-                      <AIQuestionGenerator fieldKey="invitation_description" mode="company" onQuestionsGenerated={() => window.location.reload()} />
+                      <AIQuestionGenerator fieldKey="invitation_description" mode="company" onQuestionsGenerated={() => window.location.reload()} tenantId={tenantId} />
                     </div>
                     <QuestionManager fieldKey="invitation_description" />
                   </TabsContent>
@@ -165,7 +169,7 @@ const AdminQuestions = () => {
                           <h3 className="font-semibold">{cat.label}</h3>
                           <p className="text-sm text-muted-foreground">{cat.description}</p>
                         </div>
-                        <AIQuestionGenerator fieldKey={cat.key} mode="supplier" onQuestionsGenerated={() => window.location.reload()} />
+                        <AIQuestionGenerator fieldKey={cat.key} mode="supplier" onQuestionsGenerated={() => window.location.reload()} tenantId={tenantId} />
                       </div>
                       <QuestionManager fieldKey={cat.key} />
                     </TabsContent>
