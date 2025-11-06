@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { useAdminRole } from '@/modules/core/user';
 import { Navigate } from 'react-router-dom';
@@ -21,7 +22,7 @@ import {
 import { getTenantSecrets, setTenantSecrets } from '@/modules/core/integrations/services/tenantSecrets';
 import { workflowMappingSchema } from '@/modules/core/mcp/validation/schemas';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, ExternalLink, Info, KeyRound } from 'lucide-react';
+import { AlertCircle, ExternalLink, Info, KeyRound, Pencil, Link as LinkIcon } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -45,6 +46,7 @@ export default function McpWorkflows() {
     workflow_key: '',
     webhook_path: '',
     description: '',
+    is_active: true,
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [testKey, setTestKey] = useState('');
@@ -91,6 +93,7 @@ export default function McpWorkflows() {
 
       return upsertWorkflowMap(tenantId, {
         ...formData,
+        provider: 'n8n',
         created_by: user.data.user.id,
       });
     },
@@ -98,7 +101,7 @@ export default function McpWorkflows() {
       toast.success('Workflow mapping saved');
       queryClient.invalidateQueries({ queryKey: ['mcp-workflows'] });
       setIsAddDialogOpen(false);
-      setFormData({ workflow_key: '', webhook_path: '', description: '' });
+      setFormData({ workflow_key: '', webhook_path: '', description: '', is_active: true });
       setFormErrors({});
     },
     onError: (error) => {
@@ -132,6 +135,29 @@ export default function McpWorkflows() {
     },
     onError: (error) => {
       toast.error(`Failed to save secrets: ${error.message}`);
+    },
+  });
+
+  const activateMutation = useMutation({
+    mutationFn: async (mapping: any) => {
+      if (!tenantId) throw new Error('No tenant ID');
+      const user = await supabase.auth.getUser();
+      if (!user.data.user) throw new Error('Not authenticated');
+      return upsertWorkflowMap(tenantId, {
+        workflow_key: mapping.workflow_key,
+        webhook_path: mapping.webhook_path,
+        description: mapping.description || '',
+        provider: mapping.provider || 'n8n',
+        is_active: true,
+        created_by: user.data.user.id,
+      });
+    },
+    onSuccess: () => {
+      toast.success('Workflow activated');
+      queryClient.invalidateQueries({ queryKey: ['mcp-workflows'] });
+    },
+    onError: (error) => {
+      toast.error(`Failed to activate: ${error.message}`);
     },
   });
 
@@ -232,6 +258,29 @@ export default function McpWorkflows() {
     }
   };
 
+  const handleEdit = (mapping: any) => {
+    setFormData({
+      workflow_key: mapping.workflow_key,
+      webhook_path: mapping.webhook_path,
+      description: mapping.description || '',
+      is_active: !!mapping.is_active,
+    });
+    setIsAddDialogOpen(true);
+  };
+
+  const handleResolveForMapping = async (workflowKey: string) => {
+    if (!tenantId) {
+      toast.error('No tenant context available');
+      return;
+    }
+    const url = await resolveWebhook(tenantId, 'n8n', workflowKey);
+    setResolvedUrl(url);
+    if (url) {
+      toast.success('Resolved webhook URL');
+    } else {
+      toast.error('No mapping found for this workflow key');
+    }
+  };
   if (isLoadingRole || !tenantContext) {
     return <div className="p-8">Loading...</div>;
   }
@@ -504,6 +553,17 @@ export default function McpWorkflows() {
                   />
                 </div>
 
+                <div className="flex items-center justify-between py-2">
+                  <Label htmlFor="is_active">Active</Label>
+                  <Switch
+                    id="is_active"
+                    checked={formData.is_active}
+                    onCheckedChange={(v) =>
+                      setFormData({ ...formData, is_active: v as boolean })
+                    }
+                  />
+                </div>
+
                 <div className="flex justify-end gap-2">
                   <Button
                     variant="outline"
@@ -563,7 +623,21 @@ export default function McpWorkflows() {
                     </p>
                   </div>
                   <div className="flex gap-2">
-                    {workflow.is_active && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleResolveForMapping(workflow.workflow_key)}
+                    >
+                      <LinkIcon className="h-4 w-4 mr-1" /> Resolve URL
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEdit(workflow)}
+                    >
+                      <Pencil className="h-4 w-4 mr-1" /> Edit
+                    </Button>
+                    {workflow.is_active ? (
                       <Button
                         onClick={() => deactivateMutation.mutate(workflow.id)}
                         variant="outline"
@@ -571,6 +645,14 @@ export default function McpWorkflows() {
                         disabled={deactivateMutation.isPending}
                       >
                         Deactivate
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={() => activateMutation.mutate(workflow)}
+                        size="sm"
+                        disabled={activateMutation.isPending}
+                      >
+                        Activate
                       </Button>
                     )}
                   </div>
