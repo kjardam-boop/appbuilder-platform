@@ -5,6 +5,8 @@ import { LogOut, User, Building2, Search, Bookmark, Settings, CheckSquare } from
 import { toast } from "sonner";
 import { useCurrentUser } from "@/modules/core/user";
 import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
+import { useIsPlatformTenant } from "@/hooks/useIsPlatformTenant";
+import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,6 +27,7 @@ const Header = ({ userName, userEmail }: HeaderProps) => {
   const navigate = useNavigate();
   const { isAdmin } = useCurrentUser();
   const { isPlatformAdmin } = usePlatformAdmin();
+  const { isPlatformTenant } = useIsPlatformTenant();
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -49,7 +52,14 @@ const Header = ({ userName, userEmail }: HeaderProps) => {
             <Building2 className="h-6 w-6 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-xl font-bold">IT-Anskaffelse</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-bold">IT-Anskaffelse</h1>
+              {isPlatformTenant && (
+                <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
+                  Platform
+                </Badge>
+              )}
+            </div>
             <p className="text-sm text-muted-foreground">Anskaffelsesstyring</p>
           </div>
         </div>

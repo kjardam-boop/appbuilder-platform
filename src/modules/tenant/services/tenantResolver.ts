@@ -35,6 +35,7 @@ export async function resolveTenantByHost(host: string): Promise<TenantConfig | 
         subdomain: (byDomain as any).slug || undefined,
         enabled_modules: [],
         custom_config: (byDomain as any).settings || {},
+        is_platform_tenant: (byDomain as any).is_platform_tenant || false,
         created_at: byDomain.created_at,
         updated_at: byDomain.updated_at,
       } as any;
@@ -65,10 +66,44 @@ export async function resolveTenantByHost(host: string): Promise<TenantConfig | 
           subdomain: (bySlug as any).slug || undefined,
           enabled_modules: [],
           custom_config: (bySlug as any).settings || {},
+          is_platform_tenant: (bySlug as any).is_platform_tenant || false,
           created_at: bySlug.created_at,
           updated_at: bySlug.updated_at,
         } as any;
         console.log(`[TenantResolver] Found tenant by slug: ${subdomain} -> ${mapped.tenant_id}`);
+        return mapped;
+      }
+    }
+
+    // 3) Fallback to platform tenant for Lovable domains or localhost
+    if (isLovableDomain(hostname) || isLocalhost(hostname)) {
+      console.log(`[TenantResolver] No exact match, falling back to platform tenant for: ${hostname}`);
+      
+      const { data: platformTenant, error: platformErr } = await supabase
+        .from('tenants')
+        .select('*')
+        .eq('is_platform_tenant', true)
+        .maybeSingle();
+      
+      if (platformErr) {
+        console.error('[TenantResolver] Error querying platform tenant:', platformErr);
+      }
+      
+      if (platformTenant) {
+        const mapped: TenantConfig = {
+          id: platformTenant.id,
+          tenant_id: platformTenant.id,
+          name: platformTenant.name,
+          host: hostname,
+          domain: platformTenant.domain || undefined,
+          subdomain: (platformTenant as any).slug || undefined,
+          enabled_modules: [],
+          custom_config: (platformTenant as any).settings || {},
+          is_platform_tenant: true, // Always true for platform tenant
+          created_at: platformTenant.created_at,
+          updated_at: platformTenant.updated_at,
+        } as any;
+        console.log(`[TenantResolver] Using platform tenant as fallback -> ${mapped.tenant_id}`);
         return mapped;
       }
     }
@@ -130,6 +165,24 @@ export function isValidDomain(domain: string): boolean {
 export function isValidSubdomain(subdomain: string): boolean {
   const subdomainRegex = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i;
   return subdomainRegex.test(subdomain);
+}
+
+/**
+ * Check if hostname is a Lovable project domain
+ */
+export function isLovableDomain(hostname: string): boolean {
+  return hostname.includes('lovableproject.com');
+}
+
+/**
+ * Check if hostname is localhost or local development
+ */
+export function isLocalhost(hostname: string): boolean {
+  return hostname === 'localhost' || 
+         hostname === '127.0.0.1' || 
+         hostname.startsWith('192.168.') ||
+         hostname.startsWith('10.') ||
+         hostname.startsWith('172.');
 }
 
 /**

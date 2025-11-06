@@ -13,6 +13,7 @@ export interface TenantConfig extends BaseEntity {
   database_schema?: string;
   enabled_modules: string[];
   custom_config: Record<string, any>;
+  is_platform_tenant?: boolean; // Flag indicating if this is the platform meta-tenant
   branding?: {
     logo_url?: string;
     primary_color?: string;

@@ -3269,6 +3269,7 @@ export type Database = {
           created_at: string
           domain: string | null
           id: string
+          is_platform_tenant: boolean | null
           name: string
           plan: string
           settings: Json | null
@@ -3280,6 +3281,7 @@ export type Database = {
           created_at?: string
           domain?: string | null
           id?: string
+          is_platform_tenant?: boolean | null
           name: string
           plan?: string
           settings?: Json | null
@@ -3291,6 +3293,7 @@ export type Database = {
           created_at?: string
           domain?: string | null
           id?: string
+          is_platform_tenant?: boolean | null
           name?: string
           plan?: string
           settings?: Json | null
@@ -3440,6 +3443,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      get_platform_tenant: { Args: never; Returns: string }
       get_user_roles: {
         Args: { _tenant_id: string; _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"][]
