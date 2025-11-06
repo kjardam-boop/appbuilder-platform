@@ -320,9 +320,14 @@ export const expectPermissionGranted = async (
   const { successMessage, timeout = 3000 } = options;
 
   const assertion = async () => {
-    // Look for success indicators
+    // Look for success indicators - search for each term separately to handle regex properly
+    const successTerms = ["granted", "tillatt", "tillat", "tillåtet", "godkänd", "godkjent", "innvilget"];
+    const successTextElements = successTerms.flatMap(term => 
+      screen.queryAllByText(new RegExp(term, "i"))
+    );
+    
     const successElements = [
-      ...screen.queryAllByText(/granted|tillatt|tillat|tillåtet|godkänd|godkjent|innvilget/i),
+      ...successTextElements,
       ...screen.queryAllByRole("status", { name: /success|suksess/i }),
       ...document.querySelectorAll('[data-permission-status="granted"]'),
       ...document.querySelectorAll('[aria-label*="success"]'),
@@ -420,13 +425,35 @@ export const expectRoleInScope = async (
     const roleElements = screen.queryAllByText(roleData.role, { exact: false });
 
     const matchesInSameContext = roleElements.some((roleEl) => {
-      const parent = roleEl.closest("tr, [data-role-row], [data-testid*='role'], li, div");
-      if (!parent) return false;
-      const text = parent.textContent || "";
+      // Find the container - prefer specific role containers, then broader ones
+      let container = roleEl.closest("tr, [data-role-row], [data-testid*='role'], li");
+      
+      // If no specific container, look for a parent div that might contain related elements
+      if (!container) {
+        container = roleEl.closest("div");
+        // If the container is too small (only contains the role itself), try parent
+        if (container && container.textContent?.trim() === roleEl.textContent?.trim()) {
+          container = container.parentElement;
+        }
+      }
+      
+      if (!container) return false;
+      const text = container.textContent || "";
 
-      // Verify scope type in the same container
-      const scopeTypeRegex = new RegExp(`\\b${roleData.scopeType}\\b`, "i");
-      if (!scopeTypeRegex.test(text)) return false;
+      // Search for scope type as a standalone word - must not be part of another word
+      // Check by searching for the scope type text element within the container
+      const scopeTypeElements = Array.from(container.querySelectorAll("*")).filter(el => {
+        const elText = el.textContent?.trim() || "";
+        const childTexts = Array.from(el.children).map(child => child.textContent?.trim());
+        // Check if this element contains the scope type as its own text (not inherited from children)
+        const ownText = childTexts.length > 0 
+          ? elText.replace(new RegExp(childTexts.join("|"), "g"), "").trim()
+          : elText;
+        return new RegExp(`^${roleData.scopeType}$`, "i").test(ownText);
+      });
+      
+      const hasScopeType = scopeTypeElements.length > 0;
+      if (!hasScopeType) return false;
 
       // Optional constraints
       if (roleData.scopeName) {
