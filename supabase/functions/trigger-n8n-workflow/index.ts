@@ -178,10 +178,11 @@ async function triggerN8nWorkflow(
     idempotency_key: idempotencyKey || null,
   };
 
-  // Trigger n8n with retry logic
+  // Trigger n8n with retry logic (extended in test mode)
   let lastError: any = null;
-  const maxRetries = 2;
-  const backoffMs = [250, 750];
+  const isTestMode = webhookUrl.includes('/webhook-test/');
+  const maxRetries = isTestMode ? 5 : 2;
+  const backoffMs = isTestMode ? [200, 400, 800, 1200, 2000] : [250, 750];
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
@@ -264,6 +265,14 @@ async function triggerN8nWorkflow(
       // Handle 4xx/5xx errors
       const errorText = await response.text().catch(() => 'Unknown error');
 
+      // In test mode, a 404 often means the webhook isn't registered yet.
+      if (isTestMode && httpStatus === 404 && attempt < maxRetries) {
+        console.warn(`[triggerN8nWorkflow] Test-mode 404, retrying in ${backoffMs[attempt]}ms...`);
+        await new Promise((resolve) => setTimeout(resolve, backoffMs[attempt]));
+        continue; // try again without marking the run as failed yet
+      }
+
+      // Only mark as failed when we are not going to retry anymore
       await supabase
         .from('integration_run')
         .update({
