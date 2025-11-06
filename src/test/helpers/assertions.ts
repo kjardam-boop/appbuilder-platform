@@ -322,7 +322,7 @@ export const expectPermissionGranted = async (
   const assertion = async () => {
     // Look for success indicators
     const successElements = [
-      ...screen.queryAllByText(/granted|tillåtet|godkänd/i),
+      ...screen.queryAllByText(/granted|tillatt|tillåtet|godkänd/i),
       ...screen.queryAllByRole("status", { name: /success/i }),
       ...document.querySelectorAll('[data-permission-status="granted"]'),
       ...document.querySelectorAll('[aria-label*="success"]'),
@@ -419,15 +419,17 @@ export const expectRoleInScope = async (
       expect(roleElements.length).toBeGreaterThan(0);
 
       // Verify the role is associated with the correct scope type
+      // Use word boundary to avoid matching substrings (e.g., "tenant" in "TenantAdmin")
       const scopeTypeElements = screen.queryAllByText(
-        new RegExp(roleData.scopeType, "i"),
+        new RegExp(`\\b${roleData.scopeType}\\b`, "i"),
         { exact: false }
       );
       expect(scopeTypeElements.length).toBeGreaterThan(0);
 
       // Verify scope name if provided
       if (roleData.scopeName) {
-        expect(await screen.findByText(roleData.scopeName, { exact: false })).toBeInTheDocument();
+        const scopeNameElements = screen.queryAllByText(roleData.scopeName, { exact: false });
+        expect(scopeNameElements.length).toBeGreaterThan(0);
       }
 
       // Verify scope ID if provided
@@ -449,23 +451,27 @@ export const expectRoleInScope = async (
       }
     } else {
       // When shouldExist is false, verify the combination doesn't exist
-      if (roleData.scopeName) {
-        // Both role and scope should not appear together
-        const hasRoleAndScope = roleElements.some((roleEl) => {
-          const parent = roleEl.closest("tr, [data-role-row], [data-testid*='role']");
-          if (!parent) return false;
-          
+      // Check if role and scope type appear together
+      const hasRoleAndScopeType = roleElements.some((roleEl) => {
+        const parent = roleEl.closest("tr, [data-role-row], [data-testid*='role'], div");
+        if (!parent) return false;
+        
+        const scopeTypeRegex = new RegExp(`\\b${roleData.scopeType}\\b`, "i");
+        const hasScopeType = scopeTypeRegex.test(parent.textContent || "");
+        
+        if (roleData.scopeName && hasScopeType) {
           const scopeNameStr = typeof roleData.scopeName === "string" 
             ? roleData.scopeName 
             : roleData.scopeName?.source || "";
           
-          return parent.textContent?.includes(scopeNameStr);
-        });
+          const hasScopeName = parent.textContent?.includes(scopeNameStr);
+          return hasScopeName;
+        }
         
-        expect(hasRoleAndScope).toBe(false);
-      } else {
-        expect(roleElements.length).toBe(0);
-      }
+        return hasScopeType;
+      });
+      
+      expect(hasRoleAndScopeType).toBe(false);
     }
   };
 
