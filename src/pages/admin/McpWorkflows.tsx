@@ -18,11 +18,12 @@ import {
   upsertWorkflowMap,
   deactivateWorkflowMap,
   resolveWebhook,
+  deleteWorkflowMap,
 } from '@/modules/core/mcp/services/tenantWorkflowService';
 import { getTenantSecrets, setTenantSecrets } from '@/modules/core/integrations/services/tenantSecrets';
 import { workflowMappingSchema } from '@/modules/core/mcp/validation/schemas';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, ExternalLink, Info, KeyRound, Pencil, Link as LinkIcon } from 'lucide-react';
+import { AlertCircle, ExternalLink, Info, KeyRound, Pencil, Link as LinkIcon, Trash2, PlayCircle } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -161,6 +162,20 @@ export default function McpWorkflows() {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => {
+      if (!tenantId) throw new Error('No tenant ID');
+      return deleteWorkflowMap(id, tenantId);
+    },
+    onSuccess: () => {
+      toast.success('Workflow deleted');
+      queryClient.invalidateQueries({ queryKey: ['mcp-workflows'] });
+    },
+    onError: (error) => {
+      toast.error(`Failed to delete: ${error.message}`);
+    },
+  });
+
   const handleValidateForm = () => {
     try {
       workflowMappingSchema.parse(formData);
@@ -279,6 +294,80 @@ export default function McpWorkflows() {
       toast.success('Resolved webhook URL');
     } else {
       toast.error('No mapping found for this workflow key');
+    }
+  };
+
+  const handleToggleActive = async (workflow: any) => {
+    if (!tenantId) {
+      toast.error('No tenant context available');
+      return;
+    }
+    const user = await supabase.auth.getUser();
+    if (!user.data.user) {
+      toast.error('Not authenticated');
+      return;
+    }
+    
+    try {
+      await upsertWorkflowMap(tenantId, {
+        workflow_key: workflow.workflow_key,
+        webhook_path: workflow.webhook_path,
+        description: workflow.description || '',
+        provider: workflow.provider || 'n8n',
+        is_active: !workflow.is_active,
+        created_by: user.data.user.id,
+      });
+      toast.success(workflow.is_active ? 'Workflow deactivated' : 'Workflow activated');
+      queryClient.invalidateQueries({ queryKey: ['mcp-workflows'] });
+    } catch (error: any) {
+      toast.error(`Failed to update: ${error.message}`);
+    }
+  };
+
+  const handleTestTriggerForMapping = async (workflowKey: string) => {
+    if (!tenantId) {
+      toast.error('No tenant context available');
+      return;
+    }
+
+    setIsTestingTrigger(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('trigger-n8n-workflow', {
+        body: {
+          tenantId: tenantId,
+          workflowKey: workflowKey,
+          action: 'test_trigger',
+          input: {
+            test: true,
+            timestamp: new Date().toISOString(),
+            message: 'Test trigger from MCP Workflows admin',
+          },
+        },
+      });
+
+      if (error) {
+        const msg = String((error as any)?.message || 'Unknown error');
+        if (msg.toLowerCase().includes('not registered') || msg.includes('404')) {
+          const url = await resolveWebhook(tenantId, 'n8n', workflowKey);
+          const hint = url?.includes('/webhook-test/')
+            ? "n8n test-modus: Klikk 'Execute workflow' i n8n før du tester."
+            : "Sett workflow til Active i n8n og bruk produksjons-URL.";
+          toast.error(`n8n: Webhook ikke registrert. ${hint}`);
+        } else {
+          toast.error(`Failed to trigger: ${msg}`);
+        }
+        return;
+      }
+
+      if (data?.success) {
+        toast.success(`Workflow triggered! Run ID: ${data.runId}`);
+      } else {
+        toast.error(data?.error || 'Unknown error');
+      }
+    } catch (error: any) {
+      toast.error(`Failed to trigger: ${error.message}`);
+    } finally {
+      setIsTestingTrigger(false);
     }
   };
   if (isLoadingRole || !tenantContext) {
@@ -428,53 +517,6 @@ export default function McpWorkflows() {
         </CardContent>
       </Card>
 
-      {/* Test Resolution */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Test Workflow Resolution</CardTitle>
-          <CardDescription>
-            Check what URL a workflow key resolves to
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-2">
-            <Input
-              placeholder="workflow_key (e.g. mcp-test)"
-              value={testKey}
-              onChange={(e) => setTestKey(e.target.value)}
-            />
-            <Button onClick={handleTestResolve} variant="outline">
-              Resolve
-            </Button>
-            <Button 
-              onClick={handleTestTrigger} 
-              disabled={isTestingTrigger || !testKey}
-              className="min-w-[120px]"
-            >
-              {isTestingTrigger ? 'Triggering...' : 'Test Trigger'}
-            </Button>
-          </div>
-          <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950/20">
-            <Info className="h-4 w-4 text-amber-600" />
-            <AlertDescription className="text-xs space-y-2">
-              <div className="font-semibold text-amber-900 dark:text-amber-100">⚠️ n8n Test-modus krever 2-trinns prosess:</div>
-              <ol className="list-decimal ml-4 space-y-1">
-                <li><strong>FØRST:</strong> Klikk "Execute workflow" i n8n (webhook venter på én request)</li>
-                <li><strong>DERETTER:</strong> Klikk "Test Trigger" her (må gjøres umiddelbart)</li>
-              </ol>
-              <div className="pt-1 border-t border-amber-200">
-                <strong>Produksjon:</strong> Sett workflow til <strong>Active</strong> i n8n og bruk <code className="text-xs">/webhook/...</code> i mappingen.
-              </div>
-            </AlertDescription>
-          </Alert>
-          {resolvedUrl && (
-            <div className="p-3 bg-muted rounded-lg space-y-2">
-              <p className="text-xs text-muted-foreground">Resolved URL:</p>
-              <p className="text-sm font-mono break-all">{resolvedUrl}</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       {/* Workflow Mappings List */}
       <Card>
@@ -593,22 +635,22 @@ export default function McpWorkflows() {
                   className="flex items-start justify-between p-4 border rounded-lg"
                 >
                   <div className="space-y-1 flex-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3">
                       <span className="font-mono font-medium">
                         {workflow.workflow_key}
                       </span>
                       <Badge variant="outline" className="text-xs">
                         {workflow.provider}
                       </Badge>
-                      {workflow.is_active ? (
-                        <Badge variant="default" className="text-xs">
-                          Active
-                        </Badge>
-                      ) : (
-                        <Badge variant="secondary" className="text-xs">
-                          Inactive
-                        </Badge>
-                      )}
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">
+                          {workflow.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                        <Switch
+                          checked={workflow.is_active}
+                          onCheckedChange={() => handleToggleActive(workflow)}
+                        />
+                      </div>
                     </div>
                     <p className="text-sm font-mono text-muted-foreground">
                       {workflow.webhook_path}
@@ -626,35 +668,33 @@ export default function McpWorkflows() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleResolveForMapping(workflow.workflow_key)}
+                      onClick={() => handleTestTriggerForMapping(workflow.workflow_key)}
+                      disabled={isTestingTrigger}
+                      title="Test trigger (n8n må være klar)"
                     >
-                      <LinkIcon className="h-4 w-4 mr-1" /> Resolve URL
+                      <PlayCircle className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleEdit(workflow)}
+                      title="Edit mapping"
                     >
-                      <Pencil className="h-4 w-4 mr-1" /> Edit
+                      <Pencil className="h-4 w-4" />
                     </Button>
-                    {workflow.is_active ? (
-                      <Button
-                        onClick={() => deactivateMutation.mutate(workflow.id)}
-                        variant="outline"
-                        size="sm"
-                        disabled={deactivateMutation.isPending}
-                      >
-                        Deactivate
-                      </Button>
-                    ) : (
-                      <Button
-                        onClick={() => activateMutation.mutate(workflow)}
-                        size="sm"
-                        disabled={activateMutation.isPending}
-                      >
-                        Activate
-                      </Button>
-                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        if (confirm('Are you sure you want to delete this workflow mapping?')) {
+                          deleteMutation.mutate(workflow.id);
+                        }
+                      }}
+                      disabled={deleteMutation.isPending}
+                      title="Delete mapping"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               ))}

@@ -197,3 +197,19 @@ export async function deactivateWorkflowMap(id: string, tenantId: string): Promi
     throw error;
   }
 }
+
+/**
+ * Delete a workflow mapping
+ */
+export async function deleteWorkflowMap(id: string, tenantId: string): Promise<void> {
+  const { error } = await supabase
+    .from('mcp_tenant_workflow_map')
+    .delete()
+    .eq('id', id)
+    .eq('tenant_id', tenantId);
+
+  if (error) {
+    console.error('[tenantWorkflowService] Error deleting workflow:', error);
+    throw error;
+  }
+}
