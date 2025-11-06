@@ -44,6 +44,22 @@ export { AVAILABLE_MCP_TOOLS } from './types/mcp.types';
 
 // Services
 export { AIService } from './services/aiService';
+export { 
+  getTenantAIConfig, 
+  setTenantAIConfig, 
+  getAIProviderClient,
+  executeTenantAIChat 
+} from './services/tenantAIService';
+
+// Provider types
+export type { 
+  AIProviderType, 
+  AIProviderConfig, 
+  TenantAIConfig,
+  AIChatOptions,
+  AIChatResponse as AIProviderChatResponse
+} from './types/aiProvider.types';
+export { DEFAULT_MODELS, PROVIDER_DISPLAY_NAMES } from './types/aiProvider.types';
 
 // Module metadata
 export const AI_MODULE = {

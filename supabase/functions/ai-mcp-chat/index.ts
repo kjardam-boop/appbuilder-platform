@@ -2,6 +2,21 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.1';
 
+// Import tenant AI service utilities
+import type { 
+  AIProviderType, 
+  AIProviderConfig, 
+  TenantAIConfig,
+  AIChatOptions,
+  AIChatResponse,
+  AIMessage,
+  AITool
+} from './aiTypes.ts';
+import { 
+  getTenantAIConfig, 
+  getAIProviderClient 
+} from './tenantAIService.ts';
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -325,6 +340,12 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Get tenant-specific AI configuration
+    const tenantAIConfig = await getTenantAIConfig(tenantId, supabaseClient);
+    const aiClientConfig = getAIProviderClient(tenantAIConfig?.config || null, LOVABLE_API_KEY);
+    
+    console.log(`[AI Provider] Using: ${aiClientConfig.provider} with model: ${aiClientConfig.model}`);
+
     const defaultSystemPrompt = `Du er en intelligent AI-assistent med tilgang til en bedrifts-plattform. 
 Du kan hjelpe brukere med å:
 - Søke etter og finne informasjon om selskaper, prosjekter og oppgaver
@@ -346,18 +367,41 @@ Når du bruker verktøy:
       ...messages
     ];
 
-    let response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: aiMessages,
+    // Build API request body with tenant-specific config
+    const buildRequestBody = (messages: any[]) => {
+      const body: any = {
+        model: aiClientConfig.model,
+        messages,
         tools: MCP_TOOLS,
         tool_choice: 'auto',
-      }),
+      };
+
+      // Handle temperature (not supported by GPT-5+)
+      const isGPT5Plus = aiClientConfig.model.includes('gpt-5') || 
+                        aiClientConfig.model.includes('o3') || 
+                        aiClientConfig.model.includes('o4');
+      
+      if (!isGPT5Plus && aiClientConfig.temperature !== undefined) {
+        body.temperature = aiClientConfig.temperature;
+      }
+
+      // Handle token limits
+      if (isGPT5Plus && aiClientConfig.maxCompletionTokens) {
+        body.max_completion_tokens = aiClientConfig.maxCompletionTokens;
+      } else if (aiClientConfig.maxTokens) {
+        body.max_tokens = aiClientConfig.maxTokens;
+      }
+
+      return body;
+    };
+
+    let response = await fetch(`${aiClientConfig.baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${aiClientConfig.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(buildRequestBody(aiMessages)),
     });
 
     if (!response.ok) {
@@ -413,18 +457,13 @@ Når du bruker verktøy:
       }
 
       // Call AI again with tool results
-      response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      response = await fetch(`${aiClientConfig.baseUrl}/chat/completions`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+          'Authorization': `Bearer ${aiClientConfig.apiKey}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
-          messages: aiMessages,
-          tools: MCP_TOOLS,
-          tool_choice: 'auto',
-        }),
+        body: JSON.stringify(buildRequestBody(aiMessages)),
       });
 
       if (!response.ok) {
@@ -441,7 +480,9 @@ Når du bruker verktøy:
       JSON.stringify({ 
         response: finalResponse,
         tokensUsed: aiData.usage?.total_tokens,
-        toolCallsMade: iterations
+        toolCallsMade: iterations,
+        provider: aiClientConfig.provider,
+        model: aiClientConfig.model
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
