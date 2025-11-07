@@ -44,20 +44,25 @@ serve(async (req) => {
       
       console.log(`[AI Credentials] Saving credentials for tenant ${tenantId}, provider ${provider}`);
 
-      // Create secret in Vault
+      // Insert into vault.secrets using SQL (Vault stores encrypted data automatically)
       const secretName = `ai_credentials_${tenantId}_${provider}`;
-      const { data: secretData, error: secretError } = await supabaseAdmin
-        .rpc('vault_create_secret', {
-          secret_name: secretName,
-          secret_value: JSON.stringify(credentials),
-        });
+      const { data: vaultData, error: vaultError } = await supabaseAdmin
+        .from('vault.secrets' as any)
+        .upsert({
+          name: secretName,
+          secret: JSON.stringify(credentials),
+        }, {
+          onConflict: 'name'
+        })
+        .select('id')
+        .single();
 
-      if (secretError) {
-        console.error('[AI Credentials] Vault create error:', secretError);
-        throw new Error(`Failed to store credentials: ${secretError.message}`);
+      if (vaultError) {
+        console.error('[AI Credentials] Vault upsert error:', vaultError);
+        throw new Error(`Failed to store credentials: ${vaultError.message}`);
       }
 
-      console.log('[AI Credentials] Vault secret created:', secretData);
+      console.log('[AI Credentials] Vault secret created/updated:', vaultData.id);
 
       // Upsert tenant_integrations with vault_secret_id
       const { error: integrationError } = await supabaseAdmin
@@ -65,7 +70,7 @@ serve(async (req) => {
         .upsert({
           tenant_id: tenantId,
           adapter_id: `ai-${provider}`,
-          vault_secret_id: secretData,
+          vault_secret_id: vaultData.id,
           config: config,
           is_active: true,
         }, {
@@ -80,7 +85,7 @@ serve(async (req) => {
       console.log('[AI Credentials] Integration saved successfully');
 
       return new Response(
-        JSON.stringify({ success: true, secretId: secretData }),
+        JSON.stringify({ success: true, secretId: vaultData.id }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
 
@@ -110,18 +115,19 @@ serve(async (req) => {
         );
       }
 
-      // Read secret from Vault
-      const { data: secretValue, error: secretError } = await supabaseAdmin
-        .rpc('vault_read_secret', {
-          secret_id: integration.vault_secret_id
-        });
+      // Read secret from Vault using direct table query
+      const { data: vaultSecret, error: secretError } = await supabaseAdmin
+        .from('vault.secrets' as any)
+        .select('decrypted_secret')
+        .eq('id', integration.vault_secret_id)
+        .single();
 
       if (secretError) {
         console.error('[AI Credentials] Vault read error:', secretError);
         throw new Error(`Failed to read credentials: ${secretError.message}`);
       }
 
-      const credentials = JSON.parse(secretValue);
+      const credentials = JSON.parse(vaultSecret.decrypted_secret);
 
       return new Response(
         JSON.stringify({ 

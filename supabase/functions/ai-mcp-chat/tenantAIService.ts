@@ -33,18 +33,19 @@ export async function getTenantAIConfig(
       return null;
     }
 
-    // Read credentials from Vault (requires service role in edge function context)
-    const { data: secretValue, error: vaultError } = await supabaseClient
-      .rpc('vault_read_secret', {
-        secret_id: data.vault_secret_id
-      });
+    // Read credentials from Vault using direct query (service role required)
+    const { data: vaultSecret, error: vaultError } = await supabaseClient
+      .from('vault.secrets' as any)
+      .select('decrypted_secret')
+      .eq('id', data.vault_secret_id)
+      .single();
 
-    if (vaultError || !secretValue) {
+    if (vaultError || !vaultSecret) {
       console.error('[TenantAI] Vault read error:', vaultError);
       return null;
     }
 
-    const credentials = JSON.parse(secretValue);
+    const credentials = JSON.parse(vaultSecret.decrypted_secret);
     const provider = data.adapter_id.replace('ai-', '') as AIProviderType;
     const config = data.config as any || {};
 
