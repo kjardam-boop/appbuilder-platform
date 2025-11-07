@@ -3,7 +3,9 @@ import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, RefreshCw, ImageIcon } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Loader2, RefreshCw, ImageIcon, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { executeTool } from '@/renderer/tools/toolExecutor';
 import { fetchCompanyLogo } from '@/utils/logoFetcher';
@@ -16,6 +18,17 @@ export const TenantBranding = () => {
   const [regenerating, setRegenerating] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [logoLoading, setLogoLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  
+  // Editable theme tokens
+  const [editedTokens, setEditedTokens] = useState({
+    primary: '',
+    accent: '',
+    surface: '',
+    textOnSurface: '',
+    fontStack: '',
+    logoUrl: '',
+  });
 
   const loadTheme = async () => {
     if (!slug) return;
@@ -44,6 +57,19 @@ export const TenantBranding = () => {
         .maybeSingle();
 
       setTheme(themeData);
+      
+      // Initialize edited tokens
+      if (themeData?.tokens) {
+        const tokens = themeData.tokens as any;
+        setEditedTokens({
+          primary: tokens.primary || '',
+          accent: tokens.accent || '',
+          surface: tokens.surface || '',
+          textOnSurface: tokens.textOnSurface || '',
+          fontStack: tokens.fontStack || '',
+          logoUrl: tokens.logoUrl || '',
+        });
+      }
 
       // Fetch logo if we have a URL
       if (themeData?.extracted_from_url) {
@@ -91,6 +117,28 @@ export const TenantBranding = () => {
     }
   };
 
+  const handleSave = async () => {
+    if (!theme?.id) return;
+
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('tenant_themes')
+        .update({ tokens: editedTokens })
+        .eq('id', theme.id);
+
+      if (error) throw error;
+
+      toast.success('Tema lagret!');
+      await loadTheme();
+    } catch (error) {
+      console.error('Failed to save theme:', error);
+      toast.error('Feil ved lagring av tema');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   useEffect(() => {
     loadTheme();
   }, [slug]);
@@ -124,14 +172,24 @@ export const TenantBranding = () => {
     <div className="container mx-auto py-8 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Branding: {tenant?.name}</h1>
-        <Button onClick={handleRegenerate} disabled={regenerating}>
-          {regenerating ? (
-            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-          ) : (
-            <RefreshCw className="h-4 w-4 mr-2" />
-          )}
-          Regenerer fra URL
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={handleRegenerate} disabled={regenerating} variant="outline">
+            {regenerating ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <RefreshCw className="h-4 w-4 mr-2" />
+            )}
+            Regenerer
+          </Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <Save className="h-4 w-4 mr-2" />
+            )}
+            Lagre endringer
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -146,68 +204,157 @@ export const TenantBranding = () => {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Fargepalett</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {tokens.primary && (
-            <div className="space-y-2">
-              <div
-                className="h-20 rounded border"
-                style={{ backgroundColor: tokens.primary }}
-              />
-              <p className="text-sm font-semibold">Primary</p>
-              <p className="text-xs text-muted-foreground">{tokens.primary}</p>
+      <div className="grid lg:grid-cols-2 gap-6">
+        {/* Live Preview */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Live Preview</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div
+              className="space-y-4 p-6 rounded-lg border-2"
+              style={{
+                backgroundColor: editedTokens.surface,
+                color: editedTokens.textOnSurface,
+                fontFamily: editedTokens.fontStack || 'inherit',
+              }}
+            >
+              {editedTokens.logoUrl && (
+                <div className="flex justify-center mb-4">
+                  <img
+                    src={editedTokens.logoUrl}
+                    alt="Logo"
+                    className="max-h-12 object-contain"
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  />
+                </div>
+              )}
+              <h2 className="text-2xl font-bold">Sample Heading</h2>
+              <p>Dette er eksempel på brødtekst med valgt skrift og farger.</p>
+              <div className="flex gap-2">
+                <button
+                  className="px-4 py-2 rounded font-medium"
+                  style={{ backgroundColor: editedTokens.primary, color: '#fff' }}
+                >
+                  Primary Button
+                </button>
+                <button
+                  className="px-4 py-2 rounded font-medium"
+                  style={{ backgroundColor: editedTokens.accent, color: '#fff' }}
+                >
+                  Accent Button
+                </button>
+              </div>
             </div>
-          )}
-          {tokens.accent && (
-            <div className="space-y-2">
-              <div
-                className="h-20 rounded border"
-                style={{ backgroundColor: tokens.accent }}
-              />
-              <p className="text-sm font-semibold">Accent</p>
-              <p className="text-xs text-muted-foreground">{tokens.accent}</p>
-            </div>
-          )}
-          {tokens.surface && (
-            <div className="space-y-2">
-              <div
-                className="h-20 rounded border"
-                style={{ backgroundColor: tokens.surface }}
-              />
-              <p className="text-sm font-semibold">Surface</p>
-              <p className="text-xs text-muted-foreground">{tokens.surface}</p>
-            </div>
-          )}
-          {tokens.textOnSurface && (
-            <div className="space-y-2">
-              <div
-                className="h-20 rounded border"
-                style={{ backgroundColor: tokens.textOnSurface }}
-              />
-              <p className="text-sm font-semibold">Text on Surface</p>
-              <p className="text-xs text-muted-foreground">{tokens.textOnSurface}</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Typografi</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm"><strong>Font Stack:</strong></p>
-          <p
-            className="text-lg mt-2"
-            style={{ fontFamily: tokens.fontStack || 'inherit' }}
-          >
-            {tokens.fontStack || 'N/A'}
-          </p>
-        </CardContent>
-      </Card>
+        {/* Color Editor */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Fargeredigering</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="primary">Primary</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="primary"
+                  type="color"
+                  value={editedTokens.primary}
+                  onChange={(e) => setEditedTokens(prev => ({ ...prev, primary: e.target.value }))}
+                  className="w-20 h-10 cursor-pointer"
+                />
+                <Input
+                  type="text"
+                  value={editedTokens.primary}
+                  onChange={(e) => setEditedTokens(prev => ({ ...prev, primary: e.target.value }))}
+                  className="flex-1"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="accent">Accent</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="accent"
+                  type="color"
+                  value={editedTokens.accent}
+                  onChange={(e) => setEditedTokens(prev => ({ ...prev, accent: e.target.value }))}
+                  className="w-20 h-10 cursor-pointer"
+                />
+                <Input
+                  type="text"
+                  value={editedTokens.accent}
+                  onChange={(e) => setEditedTokens(prev => ({ ...prev, accent: e.target.value }))}
+                  className="flex-1"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="surface">Surface</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="surface"
+                  type="color"
+                  value={editedTokens.surface}
+                  onChange={(e) => setEditedTokens(prev => ({ ...prev, surface: e.target.value }))}
+                  className="w-20 h-10 cursor-pointer"
+                />
+                <Input
+                  type="text"
+                  value={editedTokens.surface}
+                  onChange={(e) => setEditedTokens(prev => ({ ...prev, surface: e.target.value }))}
+                  className="flex-1"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="textOnSurface">Text on Surface</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="textOnSurface"
+                  type="color"
+                  value={editedTokens.textOnSurface}
+                  onChange={(e) => setEditedTokens(prev => ({ ...prev, textOnSurface: e.target.value }))}
+                  className="w-20 h-10 cursor-pointer"
+                />
+                <Input
+                  type="text"
+                  value={editedTokens.textOnSurface}
+                  onChange={(e) => setEditedTokens(prev => ({ ...prev, textOnSurface: e.target.value }))}
+                  className="flex-1"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="fontStack">Font Stack</Label>
+              <Input
+                id="fontStack"
+                type="text"
+                value={editedTokens.fontStack}
+                onChange={(e) => setEditedTokens(prev => ({ ...prev, fontStack: e.target.value }))}
+                placeholder="Inter, ui-sans-serif, system-ui, sans-serif"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="logoUrl">Logo URL</Label>
+              <Input
+                id="logoUrl"
+                type="text"
+                value={editedTokens.logoUrl}
+                onChange={(e) => setEditedTokens(prev => ({ ...prev, logoUrl: e.target.value }))}
+                placeholder="https://example.com/logo.png"
+              />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       <Card>
         <CardHeader>
