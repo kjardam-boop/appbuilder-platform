@@ -101,7 +101,6 @@ Return ONLY valid JSON, no markdown or explanations.`;
             content: prompt
           }
         ],
-        temperature: 0.7,
         max_completion_tokens: 500,
       }),
     });
