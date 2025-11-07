@@ -1,6 +1,6 @@
 // @ts-nocheck
 // @ts-nocheck
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Building2, Copy, RefreshCw, Globe, ExternalLink, Phone, Users, ChevronRight, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -105,6 +105,7 @@ const CompanyDetails = () => {
   const [searchResults, setSearchResults] = useState<BrregCompanySearchResult[]>([]);
   const [websiteInput, setWebsiteInput] = useState("");
   const [notesInput, setNotesInput] = useState("");
+  const websiteInputRef = useRef("");
 
   // Auto-save for notes
   const { status: notesStatus, trigger: triggerNotesSave } = useAutoSave({
@@ -118,16 +119,16 @@ const CompanyDetails = () => {
   // Auto-save for website
   const { status: websiteStatus, trigger: triggerWebsiteSave } = useAutoSave({
     onSave: async () => {
-      if (!company || !websiteInput.trim()) return;
+      if (!company || !websiteInputRef.current.trim()) return;
       const { error } = await supabase
         .from('companies')
-        .update({ website: websiteInput.trim() })
+        .update({ website: websiteInputRef.current.trim() })
         .eq('id', company.id);
       if (error) throw error;
-      setCompany({ ...company, website: websiteInput.trim() });
+      setCompany({ ...company, website: websiteInputRef.current.trim() });
     },
     delay: 1500,
-    enabled: !!company && !!websiteInput.trim()
+    enabled: !!company
   });
   useEffect(() => {
     if (id) {
@@ -142,7 +143,9 @@ const CompanyDetails = () => {
       } = await supabase.from('companies').select('*').eq('id', id).single();
       if (companyError) throw companyError;
       setCompany(companyData as Company);
-      setWebsiteInput(companyData.website || "");
+      const initialWebsite = companyData.website || "";
+      setWebsiteInput(initialWebsite);
+      websiteInputRef.current = initialWebsite;
       
       // Fetch company-global metadata (no user_id)
       const {
@@ -713,8 +716,10 @@ const CompanyDetails = () => {
                     placeholder="https://www.example.com"
                     value={websiteInput}
                     onChange={(e) => {
-                      setWebsiteInput(e.target.value);
-                      triggerWebsiteSave(e.target.value);
+                      const newValue = e.target.value;
+                      setWebsiteInput(newValue);
+                      websiteInputRef.current = newValue;
+                      triggerWebsiteSave();
                     }}
                     className={cn(
                       "flex-1",
