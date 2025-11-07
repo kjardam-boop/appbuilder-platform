@@ -176,27 +176,68 @@ Return ONLY valid JSON, no markdown or explanations.`;
       };
     }
 
-    // Create customer_app_project
-    const { data: project, error: projectError } = await supabase
+    // Check if project already exists for this tenant
+    const { data: existingProject } = await supabase
       .from("customer_app_projects")
-      .insert({
-        tenant_id: tenantId,
-        name: appConfig.name || `${tenant.name} App`,
-        description: appConfig.description || `Generated application for ${tenant.name}`,
-        subdomain: appConfig.subdomain || tenant.slug,
-        status: "draft",
-        selected_capabilities: appConfig.suggested_capabilities || [],
-        branding: theme?.tokens || null,
-      })
-      .select()
-      .single();
+      .select("id")
+      .eq("tenant_id", tenantId)
+      .maybeSingle();
 
-    if (projectError) {
-      console.error("Failed to create project:", projectError);
-      return new Response(
-        JSON.stringify({ error: "Failed to create project", details: projectError.message }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    let project;
+    
+    if (existingProject) {
+      // Update existing project
+      const { data: updatedProject, error: updateError } = await supabase
+        .from("customer_app_projects")
+        .update({
+          name: appConfig.name || `${tenant.name} App`,
+          description: appConfig.description || `Generated application for ${tenant.name}`,
+          subdomain: appConfig.subdomain || tenant.slug,
+          status: "draft",
+          selected_capabilities: appConfig.suggested_capabilities || [],
+          branding: theme?.tokens || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existingProject.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error("Failed to update project:", updateError);
+        return new Response(
+          JSON.stringify({ error: "Failed to update project", details: updateError.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      project = updatedProject;
+      console.log("Updated existing project:", project.id);
+    } else {
+      // Create new project
+      const { data: newProject, error: createError } = await supabase
+        .from("customer_app_projects")
+        .insert({
+          tenant_id: tenantId,
+          name: appConfig.name || `${tenant.name} App`,
+          description: appConfig.description || `Generated application for ${tenant.name}`,
+          subdomain: appConfig.subdomain || tenant.slug,
+          status: "draft",
+          selected_capabilities: appConfig.suggested_capabilities || [],
+          branding: theme?.tokens || null,
+        })
+        .select()
+        .single();
+
+      if (createError) {
+        console.error("Failed to create project:", createError);
+        return new Response(
+          JSON.stringify({ error: "Failed to create project", details: createError.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      project = newProject;
+      console.log("Created new project:", project.id);
     }
 
     return new Response(
