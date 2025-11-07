@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,13 @@ const CompanySelector = ({ open, onOpenChange, onSelect }: CompanySelectorProps)
   const [savedCompanies, setSavedCompanies] = useState<Company[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isLoadingSaved, setIsLoadingSaved] = useState(false);
+
+  // Load saved companies when dialog opens
+  useEffect(() => {
+    if (open) {
+      loadSavedCompanies();
+    }
+  }, [open]);
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
@@ -137,7 +144,7 @@ const CompanySelector = ({ open, onOpenChange, onSelect }: CompanySelectorProps)
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue="saved" onValueChange={(v) => v === "saved" && loadSavedCompanies()}>
+        <Tabs defaultValue="saved">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="saved">
               <Bookmark className="mr-2 h-4 w-4" />
