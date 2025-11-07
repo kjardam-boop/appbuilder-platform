@@ -30,16 +30,8 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     
-    // Create separate clients for public and vault schemas
-    const supabasePublic = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    });
-
-    const supabaseVault = createClient(supabaseUrl, supabaseServiceKey, {
-      db: { schema: 'vault' },
+    // Create client with service role (can access vault_secrets)
+    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
       auth: {
         autoRefreshToken: false,
         persistSession: false
@@ -53,13 +45,14 @@ serve(async (req) => {
       
       console.log(`[AI Credentials] Saving credentials for tenant ${tenantId}, provider ${provider}`);
 
-      // Insert into vault.secrets using vault-scoped client
+      // Insert into vault_secrets in public schema
       const secretName = `ai_credentials_${tenantId}_${provider}`;
-      const { data: vaultData, error: vaultError } = await supabaseVault
-        .from('secrets')
+      const { data: vaultData, error: vaultError } = await supabase
+        .from('vault_secrets')
         .upsert({
           name: secretName,
-          secret: JSON.stringify(credentials),
+          encrypted_value: JSON.stringify(credentials),
+          description: `AI credentials for ${provider}`,
         }, {
           onConflict: 'name'
         })
@@ -74,7 +67,7 @@ serve(async (req) => {
       console.log('[AI Credentials] Vault secret created/updated:', vaultData.id);
 
       // Upsert tenant_integrations with vault_secret_id
-      const { error: integrationError } = await supabasePublic
+      const { error: integrationError } = await supabase
         .from('tenant_integrations')
         .upsert({
           tenant_id: tenantId,
@@ -104,7 +97,7 @@ serve(async (req) => {
       console.log(`[AI Credentials] Fetching credentials for tenant ${tenantId}, provider ${provider}`);
 
       // Get integration with vault_secret_id
-      const { data: integration, error: integrationError } = await supabasePublic
+      const { data: integration, error: integrationError } = await supabase
         .from('tenant_integrations')
         .select('vault_secret_id, config')
         .eq('tenant_id', tenantId)
@@ -124,10 +117,10 @@ serve(async (req) => {
         );
       }
 
-      // Read secret from Vault using vault-scoped client
-      const { data: vaultSecret, error: secretError } = await supabaseVault
-        .from('secrets')
-        .select('decrypted_secret')
+      // Read secret from vault_secrets in public schema
+      const { data: vaultSecret, error: secretError } = await supabase
+        .from('vault_secrets')
+        .select('encrypted_value')
         .eq('id', integration.vault_secret_id)
         .single();
 
@@ -136,7 +129,7 @@ serve(async (req) => {
         throw new Error(`Failed to read credentials: ${secretError.message}`);
       }
 
-      const credentials = JSON.parse(vaultSecret.decrypted_secret);
+      const credentials = JSON.parse(vaultSecret.encrypted_value);
 
       return new Response(
         JSON.stringify({ 
@@ -150,16 +143,18 @@ serve(async (req) => {
     } else if (action === 'list') {
       console.log('[AI Credentials] Listing all Vault secrets');
 
-      // List all secrets from Vault
-      const { data: secrets, error: secretsError } = await supabaseVault
-        .from('secrets')
-        .select('id, name, created_at')
+      // List all secrets from vault_secrets in public schema
+      const { data: secrets, error: secretsError } = await supabase
+        .from('vault_secrets')
+        .select('id, name, description, created_at')
         .order('created_at', { ascending: false });
 
       if (secretsError) {
         console.error('[AI Credentials] Vault list error:', secretsError);
         throw new Error(`Failed to list secrets: ${secretsError.message}`);
       }
+
+      console.log('[AI Credentials] Found secrets:', secrets);
 
       return new Response(
         JSON.stringify({ 
@@ -178,9 +173,9 @@ serve(async (req) => {
 
       console.log(`[AI Credentials] Linking secret ${vaultSecretId} to tenant ${tenantId}, provider ${provider}`);
 
-      // Verify secret exists in Vault
-      const { data: secretExists, error: verifyError } = await supabaseVault
-        .from('secrets')
+      // Verify secret exists in vault_secrets
+      const { data: secretExists, error: verifyError } = await supabase
+        .from('vault_secrets')
         .select('id')
         .eq('id', vaultSecretId)
         .single();
@@ -191,7 +186,7 @@ serve(async (req) => {
       }
 
       // Link secret to tenant integration
-      const { error: linkError } = await supabasePublic
+      const { error: linkError } = await supabase
         .from('tenant_integrations')
         .upsert({
           tenant_id: tenantId,
