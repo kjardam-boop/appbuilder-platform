@@ -14,6 +14,90 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_policies: {
+        Row: {
+          alert_threshold_percent: number | null
+          blocked_keywords: string[] | null
+          created_at: string
+          enable_content_filter: boolean | null
+          enable_failover: boolean | null
+          failover_on_error: boolean | null
+          failover_on_rate_limit: boolean | null
+          id: string
+          max_cost_per_day: number | null
+          max_cost_per_month: number | null
+          max_requests_per_day: number | null
+          max_requests_per_hour: number | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          alert_threshold_percent?: number | null
+          blocked_keywords?: string[] | null
+          created_at?: string
+          enable_content_filter?: boolean | null
+          enable_failover?: boolean | null
+          failover_on_error?: boolean | null
+          failover_on_rate_limit?: boolean | null
+          id?: string
+          max_cost_per_day?: number | null
+          max_cost_per_month?: number | null
+          max_requests_per_day?: number | null
+          max_requests_per_hour?: number | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          alert_threshold_percent?: number | null
+          blocked_keywords?: string[] | null
+          created_at?: string
+          enable_content_filter?: boolean | null
+          enable_failover?: boolean | null
+          failover_on_error?: boolean | null
+          failover_on_rate_limit?: boolean | null
+          id?: string
+          max_cost_per_day?: number | null
+          max_cost_per_month?: number | null
+          max_requests_per_day?: number | null
+          max_requests_per_hour?: number | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ai_provider_health: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          last_check_at: string
+          metadata: Json | null
+          provider: string
+          response_time_ms: number | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          last_check_at?: string
+          metadata?: Json | null
+          provider: string
+          response_time_ms?: number | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          last_check_at?: string
+          metadata?: Json | null
+          provider?: string
+          response_time_ms?: number | null
+          status?: string
+        }
+        Relationships: []
+      }
       ai_usage_logs: {
         Row: {
           completion_tokens: number | null
@@ -3506,7 +3590,20 @@ export type Database = {
         }
         Returns: boolean
       }
+      check_ai_rate_limit: {
+        Args: { p_current_time?: string; p_tenant_id: string }
+        Returns: Json
+      }
       get_platform_tenant: { Args: never; Returns: string }
+      get_provider_health: {
+        Args: { p_provider: string }
+        Returns: {
+          error_message: string
+          last_check_at: string
+          response_time_ms: number
+          status: string
+        }[]
+      }
       get_user_roles: {
         Args: { _tenant_id: string; _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"][]

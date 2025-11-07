@@ -340,6 +340,37 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Check rate limits before proceeding
+    const { data: rateLimitCheck } = await supabaseClient.rpc('check_ai_rate_limit', {
+      p_tenant_id: tenantId
+    });
+
+    console.log('[Rate Limit Check]', rateLimitCheck);
+
+    if (rateLimitCheck && !rateLimitCheck.allowed) {
+      // Log rate limit hit
+      await supabaseClient.from('ai_usage_logs').insert({
+        tenant_id: tenantId,
+        provider: 'unknown',
+        model: 'unknown',
+        endpoint: 'ai-mcp-chat',
+        status: 'rate_limited',
+        error_message: `Rate limit exceeded: ${rateLimitCheck.reason}`,
+        metadata: rateLimitCheck
+      });
+
+      return new Response(
+        JSON.stringify({ 
+          error: 'Rate limit exceeded',
+          details: rateLimitCheck
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 429,
+        }
+      );
+    }
+
     // Get tenant-specific AI configuration
     const tenantAIConfig = await getTenantAIConfig(tenantId, supabaseClient);
     const aiClientConfig = getAIProviderClient(tenantAIConfig?.config || null, LOVABLE_API_KEY);
@@ -347,6 +378,13 @@ serve(async (req) => {
     console.log(`[AI Provider] Using: ${aiClientConfig.provider} with model: ${aiClientConfig.model}`);
 
     const startTime = Date.now(); // Track request duration
+
+    // Fetch AI policy for failover settings
+    const { data: aiPolicy } = await supabaseClient
+      .from('ai_policies')
+      .select('enable_failover, failover_on_error, failover_on_rate_limit')
+      .eq('tenant_id', tenantId)
+      .single();
 
     const defaultSystemPrompt = `Du er en intelligent AI-assistent med tilgang til en bedrifts-plattform. 
 Du kan hjelpe brukere med å:
@@ -369,7 +407,6 @@ Når du bruker verktøy:
       ...messages
     ];
 
-    // Build API request body with tenant-specific config
     const buildRequestBody = (messages: any[]) => {
       const body: any = {
         model: aiClientConfig.model,
@@ -397,30 +434,101 @@ Når du bruker verktøy:
       return body;
     };
 
-    let response = await fetch(`${aiClientConfig.baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${aiClientConfig.apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(buildRequestBody(aiMessages)),
-    });
+    // Function to call AI with failover support
+    const callAIWithFailover = async (
+      config: any,
+      messages: any[],
+      attempt: number = 1
+    ): Promise<any> => {
+      try {
+        const response = await fetch(`${config.baseUrl}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${config.apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(buildRequestBody(messages)),
+        });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('AI API error:', response.status, errorText);
-      
-      if (response.status === 429) {
-        throw new Error('Rate limit exceeded');
-      }
-      if (response.status === 402) {
-        throw new Error('Payment required');
-      }
-      
-      throw new Error(`AI API error: ${response.status}`);
-    }
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`[AI Error] ${config.provider}:`, response.status, errorText);
+          
+          // Check if we should failover
+          const shouldFailover = aiPolicy?.enable_failover && 
+            ((response.status === 429 && aiPolicy?.failover_on_rate_limit) ||
+             (response.status >= 500 && aiPolicy?.failover_on_error));
 
-    let aiData = await response.json();
+          if (shouldFailover && config.provider !== 'lovable' && attempt === 1) {
+            console.log('[Failover] Switching to Lovable AI');
+            
+            // Log failover event
+            await supabaseClient.from('ai_usage_logs').insert({
+              tenant_id: tenantId,
+              provider: config.provider,
+              model: config.model,
+              endpoint: 'ai-mcp-chat',
+              status: 'error',
+              error_message: `Provider failed (${response.status}), failing over to Lovable AI`,
+              metadata: { failover: true, original_status: response.status }
+            });
+
+            // Retry with Lovable AI
+            const lovableConfig = {
+              provider: 'lovable',
+              apiKey: LOVABLE_API_KEY,
+              baseUrl: 'https://ai.gateway.lovable.dev/v1',
+              model: 'google/gemini-2.5-flash'
+            };
+            return callAIWithFailover(lovableConfig, messages, 2);
+          }
+
+          if (response.status === 429) {
+            throw new Error('Rate limit exceeded');
+          }
+          if (response.status === 402) {
+            throw new Error('Payment required');
+          }
+          
+          throw new Error(`AI API error: ${response.status}`);
+        }
+
+        return await response.json();
+      } catch (error) {
+        // On network/connection errors, failover if enabled
+        const shouldFailover = aiPolicy?.enable_failover && 
+          aiPolicy?.failover_on_error && 
+          config.provider !== 'lovable' && 
+          attempt === 1;
+
+        if (shouldFailover) {
+          console.log('[Failover] Network error, switching to Lovable AI');
+          
+          await supabaseClient.from('ai_usage_logs').insert({
+            tenant_id: tenantId,
+            provider: config.provider,
+            model: config.model,
+            endpoint: 'ai-mcp-chat',
+            status: 'error',
+            error_message: `Network error, failing over to Lovable AI: ${error instanceof Error ? error.message : 'Unknown'}`,
+            metadata: { failover: true }
+          });
+
+          const lovableConfig = {
+            provider: 'lovable',
+            apiKey: LOVABLE_API_KEY,
+            baseUrl: 'https://ai.gateway.lovable.dev/v1',
+            model: 'google/gemini-2.5-flash'
+          };
+          return callAIWithFailover(lovableConfig, messages, 2);
+        }
+
+        throw error;
+      }
+    };
+
+    // Initial AI call with failover support
+    let aiData = await callAIWithFailover(aiClientConfig, aiMessages);
     let choice = aiData.choices?.[0];
 
     // Handle tool calls (up to 5 iterations)
@@ -458,21 +566,8 @@ Når du bruker verktøy:
         });
       }
 
-      // Call AI again with tool results
-      response = await fetch(`${aiClientConfig.baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${aiClientConfig.apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(buildRequestBody(aiMessages)),
-      });
-
-      if (!response.ok) {
-        throw new Error(`AI API error: ${response.status}`);
-      }
-
-      aiData = await response.json();
+      // Call AI again with tool results and failover support
+      aiData = await callAIWithFailover(aiClientConfig, aiMessages);
       choice = aiData.choices?.[0];
     }
 

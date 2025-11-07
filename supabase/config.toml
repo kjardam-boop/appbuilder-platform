@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.test-ai-provider]
 verify_jwt = false
+
+[functions.check-ai-provider-health]
+verify_jwt = false
