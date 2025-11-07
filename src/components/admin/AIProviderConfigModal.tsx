@@ -27,11 +27,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, CheckCircle, XCircle, Shield } from 'lucide-react';
 import type { AIProviderType } from '@/modules/core/ai';
 import { DEFAULT_MODELS, PROVIDER_DISPLAY_NAMES } from '@/modules/core/ai';
 
@@ -43,25 +40,11 @@ interface AIProviderConfigModalProps {
 }
 
 const formSchema = z.object({
-  mode: z.enum(['paste', 'existing']),
-  vaultSecretId: z.string().optional(),
-  apiKey: z.string().optional(),
-  baseUrl: z.string().url('Må være en gyldig URL').optional().or(z.literal('')),
+  vaultSecretId: z.string().min(1, 'Velg en Vault secret'),
   model: z.string().min(1, 'Modell er påkrevd'),
   temperature: z.coerce.number().min(0).max(2).optional(),
   maxTokens: z.coerce.number().min(1).optional(),
   maxCompletionTokens: z.coerce.number().min(1).optional(),
-}).refine((data) => {
-  if (data.mode === 'paste' && !data.apiKey) {
-    return false;
-  }
-  if (data.mode === 'existing' && !data.vaultSecretId) {
-    return false;
-  }
-  return true;
-}, {
-  message: 'API key eller Vault secret er påkrevd',
-  path: ['apiKey'],
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -109,28 +92,23 @@ export function AIProviderConfigModal({
   tenantId,
 }: AIProviderConfigModalProps) {
   const { toast } = useToast();
-  const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<'success' | 'error' | null>(null);
   const [vaultSecrets, setVaultSecrets] = useState<VaultSecret[]>([]);
   const [loadingSecrets, setLoadingSecrets] = useState(false);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      mode: 'paste',
       model: DEFAULT_MODELS[providerType],
       temperature: 0.7,
     },
   });
 
-  const mode = form.watch('mode');
-
-  // Fetch vault secrets when mode changes to 'existing'
+  // Fetch vault secrets when modal opens
   useEffect(() => {
-    if (mode === 'existing' && vaultSecrets.length === 0) {
+    if (open) {
       fetchVaultSecrets();
     }
-  }, [mode]);
+  }, [open]);
 
   const fetchVaultSecrets = async () => {
     setLoadingSecrets(true);
@@ -158,61 +136,30 @@ export function AIProviderConfigModal({
 
   const onSubmit = async (data: FormData) => {
     try {
-      if (data.mode === 'paste') {
-        // Create new secret in Vault
-        const { data: result, error } = await supabase.functions.invoke('manage-ai-credentials', {
-          body: {
-            action: 'save',
-            tenantId,
-            provider: providerType,
-            credentials: {
-              apiKey: data.apiKey!,
-              baseUrl: data.baseUrl || undefined,
-            },
-            config: {
-              model: data.model,
-              temperature: data.temperature,
-              maxTokens: data.maxTokens,
-              maxCompletionTokens: data.maxCompletionTokens,
-            }
+      const { data: result, error } = await supabase.functions.invoke('manage-ai-credentials', {
+        body: {
+          action: 'link',
+          tenantId,
+          provider: providerType,
+          vaultSecretId: data.vaultSecretId,
+          config: {
+            model: data.model,
+            temperature: data.temperature,
+            maxTokens: data.maxTokens,
+            maxCompletionTokens: data.maxCompletionTokens,
           }
-        });
-
-        if (error || !result?.success) {
-          throw new Error(result?.error || error?.message || 'Failed to save credentials');
         }
+      });
 
-        toast({
-          title: 'AI Provider konfigurert',
-          description: `${PROVIDER_DISPLAY_NAMES[providerType]} er nå aktiv og API-nøkkel er kryptert i Vault.`,
-        });
-      } else {
-        // Link existing Vault secret
-        const { data: result, error } = await supabase.functions.invoke('manage-ai-credentials', {
-          body: {
-            action: 'link',
-            tenantId,
-            provider: providerType,
-            vaultSecretId: data.vaultSecretId,
-            config: {
-              model: data.model,
-              temperature: data.temperature,
-              maxTokens: data.maxTokens,
-              maxCompletionTokens: data.maxCompletionTokens,
-            }
-          }
-        });
-
-        if (error || !result?.success) {
-          throw new Error(result?.error || error?.message || 'Failed to link secret');
-        }
-
-        toast({
-          title: 'AI Provider konfigurert',
-          description: `${PROVIDER_DISPLAY_NAMES[providerType]} bruker nå eksisterende Vault secret.`,
-        });
+      if (error || !result?.success) {
+        throw new Error(result?.error || error?.message || 'Failed to link secret');
       }
-      
+
+      toast({
+        title: 'AI Provider konfigurert',
+        description: `${PROVIDER_DISPLAY_NAMES[providerType]} bruker nå eksisterende Vault secret.`,
+      });
+
       onClose();
     } catch (error: any) {
       console.error('Error saving AI config:', error);
@@ -285,113 +232,38 @@ export function AIProviderConfigModal({
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
-              name="mode"
+              name="vaultSecretId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Konfigurasjonsmetode</FormLabel>
-                  <FormControl>
-                    <RadioGroup
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      className="flex gap-4"
-                    >
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="paste" id="paste" />
-                        <Label htmlFor="paste" className="cursor-pointer">
-                          Paste ny API key
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="existing" id="existing" />
-                        <Label htmlFor="existing" className="cursor-pointer flex items-center gap-1">
-                          <Shield className="h-4 w-4" />
-                          Velg eksisterende Vault secret
-                        </Label>
-                      </div>
-                    </RadioGroup>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {mode === 'existing' ? (
-              <FormField
-                control={form.control}
-                name="vaultSecretId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Vault Secret</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} disabled={loadingSecrets}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder={loadingSecrets ? "Laster secrets..." : "Velg secret"} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {vaultSecrets.map((secret) => (
+                  <FormLabel>Vault Secret</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={loadingSecrets}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={loadingSecrets ? 'Laster secrets...' : 'Velg secret'} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {vaultSecrets.length === 0 ? (
+                        <SelectItem value="__none" disabled>
+                          Ingen secrets funnet – opprett i Vault
+                        </SelectItem>
+                      ) : (
+                        vaultSecrets.map((secret) => (
                           <SelectItem key={secret.id} value={secret.id}>
                             {secret.name}
                             <span className="text-xs text-muted-foreground ml-2">
                               ({new Date(secret.created_at).toLocaleDateString('nb-NO')})
                             </span>
                           </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormDescription>
-                      Velg en eksisterende API-nøkkel fra Vault.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            ) : (
-              <>
-                <FormField
-                  control={form.control}
-                  name="apiKey"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>API Key</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="password" 
-                          placeholder="sk-..." 
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Din API-nøkkel vil bli kryptert og lagret sikkert i Vault.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {providerType === 'azure-openai' && (
-                  <FormField
-                    control={form.control}
-                    name="baseUrl"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Azure Endpoint URL</FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder="https://your-resource.openai.azure.com" 
-                            {...field} 
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Din Azure OpenAI resource endpoint.
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
-              </>
-            )}
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>Velg en eksisterende API-nøkkel fra Vault.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}
@@ -413,9 +285,7 @@ export function AIProviderConfigModal({
                       ))}
                     </SelectContent>
                   </Select>
-                  <FormDescription>
-                    Standard modell for AI-kall med denne provideren.
-                  </FormDescription>
+                  <FormDescription>Standard modell for AI-kall med denne provideren.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -429,14 +299,7 @@ export function AIProviderConfigModal({
                   <FormItem>
                     <FormLabel>Temperature (valgfri)</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="number" 
-                        step="0.1" 
-                        min="0" 
-                        max="2" 
-                        placeholder="0.7" 
-                        {...field} 
-                      />
+                      <Input type="number" step="0.1" min="0" max="2" placeholder="0.7" {...field} />
                     </FormControl>
                     <FormDescription>0-2 (høyere = mer kreativ)</FormDescription>
                     <FormMessage />
@@ -451,11 +314,7 @@ export function AIProviderConfigModal({
                   <FormItem>
                     <FormLabel>Max Tokens (valgfri)</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="number" 
-                        placeholder="1000" 
-                        {...field} 
-                      />
+                      <Input type="number" placeholder="1000" {...field} />
                     </FormControl>
                     <FormDescription>Maks respons-lengde</FormDescription>
                     <FormMessage />
@@ -465,34 +324,7 @@ export function AIProviderConfigModal({
             </div>
 
             <div className="flex gap-3 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={testConnection}
-                disabled={testing || mode === 'existing' || !form.watch('apiKey')}
-                className="gap-2"
-              >
-                {testing ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Tester...
-                  </>
-                ) : testResult === 'success' ? (
-                  <>
-                    <CheckCircle className="w-4 h-4 text-green-500" />
-                    Test Connection
-                  </>
-                ) : testResult === 'error' ? (
-                  <>
-                    <XCircle className="w-4 h-4 text-destructive" />
-                    Test Connection
-                  </>
-                ) : (
-                  'Test Connection'
-                )}
-              </Button>
-
-              <Button type="submit" className="flex-1">
+              <Button type="submit" className="flex-1" disabled={loadingSecrets || !form.watch('vaultSecretId')}>
                 Lagre konfigurasjon
               </Button>
             </div>
