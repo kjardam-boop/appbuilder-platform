@@ -11,7 +11,8 @@ import {
   Users,
   Package,
   Settings,
-  Plus
+  Plus,
+  Palette
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -261,6 +262,12 @@ export default function TenantDetails() {
           </div>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <Link to={`/admin/tenants/${tenant.slug}/branding`}>
+              <Palette className="mr-2 h-4 w-4" />
+              Branding
+            </Link>
+          </Button>
           <Button variant="outline" asChild>
             <Link to={`/admin/tenants/${tenantId}/apps`}>
               <Package className="mr-2 h-4 w-4" />
