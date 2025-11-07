@@ -257,26 +257,32 @@ Important: Return actual colors found in the HTML/CSS, not defaults.`;
     if (tenantId) {
       const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
       const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-      const supabase = createClient(supabaseUrl, supabaseKey);
+      const sb = createClient(supabaseUrl, supabaseKey);
 
-      const { error: upsertError } = await supabase
-        .from("tenant_themes")
-        .upsert(
-          {
+      // Try update existing active theme; if none, insert
+      const { data: existing } = await sb
+        .from('tenant_themes')
+        .select('id')
+        .eq('tenant_id', tenantId)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (existing?.id) {
+        const { error: updErr } = await sb
+          .from('tenant_themes')
+          .update({ tokens: finalTokens, extracted_from_url: websiteUrl, is_active: true })
+          .eq('id', existing.id);
+        if (updErr) console.warn('[extract-brand] Failed to update theme:', updErr);
+      } else {
+        const { error: insErr } = await sb
+          .from('tenant_themes')
+          .insert({
             tenant_id: tenantId,
             tokens: finalTokens,
             extracted_from_url: websiteUrl,
             is_active: true,
-          },
-          {
-            onConflict: "tenant_id",
-          }
-        );
-
-      if (upsertError) {
-        console.warn("[extract-brand] Failed to save theme:", upsertError);
-      } else {
-        console.log("[extract-brand] Theme saved to database");
+          });
+        if (insErr) console.warn('[extract-brand] Failed to insert theme:', insErr);
       }
     }
 
