@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.ai-mcp-chat]
 verify_jwt = false
+
+[functions.test-ai-provider]
+verify_jwt = false

@@ -1,6 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TaskCategoryManager } from '@/modules/core/admin';
 import { IndustryManager } from '@/modules/core/industry/components/IndustryManager';
+import AIProviderSettings from '@/pages/admin/AIProviderSettings';
 import { useAdminRole } from '@/modules/core/user';
 import { Navigate } from 'react-router-dom';
 
@@ -33,6 +34,7 @@ export default function AdminSettings() {
           <TabsTrigger value="task-categories">Oppgavekategorier</TabsTrigger>
           <TabsTrigger value="industries">Bransjer</TabsTrigger>
           <TabsTrigger value="products">Produkter</TabsTrigger>
+          <TabsTrigger value="ai-providers">AI Providers</TabsTrigger>
           <TabsTrigger value="settings">Innstillinger</TabsTrigger>
         </TabsList>
 
@@ -48,6 +50,10 @@ export default function AdminSettings() {
           <div className="p-8 text-center text-muted-foreground">
             Produktadministrasjon kommer snart...
           </div>
+        </TabsContent>
+
+        <TabsContent value="ai-providers">
+          <AIProviderSettings />
         </TabsContent>
 
         <TabsContent value="settings">
