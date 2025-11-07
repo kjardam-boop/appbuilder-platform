@@ -1,11 +1,14 @@
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AppBreadcrumbs } from "@/components/ui/app-breadcrumbs";
-import { Brain, Building2, Key, Info, ArrowRight } from "lucide-react";
+import { Brain, Building2, Key, Info, ArrowRight, Settings2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Link } from "react-router-dom";
 import { useTenants } from "@/hooks/useTenants";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import AIProviderSettings from "./AIProviderSettings";
 
 /**
  * Platform Integrations Overview
@@ -15,6 +18,7 @@ import { useTenants } from "@/hooks/useTenants";
  */
 export default function PlatformIntegrations() {
   const { data: tenants, isLoading } = useTenants();
+  const [activeTab, setActiveTab] = useState("overview");
 
   return (
     <div className="container mx-auto py-8 space-y-6">
@@ -28,9 +32,20 @@ export default function PlatformIntegrations() {
       <div>
         <h1 className="text-3xl font-bold">Platform Integrations</h1>
         <p className="text-muted-foreground mt-2">
-          Oversikt over AI providers og eksterne systemer på tvers av tenants
+          Konfigurer AI providers og se oversikt på tvers av tenants
         </p>
       </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="overview">Oversikt</TabsTrigger>
+          <TabsTrigger value="configure">
+            <Settings2 className="h-4 w-4 mr-2" />
+            Konfigurer AI Providers
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-6">
 
       {/* Info Alert */}
       <Alert>
@@ -222,6 +237,22 @@ export default function PlatformIntegrations() {
           </Alert>
         </CardContent>
       </Card>
+        </TabsContent>
+
+        <TabsContent value="configure">
+          <Card>
+            <CardHeader>
+              <CardTitle>Konfigurer AI Providers</CardTitle>
+              <CardDescription>
+                Administrer API-nøkler og innstillinger for AI providers. Disse innstillingene gjelder for din tenant.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AIProviderSettings />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
