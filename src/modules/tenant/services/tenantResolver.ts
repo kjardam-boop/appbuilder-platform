@@ -79,30 +79,51 @@ export async function resolveTenantByHost(host: string): Promise<TenantConfig | 
     if (isLovableDomain(hostname) || isLocalhost(hostname)) {
       console.log(`[TenantResolver] No exact match, falling back to platform tenant for: ${hostname}`);
       
-      const { data: platformTenant, error: platformErr } = await supabase
+      // RPC can return just the platform tenant id (uuid) in production
+      // but some tests/mocks may return the full row. Handle both cases.
+      const { data: platformTenantResult, error: platformErr } = await supabase
         .rpc('get_platform_tenant');
       
       if (platformErr) {
         console.error('[TenantResolver] Error querying platform tenant:', platformErr);
       }
       
-      if (platformTenant) {
-        const t: any = platformTenant as any;
-        const mapped: TenantConfig = {
-          id: t.id,
-          tenant_id: t.id,
-          name: t.name,
-          host: hostname,
-          domain: t.domain || undefined,
-          subdomain: t.slug || undefined,
-          enabled_modules: [],
-          custom_config: t.settings || {},
-          is_platform_tenant: true, // Always true for platform tenant
-          created_at: t.created_at,
-          updated_at: t.updated_at,
-        } as any;
-        console.log(`[TenantResolver] Using platform tenant as fallback -> ${mapped.tenant_id}`);
-        return mapped;
+      if (platformTenantResult) {
+        let t: any = null;
+
+        if (typeof platformTenantResult === 'object') {
+          // Already a full row (tests/mocks)
+          t = platformTenantResult as any;
+        } else {
+          // UUID -> fetch full row
+          const { data, error: tenantErr } = await supabase
+            .from('tenants')
+            .select('*')
+            .eq('id', platformTenantResult as any)
+            .maybeSingle();
+          if (tenantErr) {
+            console.error('[TenantResolver] Error loading platform tenant row:', tenantErr);
+          }
+          t = data as any;
+        }
+        
+        if (t) {
+          const mapped: TenantConfig = {
+            id: t.id,
+            tenant_id: t.id,
+            name: t.name,
+            host: hostname,
+            domain: (t as any).domain || undefined,
+            subdomain: (t as any).slug || undefined,
+            enabled_modules: [],
+            custom_config: (t as any).settings || {},
+            is_platform_tenant: true, // Always true for platform tenant
+            created_at: t.created_at,
+            updated_at: t.updated_at,
+          } as any;
+          console.log(`[TenantResolver] Using platform tenant as fallback -> ${mapped.tenant_id}`);
+          return mapped;
+        }
       }
     }
 
