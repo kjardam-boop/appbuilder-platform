@@ -1,5 +1,6 @@
 import type { ToolExecutionResult } from './toolExecutor';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchCompanyLogo } from '@/utils/logoFetcher';
 
 /**
  * Extract brand colors/fonts from a website
@@ -50,6 +51,16 @@ export async function executeBrand(
 
     // No theme found - generate defaults and persist
     let tokens: any;
+    
+    // Try to fetch logo from the URL
+    let logoUrl: string | null = null;
+    try {
+      logoUrl = await fetchCompanyLogo(params.url);
+      console.log('[brand] Fetched logo:', logoUrl);
+    } catch (logoErr) {
+      console.warn('[brand] Failed to fetch logo:', logoErr);
+    }
+    
     if (hostname.includes('akselera.com')) {
       console.log('[brand] Generating built-in Akselera theme');
       tokens = {
@@ -58,7 +69,7 @@ export async function executeBrand(
         surface: '#FFFFFF',
         textOnSurface: '#1F2937',
         fontStack: 'Inter, ui-sans-serif, system-ui, sans-serif',
-        logoUrl: `${params.url}/logo.png`,
+        logoUrl: logoUrl || `${params.url}/logo.png`,
       };
     } else {
       console.log('[brand] Using default theme for:', params.url);
@@ -68,7 +79,7 @@ export async function executeBrand(
         surface: '#FFFFFF',
         textOnSurface: '#1F2937',
         fontStack: 'Inter, ui-sans-serif, system-ui, sans-serif',
-        logoUrl: `${params.url}/logo.png`,
+        logoUrl: logoUrl || `${params.url}/logo.png`,
       };
     }
 
