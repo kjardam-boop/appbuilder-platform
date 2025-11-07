@@ -13,7 +13,9 @@ import {
   Settings,
   Plus,
   Palette,
-  Sparkles
+  Sparkles,
+  Copy,
+  Check
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -88,6 +90,11 @@ export default function TenantDetails() {
   const [tenantApplications, setTenantApplications] = useState<TenantApplication[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [domainDialogOpen, setDomainDialogOpen] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<AppProject | null>(null);
+  const [subdomainInput, setSubdomainInput] = useState("");
+  const [isSavingDomain, setIsSavingDomain] = useState(false);
+  const [copiedRecord, setCopiedRecord] = useState<string | null>(null);
 
   useEffect(() => {
     loadTenantDetails();
@@ -234,6 +241,56 @@ export default function TenantDetails() {
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const generateSubdomainFromName = (name: string): string => {
+    return name
+      .toLowerCase()
+      .replace(/[æ]/g, 'ae')
+      .replace(/[ø]/g, 'o')
+      .replace(/[å]/g, 'a')
+      .replace(/[^a-z0-9]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+  };
+
+  const openDomainDialog = (project: AppProject) => {
+    setSelectedProject(project);
+    setSubdomainInput(project.subdomain || generateSubdomainFromName(project.name));
+    setDomainDialogOpen(true);
+  };
+
+  const handleSaveDomain = async () => {
+    if (!selectedProject || !subdomainInput) return;
+
+    setIsSavingDomain(true);
+    try {
+      const { error } = await supabase
+        .from('customer_app_projects')
+        .update({ subdomain: subdomainInput.trim() })
+        .eq('id', selectedProject.id);
+
+      if (error) throw error;
+
+      toast.success('Domene lagret!', {
+        description: `Subdomain satt til: ${subdomainInput}`
+      });
+      
+      setDomainDialogOpen(false);
+      await loadTenantDetails();
+    } catch (error) {
+      console.error('Failed to save domain:', error);
+      toast.error('Kunne ikke lagre domene');
+    } finally {
+      setIsSavingDomain(false);
+    }
+  };
+
+  const copyToClipboard = (text: string, recordType: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedRecord(recordType);
+    setTimeout(() => setCopiedRecord(null), 2000);
+    toast.success('Kopiert til utklippstavle');
   };
 
   if (isLoading) {
@@ -517,6 +574,20 @@ export default function TenantDetails() {
                     <Separator />
 
                     <div className="flex gap-2">
+                      <Button size="sm" variant="secondary" asChild>
+                        <Link to={`/apps/${project.id}/brand-preview`} className="flex items-center gap-2">
+                          <Eye className="h-4 w-4" />
+                          Åpne app
+                        </Link>
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => openDomainDialog(project)}
+                      >
+                        <Settings className="h-4 w-4 mr-2" />
+                        Domene
+                      </Button>
                       {project.deployed_to_preview_at && getPreviewUrl(project) && (
                         <Button variant="outline" size="sm" asChild>
                           <a
@@ -545,12 +616,6 @@ export default function TenantDetails() {
                           </a>
                         </Button>
                       )}
-                      <Button size="sm" variant="secondary" asChild>
-                        <Link to={`/apps/${project.id}/brand-preview`} className="flex items-center gap-2">
-                          <Eye className="h-4 w-4" />
-                          Åpne app
-                        </Link>
-                      </Button>
                     </div>
 
                     {project.selected_capabilities && (
@@ -638,6 +703,181 @@ export default function TenantDetails() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Domain Configuration Dialog */}
+      <Dialog open={domainDialogOpen} onOpenChange={setDomainDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Domenekonfigurasjon</DialogTitle>
+            <DialogDescription>
+              Konfigurer subdomain og se DNS-instruksjoner for {selectedProject?.name}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            {/* Subdomain Input */}
+            <div className="space-y-2">
+              <Label htmlFor="subdomain">Subdomain</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="subdomain"
+                  value={subdomainInput}
+                  onChange={(e) => setSubdomainInput(e.target.value)}
+                  placeholder="mitt-selskap"
+                  className="flex-1"
+                />
+                <Button
+                  variant="outline"
+                  onClick={() => selectedProject && setSubdomainInput(generateSubdomainFromName(selectedProject.name))}
+                >
+                  Auto-generer
+                </Button>
+              </div>
+              {subdomainInput && (
+                <p className="text-sm text-muted-foreground">
+                  Produksjons-URL: <span className="font-mono text-primary">https://{subdomainInput}.lovableproject.com</span>
+                </p>
+              )}
+            </div>
+
+            <Separator />
+
+            {/* DNS Instructions */}
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-semibold mb-2">DNS-konfigurasjon</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  For å koble til ditt eget domene, legg til følgende DNS-poster hos din domeneleverandør:
+                </p>
+              </div>
+
+              {/* A Record for root */}
+              <Card className="bg-muted/50">
+                <CardContent className="pt-4">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline">A Record</Badge>
+                        <span className="text-sm font-medium">Root domain</span>
+                      </div>
+                      <div className="text-xs space-y-1 text-muted-foreground">
+                        <div><span className="font-medium">Type:</span> A</div>
+                        <div><span className="font-medium">Name:</span> @</div>
+                        <div><span className="font-medium">Value:</span> <span className="font-mono">185.158.133.1</span></div>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => copyToClipboard('185.158.133.1', 'a-root')}
+                    >
+                      {copiedRecord === 'a-root' ? (
+                        <Check className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* A Record for www */}
+              <Card className="bg-muted/50">
+                <CardContent className="pt-4">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline">A Record</Badge>
+                        <span className="text-sm font-medium">WWW subdomain</span>
+                      </div>
+                      <div className="text-xs space-y-1 text-muted-foreground">
+                        <div><span className="font-medium">Type:</span> A</div>
+                        <div><span className="font-medium">Name:</span> www</div>
+                        <div><span className="font-medium">Value:</span> <span className="font-mono">185.158.133.1</span></div>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => copyToClipboard('185.158.133.1', 'a-www')}
+                    >
+                      {copiedRecord === 'a-www' ? (
+                        <Check className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* TXT Record */}
+              <Card className="bg-muted/50">
+                <CardContent className="pt-4">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline">TXT Record</Badge>
+                        <span className="text-sm font-medium">Verification</span>
+                      </div>
+                      <div className="text-xs space-y-1 text-muted-foreground">
+                        <div><span className="font-medium">Type:</span> TXT</div>
+                        <div><span className="font-medium">Name:</span> _lovable</div>
+                        <div><span className="font-medium">Value:</span> <span className="font-mono">lovable_verify=ABC</span></div>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => copyToClipboard('lovable_verify=ABC', 'txt')}
+                    >
+                      {copiedRecord === 'txt' ? (
+                        <Check className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="text-xs text-muted-foreground space-y-2">
+                <p>
+                  <strong>Viktig:</strong> DNS-endringer kan ta opptil 72 timer å propagere.
+                </p>
+                <p>
+                  SSL-sertifikat (HTTPS) vil automatisk bli provisjonert når DNS-postene er korrekt konfigurert.
+                </p>
+                <p>
+                  Du kan verifisere DNS-innstillingene dine på <a href="https://dnschecker.org" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">DNSChecker.org</a>
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => setDomainDialogOpen(false)}
+              >
+                Avbryt
+              </Button>
+              <Button
+                onClick={handleSaveDomain}
+                disabled={isSavingDomain || !subdomainInput.trim()}
+              >
+                {isSavingDomain ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Lagrer...
+                  </>
+                ) : (
+                  'Lagre subdomain'
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
