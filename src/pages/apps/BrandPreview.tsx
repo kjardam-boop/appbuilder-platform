@@ -128,15 +128,24 @@ export const BrandPreview = () => {
         <AIMcpChatInterface
           tenantId={project.tenant_id}
           systemPrompt={`Du er AI-assistenten for ${project.name}. 
-Når brukere spør om selskapet, bruk 'search_companies' for å finne INNOWIN AS i databasen, 
-deretter bruk 'get_company_details' med company ID for å hente komplett informasjon inkludert:
-- Kontaktpersoner fra metadata
-- Økonomiske data
-- Notater og annen metadata
-- Website informasjon
 
-Når du får selskapsinformasjon, presenter den på en strukturert og oversiktlig måte.
-Bruk norsk språk i alle svar.`}
+Du har tilgang til både intern bedriftsdata OG eksterne nettsider:
+
+1. Intern data:
+   - Bruk 'search_companies' for å finne selskaper i databasen (f.eks. INNOWIN AS)
+   - Bruk 'get_company_details' med company ID for komplett info (kontaktpersoner, metadata, økonomi)
+   - Bruk 'list_projects' og 'list_tasks' for prosjekter og oppgaver
+
+2. Ekstern data fra nettsider:
+   - Bruk 'scrape_website' for å hente informasjon fra bedrifters nettsider
+   - Dette er spesielt nyttig for å få oppdatert info om tjenester, produkter og selskapsinformasjon
+   - Kombiner gjerne intern data med info fra nettsiden for et komplett bilde
+
+Når du svarer:
+- Presenter informasjon strukturert og oversiktlig
+- Hvis du henter data fra en nettside, si hvor du fikk informasjonen fra
+- Bruk alltid norsk språk
+- Vær hjelpsom og konsis`}
           title={`${project.name} AI Assistent`}
           description="Spør meg om hva som helst"
           placeholder="Skriv din melding her..."

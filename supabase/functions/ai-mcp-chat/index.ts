@@ -172,6 +172,21 @@ const MCP_TOOLS = [
         required: ["id"]
       }
     }
+  },
+  {
+    type: "function",
+    function: {
+      name: "scrape_website",
+      description: "Scrape content from a website URL. Returns the HTML content and extracted text. Use this to get information from company websites or external sources.",
+      parameters: {
+        type: "object",
+        properties: {
+          url: { type: "string", description: "Website URL to scrape (must include http:// or https://)" },
+          extract_text: { type: "boolean", description: "Whether to extract clean text from HTML (default: true)", default: true }
+        },
+        required: ["url"]
+      }
+    }
   }
 ];
 
@@ -345,6 +360,61 @@ async function executeMcpTool(
         return { success: true, task: data };
       }
 
+      case "scrape_website": {
+        try {
+          console.log(`[Scraping] URL: ${args.url}`);
+          
+          // Validate URL
+          const url = new URL(args.url);
+          if (!['http:', 'https:'].includes(url.protocol)) {
+            throw new Error('Only HTTP and HTTPS protocols are supported');
+          }
+
+          // Fetch website content
+          const response = await fetch(args.url, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (compatible; AkseleraBotAgent/1.0)',
+            },
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+
+          const html = await response.text();
+          
+          // Extract text if requested
+          let extractedText = null;
+          if (args.extract_text !== false) {
+            // Simple HTML to text conversion
+            extractedText = html
+              .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+              .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+              .replace(/<[^>]+>/g, ' ')
+              .replace(/\s+/g, ' ')
+              .trim();
+          }
+
+          console.log(`[Scraping] Success. Content length: ${html.length} chars`);
+
+          return {
+            success: true,
+            url: args.url,
+            html: html.substring(0, 10000), // Limit HTML to first 10k chars
+            text: extractedText ? extractedText.substring(0, 8000) : null, // Limit text to 8k chars
+            length: html.length,
+            scraped_at: new Date().toISOString()
+          };
+        } catch (error) {
+          console.error(`[Scraping Error]`, error);
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to scrape website',
+            url: args.url
+          };
+        }
+      }
+
       default:
         throw new Error(`Unknown tool: ${toolName}`);
     }
@@ -436,19 +506,22 @@ Du kan hjelpe brukere med å:
 - Opprette nye prosjekter og oppgaver
 - Analysere data og gi anbefalinger
 - Svare på spørsmål om plattformens innhold
+- Hente informasjon fra nettsider og eksterne kilder
 
 Viktige verktøy:
 - Bruk 'get_company_details' for å hente komplett informasjon om et selskap (inkluderer kontaktpersoner fra metadata)
 - Bruk 'list_companies' eller 'search_companies' for å finne selskaper
 - Bruk 'list_projects' for å se prosjekter
 - Bruk 'list_applications' for å se tilgjengelige forretningssystemer
+- Bruk 'scrape_website' for å hente informasjon fra nettsider (f.eks. bedriftsnettsider, produktsider)
 
 Når du bruker verktøy:
 - Alltid forklar hva du gjør
 - Bruk norsk språk i svarene dine
 - Vær konsis og presis
 - Hvis du ikke finner noe, si det tydelig
-- Presenter kontaktpersoner og metadata når det er relevant`;
+- Presenter kontaktpersoner og metadata når det er relevant
+- Når du scraper nettsider, oppsummer innholdet på en nyttig måte`;
 
     const effectiveSystemPrompt = systemPrompt || defaultSystemPrompt;
 
