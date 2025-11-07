@@ -5,12 +5,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Server, Brain, Database, Plus } from "lucide-react";
+import { ArrowLeft, Server, Brain, Database, Code2 } from "lucide-react";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { McpProvidersTab } from "@/components/admin/integrations/McpProvidersTab";
 import { AIProvidersTab } from "@/components/admin/integrations/AIProvidersTab";
 import { ExternalSystemsTab } from "@/components/admin/integrations/ExternalSystemsTab";
+import { McpActionsTab } from "@/components/admin/integrations/McpActionsTab";
 import { AppBreadcrumbs } from "@/components/ui/app-breadcrumbs";
 
 /**
@@ -95,7 +96,7 @@ export default function TenantIntegrations() {
 
       {/* Tabs */}
       <Tabs defaultValue="mcp-providers" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="mcp-providers" className="flex items-center gap-2">
             <Server className="h-4 w-4" />
             MCP Providers
@@ -107,6 +108,10 @@ export default function TenantIntegrations() {
           <TabsTrigger value="external-systems" className="flex items-center gap-2">
             <Database className="h-4 w-4" />
             Eksterne Systemer
+          </TabsTrigger>
+          <TabsTrigger value="mcp-actions" className="flex items-center gap-2">
+            <Code2 className="h-4 w-4" />
+            MCP Actions
           </TabsTrigger>
         </TabsList>
 
@@ -120,6 +125,10 @@ export default function TenantIntegrations() {
 
         <TabsContent value="external-systems" className="space-y-6">
           <ExternalSystemsTab tenantId={tenantId!} />
+        </TabsContent>
+
+        <TabsContent value="mcp-actions" className="space-y-6">
+          <McpActionsTab tenantId={tenantId!} />
         </TabsContent>
       </Tabs>
     </div>

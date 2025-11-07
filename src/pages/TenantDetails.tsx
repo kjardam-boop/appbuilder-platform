@@ -404,6 +404,12 @@ export default function TenantDetails() {
               Integrasjoner
             </Link>
           </Button>
+          <Button variant="outline" asChild>
+            <Link to={`/admin/tenants/${tenantId}/mcp-actions`}>
+              <Settings className="mr-2 h-4 w-4" />
+              MCP Actions
+            </Link>
+          </Button>
           <Button asChild>
             <Link to={`/admin/tenants/${tenantId}/settings`}>
               <Settings className="mr-2 h-4 w-4" />

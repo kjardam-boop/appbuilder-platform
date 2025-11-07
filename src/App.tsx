@@ -10,6 +10,7 @@ import Modules from "./pages/Modules";
 import Tenants from "./pages/Tenants";
 import TenantDetails from "./pages/TenantDetails";
 import TenantIntegrations from "./pages/admin/TenantIntegrations";
+import McpActionsRegistry from "./pages/admin/McpActionsRegistry";
 import TenantSettings from "./pages/admin/TenantSettings";
 import CompanyRegistration from "./pages/onboarding/CompanyRegistration";
 import ProjectCreation from "./pages/onboarding/ProjectCreation";
@@ -113,6 +114,7 @@ const App = () => (
               <Route path="tenants" element={<Tenants />} />
               <Route path="tenants/:id" element={<TenantDetails />} />
               <Route path="tenants/:id/integrations" element={<TenantIntegrations />} />
+              <Route path="tenants/:id/mcp-actions" element={<McpActionsRegistry />} />
               <Route path="tenants/:tenantId/settings" element={<TenantSettings />} />
               <Route path="users" element={<UserManagement />} />
               <Route path="roles" element={<RoleManagement />} />
