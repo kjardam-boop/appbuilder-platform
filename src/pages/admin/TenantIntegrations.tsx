@@ -22,7 +22,7 @@ import { AppBreadcrumbs } from "@/components/ui/app-breadcrumbs";
  * - External Systems (ERP, CRM, etc.) with MCP links
  */
 export default function TenantIntegrations() {
-  const { id: tenantId } = useParams<{ id: string }>();
+  const { tenantId } = useParams<{ tenantId: string }>();
   const navigate = useNavigate();
 
   // Fetch tenant details

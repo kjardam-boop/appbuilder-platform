@@ -13,6 +13,9 @@ import { Loader2, Settings, Plus, Trash2 } from "lucide-react";
 import type { TenantAppInstall } from "@/modules/core/applications/types/appRegistry.types";
 import { UpdateAppDialog } from "@/components/Admin/UpdateAppDialog";
 import { toast } from "sonner";
+import { AppBreadcrumbs } from "@/components/ui/app-breadcrumbs";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 export default function TenantAppsPage() {
   const { tenantId } = useParams<{ tenantId: string }>();
@@ -26,6 +29,22 @@ export default function TenantAppsPage() {
   const [configJson, setConfigJson] = useState("{}");
   const [overridesJson, setOverridesJson] = useState("{}");
   const [channel, setChannel] = useState<"stable" | "canary" | "pinned">("stable");
+
+  // Fetch tenant details for breadcrumbs
+  const { data: tenant } = useQuery({
+    queryKey: ["tenant", tenantId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tenants")
+        .select("id, name, slug")
+        .eq("id", tenantId)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!tenantId,
+  });
 
   const handleOpenConfig = (app: TenantAppInstall) => {
     setSelectedApp(app);
@@ -67,11 +86,20 @@ export default function TenantAppsPage() {
   }
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex items-center justify-between mb-8">
+    <div className="container mx-auto py-8 space-y-6">
+      {tenant && (
+        <AppBreadcrumbs levels={[
+          { label: "Admin", href: "/admin" },
+          { label: "Tenants", href: "/admin/tenants" },
+          { label: tenant.name, href: `/admin/tenants/${tenantId}` },
+          { label: "Applikasjoner" }
+        ]} />
+      )}
+      
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Installed Apps</h1>
-          <p className="text-muted-foreground">Manage applications for this tenant</p>
+          <h1 className="text-3xl font-bold mb-2">Installerte Applikasjoner</h1>
+          <p className="text-muted-foreground">Administrer applikasjoner for {tenant?.name || 'denne tenant'}</p>
         </div>
         <Link to={`/admin/tenants/${tenantId}/apps/catalog`}>
           <Button>
