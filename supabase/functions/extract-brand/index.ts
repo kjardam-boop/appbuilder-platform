@@ -26,7 +26,7 @@ serve(async (req) => {
     // Fetch website HTML
     const websiteResponse = await fetch(websiteUrl, {
       headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; BrandExtractor/1.0)",
+        "User-Agent": "Mozilla/5.0 (compatible; BrandExtractor/1.1)",
       },
     });
 
@@ -77,12 +77,12 @@ Important: Return actual colors found in the HTML/CSS, not defaults.`;
         messages: [
           {
             role: "system",
-            content: "You are a brand design expert that extracts color schemes and typography from websites. Always respond with valid JSON only, no markdown."
+            content: "You are a brand design expert that extracts color schemes and typography from websites. Always respond with valid JSON only, no markdown.",
           },
           {
             role: "user",
-            content: prompt
-          }
+            content: prompt,
+          },
         ],
         max_completion_tokens: 300,
       }),
@@ -96,27 +96,26 @@ Important: Return actual colors found in the HTML/CSS, not defaults.`;
 
     const aiData = await aiResponse.json();
     const generatedText = aiData.choices?.[0]?.message?.content || "{}";
-    
-    // Parse JSON from response and ensure we return COMPLETE tokens
-    let tokens: any = {};
+
+    // Parse JSON from response and ensure COMPLETE tokens
+    let parsedTokens: any = {};
     try {
       const cleanedText = generatedText
-        .replace(/```json\n?/g, '')
-        .replace(/```\n?/g, '')
+        .replace(/```json\n?/g, "")
+        .replace(/```\n?/g, "")
         .trim();
       const parsed = JSON.parse(cleanedText);
-      if (parsed && typeof parsed === 'object') {
-        tokens = parsed;
-      }
+      if (parsed && typeof parsed === "object") parsedTokens = parsed;
     } catch (parseError) {
-      console.warn("[extract-brand] Failed to parse AI response, will use heuristics + fallbacks.", { generatedText });
+      console.warn("[extract-brand] Failed to parse AI response; will use heuristics + fallbacks.", { generatedText });
     }
 
-    // Helper utils
+    // Helpers
     const toSix = (hex: string) => {
-      const h = hex.replace('#', '').toUpperCase();
+      const h = hex?.replace('#', '').toUpperCase() || '';
       if (h.length === 3) return `#${h[0]}${h[0]}${h[1]}${h[1]}${h[2]}${h[2]}`;
-      return `#${h.padStart(6, '0')}`;
+      if (h.length === 6) return `#${h}`;
+      return '';
     };
     const isHex = (v: any) => typeof v === 'string' && /^#[0-9A-F]{6}$/i.test(v);
     const hexToRgb = (hex: string) => {
@@ -133,19 +132,20 @@ Important: Return actual colors found in the HTML/CSS, not defaults.`;
       return 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2];
     };
 
-    // Heuristic extraction from HTML (in case AI returns partial)
-    const hexCandidates = Array.from(html.matchAll(/#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})\b/g)).map(m => toSix(m[0]));
+    // Heuristic color candidates from HTML if AI missed
+    const hexCandidates = Array.from(html.matchAll(/#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})\b/g))
+      .map((m) => toSix(m[0]))
+      .filter(Boolean);
     const freq = new Map<string, number>();
     for (const c of hexCandidates) {
-      // Skip pure black/white and extremes often used for text/background defaults
       if (c === '#FFFFFF' || c === '#000000') continue;
       freq.set(c, (freq.get(c) || 0) + 1);
     }
-    const sorted = Array.from(freq.entries()).sort((a,b) => b[1] - a[1]).map(([c]) => c);
-    const heuristicPrimary = sorted[0];
-    const heuristicAccent = sorted[1] && sorted[1] !== heuristicPrimary ? sorted[1] : undefined;
+    const sorted = Array.from(freq.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([c]) => c);
 
-    // Load existing theme to merge, if any
+    // Load existing theme to merge
     let existingTokens: any = null;
     if (tenantId) {
       try {
@@ -165,26 +165,22 @@ Important: Return actual colors found in the HTML/CSS, not defaults.`;
     }
 
     const pickHex = (key: string, fallback?: string) => {
-      const val = tokens[key];
-      if (isHex(val)) return toSix(val);
+      const val = parsedTokens[key];
       const fromExisting = existingTokens?.[key];
-      if (isHex(fromExisting)) return toSix(fromExisting);
-      if (fallback && isHex(fallback)) return toSix(fallback);
-      return undefined;
+      const candidate = isHex(val) ? val : isHex(fromExisting) ? fromExisting : (fallback && isHex(fallback) ? fallback : '');
+      return candidate || '';
     };
 
     const surfaceFallback = '#FFFFFF';
-    const primaryFinal = pickHex('primary', heuristicPrimary) || '#2563EB';
-    const accentFinal = pickHex('accent', heuristicAccent || (primaryFinal === '#2563EB' ? '#10B981' : undefined)) || '#10B981';
+    const primaryFinal = pickHex('primary', sorted[0]) || '#2563EB';
+    const accentFinal = pickHex('accent', sorted.find((c) => c !== primaryFinal)) || '#10B981';
     const surfaceFinal = pickHex('surface', surfaceFallback) || '#FFFFFF';
-    const textOnSurfaceFinal = pickHex('textOnSurface', undefined) || (luminance(surfaceFinal) > 0.6 ? '#1F2937' : '#F9FAFB');
-    const fontStackFinal = typeof tokens.fontStack === 'string' && tokens.fontStack.trim().length > 0
-      ? tokens.fontStack.trim()
-      : (typeof existingTokens?.fontStack === 'string' && existingTokens.fontStack.trim().length > 0
-          ? existingTokens.fontStack
-          : 'Inter, ui-sans-serif, system-ui, sans-serif');
+    const textOnSurfaceFinal = pickHex('textOnSurface') || (luminance(surfaceFinal) > 0.6 ? '#1F2937' : '#F9FAFB');
+    const fontStackFinal = typeof parsedTokens.fontStack === 'string' && parsedTokens.fontStack.trim()
+      ? parsedTokens.fontStack.trim()
+      : (typeof existingTokens?.fontStack === 'string' && existingTokens.fontStack.trim() ? existingTokens.fontStack : 'Inter, ui-sans-serif, system-ui, sans-serif');
 
-    const normalizedTokens = {
+    const finalTokens = {
       primary: toSix(primaryFinal),
       accent: toSix(accentFinal),
       surface: toSix(surfaceFinal),
@@ -193,8 +189,7 @@ Important: Return actual colors found in the HTML/CSS, not defaults.`;
       logoUrl: `${websiteUrl}/logo.png`,
     };
 
-    console.log('[extract-brand] Final tokens after normalization:', normalizedTokens);
-    tokens = normalizedTokens;
+    console.log('[extract-brand] Final tokens after normalization:', finalTokens);
 
     // Save to database if tenantId provided
     if (tenantId) {
@@ -204,14 +199,17 @@ Important: Return actual colors found in the HTML/CSS, not defaults.`;
 
       const { error: upsertError } = await supabase
         .from("tenant_themes")
-        .upsert({
-          tenant_id: tenantId,
-          tokens,
-          extracted_from_url: websiteUrl,
-          is_active: true,
-        }, {
-          onConflict: 'tenant_id',
-        });
+        .upsert(
+          {
+            tenant_id: tenantId,
+            tokens: finalTokens,
+            extracted_from_url: websiteUrl,
+            is_active: true,
+          },
+          {
+            onConflict: "tenant_id",
+          }
+        );
 
       if (upsertError) {
         console.warn("[extract-brand] Failed to save theme:", upsertError);
@@ -221,14 +219,9 @@ Important: Return actual colors found in the HTML/CSS, not defaults.`;
     }
 
     return new Response(
-      JSON.stringify({ 
-        success: true,
-        tokens,
-        extracted_from_url: websiteUrl,
-      }),
+      JSON.stringify({ success: true, tokens: finalTokens, extracted_from_url: websiteUrl }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-
   } catch (error) {
     console.error("[extract-brand] Error:", error);
     return new Response(

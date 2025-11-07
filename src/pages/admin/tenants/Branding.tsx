@@ -104,7 +104,27 @@ export const TenantBranding = () => {
       });
 
       if (result.ok) {
-        toast.success('Tema regenerert!');
+        // Merge any returned tokens with existing ones to avoid blanks/defaults
+        const returned = (result.data || {}) as Partial<typeof editedTokens>;
+        const mergedTokens = {
+          ...editedTokens,
+          ...returned,
+        };
+
+        // Persist merged tokens to the active tenant theme
+        const { error: upsertErr } = await supabase
+          .from('tenant_themes')
+          .update({ tokens: mergedTokens, is_active: true })
+          .eq('id', theme.id);
+
+        if (upsertErr) {
+          console.error('Failed to save merged theme after regeneration:', upsertErr);
+          toast.error('Tema ble regenerert, men lagring feilet');
+        } else {
+          setEditedTokens(mergedTokens);
+          toast.success('Tema regenerert!');
+        }
+
         await loadTheme();
       } else {
         toast.error('Feil ved regenerering av tema');
