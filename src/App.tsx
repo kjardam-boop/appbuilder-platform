@@ -112,9 +112,9 @@ const App = () => (
             <Route path="/admin" element={<AdminLayout><Admin /></AdminLayout>}>
               <Route index element={<AdminDashboard />} />
               <Route path="tenants" element={<Tenants />} />
-              <Route path="tenants/:id" element={<TenantDetails />} />
-              <Route path="tenants/:id/integrations" element={<TenantIntegrations />} />
-              <Route path="tenants/:id/mcp-actions" element={<McpActionsRegistry />} />
+              <Route path="tenants/:tenantId" element={<TenantDetails />} />
+              <Route path="tenants/:tenantId/integrations" element={<TenantIntegrations />} />
+              <Route path="tenants/:tenantId/mcp-actions" element={<McpActionsRegistry />} />
               <Route path="tenants/:tenantId/settings" element={<TenantSettings />} />
               <Route path="users" element={<UserManagement />} />
               <Route path="roles" element={<RoleManagement />} />

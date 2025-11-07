@@ -39,9 +39,9 @@ describe('tenantResolver', () => {
 
     const platformTenant = {
       id: 'plat-1',
-      name: 'Default Platform',
+      name: 'app builder-platform',
       domain: 'platform.example.com',
-      slug: 'lovenest-platform',
+      slug: 'app-builder-platform',
       settings: { featureFlags: [] },
       created_at: '2024-01-01T00:00:00Z',
       updated_at: '2024-01-02T00:00:00Z',

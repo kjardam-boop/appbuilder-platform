@@ -279,15 +279,15 @@ const RoleManagement = () => {
         });
       }
 
-      // Load app names with tenant context (join with app_definitions)
+      // Load app names with app definition; derive tenant name from cache (no FK join on tenants)
       if (scopeIds.apps.size > 0) {
         const { data: apps } = await supabase
           .from('applications')
-          .select('id, tenant_id, tenants(name), app_definition:app_definitions(name)')
+          .select('id, tenant_id, app_definition:app_definitions(name)')
           .in('id', Array.from(scopeIds.apps));
         
         apps?.forEach(a => {
-          const tenantName = (a.tenants as any)?.name;
+          const tenantName = newScopeNames.tenants[a.tenant_id as string];
           const appDefName = (a.app_definition as any)?.name || 'Unknown App';
           newScopeNames.apps[a.id] = tenantName 
             ? `${appDefName} (${tenantName})`
