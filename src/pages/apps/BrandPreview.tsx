@@ -28,7 +28,45 @@ export const BrandPreview = () => {
           return;
         }
 
-        setProject(projectData);
+        // Get tenant info
+        const { data: tenantData } = await supabase
+          .from('tenants')
+          .select('name, slug, settings')
+          .eq('id', projectData.tenant_id)
+          .single();
+
+        // Get company info from tenant settings
+        let companyData = null;
+        if (tenantData?.settings && (tenantData.settings as any).company_id) {
+          const { data: company } = await supabase
+            .from('companies')
+            .select('name, website, org_number, industry_description, employees, company_roles')
+            .eq('id', (tenantData.settings as any).company_id)
+            .single();
+          companyData = company;
+        }
+
+        // Get active projects for this company
+        let projectsData = [];
+        if (companyData) {
+          const { data: projects } = await supabase
+            .from('projects')
+            .select('id, name, description, status, start_date, end_date')
+            .eq('company_id', (tenantData.settings as any).company_id)
+            .order('created_at', { ascending: false })
+            .limit(10);
+          projectsData = projects || [];
+        }
+
+        // Combine all context
+        const enrichedProject = {
+          ...projectData,
+          tenant: tenantData,
+          company: companyData,
+          relatedProjects: projectsData,
+        };
+
+        setProject(enrichedProject);
 
         // Get tenant's active branding theme
         const { data: theme } = await supabase
@@ -124,29 +162,42 @@ export const BrandPreview = () => {
           )}
         </div>
 
-        {/* AI Chat Interface with tenant branding */}
+        {/* AI Chat Interface with tenant branding and full context */}
         <AIMcpChatInterface
           tenantId={project.tenant_id}
-          systemPrompt={`Du er AI-assistenten for ${project.name}. 
+          systemPrompt={`Du er AI-assistenten for ${project.name}.
 
-KONTEKST: Denne chatten handler om selskapet/prosjektet "${project.name}". 
-Når brukeren stiller spørsmål som "Hvem er kontaktpersoner?", "Hva tilbyr dere?", "Har dere referanser?" osv., 
-så mener de kontaktpersoner/tjenester/referanser for ${project.name}.
+=== FULL KONTEKST ===
 
-Du trenger IKKE spørre om hvilket selskap - bruk "${project.name}" som standard kontekst.
+SELSKAP:
+- Navn: ${project.company?.name || project.tenant?.name || 'Ukjent'}
+- Org.nr: ${project.company?.org_number || 'N/A'}
+- Nettside: ${project.company?.website || 'N/A'}
+- Bransje: ${project.company?.industry_description || 'N/A'}
+- Antall ansatte: ${project.company?.employees || 'N/A'}
+- Roller: ${project.company?.company_roles?.join(', ') || 'N/A'}
 
-KRITISK VIKTIG: Du MÅ ALLTID returnere svar i strukturert ExperienceJSON format!
+${project.relatedProjects && project.relatedProjects.length > 0 ? `
+AKTIVE PROSJEKTER (${project.relatedProjects.length}):
+${project.relatedProjects.map((p: any) => 
+  `- ${p.name}: ${p.description || 'Ingen beskrivelse'} (Status: ${p.status})`
+).join('\n')}
+` : ''}
 
-Verktøy tilgjengelig:
-1. Intern database: 'search_companies', 'get_company_details', 'list_projects', 'list_tasks'
-2. Web scraping: 'scrape_website' - Bruk aktivt for å hente info fra nettsider!
+=== VIKTIG ===
+Når brukeren spør om "kontaktpersoner", "tjenester", "referanser", "møter" osv., 
+så gjelder det ALLTID dette selskapet (${project.company?.name || project.tenant?.name}).
 
-For å finne informasjon om ${project.name}:
-1. Først søk i intern database: search_companies med navn="${project.name}"
-2. Hvis du finner selskapet, bruk 'scrape_website' med company.website for å hente kontaktinfo/tjenester
-3. Strukturer resultatet i ExperienceJSON format
+Du må ALDRI spørre "hvilket selskap?" - du har full kontekst allerede!
 
-HVORDAN SVARE - ALLTID BRUK DETTE FORMATET:
+=== ARBEIDSFLYT ===
+1. Bruk 'scrape_website' med ${project.company?.website || 'company website'} for å hente kontaktinfo/tjenester
+2. Strukturer ALLTID resultat som ExperienceJSON (aldri ren tekst!)
+3. Hvis nettside ikke fungerer, bruk intern database: search_companies("${project.company?.name || project.tenant?.name}")
+
+=== HVORDAN SVARE ===
+
+Du MÅ ALLTID returnere svar i dette strukturerte formatet:
 
 \`\`\`experience-json
 {
@@ -155,14 +206,14 @@ HVORDAN SVARE - ALLTID BRUK DETTE FORMATET:
   "blocks": [
     {
       "type": "cards.list",
-      "title": "Overskrift her",
+      "title": "Overskrift",
       "items": [
         {
-          "title": "Navn/tittel",
-          "subtitle": "Rolle/underoverskrift",
-          "body": "Detaljer her (email, telefon, etc)",
+          "title": "Navn/Tittel",
+          "subtitle": "Rolle/Underoverskrift",
+          "body": "📧 email@example.com\\n📞 +47 123 45 678",
           "cta": [
-            { "label": "Knapp tekst", "href": "mailto:email@example.com" }
+            { "label": "Send e-post", "href": "mailto:email@example.com" }
           ]
         }
       ]
@@ -171,19 +222,18 @@ HVORDAN SVARE - ALLTID BRUK DETTE FORMATET:
 }
 \`\`\`
 
-EKSEMPLER PÅ BRUK:
-
-**Kontaktpersoner**: cards.list med navn, tittel, email/telefon i body, cta: "Send e-post"
-**Tjenester/produkter**: cards.list med tittel, beskrivelse, cta: "Les mer"
-**Selskapsinfo**: card med headline, body med info
-**Møtebooking**: card med body: møteinfo, cta: "Book møte"
+EKSEMPLER:
+- **Kontaktpersoner**: cards.list med navn, tittel, email/telefon, cta: "Send e-post"
+- **Tjenester**: cards.list med tjenestenavn, beskrivelse, cta: "Les mer"
+- **Selskapsinfo**: card med headline, body
+- **Møte**: card med tekst, cta: "Book møte"
 
 Tilgjengelige block-typer:
 - "cards.list" - grid av kort (beste for lister)
-- "card" - enkelt kort med heading/body/actions
-- "table" - tabulære data med kolonner og rader
+- "card" - enkelt kort
+- "table" - tabulære data
 
-Bruk norsk språk alltid. HUSK: Strukturer ALT i ExperienceJSON format!`}
+Bruk alltid norsk. ALDRI returner ren tekst - kun ExperienceJSON!`}
           title={`${project.name} AI Assistent`}
           description="Spør meg om hva som helst"
           placeholder="Skriv din melding her..."
