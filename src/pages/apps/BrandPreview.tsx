@@ -16,10 +16,10 @@ export const BrandPreview = () => {
       if (!projectId) return;
 
       try {
-        // Get project with tenant relationship
+        // Get project with capabilities
         const { data: project } = await supabase
           .from('customer_app_projects')
-          .select('name, tenant_id')
+          .select('name, description, tenant_id, selected_capabilities')
           .eq('id', projectId)
           .single();
 
@@ -38,44 +38,39 @@ export const BrandPreview = () => {
 
         if (theme?.tokens) {
           const branding = theme.tokens as any;
+          const capabilities = (project.selected_capabilities as string[]) || [];
+          
+          // Build app blocks based on capabilities
+          const blocks: any[] = [
+            {
+              type: 'card',
+              headline: project.name,
+              body: project.description || 'Velkommen til din skreddersydde applikasjon',
+            },
+          ];
+
+          // Add capability cards if any
+          if (capabilities.length > 0) {
+            blocks.push({
+              type: 'cards.list',
+              title: 'Funksjoner',
+              items: capabilities.map((cap: string) => ({
+                title: cap,
+                body: `Utforsk ${cap.toLowerCase()}-funksjonen i din app`,
+              })),
+            });
+          }
+
           const exp: ExperienceJSON = {
             version: '1.0',
-            layout: { type: 'stack', gap: 'md' },
+            layout: { type: 'stack', gap: 'lg' },
             theme: branding,
-            blocks: [
-              {
-                type: 'card',
-                headline: `${project.name} - Branding Preview`,
-                body: 'Dette er en forhåndsvisning av brandingen for dette prosjektet. Branding oppdateres automatisk når tenant-temaet endres.',
-              },
-              {
-                type: 'cards.list',
-                title: 'Design Tokens',
-                items: [
-                  {
-                    title: 'Primary Color',
-                    body: branding.primary || 'N/A',
-                  },
-                  {
-                    title: 'Accent Color',
-                    body: branding.accent || 'N/A',
-                  },
-                  {
-                    title: 'Surface Color',
-                    body: branding.surface || 'N/A',
-                  },
-                  {
-                    title: 'Text on Surface',
-                    body: branding.textOnSurface || 'N/A',
-                  },
-                ],
-              },
-            ],
+            blocks,
           };
           setExperience(exp);
         }
       } catch (error) {
-        console.error('Failed to load project branding:', error);
+        console.error('Failed to load project:', error);
       } finally {
         setLoading(false);
       }
