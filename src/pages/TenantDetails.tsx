@@ -95,6 +95,7 @@ export default function TenantDetails() {
   const [subdomainInput, setSubdomainInput] = useState("");
   const [isSavingDomain, setIsSavingDomain] = useState(false);
   const [copiedRecord, setCopiedRecord] = useState<string | null>(null);
+  const [isPublishingPreview, setIsPublishingPreview] = useState(false);
 
   useEffect(() => {
     loadTenantDetails();
@@ -291,6 +292,37 @@ export default function TenantDetails() {
     setCopiedRecord(recordType);
     setTimeout(() => setCopiedRecord(null), 2000);
     toast.success('Kopiert til utklippstavle');
+  };
+
+  const handlePublishToPreview = async (project: AppProject) => {
+    if (!project.subdomain) {
+      toast.error('Subdomain må være konfigurert først', {
+        description: 'Klikk på "Domene" for å sette subdomain'
+      });
+      return;
+    }
+
+    setIsPublishingPreview(true);
+    try {
+      const { error } = await supabase
+        .from('customer_app_projects')
+        .update({ deployed_to_preview_at: new Date().toISOString() })
+        .eq('id', project.id);
+
+      if (error) throw error;
+
+      const previewUrl = getPreviewUrl(project);
+      toast.success('Publisert til preview!', {
+        description: `Appen er nå tilgjengelig på ${previewUrl}`
+      });
+      
+      await loadTenantDetails();
+    } catch (error) {
+      console.error('Failed to publish to preview:', error);
+      toast.error('Kunne ikke publisere til preview');
+    } finally {
+      setIsPublishingPreview(false);
+    }
   };
 
   if (isLoading) {
@@ -573,7 +605,7 @@ export default function TenantDetails() {
 
                     <Separator />
 
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <Button size="sm" variant="secondary" asChild>
                         <Link to={`/apps/${project.id}/brand-preview`} className="flex items-center gap-2">
                           <Eye className="h-4 w-4" />
@@ -588,6 +620,25 @@ export default function TenantDetails() {
                         <Settings className="h-4 w-4 mr-2" />
                         Domene
                       </Button>
+                      
+                      {/* Publish to Preview button - show if subdomain set but not yet deployed */}
+                      {project.subdomain && !project.deployed_to_preview_at && (
+                        <Button 
+                          size="sm" 
+                          variant="default"
+                          onClick={() => handlePublishToPreview(project)}
+                          disabled={isPublishingPreview}
+                        >
+                          {isPublishingPreview ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Eye className="h-4 w-4 mr-2" />
+                          )}
+                          Publiser til Preview
+                        </Button>
+                      )}
+
+                      {/* Preview link - show if deployed to preview */}
                       {project.deployed_to_preview_at && getPreviewUrl(project) && (
                         <Button variant="outline" size="sm" asChild>
                           <a
@@ -597,11 +648,13 @@ export default function TenantDetails() {
                             className="flex items-center gap-2"
                           >
                             <Eye className="h-4 w-4" />
-                            Preview
+                            Åpne Preview
                             <ExternalLink className="h-3 w-3" />
                           </a>
                         </Button>
                       )}
+
+                      {/* Production link - show if deployed to production */}
                       {project.deployed_to_production_at && getProductionUrl(project) && (
                         <Button size="sm" asChild>
                           <a
