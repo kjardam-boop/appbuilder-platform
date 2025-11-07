@@ -342,25 +342,44 @@ export default function Jul25App() {
       return;
     }
     
-    const prompt = `Generer et positivt, julete norsk ord eller uttrykk for dag ${day} i julekalenderen. Bare ett ord eller kort uttrykk, ingen forklaring.`;
+    const currentDate = new Date(2025, 11, day); // December 2025
+    const dateStr = `${day}. desember 2025`;
+    
+    const prompt = `Skriv en hyggelig og inspirerende tekst for ${dateStr} som del av en digital julekalender. 
+
+Teksten skal:
+- Være 2-4 setninger (150-250 ord)
+- Ha fokus på jul, advent og/eller den kristne julen
+- Inkludere en interessant historisk hendelse eller fakta som skjedde på denne datoen (${day}. desember) i historien
+- Være varm, inkluderende og julestemningsfylt
+- Være på norsk og passe for alle aldre
+
+Formater teksten i to deler:
+1. En juletekst med fokus på advent, jul og kristne tradisjoner
+2. En historisk fakta om hva som skjedde på denne datoen
+
+Eksempel struktur:
+"[Hyggelig juletekst om dagen]
+
+Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
     
     try {
       const { data, error } = await supabase.functions.invoke('generate-text', {
-        body: { prompt, maxLength: 30 }
+        body: { prompt, maxLength: 500 }
       });
 
       if (error) throw error;
 
-      const newWord = { date: day, word: data.content || data.text || "Julebro", generated: true };
+      const newWord = { date: day, word: data.content || data.text || "God jul! 🎄", generated: true };
       setChristmasWords(prev => prev.map(w => 
         w.date === day ? newWord : w
       ));
       setSelectedWord(newWord);
       
-      toast.success(`Ord for dag ${day} generert! 🎄`);
+      toast.success(`Dagens tekst generert! 🎄`);
     } catch (error) {
       console.error('Error generating word:', error);
-      toast.error('Kunne ikke generere ord');
+      toast.error('Kunne ikke generere tekst');
     }
   };
   
@@ -1007,10 +1026,10 @@ export default function Jul25App() {
             <CardHeader>
               <CardTitle className="text-base sm:text-lg flex items-center gap-2">
                 <Church className="w-5 h-5 text-purple-600" />
-                Julekalender - Ord for dagen
+                Julekalender - Dagens tekst
               </CardTitle>
               <CardDescription className="text-xs sm:text-sm">
-                Klikk på en luke for å generere dagens juleord med AI! 🎄
+                Klikk på en luke for å lese dagens juletekst med historisk fakta! 🎄
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -1057,19 +1076,26 @@ export default function Jul25App() {
 
         {/* Christmas Word Dialog */}
         <Dialog open={selectedWord !== null} onOpenChange={() => setSelectedWord(null)}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-2xl max-h-[80vh]">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Star className="w-6 h-6 text-yellow-500" />
-                {selectedWord?.date}. desember - Ord for dagen
+                {selectedWord?.date}. desember - Dagens tekst
               </DialogTitle>
             </DialogHeader>
-            <div className="py-8 text-center">
-              <div className="text-3xl sm:text-4xl font-bold text-purple-600 mb-4">
-                {selectedWord?.word || "Laster..."}
+            <ScrollArea className="max-h-[60vh] pr-4">
+              <div className="py-6 space-y-4">
+                <div className="text-center mb-4">
+                  <Star className="w-12 h-12 mx-auto text-yellow-500 mb-4" />
+                </div>
+                <div className="text-base leading-relaxed text-foreground whitespace-pre-wrap">
+                  {selectedWord?.word || "Laster..."}
+                </div>
+                <div className="pt-4 text-center">
+                  <Star className="w-8 h-8 mx-auto text-yellow-500/50" />
+                </div>
               </div>
-              <Star className="w-12 h-12 mx-auto text-yellow-500 animate-pulse" />
-            </div>
+            </ScrollArea>
           </DialogContent>
         </Dialog>
 
