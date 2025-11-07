@@ -346,6 +346,8 @@ serve(async (req) => {
     
     console.log(`[AI Provider] Using: ${aiClientConfig.provider} with model: ${aiClientConfig.model}`);
 
+    const startTime = Date.now(); // Track request duration
+
     const defaultSystemPrompt = `Du er en intelligent AI-assistent med tilgang til en bedrifts-plattform. 
 Du kan hjelpe brukere med å:
 - Søke etter og finne informasjon om selskaper, prosjekter og oppgaver
@@ -476,6 +478,42 @@ Når du bruker verktøy:
 
     const finalResponse = choice?.message?.content || 'Ingen respons fra AI';
 
+    // Log AI usage to database
+    const duration = Date.now() - startTime;
+    const totalTokens = aiData.usage?.total_tokens || 0;
+    const promptTokens = aiData.usage?.prompt_tokens || 0;
+    const completionTokens = aiData.usage?.completion_tokens || 0;
+
+    try {
+      // Calculate cost using database function
+      const { data: costData } = await supabaseClient.rpc('calculate_ai_cost', {
+        p_provider: aiClientConfig.provider,
+        p_model: aiClientConfig.model,
+        p_prompt_tokens: promptTokens,
+        p_completion_tokens: completionTokens
+      });
+
+      await supabaseClient.from('ai_usage_logs').insert({
+        tenant_id: tenantId,
+        provider: aiClientConfig.provider,
+        model: aiClientConfig.model,
+        endpoint: 'ai-mcp-chat',
+        prompt_tokens: promptTokens,
+        completion_tokens: completionTokens,
+        total_tokens: totalTokens,
+        cost_estimate: costData || 0,
+        request_duration_ms: duration,
+        status: 'success',
+        metadata: {
+          tool_calls_made: iterations,
+          system_prompt_used: !!systemPrompt
+        }
+      });
+    } catch (logError) {
+      console.error('[AI Usage Log Error]', logError);
+      // Don't fail the request if logging fails
+    }
+
     return new Response(
       JSON.stringify({ 
         response: finalResponse,
@@ -493,6 +531,28 @@ Når du bruker verktøy:
   } catch (error) {
     console.error('Error in ai-mcp-chat:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    
+    // Try to log failed request
+    try {
+      const { tenantId } = await req.clone().json();
+      if (tenantId) {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+        const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
+
+        await supabaseClient.from('ai_usage_logs').insert({
+          tenant_id: tenantId,
+          provider: 'lovable', // Default for errors
+          model: 'unknown',
+          endpoint: 'ai-mcp-chat',
+          status: errorMessage.includes('Rate limit') ? 'rate_limited' : 'error',
+          error_message: errorMessage
+        });
+      }
+    } catch (logError) {
+      console.error('[Error Log Failed]', logError);
+    }
+    
     return new Response(
       JSON.stringify({ error: errorMessage }),
       { 

@@ -14,6 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_usage_logs: {
+        Row: {
+          completion_tokens: number | null
+          cost_estimate: number | null
+          created_at: string
+          endpoint: string | null
+          error_message: string | null
+          id: string
+          metadata: Json | null
+          model: string
+          prompt_tokens: number | null
+          provider: string
+          request_duration_ms: number | null
+          status: string | null
+          tenant_id: string
+          total_tokens: number | null
+          user_id: string | null
+        }
+        Insert: {
+          completion_tokens?: number | null
+          cost_estimate?: number | null
+          created_at?: string
+          endpoint?: string | null
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          model: string
+          prompt_tokens?: number | null
+          provider: string
+          request_duration_ms?: number | null
+          status?: string | null
+          tenant_id: string
+          total_tokens?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          completion_tokens?: number | null
+          cost_estimate?: number | null
+          created_at?: string
+          endpoint?: string | null
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          model?: string
+          prompt_tokens?: number | null
+          provider?: string
+          request_duration_ms?: number | null
+          status?: string | null
+          tenant_id?: string
+          total_tokens?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       app_capability_usage: {
         Row: {
           app_definition_id: string
@@ -3434,6 +3488,15 @@ export type Database = {
       admin_has_platform_role: {
         Args: { check_user_id: string }
         Returns: boolean
+      }
+      calculate_ai_cost: {
+        Args: {
+          p_completion_tokens: number
+          p_model: string
+          p_prompt_tokens: number
+          p_provider: string
+        }
+        Returns: number
       }
       can_manage_roles_in_scope: {
         Args: {
