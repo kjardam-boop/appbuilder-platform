@@ -45,7 +45,7 @@ export const ExperienceRenderer = ({ experience, onAction, onToolCall }: Experie
         return (
           <div
             key={`${block.type}-${index}`}
-            className="animate-fade-in w-full min-w-0"
+            className="animate-fade-in w-full max-w-full min-w-0 overflow-hidden"
             style={{ animationDelay: `${index * 0.1}s` }}
           >
             <Component

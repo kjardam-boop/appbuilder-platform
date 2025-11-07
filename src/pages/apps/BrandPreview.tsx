@@ -161,14 +161,14 @@ export const BrandPreview = () => {
         fontFamily: branding.fontStack || 'Inter, ui-sans-serif, system-ui, sans-serif',
       }}
     >
-      <div className="max-w-6xl mx-auto space-y-4 md:space-y-6 w-full">
+      <div className="max-w-6xl mx-auto space-y-4 md:space-y-6 w-full overflow-hidden">
         {/* Header with branding */}
         <div className="text-center space-y-4">
           {logoUrl && (
             <img 
               src={logoUrl} 
               alt={project.name}
-              className="h-16 mx-auto object-contain"
+              className="h-20 md:h-24 mx-auto object-contain"
               onError={(e) => {
                 // Hide image if it fails to load
                 e.currentTarget.style.display = 'none';

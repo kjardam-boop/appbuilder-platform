@@ -31,9 +31,9 @@ const getCtaIcon = (type?: string) => {
 
 export const CardsListBlock = ({ title, items }: CardsListBlockProps) => {
   return (
-    <div className="w-full space-y-6 animate-fade-in">
+    <div className="w-full max-w-full space-y-6 animate-fade-in overflow-hidden">
       {title && <h2 className="text-2xl md:text-3xl font-bold text-foreground break-words">{title}</h2>}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 w-full max-w-full">
         {items.map((item, index) => (
           <Card 
             key={index} 
