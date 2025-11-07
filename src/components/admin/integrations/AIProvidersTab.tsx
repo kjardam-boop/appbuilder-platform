@@ -105,15 +105,24 @@ export function AIProvidersTab({ tenantId }: AIProvidersTabProps) {
           <CardHeader>
             <CardTitle>Ingen AI providers konfigurert</CardTitle>
             <CardDescription>
-              Gå til AI Provider innstillinger for å konfigurere OpenAI, Anthropic, eller andre AI providers.
+              Velg en AI provider å konfigurere med eksisterende Vault secret eller ny API key.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button asChild variant="outline">
-              <Link to="/admin/integrations">
-                Gå til AI Provider innstillinger
-              </Link>
-            </Button>
+            <div className="grid grid-cols-2 gap-3">
+              <Button variant="outline" onClick={() => handleChangeSecret('ai-openai')}>
+                Konfigurer OpenAI
+              </Button>
+              <Button variant="outline" onClick={() => handleChangeSecret('ai-anthropic')}>
+                Konfigurer Anthropic
+              </Button>
+              <Button variant="outline" onClick={() => handleChangeSecret('ai-google')}>
+                Konfigurer Google
+              </Button>
+              <Button variant="outline" onClick={() => handleChangeSecret('ai-azure-openai')}>
+                Konfigurer Azure OpenAI
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}
