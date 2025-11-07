@@ -78,6 +78,7 @@ import { DynamicPage } from "./pages/DynamicPage";
 import { AkseleraDemoPage } from "./tenants/akselera/pages/DemoPage";
 import { BrandPreview } from "./pages/apps/BrandPreview";
 import { TenantBranding } from "./pages/admin/tenants/Branding";
+import Demo from "./pages/Demo";
 
 const queryClient = new QueryClient();
 
@@ -192,6 +193,7 @@ const App = () => (
             <Route path="/apps/jul25/member/:memberId" element={<Jul25MemberEdit />} />
             
             {/* Tenant-specific demo pages */}
+            <Route path="/demo" element={<Demo />} />
             <Route path="/akselera/demo" element={<AkseleraDemoPage />} />
             
             {/* Tenant branding admin */}
