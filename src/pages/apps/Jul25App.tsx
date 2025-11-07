@@ -347,9 +347,17 @@ export default function Jul25App() {
     
     const prompt = `Skriv en hyggelig og inspirerende tekst for ${dateStr} som del av en digital julekalender. 
 
+VIKTIG INFORMASJON OM ADVENT 2025:
+- 1. søndag i advent (1. lys): 30. november 2025
+- 2. søndag i advent (2. lys): 7. desember 2025
+- 3. søndag i advent (3. lys): 14. desember 2025
+- 4. søndag i advent (4. lys): 21. desember 2025
+- Julaften: 24. desember 2025
+
 Teksten skal:
 - Være 2-4 setninger (150-250 ord)
 - Ha fokus på jul, advent og/eller den kristne julen
+- Hvis datoen er en adventssøndag, nevn at dette er [X]. søndag i advent og at vi tenner [X]. lys
 - Inkludere en interessant historisk hendelse eller fakta som skjedde på denne datoen (${day}. desember) i historien
 - Være varm, inkluderende og julestemningsfylt
 - Være på norsk og passe for alle aldre
