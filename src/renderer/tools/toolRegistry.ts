@@ -2,6 +2,7 @@ import { executeBrand } from './brand';
 import { executeContent } from './content';
 import { executeAutomations } from './automations';
 import { paymentsCreateCheckout, paymentsGetStatus } from './payments';
+import { executeAppGeneration } from './appGeneration';
 
 type ToolFn = (tenantId: string, params: any) => Promise<any>;
 
@@ -11,6 +12,7 @@ const registry: Record<string, ToolFn> = {
   'automations.enqueueJob': executeAutomations,
   'payments.createCheckout': paymentsCreateCheckout,
   'payments.getStatus': paymentsGetStatus,
+  'app.generate': executeAppGeneration,
 };
 
 export function getTool(name: string): ToolFn {

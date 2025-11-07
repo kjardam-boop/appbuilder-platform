@@ -12,7 +12,8 @@ import {
   Package,
   Settings,
   Plus,
-  Palette
+  Palette,
+  Sparkles
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +23,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AppBreadcrumbs } from "@/components/ui/app-breadcrumbs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { executeTool } from "@/renderer/tools/toolExecutor";
 
 interface TenantData {
   id: string;
@@ -82,6 +84,7 @@ export default function TenantDetails() {
   const [tenantUsers, setTenantUsers] = useState<TenantUser[]>([]);
   const [tenantApplications, setTenantApplications] = useState<TenantApplication[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
     loadTenantDetails();
@@ -203,6 +206,31 @@ export default function TenantDetails() {
       return `https://${project.subdomain}.lovableproject.com`;
     }
     return null;
+  };
+
+  const handleGenerateApp = async () => {
+    if (!tenantId) return;
+
+    setIsGenerating(true);
+    try {
+      const result = await executeTool(tenantId, 'app.generate', {});
+
+      if (result.ok) {
+        toast.success('App generert!', {
+          description: `${result.data.project.name} er opprettet`
+        });
+        await loadTenantDetails(); // Reload to show new app
+      } else {
+        toast.error('Feil ved generering', {
+          description: result.error?.message || 'Kunne ikke generere app'
+        });
+      }
+    } catch (error) {
+      console.error('Failed to generate app:', error);
+      toast.error('Feil ved generering av app');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   if (isLoading) {
@@ -430,9 +458,13 @@ export default function TenantDetails() {
               <h2 className="text-2xl font-bold">Kundetilpassede Applikasjoner</h2>
               <p className="text-muted-foreground">Kundespesifikke applikasjoner bygget for denne tenanten (customer_app_projects)</p>
             </div>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Ny applikasjon
+            <Button onClick={handleGenerateApp} disabled={isGenerating}>
+              {isGenerating ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Sparkles className="mr-2 h-4 w-4" />
+              )}
+              Generer applikasjon med AI
             </Button>
           </div>
 
@@ -444,9 +476,13 @@ export default function TenantDetails() {
                 <p className="text-muted-foreground mb-4">
                   Denne tenanten har ingen applikasjoner ennå
                 </p>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Opprett første applikasjon
+                <Button onClick={handleGenerateApp} disabled={isGenerating}>
+                  {isGenerating ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="mr-2 h-4 w-4" />
+                  )}
+                  Generer første applikasjon
                 </Button>
               </CardContent>
             </Card>
