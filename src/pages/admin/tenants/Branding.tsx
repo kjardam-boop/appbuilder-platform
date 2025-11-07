@@ -3,9 +3,10 @@ import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, RefreshCw } from 'lucide-react';
+import { Loader2, RefreshCw, ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { executeTool } from '@/renderer/tools/toolExecutor';
+import { fetchCompanyLogo } from '@/utils/logoFetcher';
 
 export const TenantBranding = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -13,6 +14,8 @@ export const TenantBranding = () => {
   const [tenant, setTenant] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [regenerating, setRegenerating] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [logoLoading, setLogoLoading] = useState(false);
 
   const loadTheme = async () => {
     if (!slug) return;
@@ -41,6 +44,19 @@ export const TenantBranding = () => {
         .maybeSingle();
 
       setTheme(themeData);
+
+      // Fetch logo if we have a URL
+      if (themeData?.extracted_from_url) {
+        setLogoLoading(true);
+        try {
+          const fetchedLogoUrl = await fetchCompanyLogo(themeData.extracted_from_url);
+          setLogoUrl(fetchedLogoUrl);
+        } catch (error) {
+          console.error('Failed to fetch logo:', error);
+        } finally {
+          setLogoLoading(false);
+        }
+      }
     } catch (error) {
       console.error('Failed to load theme:', error);
       toast.error('Feil ved lasting av tema');
@@ -193,17 +209,51 @@ export const TenantBranding = () => {
         </CardContent>
       </Card>
 
-      {tokens.logoUrl && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Logo</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm mb-2"><strong>Logo URL:</strong></p>
-            <p className="text-xs text-muted-foreground break-all">{tokens.logoUrl}</p>
-          </CardContent>
-        </Card>
-      )}
+      <Card>
+        <CardHeader>
+          <CardTitle>Logo</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {logoLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : logoUrl ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-center p-6 bg-muted/50 rounded-lg border">
+                <img 
+                  src={logoUrl} 
+                  alt="Company Logo" 
+                  className="max-h-24 max-w-full object-contain"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+              </div>
+              <div>
+                <p className="text-sm mb-2"><strong>Logo URL:</strong></p>
+                <p className="text-xs text-muted-foreground break-all">{logoUrl}</p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <ImageIcon className="h-12 w-12 text-muted-foreground mb-2" />
+              <p className="text-sm text-muted-foreground">Ingen logo funnet</p>
+              {theme?.extracted_from_url && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Prøv å regenerere tema fra URL
+                </p>
+              )}
+            </div>
+          )}
+          {tokens.logoUrl && tokens.logoUrl !== logoUrl && (
+            <div className="pt-2 border-t">
+              <p className="text-sm mb-2"><strong>Logo URL fra tokens:</strong></p>
+              <p className="text-xs text-muted-foreground break-all">{tokens.logoUrl}</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };
