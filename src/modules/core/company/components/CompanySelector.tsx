@@ -90,7 +90,7 @@ const CompanySelector = ({ open, onOpenChange, onSelect }: CompanySelectorProps)
         return;
       }
 
-      // Insert new company without contact person fields (they don't exist in schema)
+      // Insert new company
       const { data: newCompany, error } = await supabase
         .from("companies")
         .insert({
@@ -106,6 +106,48 @@ const CompanySelector = ({ open, onOpenChange, onSelect }: CompanySelectorProps)
       if (error) {
         console.error("Error inserting company:", error);
         throw error;
+      }
+
+      // Fetch enhanced data including contact person from Brreg
+      const { data: enhancedData, error: enhancedError } = await supabase.functions.invoke('brreg-enhanced-lookup', {
+        body: { orgNumber: company.organisasjonsnummer },
+      });
+
+      // If we have contact person data, save it to company_metadata
+      if (!enhancedError && enhancedData?.kontaktperson) {
+        const contactPerson = {
+          full_name: enhancedData.kontaktperson,
+          title: enhancedData.kontaktpersonRolle || null,
+          phone: enhancedData.kontaktpersonTelefon || null,
+          email: null,
+          department: null,
+          is_primary: true,
+          notes: `Hentet fra Brønnøysundregistrene${enhancedData.telefonnummerKilde ? ` (${enhancedData.telefonnummerKilde})` : ''}`
+        };
+
+        // Check if company_metadata exists
+        const { data: existingMetadata } = await supabase
+          .from("company_metadata")
+          .select("id, contact_persons")
+          .eq("company_id", newCompany.id)
+          .maybeSingle();
+
+        if (existingMetadata) {
+          // Update existing metadata
+          const updatedContacts = [...(existingMetadata.contact_persons || []), contactPerson];
+          await supabase
+            .from("company_metadata")
+            .update({ contact_persons: updatedContacts })
+            .eq("id", existingMetadata.id);
+        } else {
+          // Create new metadata with contact person
+          await supabase
+            .from("company_metadata")
+            .insert({
+              company_id: newCompany.id,
+              contact_persons: [contactPerson]
+            });
+        }
       }
       
       onSelect(newCompany.id);
