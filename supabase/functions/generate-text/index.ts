@@ -32,7 +32,7 @@ serve(async (req) => {
       userPrompt += `\n\nMaksimal lengde: ${maxLength} tegn`;
     }
 
-    // Call Lovable AI
+    // Call Lovable AI with premium model for creative writing
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -40,15 +40,15 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: 'google/gemini-2.5-pro',
         messages: [
           { 
             role: 'system', 
-            content: 'Du er en profesjonell tekstforfatter som lager klart, konsist innhold på norsk. Følg instruksjonene nøye og lever høy kvalitet.' 
+            content: 'Du er en dyktig og kreativ tekstforfatter med sans for poesi og billedspråk. Du skriver varierte, engasjerende tekster på norsk med høy kvalitet. Følg instruksjonene nøye og vær kreativ.' 
           },
           { role: 'user', content: userPrompt }
         ],
-        temperature: temperature || 0.7,
+        temperature: temperature || 0.9,
       }),
     });
 
