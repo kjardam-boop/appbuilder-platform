@@ -5,11 +5,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Code2, FileJson, CheckCircle, XCircle, Calendar, User } from "lucide-react";
+import { Code2, FileJson, CheckCircle, XCircle, Calendar, User, Play } from "lucide-react";
+import { useState } from "react";
+import { TestMcpActionDialog } from "./TestMcpActionDialog";
 
 interface McpRegistryEntry {
   id: string;
@@ -37,8 +40,11 @@ export function McpActionDetailsDialog({
   open,
   onOpenChange,
 }: McpActionDetailsDialogProps) {
+  const [testDialogOpen, setTestDialogOpen] = useState(false);
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh]">
         <DialogHeader>
           <div className="flex items-center justify-between">
@@ -165,9 +171,27 @@ await mcpExecute({
                 </pre>
               </div>
             </div>
+
+            {/* Test Button */}
+            <Button
+              onClick={() => setTestDialogOpen(true)}
+              className="w-full gap-2"
+              disabled={!action.enabled}
+            >
+              <Play className="h-4 w-4" />
+              Test denne action
+            </Button>
           </div>
         </ScrollArea>
       </DialogContent>
     </Dialog>
+
+    {/* Test Dialog */}
+    <TestMcpActionDialog
+      action={action}
+      open={testDialogOpen}
+      onOpenChange={setTestDialogOpen}
+    />
+    </>
   );
 }
