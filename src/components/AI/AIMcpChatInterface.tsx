@@ -86,7 +86,7 @@ export function AIMcpChatInterface({
 
   return (
     <Card 
-      className="h-[70vh] md:h-[65vh] lg:h-[60vh] flex flex-col border-2" 
+      className="h-[80svh] md:h-[65vh] lg:h-[60vh] flex flex-col border-2 overflow-hidden min-h-0" 
       style={{
         ...cardStyle,
         borderColor: 'var(--color-primary, hsl(var(--border)))',
@@ -122,8 +122,8 @@ export function AIMcpChatInterface({
         </div>
       </CardHeader>
 
-      <CardContent className="flex-1 p-0 flex flex-col">
-        <ScrollArea ref={scrollRef} className="flex-1 p-4">
+      <CardContent className="flex-1 min-h-0 p-0 flex flex-col">
+        <ScrollArea ref={scrollRef} className="flex-1 min-h-0 p-4">
           <div className="space-y-4">
             {messages.length === 0 && (
               <div className="text-center text-muted-foreground py-8">
