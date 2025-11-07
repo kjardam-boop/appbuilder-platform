@@ -85,8 +85,20 @@ export function AIMcpChatInterface({
   };
 
   return (
-    <Card className="h-[600px] flex flex-col" style={cardStyle}>
-      <CardHeader className="border-b" style={{ borderColor: 'var(--color-primary, hsl(var(--border)))' }}>
+    <Card 
+      className="h-[600px] flex flex-col border-2" 
+      style={{
+        ...cardStyle,
+        borderColor: 'var(--color-primary, hsl(var(--border)))',
+      }}
+    >
+      <CardHeader 
+        className="border-b-2" 
+        style={{ 
+          borderColor: 'var(--color-primary, hsl(var(--border)))',
+          backgroundColor: 'color-mix(in srgb, var(--color-primary, hsl(var(--primary))) 5%, transparent)',
+        }}
+      >
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="flex items-center gap-2" style={{ color: 'var(--color-primary, hsl(var(--primary)))' }}>
@@ -180,19 +192,36 @@ export function AIMcpChatInterface({
             {isLoading && (
               <div className="flex gap-3">
                 <div className="flex-shrink-0">
-                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Bot className="h-4 w-4 text-primary" />
+                  <div 
+                    className="h-8 w-8 rounded-full flex items-center justify-center"
+                    style={{ 
+                      backgroundColor: 'color-mix(in srgb, var(--color-primary, hsl(var(--primary))) 10%, transparent)',
+                      color: 'var(--color-primary, hsl(var(--primary)))'
+                    }}
+                  >
+                    <Bot className="h-4 w-4" />
                   </div>
                 </div>
-                <div className="bg-muted rounded-lg px-4 py-2">
-                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                <div 
+                  className="rounded-lg px-4 py-2"
+                  style={{ 
+                    backgroundColor: 'color-mix(in srgb, var(--color-text-on-surface, hsl(var(--foreground))) 5%, transparent)'
+                  }}
+                >
+                  <Loader2 
+                    className="h-4 w-4 animate-spin" 
+                    style={{ color: 'var(--color-primary, hsl(var(--primary)))' }}
+                  />
                 </div>
               </div>
             )}
           </div>
         </ScrollArea>
 
-        <div className="border-t p-4">
+        <div 
+          className="border-t-2 p-4"
+          style={{ borderColor: 'var(--color-primary, hsl(var(--border)))' }}
+        >
           <form onSubmit={handleSubmit} className="flex gap-2">
             <Input
               value={input}
@@ -200,9 +229,19 @@ export function AIMcpChatInterface({
               placeholder={placeholder}
               disabled={isLoading}
               className="flex-1"
+              style={{
+                borderColor: 'var(--color-primary, hsl(var(--border)))',
+              }}
               autoFocus
             />
-            <Button type="submit" disabled={!input.trim() || isLoading}>
+            <Button 
+              type="submit" 
+              disabled={!input.trim() || isLoading}
+              style={{
+                backgroundColor: 'var(--color-primary, hsl(var(--primary)))',
+                color: '#ffffff',
+              }}
+            >
               {isLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
@@ -210,7 +249,10 @@ export function AIMcpChatInterface({
               )}
             </Button>
           </form>
-          <p className="text-xs text-muted-foreground mt-2 text-center">
+          <p 
+            className="text-xs mt-2 text-center" 
+            style={{ color: 'var(--color-text-on-surface, hsl(var(--muted-foreground)))' }}
+          >
             AI-assistenten har tilgang til MCP tools og kan utføre handlinger
           </p>
         </div>

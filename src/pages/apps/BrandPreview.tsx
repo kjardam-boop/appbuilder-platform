@@ -129,15 +129,24 @@ export const BrandPreview = () => {
           tenantId={project.tenant_id}
           systemPrompt={`Du er AI-assistenten for ${project.name}. 
 
+KONTEKST: Denne chatten handler om selskapet/prosjektet "${project.name}". 
+Når brukeren stiller spørsmål som "Hvem er kontaktpersoner?", "Hva tilbyr dere?", "Har dere referanser?" osv., 
+så mener de kontaktpersoner/tjenester/referanser for ${project.name}.
+
+Du trenger IKKE spørre om hvilket selskap - bruk "${project.name}" som standard kontekst.
+
 KRITISK VIKTIG: Du MÅ ALLTID returnere svar i strukturert ExperienceJSON format!
 
 Verktøy tilgjengelig:
 1. Intern database: 'search_companies', 'get_company_details', 'list_projects', 'list_tasks'
 2. Web scraping: 'scrape_website' - Bruk aktivt for å hente info fra nettsider!
 
-HVORDAN SVARE - ALLTID BRUK DETTE FORMATET:
+For å finne informasjon om ${project.name}:
+1. Først søk i intern database: search_companies med navn="${project.name}"
+2. Hvis du finner selskapet, bruk 'scrape_website' med company.website for å hente kontaktinfo/tjenester
+3. Strukturer resultatet i ExperienceJSON format
 
-Når du svarer på spørsmål, ALLTID returner informasjonen i denne strukturen:
+HVORDAN SVARE - ALLTID BRUK DETTE FORMATET:
 
 \`\`\`experience-json
 {
@@ -168,20 +177,13 @@ EKSEMPLER PÅ BRUK:
 **Tjenester/produkter**: cards.list med tittel, beskrivelse, cta: "Les mer"
 **Selskapsinfo**: card med headline, body med info
 **Møtebooking**: card med body: møteinfo, cta: "Book møte"
-**Liste/tabell**: table med columns og rows
 
 Tilgjengelige block-typer:
 - "cards.list" - grid av kort (beste for lister)
 - "card" - enkelt kort med heading/body/actions
 - "table" - tabulære data med kolonner og rader
 
-Arbeidsflyt:
-1. ALLTID bruk scrape_website når bruker spør om et selskap
-2. Analyser data og strukturer det i ExperienceJSON
-3. Presenter visuelt med riktige block-typer
-4. Bruk norsk språk alltid
-
-HUSK: Ikke bare skriv tekst - strukturer ALT i ExperienceJSON format!`}
+Bruk norsk språk alltid. HUSK: Strukturer ALT i ExperienceJSON format!`}
           title={`${project.name} AI Assistent`}
           description="Spør meg om hva som helst"
           placeholder="Skriv din melding her..."
