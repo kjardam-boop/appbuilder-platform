@@ -58,6 +58,7 @@ interface AppProject {
   selected_capabilities: any;
   deployed_to_preview_at: string | null;
   deployed_to_production_at: string | null;
+  app_key: string | null;
 }
 
 interface TenantUser {
@@ -623,7 +624,10 @@ export default function TenantDetails() {
 
                     <div className="flex flex-wrap gap-2">
                       <Button size="sm" variant="secondary" asChild>
-                        <Link to={`/apps/${project.id}/brand-preview`} className="flex items-center gap-2">
+                        <Link 
+                          to={project.app_key ? `/apps/${project.app_key}` : `/apps/${project.id}/brand-preview`} 
+                          className="flex items-center gap-2"
+                        >
                           <Eye className="h-4 w-4" />
                           Åpne app
                         </Link>

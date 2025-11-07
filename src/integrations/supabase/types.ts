@@ -1247,6 +1247,7 @@ export type Database = {
       }
       customer_app_projects: {
         Row: {
+          app_key: string | null
           approved_at: string | null
           approved_by: string | null
           created_at: string | null
@@ -1265,6 +1266,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          app_key?: string | null
           approved_at?: string | null
           approved_by?: string | null
           created_at?: string | null
@@ -1283,6 +1285,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          app_key?: string | null
           approved_at?: string | null
           approved_by?: string | null
           created_at?: string | null
