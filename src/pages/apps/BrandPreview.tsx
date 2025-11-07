@@ -213,19 +213,21 @@ Du MÅ ALLTID returnere svar som strukturert ExperienceJSON inne i en code block
         {
           "title": "Inger Fosso",
           "subtitle": "Salg",
-          "body": "📧 inger.fosso@akselera.com\\n📞 +47 950 59 534",
+          "itemType": "person",
+          "body": "E-post: inger.fosso@akselera.com\\nTelefon: +47 950 59 534",
           "cta": [
-            { "label": "Send e-post", "href": "mailto:inger.fosso@akselera.com" },
-            { "label": "Ring", "href": "tel:+4795059534" }
+            { "label": "Send e-post", "href": "mailto:inger.fosso@akselera.com", "type": "email" },
+            { "label": "Ring", "href": "tel:+4795059534", "type": "phone" }
           ]
         },
         {
           "title": "Mathis Hordvei",
           "subtitle": "Administrerende direktør",
-          "body": "📧 mathis.hordvei@akselera.com\\n📞 +47 952 68 728",
+          "itemType": "person",
+          "body": "E-post: mathis.hordvei@akselera.com\\nTelefon: +47 952 68 728",
           "cta": [
-            { "label": "Send e-post", "href": "mailto:mathis.hordvei@akselera.com" },
-            { "label": "Ring", "href": "tel:+4795268728" }
+            { "label": "Send e-post", "href": "mailto:mathis.hordvei@akselera.com", "type": "email" },
+            { "label": "Ring", "href": "tel:+4795268728", "type": "phone" }
           ]
         }
       ]
@@ -239,7 +241,7 @@ Du MÅ ALLTID returnere svar som strukturert ExperienceJSON inne i en code block
 \`\`\`experience-json
 {
   "version": "1.0",
-  "layout": { "type": "grid", "columns": 2, "gap": "md" },
+  "layout": { "type": "stack", "gap": "md" },
   "blocks": [
     {
       "type": "cards.list",
@@ -248,14 +250,16 @@ Du MÅ ALLTID returnere svar som strukturert ExperienceJSON inne i en code block
         {
           "title": "IT-konsulentvirksomhet",
           "subtitle": "Ekspertise innen systemutvikling",
-          "body": "Vi tilbyr skreddersydde IT-løsninger for bedrifter av alle størrelser.",
-          "cta": [{ "label": "Les mer", "href": "https://akselera.com/tjenester" }]
+          "itemType": "service",
+          "body": "Vi tilbyr skreddersydde IT-løsninger for bedrifter av alle størrelser med fokus på moderne teknologi og beste praksis.",
+          "cta": [{ "label": "Les mer", "href": "https://akselera.com/tjenester", "type": "web" }]
         },
         {
           "title": "Drift av IT-systemer",
           "subtitle": "24/7 support og vedlikehold",
-          "body": "Sikker og stabil drift av kritiske forretningssystemer.",
-          "cta": [{ "label": "Kontakt oss", "href": "mailto:kontakt@akselera.com" }]
+          "itemType": "service",
+          "body": "Sikker og stabil drift av kritiske forretningssystemer med proaktiv overvåkning og rask responstid.",
+          "cta": [{ "label": "Kontakt oss", "href": "mailto:kontakt@akselera.com", "type": "email" }]
         }
       ]
     }
@@ -290,9 +294,19 @@ Du MÅ ALLTID returnere svar som strukturert ExperienceJSON inne i en code block
 3. Bruk "cards.list" for lister (kontaktpersoner, tjenester, produkter)
 4. Bruk "card" for enkelt innhold med handlinger
 5. Bruk "table" kun for tabulære data med mange kolonner
-6. Legg til "cta" (call-to-action) buttons med mailto:, tel:, eller https:// links
-7. Bruk norsk språk i all tekst
-8. Strukturer data visuelt og attraktivt
+6. **VIKTIG**: Spesifiser "itemType" for cards.list items:
+   - "person" for kontaktpersoner (viser person-ikon)
+   - "service" for tjenester
+   - "company" for selskapsinfo
+   - "generic" for annet innhold
+7. **VIKTIG**: Spesifiser "type" for CTA-buttons:
+   - "email" for e-post links (viser mail-ikon)
+   - "phone" for telefon links (viser phone-ikon)
+   - "web" for nettsider (viser external-link-ikon)
+   - "generic" for andre handlinger
+8. Bruk norsk språk i all tekst
+9. Strukturer data visuelt og attraktivt med riktig spacing
+10. Ikke bruk emojis - ikoner genereres automatisk basert på type
 
 Tilgjengelige block-typer:
 - "cards.list" - grid av kort (beste for lister)

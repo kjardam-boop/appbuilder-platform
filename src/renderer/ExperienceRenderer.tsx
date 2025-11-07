@@ -27,12 +27,12 @@ export const ExperienceRenderer = ({ experience, onAction, onToolCall }: Experie
   return (
     <div
       className={cn(
-        'experience-container bg-surface text-on-surface',
+        'experience-container bg-background text-foreground p-6 rounded-lg',
         experience.layout.type === 'stack' && 'flex flex-col',
-        experience.layout.type === 'grid' && 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3',
-        experience.layout.gap === 'sm' && 'gap-2',
-        experience.layout.gap === 'md' && 'gap-4',
-        experience.layout.gap === 'lg' && 'gap-6',
+        experience.layout.type === 'grid' && 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3',
+        experience.layout.gap === 'sm' && 'gap-4',
+        experience.layout.gap === 'md' && 'gap-6',
+        experience.layout.gap === 'lg' && 'gap-8',
       )}
       style={style}
     >
@@ -43,12 +43,17 @@ export const ExperienceRenderer = ({ experience, onAction, onToolCall }: Experie
           return null;
         }
         return (
-          <Component
+          <div
             key={`${block.type}-${index}`}
-            {...(block as any)}
-            onAction={onAction}
-            onToolCall={onToolCall}
-          />
+            className="animate-fade-in"
+            style={{ animationDelay: `${index * 0.1}s` }}
+          >
+            <Component
+              {...(block as any)}
+              onAction={onAction}
+              onToolCall={onToolCall}
+            />
+          </div>
         );
       })}
     </div>
