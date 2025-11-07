@@ -117,11 +117,24 @@ export function AIProviderConfigModal({
         body: { action: 'list' }
       });
 
-      if (error || !data?.success) {
-        throw new Error(data?.error || error?.message || 'Failed to fetch secrets');
+      if (error) {
+        throw new Error(error.message || 'Failed to fetch secrets');
       }
 
-      setVaultSecrets(data.secrets || []);
+      // Accept multiple response shapes: { success, secrets }, { secrets }, or raw array
+      const secrets = Array.isArray((data as any)?.secrets)
+        ? (data as any).secrets
+        : Array.isArray(data)
+          ? (data as any)
+          : Array.isArray((data as any)?.data)
+            ? (data as any).data
+            : [];
+
+      setVaultSecrets((secrets as any[]).map((s: any) => ({
+        id: s.id,
+        name: s.name || s.secret_name || 'Secret',
+        created_at: s.created_at || s.inserted_at || new Date().toISOString(),
+      })));
     } catch (error: any) {
       console.error('Error fetching vault secrets:', error);
       toast({
@@ -129,6 +142,7 @@ export function AIProviderConfigModal({
         description: 'Kunne ikke hente Vault secrets',
         variant: 'destructive',
       });
+      setVaultSecrets([]);
     } finally {
       setLoadingSecrets(false);
     }
@@ -171,52 +185,6 @@ export function AIProviderConfigModal({
     }
   };
 
-  const testConnection = async () => {
-    setTesting(true);
-    setTestResult(null);
-
-    try {
-      const formData = form.getValues();
-      
-      const { data, error } = await supabase.functions.invoke('test-ai-provider', {
-        body: {
-          provider: providerType,
-          config: {
-            apiKey: formData.apiKey,
-            baseUrl: formData.baseUrl || undefined,
-            model: formData.model,
-          },
-        },
-      });
-
-      if (error) throw error;
-
-      if (data.success) {
-        setTestResult('success');
-        toast({
-          title: 'Connection test vellykket',
-          description: 'AI provider er tilgjengelig og fungerer.',
-        });
-      } else {
-        setTestResult('error');
-        toast({
-          title: 'Connection test feilet',
-          description: data.error || 'Kunne ikke koble til provider',
-          variant: 'destructive',
-        });
-      }
-    } catch (error: any) {
-      console.error('Test connection error:', error);
-      setTestResult('error');
-      toast({
-        title: 'Connection test feilet',
-        description: error.message || 'Kunne ikke teste connection',
-        variant: 'destructive',
-      });
-    } finally {
-      setTesting(false);
-    }
-  };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
