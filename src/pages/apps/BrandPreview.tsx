@@ -161,7 +161,7 @@ export const BrandPreview = () => {
         fontFamily: branding.fontStack || 'Inter, ui-sans-serif, system-ui, sans-serif',
       }}
     >
-      <div className="max-w-full mx-auto space-y-4 md:space-y-6 w-full overflow-hidden">
+      <div className="max-w-full mx-auto space-y-4 md:space-y-6 w-full">
         {/* Header with branding */}
         <div className="text-center space-y-4">
           {logoUrl && (

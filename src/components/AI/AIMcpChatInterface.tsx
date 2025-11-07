@@ -86,7 +86,7 @@ export function AIMcpChatInterface({
 
   return (
     <Card 
-      className="h-[600px] flex flex-col border-2" 
+      className="h-[70vh] md:h-[65vh] lg:h-[60vh] flex flex-col border-2" 
       style={{
         ...cardStyle,
         borderColor: 'var(--color-primary, hsl(var(--border)))',
