@@ -14,9 +14,9 @@ export async function executeBrand(
       try { return new URL(params.url).hostname; } catch { return params.url; }
     })();
 
-    // Try to load existing theme from database
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(tenantId);
 
+    // Try to load existing theme from database by tenant_id
     if (isUuid) {
       const { data: byTenant } = await supabase
         .from('tenant_themes')
@@ -45,13 +45,24 @@ export async function executeBrand(
         return byUrl.tokens;
       }
     } catch (e) {
-      console.warn('[brand] Lookup by URL failed (table might not exist):', e);
+      console.warn('[brand] Lookup by URL failed:', e);
     }
 
-    // Special-case: Akselera branding when URL matches
+    // No theme found - generate defaults and persist
+    let tokens: any;
     if (hostname.includes('akselera.com')) {
-      console.log('[brand] Falling back to built-in Akselera theme');
-      return {
+      console.log('[brand] Generating built-in Akselera theme');
+      tokens = {
+        primary: '#2563EB',
+        accent: '#10B981',
+        surface: '#FFFFFF',
+        textOnSurface: '#1F2937',
+        fontStack: 'Inter, ui-sans-serif, system-ui, sans-serif',
+        logoUrl: `${params.url}/logo.png`,
+      };
+    } else {
+      console.log('[brand] Using default theme for:', params.url);
+      tokens = {
         primary: '#2563EB',
         accent: '#10B981',
         surface: '#FFFFFF',
@@ -61,19 +72,34 @@ export async function executeBrand(
       };
     }
 
-    // Default sensible theme
-    console.log('[brand] No theme found in database, using defaults for:', params.url);
-    return {
-      primary: '#2563EB',
-      accent: '#10B981',
-      surface: '#FFFFFF',
-      textOnSurface: '#1F2937',
-      fontStack: 'Inter, ui-sans-serif, system-ui, sans-serif',
-      logoUrl: `${params.url}/logo.png`,
-    };
+    // Persist theme to database if tenantId is a UUID
+    if (isUuid) {
+      try {
+        const { error: upsertError } = await supabase
+          .from('tenant_themes')
+          .upsert({
+            tenant_id: tenantId,
+            tokens,
+            extracted_from_url: params.url,
+            is_active: true,
+          }, {
+            onConflict: 'tenant_id',
+            ignoreDuplicates: false,
+          });
+
+        if (upsertError) {
+          console.warn('[brand] Failed to persist theme:', upsertError);
+        } else {
+          console.log('[brand] Theme persisted to tenant_themes for tenant:', tenantId);
+        }
+      } catch (persistErr) {
+        console.warn('[brand] Error persisting theme:', persistErr);
+      }
+    }
+
+    return tokens;
   } catch (err) {
     console.error('[brand] Error extracting brand:', err);
-    // Fallback to defaults
     return {
       primary: '#2563EB',
       accent: '#10B981',

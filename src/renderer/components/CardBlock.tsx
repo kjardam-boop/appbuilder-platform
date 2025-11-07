@@ -8,19 +8,19 @@ interface CardBlockProps extends CardBlockType {
 
 export const CardBlock = ({ headline, body, actions, onAction }: CardBlockProps) => {
   return (
-    <Card>
+    <Card className="bg-surface text-on-surface border-primary/20">
       <CardHeader>
-        <CardTitle>{headline}</CardTitle>
+        <CardTitle className="text-primary">{headline}</CardTitle>
       </CardHeader>
       <CardContent>
-        <CardDescription className="whitespace-pre-wrap">{body}</CardDescription>
+        <CardDescription className="whitespace-pre-wrap text-on-surface">{body}</CardDescription>
         {actions && actions.length > 0 && (
           <div className="mt-4 flex gap-2">
             {actions.map((action) => (
               <Button
                 key={action.action_id}
                 onClick={() => onAction?.(action.action_id)}
-                variant="outline"
+                className="bg-primary text-white hover:opacity-90"
               >
                 {action.label}
               </Button>

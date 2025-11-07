@@ -8,19 +8,19 @@ interface TableBlockProps extends TableBlockType {
 export const TableBlock = ({ title, columns, rows }: TableBlockProps) => {
   return (
     <div className="space-y-4">
-      {title && <h2 className="text-2xl font-bold">{title}</h2>}
-      <div className="border rounded-lg overflow-hidden">
+      {title && <h2 className="text-2xl font-bold text-primary">{title}</h2>}
+      <div className="border border-primary/20 rounded-lg overflow-hidden bg-surface">
         <Table>
           <TableHeader>
-            <TableRow>
+            <TableRow className="bg-primary/10">
               {columns.map((column, index) => (
-                <TableHead key={index}>{column}</TableHead>
+                <TableHead key={index} className="text-primary font-semibold">{column}</TableHead>
               ))}
             </TableRow>
           </TableHeader>
           <TableBody>
             {rows.map((row, rowIndex) => (
-              <TableRow key={rowIndex}>
+              <TableRow key={rowIndex} className="text-on-surface">
                 {row.map((cell, cellIndex) => (
                   <TableCell key={cellIndex}>{cell}</TableCell>
                 ))}

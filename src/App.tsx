@@ -72,6 +72,8 @@ import IntegrationGraph from "./pages/admin/IntegrationGraph";
 import { PageBuilder } from "./platform/admin/PageBuilder";
 import { DynamicPage } from "./pages/DynamicPage";
 import { AkseleraDemoPage } from "./tenants/akselera/pages/DemoPage";
+import { BrandPreview } from "./pages/apps/BrandPreview";
+import { TenantBranding } from "./pages/admin/tenants/Branding";
 
 const queryClient = new QueryClient();
 
@@ -177,12 +179,16 @@ const App = () => (
             
             {/* Customer Apps */}
             <Route path="/apps" element={<AppsPage />} />
+            <Route path="/apps/:projectId/brand-preview" element={<BrandPreview />} />
             <Route path="/apps/jul25" element={<Jul25App />} />
             <Route path="/apps/jul25/admin" element={<Jul25FamilyAdmin />} />
             <Route path="/apps/jul25/member/:memberId" element={<Jul25MemberEdit />} />
             
             {/* Tenant-specific demo pages */}
             <Route path="/akselera/demo" element={<AkseleraDemoPage />} />
+            
+            {/* Tenant branding admin */}
+            <Route path="/admin/tenants/:slug/branding" element={<AdminLayout><TenantBranding /></AdminLayout>} />
             
             {/* Dynamic Pages */}
             <Route path="/page/:pageKey" element={<DynamicPage />} />

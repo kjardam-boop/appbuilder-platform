@@ -27,7 +27,7 @@ export const ExperienceRenderer = ({ experience, onAction, onToolCall }: Experie
   return (
     <div
       className={cn(
-        'experience-container',
+        'experience-container bg-surface text-on-surface',
         experience.layout.type === 'stack' && 'flex flex-col',
         experience.layout.type === 'grid' && 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3',
         experience.layout.gap === 'sm' && 'gap-2',

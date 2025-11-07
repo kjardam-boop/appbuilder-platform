@@ -15,7 +15,7 @@ export const AkseleraDemoPage = () => {
   const handleGenerate = async () => {
     setIsLoading(true);
     try {
-      // Get actual tenant ID from database
+      // Get actual tenant ID and current user
       const { data: tenant } = await supabase
         .from('tenants')
         .select('id')
@@ -23,6 +23,9 @@ export const AkseleraDemoPage = () => {
         .single();
 
       const actualTenantId = tenant?.id || 'akselera';
+
+      const { data: { user } } = await supabase.auth.getUser();
+      const currentUserId = user?.id;
 
       // 1. Extract brand
       const brandResult = await executeTool(actualTenantId, 'brand.extractFromSite', {
@@ -73,7 +76,42 @@ export const AkseleraDemoPage = () => {
       };
 
       setExperience(exp);
-      toast.success('Experience generert!');
+
+      // 4. Auto-create customer_app_projects entry for "Akselera Demo" if it doesn't exist
+      if (actualTenantId && currentUserId) {
+        try {
+          const { data: existingProject } = await supabase
+            .from('customer_app_projects')
+            .select('id')
+            .eq('tenant_id', actualTenantId)
+            .eq('name', 'Akselera Demo')
+            .maybeSingle();
+
+          if (!existingProject) {
+            const { error: insertError } = await supabase
+              .from('customer_app_projects')
+              .insert({
+                tenant_id: actualTenantId,
+                name: 'Akselera Demo',
+                description: 'Auto-generated demo application showcasing extracted branding',
+                status: 'preview',
+                subdomain: 'akselera-demo',
+                branding: brandResult.data,
+                created_by: currentUserId,
+              });
+
+            if (insertError) {
+              console.warn('[demo] Failed to auto-create customer_app_projects:', insertError);
+            } else {
+              console.log('[demo] Auto-created customer_app_projects for "Akselera Demo"');
+            }
+          }
+        } catch (appErr) {
+          console.warn('[demo] Error auto-creating app project:', appErr);
+        }
+      }
+
+      toast.success('Experience generert og branding lagret!');
     } catch (error) {
       console.error('Failed to generate experience:', error);
       toast.error('Feil ved generering av experience');
