@@ -257,76 +257,80 @@ export const TenantBranding = () => {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="primary">Primary</Label>
-              <div className="flex gap-2">
+              <div className="flex gap-2 items-center">
                 <Input
                   id="primary"
                   type="color"
                   value={editedTokens.primary}
                   onChange={(e) => setEditedTokens(prev => ({ ...prev, primary: e.target.value }))}
-                  className="w-20 h-10 cursor-pointer"
+                  className="w-24 h-24 cursor-pointer p-1 rounded-lg border-2"
                 />
                 <Input
                   type="text"
                   value={editedTokens.primary}
                   onChange={(e) => setEditedTokens(prev => ({ ...prev, primary: e.target.value }))}
-                  className="flex-1"
+                  className="flex-1 font-mono"
+                  placeholder="#000000"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="accent">Accent</Label>
-              <div className="flex gap-2">
+              <div className="flex gap-2 items-center">
                 <Input
                   id="accent"
                   type="color"
                   value={editedTokens.accent}
                   onChange={(e) => setEditedTokens(prev => ({ ...prev, accent: e.target.value }))}
-                  className="w-20 h-10 cursor-pointer"
+                  className="w-24 h-24 cursor-pointer p-1 rounded-lg border-2"
                 />
                 <Input
                   type="text"
                   value={editedTokens.accent}
                   onChange={(e) => setEditedTokens(prev => ({ ...prev, accent: e.target.value }))}
-                  className="flex-1"
+                  className="flex-1 font-mono"
+                  placeholder="#000000"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="surface">Surface</Label>
-              <div className="flex gap-2">
+              <div className="flex gap-2 items-center">
                 <Input
                   id="surface"
                   type="color"
                   value={editedTokens.surface}
                   onChange={(e) => setEditedTokens(prev => ({ ...prev, surface: e.target.value }))}
-                  className="w-20 h-10 cursor-pointer"
+                  className="w-24 h-24 cursor-pointer p-1 rounded-lg border-2"
                 />
                 <Input
                   type="text"
                   value={editedTokens.surface}
                   onChange={(e) => setEditedTokens(prev => ({ ...prev, surface: e.target.value }))}
-                  className="flex-1"
+                  className="flex-1 font-mono"
+                  placeholder="#FFFFFF"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="textOnSurface">Text on Surface</Label>
-              <div className="flex gap-2">
+              <div className="flex gap-2 items-center">
                 <Input
                   id="textOnSurface"
                   type="color"
                   value={editedTokens.textOnSurface}
                   onChange={(e) => setEditedTokens(prev => ({ ...prev, textOnSurface: e.target.value }))}
-                  className="w-20 h-10 cursor-pointer"
+                  className="w-24 h-24 cursor-pointer p-1 rounded-lg border-2"
                 />
                 <Input
                   type="text"
                   value={editedTokens.textOnSurface}
                   onChange={(e) => setEditedTokens(prev => ({ ...prev, textOnSurface: e.target.value }))}
-                  className="flex-1"
+                  className="flex-1 font-mono"
+                  placeholder="#000000"
                 />
               </div>
             </div>
