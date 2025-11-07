@@ -21,6 +21,13 @@ interface AIMcpChatInterfaceProps {
   description?: string;
 }
 
+interface BrandColors {
+  primary?: string;
+  accent?: string;
+  surface?: string;
+  textOnSurface?: string;
+}
+
 export function AIMcpChatInterface({
   tenantId,
   systemPrompt,
@@ -36,6 +43,12 @@ export function AIMcpChatInterface({
     tenantId,
     systemPrompt
   );
+
+  // Inherit CSS custom properties from parent
+  const cardStyle = {
+    background: 'var(--color-surface, hsl(var(--card)))',
+    color: 'var(--color-text-on-surface, hsl(var(--card-foreground)))',
+  } as React.CSSProperties;
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -70,16 +83,16 @@ export function AIMcpChatInterface({
   };
 
   return (
-    <Card className="h-[600px] flex flex-col">
-      <CardHeader className="border-b">
+    <Card className="h-[600px] flex flex-col" style={cardStyle}>
+      <CardHeader className="border-b" style={{ borderColor: 'var(--color-primary, hsl(var(--border)))' }}>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="flex items-center gap-2">
-              <Bot className="h-5 w-5 text-primary" />
+            <CardTitle className="flex items-center gap-2" style={{ color: 'var(--color-primary, hsl(var(--primary)))' }}>
+              <Bot className="h-5 w-5" />
               {title}
             </CardTitle>
             {description && (
-              <p className="text-sm text-muted-foreground mt-1">{description}</p>
+              <p className="text-sm mt-1" style={{ color: 'var(--color-text-on-surface, hsl(var(--muted-foreground)))' }}>{description}</p>
             )}
           </div>
           {messages.length > 0 && (
@@ -117,26 +130,45 @@ export function AIMcpChatInterface({
               >
                 {message.role !== 'user' && (
                   <div className="flex-shrink-0">
-                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Bot className="h-4 w-4 text-primary" />
+                    <div 
+                      className="h-8 w-8 rounded-full flex items-center justify-center"
+                      style={{ 
+                        backgroundColor: 'color-mix(in srgb, var(--color-primary, hsl(var(--primary))) 10%, transparent)',
+                        color: 'var(--color-primary, hsl(var(--primary)))'
+                      }}
+                    >
+                      <Bot className="h-4 w-4" />
                     </div>
                   </div>
                 )}
 
                 <div
-                  className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                  className="max-w-[80%] rounded-lg px-4 py-2"
+                  style={
                     message.role === 'user'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted'
-                  }`}
+                      ? { 
+                          backgroundColor: 'var(--color-primary, hsl(var(--primary)))',
+                          color: '#ffffff'
+                        }
+                      : { 
+                          backgroundColor: 'color-mix(in srgb, var(--color-text-on-surface, hsl(var(--foreground))) 5%, transparent)',
+                          color: 'var(--color-text-on-surface, hsl(var(--foreground)))'
+                        }
+                  }
                 >
                   <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                 </div>
 
                 {message.role === 'user' && (
                   <div className="flex-shrink-0">
-                    <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
-                      <User className="h-4 w-4 text-primary-foreground" />
+                    <div 
+                      className="h-8 w-8 rounded-full flex items-center justify-center"
+                      style={{ 
+                        backgroundColor: 'var(--color-primary, hsl(var(--primary)))',
+                        color: '#ffffff'
+                      }}
+                    >
+                      <User className="h-4 w-4" />
                     </div>
                   </div>
                 )}

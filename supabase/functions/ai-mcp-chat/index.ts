@@ -158,6 +158,20 @@ const MCP_TOOLS = [
         required: ["query"]
       }
     }
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_company_details",
+      description: "Get comprehensive company information including metadata, contact persons, website, financial data, and notes.",
+      parameters: {
+        type: "object",
+        properties: {
+          id: { type: "string", description: "Company UUID" }
+        },
+        required: ["id"]
+      }
+    }
   }
 ];
 
@@ -253,6 +267,35 @@ async function executeMcpTool(
         
         if (error) throw error;
         return data;
+      }
+
+      case "get_company_details": {
+        // Fetch company with all related data
+        const { data: company, error: companyError } = await supabaseClient
+          .from('companies')
+          .select('*')
+          .eq('id', args.id)
+          .maybeSingle();
+        
+        if (companyError) throw companyError;
+        if (!company) return { error: 'Company not found' };
+        
+        // Fetch company metadata (includes contact persons, notes, etc)
+        const { data: metadata, error: metadataError } = await supabaseClient
+          .from('company_metadata')
+          .select('*')
+          .eq('company_id', args.id)
+          .maybeSingle();
+        
+        // Combine all data
+        return {
+          ...company,
+          metadata: metadata || null,
+          contact_persons: metadata?.contact_persons || [],
+          notes: metadata?.notes || null,
+          priority_level: metadata?.priority_level || null,
+          sales_assessment_score: metadata?.sales_assessment_score || null
+        };
       }
 
       case "get_project": {
@@ -389,15 +432,23 @@ serve(async (req) => {
     const defaultSystemPrompt = `Du er en intelligent AI-assistent med tilgang til en bedrifts-plattform. 
 Du kan hjelpe brukere med å:
 - Søke etter og finne informasjon om selskaper, prosjekter og oppgaver
+- Hente detaljert selskapsinformasjon inkludert kontaktpersoner, metadata og finansiell data
 - Opprette nye prosjekter og oppgaver
 - Analysere data og gi anbefalinger
 - Svare på spørsmål om plattformens innhold
+
+Viktige verktøy:
+- Bruk 'get_company_details' for å hente komplett informasjon om et selskap (inkluderer kontaktpersoner fra metadata)
+- Bruk 'list_companies' eller 'search_companies' for å finne selskaper
+- Bruk 'list_projects' for å se prosjekter
+- Bruk 'list_applications' for å se tilgjengelige forretningssystemer
 
 Når du bruker verktøy:
 - Alltid forklar hva du gjør
 - Bruk norsk språk i svarene dine
 - Vær konsis og presis
-- Hvis du ikke finner noe, si det tydelig`;
+- Hvis du ikke finner noe, si det tydelig
+- Presenter kontaktpersoner og metadata når det er relevant`;
 
     const effectiveSystemPrompt = systemPrompt || defaultSystemPrompt;
 
