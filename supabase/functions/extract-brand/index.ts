@@ -180,9 +180,42 @@ serve(async (req) => {
     // Prefer CSS/HTML extraction; only call AI if we lack key colors
     let primaryGuess = (varCandidates['brand']?.[0] || varCandidates['primary']?.[0] || sorted[0] || '').toUpperCase();
     let accentGuess = (varCandidates['accent']?.[0] || sorted.find(c => c !== primaryGuess) || '').toUpperCase();
+    let secondaryGuess = (varCandidates['secondary']?.[0] || sorted.find(c => c !== primaryGuess && c !== accentGuess) || '').toUpperCase();
+    
+    // Find distinct colors for semantic purposes
+    const findDistinctColor = (exclude: string[], preferHue?: (h: number) => boolean) => {
+      for (const col of sorted) {
+        if (exclude.includes(col)) continue;
+        const rgb = hexToRgb(col);
+        const max = Math.max(rgb.r, rgb.g, rgb.b);
+        const min = Math.min(rgb.r, rgb.g, rgb.b);
+        const delta = max - min;
+        if (delta > 30) { // Has some saturation
+          if (!preferHue) return col;
+          // Calculate hue
+          let h = 0;
+          if (delta !== 0) {
+            if (max === rgb.r) h = 60 * (((rgb.g - rgb.b) / delta) % 6);
+            else if (max === rgb.g) h = 60 * (((rgb.b - rgb.r) / delta) + 2);
+            else h = 60 * (((rgb.r - rgb.g) / delta) + 4);
+          }
+          if (h < 0) h += 360;
+          if (preferHue(h)) return col;
+        }
+      }
+      return '';
+    };
+
+    const usedColors = [primaryGuess, accentGuess, secondaryGuess];
+    const destructiveGuess = findDistinctColor(usedColors, (h) => h >= 0 && h <= 30).toUpperCase(); // Red hues
+    usedColors.push(destructiveGuess);
+    const successGuess = findDistinctColor(usedColors, (h) => h >= 90 && h <= 150).toUpperCase(); // Green hues
+    usedColors.push(successGuess);
+    const warningGuess = findDistinctColor(usedColors, (h) => h >= 30 && h <= 60).toUpperCase(); // Yellow/orange hues
+    usedColors.push(warningGuess);
 
     let parsedTokens: any = {};
-    if (!isHex(primaryGuess) || !isHex(accentGuess)) {
+    if (!isHex(primaryGuess) || !isHex(accentGuess) || !isHex(secondaryGuess)) {
       // Fallback to AI only when necessary to save credits
       const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
       if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY not configured");
@@ -214,6 +247,7 @@ Return valid JSON with keys: primary, accent, surface, textOnSurface, fontStack.
 
       if (isHex(parsedTokens?.primary)) primaryGuess = parsedTokens.primary.toUpperCase();
       if (isHex(parsedTokens?.accent)) accentGuess = parsedTokens.accent.toUpperCase();
+      if (isHex(parsedTokens?.secondary)) secondaryGuess = parsedTokens.secondary.toUpperCase();
     }
 
     // Compose final tokens with strong fallbacks favoring existing values
@@ -222,10 +256,15 @@ Return valid JSON with keys: primary, accent, surface, textOnSurface, fontStack.
 
     const primaryFinal = isHex(primaryGuess) ? primaryGuess : (existingTokens?.primary || '#2563EB');
     const accentFinal = isHex(accentGuess) ? accentGuess : (existingTokens?.accent || '#10B981');
+    const secondaryFinal = isHex(secondaryGuess) ? secondaryGuess : (existingTokens?.secondary || '#8B5CF6');
     const surfaceFinal = isHex(toSix(surfaceGuess)) ? toSix(surfaceGuess) : (existingTokens?.surface || '#FFFFFF');
     const textOnSurfaceFinal = isHex(toSix(textGuess))
       ? toSix(textGuess)
       : (existingTokens?.textOnSurface || (luminance(surfaceFinal) > 0.6 ? '#1F2937' : '#F9FAFB'));
+    const destructiveFinal = isHex(destructiveGuess) ? destructiveGuess : (existingTokens?.destructive || '#EF4444');
+    const successFinal = isHex(successGuess) ? successGuess : (existingTokens?.success || '#10B981');
+    const warningFinal = isHex(warningGuess) ? warningGuess : (existingTokens?.warning || '#F59E0B');
+    const mutedFinal = existingTokens?.muted || '#6B7280';
     const fontStackFinal = typeof parsedTokens.fontStack === 'string' && parsedTokens.fontStack.trim()
       ? parsedTokens.fontStack.trim()
       : (typeof existingTokens?.fontStack === 'string' && existingTokens.fontStack.trim()
@@ -235,8 +274,13 @@ Return valid JSON with keys: primary, accent, surface, textOnSurface, fontStack.
     const finalTokens = {
       primary: toSix(primaryFinal),
       accent: toSix(accentFinal),
+      secondary: toSix(secondaryFinal),
       surface: toSix(surfaceFinal),
       textOnSurface: toSix(textOnSurfaceFinal),
+      destructive: toSix(destructiveFinal),
+      success: toSix(successFinal),
+      warning: toSix(warningFinal),
+      muted: mutedFinal,
       fontStack: fontStackFinal,
       logoUrl: `${websiteUrl.replace(/\/$/, '')}/logo.png`,
     };

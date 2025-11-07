@@ -37,8 +37,13 @@ export async function executeBrand(
     return {
       primary: '#2563EB',
       accent: '#10B981',
+      secondary: '#8B5CF6',
       surface: '#FFFFFF',
       textOnSurface: '#1F2937',
+      destructive: '#EF4444',
+      success: '#10B981',
+      warning: '#F59E0B',
+      muted: '#6B7280',
       fontStack: 'Inter, ui-sans-serif, system-ui, sans-serif',
       logoUrl: `${params.url}/logo.png`,
     };
