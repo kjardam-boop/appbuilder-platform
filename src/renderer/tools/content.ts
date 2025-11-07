@@ -3,26 +3,32 @@ import type { ToolExecutionResult } from './toolExecutor';
 /**
  * Scrape content from public web pages
  */
+export async function executeContent(
+  tenantId: string,
+  params: { urls: string[] }
+): Promise<any> {
+  // TODO: Implement actual web scraping
+  // For now, return mock data
+  const mockContent = params.urls.map(url => ({
+    url,
+    title: `Page from ${new URL(url).hostname}`,
+    paragraphs: [
+      'Consulting for growth and operational excellence.',
+      'Digital products, integrations and automation.',
+    ],
+  }));
+
+  return mockContent;
+}
+
+// Legacy export for backward compatibility
 export async function contentScrape(
   tenantId: string,
   params: { urls: string[] }
 ): Promise<ToolExecutionResult> {
   try {
-    // TODO: Implement actual web scraping
-    // For now, return mock data
-    const mockContent = params.urls.map(url => ({
-      url,
-      title: `Page from ${new URL(url).hostname}`,
-      paragraphs: [
-        'This is mock content from the scraped page.',
-        'In production, this would contain actual page content.',
-      ],
-    }));
-
-    return {
-      ok: true,
-      data: mockContent,
-    };
+    const data = await executeContent(tenantId, params);
+    return { ok: true, data };
   } catch (err) {
     return {
       ok: false,

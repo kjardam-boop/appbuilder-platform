@@ -20,8 +20,9 @@ const CardsListBlockSchema = z.object({
     body: z.string().optional(),
     cta: z.array(z.object({
       label: z.string(),
-      href: z.string().url(),
+      href: z.string().url().optional(),
     })).optional(),
+    meta: z.record(z.string()).optional(),
   })),
 });
 

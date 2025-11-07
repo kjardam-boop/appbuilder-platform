@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.generate-experience]
 verify_jwt = true
+
+[functions.create-tenant-onboarding]
+verify_jwt = true

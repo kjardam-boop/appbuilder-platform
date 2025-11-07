@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import { tailwindPreset } from "./src/shared/config/tailwind.preset";
 
 export default {
   darkMode: ["class"],
@@ -13,7 +14,9 @@ export default {
       },
     },
     extend: {
+      ...(tailwindPreset.theme?.extend || {}),
       colors: {
+        ...(tailwindPreset.theme?.extend?.colors || {}),
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

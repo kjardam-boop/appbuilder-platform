@@ -94,22 +94,23 @@ Deno.serve(async (req) => {
 
     console.log('[create-tenant-onboarding] Tenant created:', tenant);
 
-    // Link user to tenant as tenant_owner
-    const { error: tenantUserError } = await supabaseAdmin
-      .from('tenant_users')
+    // Link user to tenant as tenant_owner via user_roles
+    const { error: roleError } = await supabaseAdmin
+      .from('user_roles')
       .insert({
-        tenant_id: tenant.id,
         user_id: user_id,
-        roles: ['tenant_owner'],
-        is_active: true,
+        role: 'tenant_owner',
+        scope_type: 'tenant',
+        scope_id: tenant.id,
+        granted_by: user_id, // Self-granted during tenant creation
       });
 
-    if (tenantUserError) {
-      console.error('[create-tenant-onboarding] Error linking user to tenant:', tenantUserError);
-      // Rollback: delete tenant if user linking fails
+    if (roleError) {
+      console.error('[create-tenant-onboarding] Error granting tenant_owner role:', roleError);
+      // Rollback: delete tenant if role grant fails
       await supabaseAdmin.from('tenants').delete().eq('id', tenant.id);
       return new Response(
-        JSON.stringify({ error: 'Failed to link user to tenant', details: tenantUserError }),
+        JSON.stringify({ error: 'Failed to grant tenant_owner role', details: roleError }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

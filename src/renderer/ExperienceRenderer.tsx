@@ -20,7 +20,7 @@ export const ExperienceRenderer = ({ experience, onAction, onToolCall }: Experie
       '--color-accent': theme.accent,
       '--color-surface': theme.surface,
       '--color-text-on-surface': theme.textOnSurface,
-      '--font-stack': theme.fontStack,
+      '--font-stack': theme.fontStack || 'ui-sans-serif, system-ui, sans-serif',
     } as React.CSSProperties;
   }, [theme]);
 

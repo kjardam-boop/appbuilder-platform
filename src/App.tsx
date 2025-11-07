@@ -71,6 +71,7 @@ import IntegrationRecommendations from "./pages/admin/IntegrationRecommendations
 import IntegrationGraph from "./pages/admin/IntegrationGraph";
 import { PageBuilder } from "./platform/admin/PageBuilder";
 import { DynamicPage } from "./pages/DynamicPage";
+import { AkseleraDemoPage } from "./tenants/akselera/pages/DemoPage";
 
 const queryClient = new QueryClient();
 
@@ -179,6 +180,9 @@ const App = () => (
             <Route path="/apps/jul25" element={<Jul25App />} />
             <Route path="/apps/jul25/admin" element={<Jul25FamilyAdmin />} />
             <Route path="/apps/jul25/member/:memberId" element={<Jul25MemberEdit />} />
+            
+            {/* Tenant-specific demo pages */}
+            <Route path="/akselera/demo" element={<AkseleraDemoPage />} />
             
             {/* Dynamic Pages */}
             <Route path="/page/:pageKey" element={<DynamicPage />} />

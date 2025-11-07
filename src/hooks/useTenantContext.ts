@@ -5,6 +5,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { RequestContext } from '@/modules/tenant/types/tenant.types';
 import { resolveTenantByHost } from '@/modules/tenant/services/tenantResolver';
 
+// Static configs for dev/demo
+import akselera from '@/tenants/akselera/config';
+import agJacobsen from '@/tenants/ag-jacobsen/config';
+
+const staticConfigs: Record<string, any> = {
+  'akselera': akselera,
+  'ag-jacobsen': agJacobsen,
+};
+
 export const useTenantContext = (): RequestContext | null => {
   const { user } = useAuth();
   const [context, setContext] = useState<RequestContext | null>(null);
@@ -14,8 +23,33 @@ export const useTenantContext = (): RequestContext | null => {
       if (!user) return;
 
       try {
-        // Resolve tenant from hostname
         const host = window.location.hostname;
+        
+        // Dev mode: fallback to static config if localhost
+        const isDev = host === 'localhost' || host.startsWith('127.0.0.1');
+        
+        if (isDev && window.location.pathname.startsWith('/akselera')) {
+          // Use static Akselera config for demo
+          const staticConfig = staticConfigs['akselera'];
+          const ctx: RequestContext = {
+            tenant_id: 'akselera-demo',
+            tenant: {
+              tenant_id: 'akselera-demo',
+              name: staticConfig.name,
+              host,
+              enabled_modules: [],
+              custom_config: staticConfig,
+            } as any,
+            user_id: user.id,
+            user_role: 'tenant_owner', // Mock for dev
+            request_id: crypto.randomUUID(),
+            timestamp: new Date().toISOString(),
+          };
+          setContext(ctx);
+          return;
+        }
+
+        // Production: resolve from database
         const tenant = await resolveTenantByHost(host);
 
         if (!tenant) {
