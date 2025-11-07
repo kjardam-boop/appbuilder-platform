@@ -17,3 +17,6 @@ verify_jwt = true
 
 [functions.create-tenant-onboarding]
 verify_jwt = true
+
+[functions.ai-chat]
+verify_jwt = false

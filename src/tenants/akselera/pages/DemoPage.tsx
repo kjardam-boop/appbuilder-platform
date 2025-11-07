@@ -5,6 +5,7 @@ import { ExperienceRenderer } from '@/renderer/ExperienceRenderer';
 import { executeTool } from '@/renderer/tools/toolExecutor';
 import type { ExperienceJSON } from '@/renderer/schemas/experience.schema';
 import { toast } from 'sonner';
+import { ChatBox } from '../components/ChatBox';
 
 export const AkseleraDemoPage = () => {
   const [experience, setExperience] = useState<ExperienceJSON | null>(null);
@@ -89,6 +90,8 @@ export const AkseleraDemoPage = () => {
           <ExperienceRenderer experience={experience} />
         </div>
       )}
+
+      <ChatBox tenantId="akselera" />
     </div>
   );
 };

@@ -9,8 +9,22 @@ export async function executeBrand(
   params: { url: string }
 ): Promise<any> {
   // TODO: Call external brand extraction API
-  // For now, return mock data based on URL
-  const mockBrand = {
+  // For now, return tenant-specific mock data
+  
+  // Akselera branding (based on akselera.com)
+  if (params.url.includes('akselera.com') || tenantId === 'akselera') {
+    return {
+      primary: '#2563EB', // Akselera blue
+      accent: '#10B981', // Green accent
+      surface: '#FFFFFF',
+      textOnSurface: '#1F2937',
+      fontStack: 'Inter, ui-sans-serif, system-ui, -apple-system, sans-serif',
+      logoUrl: 'https://www.akselera.com/logo.png',
+    };
+  }
+  
+  // Default branding
+  return {
     primary: '#0EA5E9',
     accent: '#22C55E',
     surface: '#0B1220',
@@ -18,8 +32,6 @@ export async function executeBrand(
     fontStack: 'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif',
     logoUrl: `${params.url}/logo.png`,
   };
-
-  return mockBrand;
 }
 
 // Legacy export for backward compatibility
