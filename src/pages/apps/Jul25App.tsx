@@ -345,7 +345,29 @@ export default function Jul25App() {
     const currentDate = new Date(2025, 11, day); // December 2025
     const dateStr = `${day}. desember 2025`;
     
-    const prompt = `Skriv en hyggelig og inspirerende tekst for ${dateStr} som del av en digital julekalender. 
+    // Variert tematikk basert på periode
+    let themeGuidance = "";
+    if (day <= 7) {
+      themeGuidance = "Fokuser på forventning, håp og forberedelse til jul. Snakk om adventstiden som ventetid.";
+    } else if (day <= 14) {
+      themeGuidance = "Fokuser på glede, fellesskap og julestemning. Snakk om tradisjoner og samvær.";
+    } else if (day <= 21) {
+      themeGuidance = "Fokuser på budskapet om Jesu fødsel, stjerna over Betlehem, eller juleevangeliet.";
+    } else {
+      themeGuidance = "Fokuser på julegleden, gaver, kjærlighet og den nært forestående julaften.";
+    }
+    
+    // Varierte stilvalg
+    const styles = [
+      "Skriv som et reflekterende dikt",
+      "Skriv som en varm fortelling",
+      "Skriv som en oppmuntrende betraktning",
+      "Skriv som en poetisk meditasjon",
+      "Skriv som en livlig beskrivelse"
+    ];
+    const selectedStyle = styles[day % styles.length];
+    
+    const prompt = `Skriv en unik og inspirerende tekst for ${dateStr} som del av en digital julekalender. 
 
 VIKTIG INFORMASJON OM ADVENT 2025:
 - 1. søndag i advent (1. lys): 30. november 2025
@@ -354,16 +376,24 @@ VIKTIG INFORMASJON OM ADVENT 2025:
 - 4. søndag i advent (4. lys): 21. desember 2025
 - Julaften: 24. desember 2025
 
+TEMATISK RETNING FOR DENNE DAGEN:
+${themeGuidance}
+
+STILVALG:
+${selectedStyle}
+
 Teksten skal:
 - Være 2-4 setninger (150-250 ord)
 - Ha fokus på jul, advent og/eller den kristne julen
 - Hvis datoen er en adventssøndag, nevn at dette er [X]. søndag i advent og at vi tenner [X]. lys
-- Inkludere en interessant historisk hendelse eller fakta som skjedde på denne datoen (${day}. desember) i historien
+- Inkludere EN interessant historisk hendelse eller fakta som skjedde på denne datoen (${day}. desember) i historien
 - Være varm, inkluderende og julestemningsfylt
+- Være HELT UNIK - ikke bruk standardfraser som "i adventstiden" eller "i disse dager" hver gang
+- Variere lengde, tone og struktur fra dag til dag
 - Være på norsk og passe for alle aldre
 
 Formater teksten i to deler:
-1. En juletekst med fokus på advent, jul og kristne tradisjoner
+1. En juletekst med fokus på advent, jul og kristne tradisjoner (bruk den anbefalte stilarten)
 2. En historisk fakta om hva som skjedde på denne datoen
 
 Eksempel struktur:
