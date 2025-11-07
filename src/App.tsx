@@ -12,6 +12,8 @@ import TenantDetails from "./pages/TenantDetails";
 import TenantIntegrations from "./pages/admin/TenantIntegrations";
 import McpActionsRegistry from "./pages/admin/McpActionsRegistry";
 import TenantSettings from "./pages/admin/TenantSettings";
+import PlatformIntegrations from "./pages/admin/PlatformIntegrations";
+import AIProviderSettings from "./pages/admin/AIProviderSettings";
 import CompanyRegistration from "./pages/onboarding/CompanyRegistration";
 import ProjectCreation from "./pages/onboarding/ProjectCreation";
 import Auth from "./pages/Auth";
@@ -129,7 +131,8 @@ const App = () => (
               <Route path="capabilities" element={<CapabilityCatalog />} />
               <Route path="capabilities/:capabilityId" element={<CapabilityDetailsPage />} />
               <Route path="database" element={<AdminSeed />} />
-              <Route path="integrations" element={<AdminSettings />} />
+              <Route path="integrations" element={<PlatformIntegrations />} />
+              <Route path="ai-providers" element={<AIProviderSettings />} />
               <Route path="security" element={<AdminSettings />} />
               <Route path="apps" element={<AppCatalog />} />
               <Route path="apps/new" element={<AppDefinitionCreate />} />
