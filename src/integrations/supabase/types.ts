@@ -3526,6 +3526,7 @@ export type Database = {
           rate_limit: Json | null
           tenant_id: string
           updated_at: string
+          vault_secret_id: string | null
         }
         Insert: {
           adapter_id: string
@@ -3538,6 +3539,7 @@ export type Database = {
           rate_limit?: Json | null
           tenant_id: string
           updated_at?: string
+          vault_secret_id?: string | null
         }
         Update: {
           adapter_id?: string
@@ -3550,6 +3552,7 @@ export type Database = {
           rate_limit?: Json | null
           tenant_id?: string
           updated_at?: string
+          vault_secret_id?: string | null
         }
         Relationships: []
       }

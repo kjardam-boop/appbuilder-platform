@@ -101,32 +101,32 @@ export function AIProviderConfigModal({
 
   const onSubmit = async (data: FormData) => {
     try {
-      const { error } = await supabase
-        .from('tenant_integrations')
-        .upsert(
-          {
-            tenant_id: tenantId,
-            adapter_id: `ai-${providerType}`,
-            config: {
-              model: data.model,
-              temperature: data.temperature,
-              maxTokens: data.maxTokens,
-              maxCompletionTokens: data.maxCompletionTokens,
-            },
-            credentials: {
-              apiKey: data.apiKey,
-              baseUrl: data.baseUrl || undefined,
-            },
-            is_active: true,
+      // Use edge function to securely store credentials in Vault
+      const { data: result, error } = await supabase.functions.invoke('manage-ai-credentials', {
+        body: {
+          action: 'save',
+          tenantId,
+          provider: providerType,
+          credentials: {
+            apiKey: data.apiKey,
+            baseUrl: data.baseUrl || undefined,
           },
-          { onConflict: 'tenant_id,adapter_id' }
-        );
+          config: {
+            model: data.model,
+            temperature: data.temperature,
+            maxTokens: data.maxTokens,
+            maxCompletionTokens: data.maxCompletionTokens,
+          }
+        }
+      });
 
-      if (error) throw error;
+      if (error || !result?.success) {
+        throw new Error(result?.error || error?.message || 'Failed to save credentials');
+      }
 
       toast({
         title: 'AI Provider konfigurert',
-        description: `${PROVIDER_DISPLAY_NAMES[providerType]} er nå aktiv for din tenant.`,
+        description: `${PROVIDER_DISPLAY_NAMES[providerType]} er nå aktiv og API-nøkkel er kryptert i Vault.`,
       });
       
       onClose();

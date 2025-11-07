@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Settings, Brain } from "lucide-react";
+import { Lock, Settings, Brain } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "react-router-dom";
 
@@ -86,7 +86,8 @@ export function AIProvidersTab({ tenantId }: AIProvidersTabProps) {
       <div className="grid gap-4 md:grid-cols-2">
         {aiIntegrations?.map((integration) => {
           const config = integration.config as unknown as AIConfig;
-          const credentials = integration.credentials as unknown as AICredentials;
+          // AI credentials are now in Vault - show masked info
+          const hasVaultSecret = !!integration.vault_secret_id;
           
           return (
             <Card key={integration.id}>
@@ -100,9 +101,17 @@ export function AIProvidersTab({ tenantId }: AIProvidersTabProps) {
                       Model: {config?.model || "Standard"}
                     </CardDescription>
                   </div>
-                  <Badge variant={integration.is_active ? "default" : "secondary"}>
-                    {integration.is_active ? "Active" : "Inactive"}
-                  </Badge>
+                  <div className="flex gap-2">
+                    <Badge variant={integration.is_active ? "default" : "secondary"}>
+                      {integration.is_active ? "Active" : "Inactive"}
+                    </Badge>
+                    {hasVaultSecret && (
+                      <Badge variant="outline">
+                        <Lock className="h-3 w-3 mr-1" />
+                        Vault
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -118,7 +127,7 @@ export function AIProvidersTab({ tenantId }: AIProvidersTabProps) {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">API Key:</span>
                     <span className="font-mono text-xs">
-                      {credentials?.apiKey ? "••••••••" : "Ikke satt"}
+                      {hasVaultSecret ? "••••••••" : "Ikke satt"}
                     </span>
                   </div>
                 </div>

@@ -17,7 +17,7 @@ export async function getTenantAIConfig(
   try {
     const { data, error } = await supabaseClient
       .from('tenant_integrations')
-      .select('adapter_id, config, credentials, is_active')
+      .select('adapter_id, config, vault_secret_id, is_active')
       .eq('tenant_id', tenantId)
       .like('adapter_id', 'ai-%')
       .eq('is_active', true)
@@ -28,9 +28,25 @@ export async function getTenantAIConfig(
       return null;
     }
 
+    if (!data.vault_secret_id) {
+      console.log(`[TenantAI] No vault credentials for tenant ${tenantId}`);
+      return null;
+    }
+
+    // Read credentials from Vault (requires service role in edge function context)
+    const { data: secretValue, error: vaultError } = await supabaseClient
+      .rpc('vault_read_secret', {
+        secret_id: data.vault_secret_id
+      });
+
+    if (vaultError || !secretValue) {
+      console.error('[TenantAI] Vault read error:', vaultError);
+      return null;
+    }
+
+    const credentials = JSON.parse(secretValue);
     const provider = data.adapter_id.replace('ai-', '') as AIProviderType;
     const config = data.config as any || {};
-    const credentials = data.credentials as any || {};
 
     return {
       tenantId,

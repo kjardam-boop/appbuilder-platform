@@ -1,5 +1,8 @@
 project_id = "lunsgsyeaqnalpdbkhyg"
 
+[functions.manage-ai-credentials]
+verify_jwt = true
+
 [functions.trigger-n8n-workflow]
 verify_jwt = false
 
