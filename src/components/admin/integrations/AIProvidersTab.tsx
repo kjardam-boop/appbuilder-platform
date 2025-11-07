@@ -21,7 +21,7 @@ interface AIConfig {
 }
 
 interface AICredentials {
-  apiKey?: string;
+  secretName?: string;
 }
 
 export function AIProvidersTab({ tenantId }: AIProvidersTabProps) {
@@ -43,23 +43,6 @@ export function AIProvidersTab({ tenantId }: AIProvidersTabProps) {
       return data;
     },
   });
-
-  // Fetch vault secret names for display
-  const { data: vaultSecrets } = useQuery({
-    queryKey: ["vault-secrets"],
-    queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('manage-ai-credentials', {
-        body: { action: 'list' }
-      });
-      if (error || !data?.success) return [];
-      return data.secrets as Array<{ id: string; name: string }>;
-    },
-  });
-
-  const getSecretName = (vaultSecretId: string | null) => {
-    if (!vaultSecretId || !vaultSecrets) return null;
-    return vaultSecrets.find(s => s.id === vaultSecretId)?.name || null;
-  };
 
   const handleChangeSecret = (provider: string) => {
     const providerType = provider.replace('ai-', '') as AIProviderType;
@@ -130,8 +113,9 @@ export function AIProvidersTab({ tenantId }: AIProvidersTabProps) {
       <div className="grid gap-4 md:grid-cols-2">
         {aiIntegrations?.map((integration) => {
           const config = integration.config as unknown as AIConfig;
-          // AI credentials are now in Vault - show masked info
-          const hasVaultSecret = !!integration.vault_secret_id;
+          const credentials = integration.credentials as unknown as AICredentials;
+          // AI credentials are now in Environment Secrets
+          const hasSecret = !!credentials?.secretName;
           
           return (
             <Card key={integration.id}>
@@ -149,10 +133,10 @@ export function AIProvidersTab({ tenantId }: AIProvidersTabProps) {
                     <Badge variant={integration.is_active ? "default" : "secondary"}>
                       {integration.is_active ? "Active" : "Inactive"}
                     </Badge>
-                    {hasVaultSecret && (
+                    {hasSecret && (
                       <Badge variant="outline">
                         <Lock className="h-3 w-3 mr-1" />
-                        Vault
+                        Secured
                       </Badge>
                     )}
                   </div>
@@ -168,11 +152,11 @@ export function AIProvidersTab({ tenantId }: AIProvidersTabProps) {
                     <span className="text-muted-foreground">Max Tokens:</span>
                     <span>{config?.maxTokens || "Standard"}</span>
                   </div>
-                  {hasVaultSecret && (
+                  {hasSecret && (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Vault Secret:</span>
+                      <span className="text-muted-foreground">Secret Name:</span>
                       <span className="font-mono text-xs">
-                        {getSecretName(integration.vault_secret_id) || "••••••••"}
+                        {credentials?.secretName || "••••••••"}
                       </span>
                     </div>
                   )}
