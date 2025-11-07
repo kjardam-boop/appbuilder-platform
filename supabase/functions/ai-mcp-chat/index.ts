@@ -602,7 +602,7 @@ Når du bruker verktøy:
               provider: 'lovable',
               apiKey: LOVABLE_API_KEY,
               baseUrl: 'https://ai.gateway.lovable.dev/v1',
-              model: 'google/gemini-2.5-flash'
+              model: 'google/gemini-2.5-pro'
             };
             return callAIWithFailover(lovableConfig, messages, 2);
           }
@@ -642,7 +642,7 @@ Når du bruker verktøy:
             provider: 'lovable',
             apiKey: LOVABLE_API_KEY,
             baseUrl: 'https://ai.gateway.lovable.dev/v1',
-            model: 'google/gemini-2.5-flash'
+            model: 'google/gemini-2.5-pro'
           };
           return callAIWithFailover(lovableConfig, messages, 2);
         }

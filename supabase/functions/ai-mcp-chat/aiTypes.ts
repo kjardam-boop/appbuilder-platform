@@ -70,7 +70,7 @@ export interface AIChatResponse {
 export const DEFAULT_MODELS: Record<AIProviderType, string> = {
   'openai': 'gpt-5-mini-2025-08-07',
   'anthropic': 'claude-sonnet-4-5',
-  'google': 'google/gemini-2.5-flash',
+  'google': 'google/gemini-2.5-pro',
   'azure-openai': 'gpt-5-mini-2025-08-07',
-  'lovable': 'google/gemini-2.5-flash',
+  'lovable': 'google/gemini-2.5-pro',
 };

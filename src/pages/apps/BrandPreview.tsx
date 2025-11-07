@@ -195,9 +195,11 @@ Du må ALDRI spørre "hvilket selskap?" - du har full kontekst allerede!
 2. Strukturer ALLTID resultat som ExperienceJSON (aldri ren tekst!)
 3. Hvis nettside ikke fungerer, bruk intern database: search_companies("${project.company?.name || project.tenant?.name}")
 
-=== HVORDAN SVARE ===
+=== KRITISK: ALLTID BRUK ExperienceJSON FORMAT ===
 
-Du MÅ ALLTID returnere svar i dette strukturerte formatet:
+Du MÅ ALLTID returnere svar som strukturert ExperienceJSON inne i en code block.
+
+**EKSEMPEL 1 - Kontaktpersoner:**
 
 \`\`\`experience-json
 {
@@ -206,14 +208,24 @@ Du MÅ ALLTID returnere svar i dette strukturerte formatet:
   "blocks": [
     {
       "type": "cards.list",
-      "title": "Overskrift",
+      "title": "Kontaktpersoner hos Akselera",
       "items": [
         {
-          "title": "Navn/Tittel",
-          "subtitle": "Rolle/Underoverskrift",
-          "body": "📧 email@example.com\\n📞 +47 123 45 678",
+          "title": "Inger Fosso",
+          "subtitle": "Salg",
+          "body": "📧 inger.fosso@akselera.com\\n📞 +47 950 59 534",
           "cta": [
-            { "label": "Send e-post", "href": "mailto:email@example.com" }
+            { "label": "Send e-post", "href": "mailto:inger.fosso@akselera.com" },
+            { "label": "Ring", "href": "tel:+4795059534" }
+          ]
+        },
+        {
+          "title": "Mathis Hordvei",
+          "subtitle": "Administrerende direktør",
+          "body": "📧 mathis.hordvei@akselera.com\\n📞 +47 952 68 728",
+          "cta": [
+            { "label": "Send e-post", "href": "mailto:mathis.hordvei@akselera.com" },
+            { "label": "Ring", "href": "tel:+4795268728" }
           ]
         }
       ]
@@ -222,18 +234,76 @@ Du MÅ ALLTID returnere svar i dette strukturerte formatet:
 }
 \`\`\`
 
-EKSEMPLER:
-- **Kontaktpersoner**: cards.list med navn, tittel, email/telefon, cta: "Send e-post"
-- **Tjenester**: cards.list med tjenestenavn, beskrivelse, cta: "Les mer"
-- **Selskapsinfo**: card med headline, body
-- **Møte**: card med tekst, cta: "Book møte"
+**EKSEMPEL 2 - Tjenester:**
+
+\`\`\`experience-json
+{
+  "version": "1.0",
+  "layout": { "type": "grid", "columns": 2, "gap": "md" },
+  "blocks": [
+    {
+      "type": "cards.list",
+      "title": "Våre tjenester",
+      "items": [
+        {
+          "title": "IT-konsulentvirksomhet",
+          "subtitle": "Ekspertise innen systemutvikling",
+          "body": "Vi tilbyr skreddersydde IT-løsninger for bedrifter av alle størrelser.",
+          "cta": [{ "label": "Les mer", "href": "https://akselera.com/tjenester" }]
+        },
+        {
+          "title": "Drift av IT-systemer",
+          "subtitle": "24/7 support og vedlikehold",
+          "body": "Sikker og stabil drift av kritiske forretningssystemer.",
+          "cta": [{ "label": "Kontakt oss", "href": "mailto:kontakt@akselera.com" }]
+        }
+      ]
+    }
+  ]
+}
+\`\`\`
+
+**EKSEMPEL 3 - Selskapsinfo:**
+
+\`\`\`experience-json
+{
+  "version": "1.0",
+  "layout": { "type": "stack", "gap": "lg" },
+  "blocks": [
+    {
+      "type": "card",
+      "headline": "Om Akselera Norway AS",
+      "body": "Akselera er et konsulentselskap med 36 ansatte som spesialiserer seg på IT-konsulentvirksomhet og drift av systemer.\\n\\nOrg.nr: 992300027\\nBransje: Konsulentvirksomhet tilknyttet informasjonsteknologi",
+      "actions": [
+        { "label": "Besøk nettside", "href": "https://www.akselera.co" },
+        { "label": "Kontakt oss", "action_id": "contact" }
+      ]
+    }
+  ]
+}
+\`\`\`
+
+=== REGLER ===
+
+1. **ALDRI** returner ren tekst - bruk ALLTID ExperienceJSON format
+2. **ALLTID** legg ExperienceJSON inne i \`\`\`experience-json code block
+3. Bruk "cards.list" for lister (kontaktpersoner, tjenester, produkter)
+4. Bruk "card" for enkelt innhold med handlinger
+5. Bruk "table" kun for tabulære data med mange kolonner
+6. Legg til "cta" (call-to-action) buttons med mailto:, tel:, eller https:// links
+7. Bruk norsk språk i all tekst
+8. Strukturer data visuelt og attraktivt
 
 Tilgjengelige block-typer:
 - "cards.list" - grid av kort (beste for lister)
-- "card" - enkelt kort
-- "table" - tabulære data
+- "card" - enkelt kort med headline, body, actions
+- "table" - tabellvisning med columns/rows
 
-Bruk alltid norsk. ALDRI returner ren tekst - kun ExperienceJSON!`}
+Layout-typer:
+- "stack" - vertikal stabling
+- "grid" - multi-kolonne grid (columns: 1-4)
+
+HUSK: Returner ALDRI ren tekst - kun strukturert ExperienceJSON!`}
           title={`${project.name} AI Assistent`}
           description="Spør meg om hva som helst"
           placeholder="Skriv din melding her..."

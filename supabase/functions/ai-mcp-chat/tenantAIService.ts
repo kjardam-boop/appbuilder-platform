@@ -88,7 +88,7 @@ export function getAIProviderClient(config: AIProviderConfig | null, fallbackKey
     provider: config?.provider || 'lovable',
     apiKey: config?.apiKey || fallbackKey,
     baseUrl: config?.baseUrl || 'https://ai.gateway.lovable.dev/v1',
-    model: config?.model || 'google/gemini-2.5-flash',
+    model: config?.model || 'google/gemini-2.5-pro',
     temperature: config?.temperature,
     maxTokens: config?.maxTokens,
     maxCompletionTokens: config?.maxCompletionTokens,
