@@ -66,6 +66,18 @@ export function AIProvidersTab({ tenantId }: AIProvidersTabProps) {
     );
   }
 
+  // Helper to check if a provider is already configured
+  const isProviderConfigured = (providerId: string) => {
+    return aiIntegrations?.some(int => int.adapter_id === providerId) || false;
+  };
+
+  const availableProviders = [
+    { id: 'ai-openai', name: 'OpenAI' },
+    { id: 'ai-anthropic', name: 'Anthropic' },
+    { id: 'ai-google', name: 'Google' },
+    { id: 'ai-azure-openai', name: 'Azure OpenAI' },
+  ].filter(provider => !isProviderConfigured(provider.id));
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -83,28 +95,25 @@ export function AIProvidersTab({ tenantId }: AIProvidersTabProps) {
         </Button>
       </div>
 
-      {aiIntegrations && aiIntegrations.length === 0 && (
+      {availableProviders.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Ingen AI providers konfigurert</CardTitle>
+            <CardTitle>Legg til AI Provider</CardTitle>
             <CardDescription>
-              Velg en AI provider å konfigurere med eksisterende Vault secret eller ny API key.
+              Velg en AI provider å konfigurere. Du må først legge inn secret i Supabase (Project Settings → Edge Functions → Secrets).
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-3">
-              <Button variant="outline" onClick={() => handleChangeSecret('ai-openai')}>
-                Konfigurer OpenAI
-              </Button>
-              <Button variant="outline" onClick={() => handleChangeSecret('ai-anthropic')}>
-                Konfigurer Anthropic
-              </Button>
-              <Button variant="outline" onClick={() => handleChangeSecret('ai-google')}>
-                Konfigurer Google
-              </Button>
-              <Button variant="outline" onClick={() => handleChangeSecret('ai-azure-openai')}>
-                Konfigurer Azure OpenAI
-              </Button>
+              {availableProviders.map(provider => (
+                <Button 
+                  key={provider.id}
+                  variant="outline" 
+                  onClick={() => handleChangeSecret(provider.id)}
+                >
+                  Konfigurer {provider.name}
+                </Button>
+              ))}
             </div>
           </CardContent>
         </Card>
