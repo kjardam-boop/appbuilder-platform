@@ -39,18 +39,10 @@ serve(async (req) => {
       );
     }
 
-    // Fetch branding theme
-    const { data: theme } = await supabase
-      .from("tenant_themes")
-      .select("tokens, extracted_from_url")
-      .eq("tenant_id", tenantId)
-      .eq("is_active", true)
-      .maybeSingle();
-
     // Fetch company info if linked
     const settings = tenant.settings as any;
     const companyId = settings?.company_id;
-    let company = null;
+    let company: { name: string; website: string | null; org_number: string } | null = null;
     if (companyId) {
       const { data: companyData } = await supabase
         .from("companies")
@@ -58,6 +50,53 @@ serve(async (req) => {
         .eq("id", companyId)
         .maybeSingle();
       company = companyData;
+    }
+
+    // Fetch or generate branding theme
+    let theme = await supabase
+      .from("tenant_themes")
+      .select("tokens, extracted_from_url")
+      .eq("tenant_id", tenantId)
+      .eq("is_active", true)
+      .maybeSingle()
+      .then(res => res.data);
+
+    // If no theme exists and company has website, generate one
+    if (!theme && company?.website) {
+      console.log(`Generating theme from company website: ${company.website}`);
+      
+      const websiteUrl = company.website.startsWith('http') 
+        ? company.website 
+        : `https://${company.website}`;
+      
+      // Generate default theme tokens
+      const tokens = {
+        primary: '#2563EB',
+        accent: '#10B981',
+        surface: '#FFFFFF',
+        textOnSurface: '#1F2937',
+        fontStack: 'Inter, ui-sans-serif, system-ui, sans-serif',
+        logoUrl: `${websiteUrl}/logo.png`,
+      };
+
+      // Save theme to database
+      const { data: newTheme, error: themeError } = await supabase
+        .from("tenant_themes")
+        .insert({
+          tenant_id: tenantId,
+          tokens,
+          extracted_from_url: websiteUrl,
+          is_active: true,
+        })
+        .select()
+        .single();
+
+      if (!themeError && newTheme) {
+        theme = newTheme;
+        console.log('Theme created and saved to database');
+      } else {
+        console.warn('Failed to save theme:', themeError);
+      }
     }
 
     // Generate app config using OpenAI
