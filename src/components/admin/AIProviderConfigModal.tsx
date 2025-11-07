@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -27,9 +27,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, CheckCircle, XCircle } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, Shield } from 'lucide-react';
 import type { AIProviderType } from '@/modules/core/ai';
 import { DEFAULT_MODELS, PROVIDER_DISPLAY_NAMES } from '@/modules/core/ai';
 
@@ -41,12 +43,25 @@ interface AIProviderConfigModalProps {
 }
 
 const formSchema = z.object({
-  apiKey: z.string().min(1, 'API key er påkrevd'),
+  mode: z.enum(['paste', 'existing']),
+  vaultSecretId: z.string().optional(),
+  apiKey: z.string().optional(),
   baseUrl: z.string().url('Må være en gyldig URL').optional().or(z.literal('')),
   model: z.string().min(1, 'Modell er påkrevd'),
   temperature: z.coerce.number().min(0).max(2).optional(),
   maxTokens: z.coerce.number().min(1).optional(),
   maxCompletionTokens: z.coerce.number().min(1).optional(),
+}).refine((data) => {
+  if (data.mode === 'paste' && !data.apiKey) {
+    return false;
+  }
+  if (data.mode === 'existing' && !data.vaultSecretId) {
+    return false;
+  }
+  return true;
+}, {
+  message: 'API key eller Vault secret er påkrevd',
+  path: ['apiKey'],
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -81,6 +96,12 @@ const MODEL_OPTIONS: Record<AIProviderType, string[]> = {
   'lovable': ['google/gemini-2.5-flash'],
 };
 
+interface VaultSecret {
+  id: string;
+  name: string;
+  created_at: string;
+}
+
 export function AIProviderConfigModal({
   open,
   onClose,
@@ -90,44 +111,107 @@ export function AIProviderConfigModal({
   const { toast } = useToast();
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<'success' | 'error' | null>(null);
+  const [vaultSecrets, setVaultSecrets] = useState<VaultSecret[]>([]);
+  const [loadingSecrets, setLoadingSecrets] = useState(false);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      mode: 'paste',
       model: DEFAULT_MODELS[providerType],
       temperature: 0.7,
     },
   });
 
-  const onSubmit = async (data: FormData) => {
+  const mode = form.watch('mode');
+
+  // Fetch vault secrets when mode changes to 'existing'
+  useEffect(() => {
+    if (mode === 'existing' && vaultSecrets.length === 0) {
+      fetchVaultSecrets();
+    }
+  }, [mode]);
+
+  const fetchVaultSecrets = async () => {
+    setLoadingSecrets(true);
     try {
-      // Use edge function to securely store credentials in Vault
-      const { data: result, error } = await supabase.functions.invoke('manage-ai-credentials', {
-        body: {
-          action: 'save',
-          tenantId,
-          provider: providerType,
-          credentials: {
-            apiKey: data.apiKey,
-            baseUrl: data.baseUrl || undefined,
-          },
-          config: {
-            model: data.model,
-            temperature: data.temperature,
-            maxTokens: data.maxTokens,
-            maxCompletionTokens: data.maxCompletionTokens,
-          }
-        }
+      const { data, error } = await supabase.functions.invoke('manage-ai-credentials', {
+        body: { action: 'list' }
       });
 
-      if (error || !result?.success) {
-        throw new Error(result?.error || error?.message || 'Failed to save credentials');
+      if (error || !data?.success) {
+        throw new Error(data?.error || error?.message || 'Failed to fetch secrets');
       }
 
+      setVaultSecrets(data.secrets || []);
+    } catch (error: any) {
+      console.error('Error fetching vault secrets:', error);
       toast({
-        title: 'AI Provider konfigurert',
-        description: `${PROVIDER_DISPLAY_NAMES[providerType]} er nå aktiv og API-nøkkel er kryptert i Vault.`,
+        title: 'Feil',
+        description: 'Kunne ikke hente Vault secrets',
+        variant: 'destructive',
       });
+    } finally {
+      setLoadingSecrets(false);
+    }
+  };
+
+  const onSubmit = async (data: FormData) => {
+    try {
+      if (data.mode === 'paste') {
+        // Create new secret in Vault
+        const { data: result, error } = await supabase.functions.invoke('manage-ai-credentials', {
+          body: {
+            action: 'save',
+            tenantId,
+            provider: providerType,
+            credentials: {
+              apiKey: data.apiKey!,
+              baseUrl: data.baseUrl || undefined,
+            },
+            config: {
+              model: data.model,
+              temperature: data.temperature,
+              maxTokens: data.maxTokens,
+              maxCompletionTokens: data.maxCompletionTokens,
+            }
+          }
+        });
+
+        if (error || !result?.success) {
+          throw new Error(result?.error || error?.message || 'Failed to save credentials');
+        }
+
+        toast({
+          title: 'AI Provider konfigurert',
+          description: `${PROVIDER_DISPLAY_NAMES[providerType]} er nå aktiv og API-nøkkel er kryptert i Vault.`,
+        });
+      } else {
+        // Link existing Vault secret
+        const { data: result, error } = await supabase.functions.invoke('manage-ai-credentials', {
+          body: {
+            action: 'link',
+            tenantId,
+            provider: providerType,
+            vaultSecretId: data.vaultSecretId,
+            config: {
+              model: data.model,
+              temperature: data.temperature,
+              maxTokens: data.maxTokens,
+              maxCompletionTokens: data.maxCompletionTokens,
+            }
+          }
+        });
+
+        if (error || !result?.success) {
+          throw new Error(result?.error || error?.message || 'Failed to link secret');
+        }
+
+        toast({
+          title: 'AI Provider konfigurert',
+          description: `${PROVIDER_DISPLAY_NAMES[providerType]} bruker nå eksisterende Vault secret.`,
+        });
+      }
       
       onClose();
     } catch (error: any) {
@@ -201,45 +285,112 @@ export function AIProviderConfigModal({
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
-              name="apiKey"
+              name="mode"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>API Key</FormLabel>
+                  <FormLabel>Konfigurasjonsmetode</FormLabel>
                   <FormControl>
-                    <Input 
-                      type="password" 
-                      placeholder="sk-..." 
-                      {...field} 
-                    />
+                    <RadioGroup
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      className="flex gap-4"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="paste" id="paste" />
+                        <Label htmlFor="paste" className="cursor-pointer">
+                          Paste ny API key
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="existing" id="existing" />
+                        <Label htmlFor="existing" className="cursor-pointer flex items-center gap-1">
+                          <Shield className="h-4 w-4" />
+                          Velg eksisterende Vault secret
+                        </Label>
+                      </div>
+                    </RadioGroup>
                   </FormControl>
-                  <FormDescription>
-                    Din API-nøkkel vil bli kryptert og lagret sikkert.
-                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            {providerType === 'azure-openai' && (
+            {mode === 'existing' ? (
               <FormField
                 control={form.control}
-                name="baseUrl"
+                name="vaultSecretId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Azure Endpoint URL</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="https://your-resource.openai.azure.com" 
-                        {...field} 
-                      />
-                    </FormControl>
+                    <FormLabel>Vault Secret</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={loadingSecrets}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder={loadingSecrets ? "Laster secrets..." : "Velg secret"} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {vaultSecrets.map((secret) => (
+                          <SelectItem key={secret.id} value={secret.id}>
+                            {secret.name}
+                            <span className="text-xs text-muted-foreground ml-2">
+                              ({new Date(secret.created_at).toLocaleDateString('nb-NO')})
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormDescription>
-                      Din Azure OpenAI resource endpoint.
+                      Velg en eksisterende API-nøkkel fra Vault.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+            ) : (
+              <>
+                <FormField
+                  control={form.control}
+                  name="apiKey"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>API Key</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="password" 
+                          placeholder="sk-..." 
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Din API-nøkkel vil bli kryptert og lagret sikkert i Vault.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {providerType === 'azure-openai' && (
+                  <FormField
+                    control={form.control}
+                    name="baseUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Azure Endpoint URL</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="https://your-resource.openai.azure.com" 
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Din Azure OpenAI resource endpoint.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+              </>
             )}
 
             <FormField
@@ -318,7 +469,7 @@ export function AIProviderConfigModal({
                 type="button"
                 variant="outline"
                 onClick={testConnection}
-                disabled={testing || !form.watch('apiKey')}
+                disabled={testing || mode === 'existing' || !form.watch('apiKey')}
                 className="gap-2"
               >
                 {testing ? (

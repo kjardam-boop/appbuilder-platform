@@ -33,9 +33,22 @@ export async function getTenantAIConfig(
       return null;
     }
 
-    // Read credentials from Vault using direct query (service role required)
-    const { data: vaultSecret, error: vaultError } = await supabaseClient
-      .from('vault.secrets' as any)
+    // Create vault-scoped client for reading secrets
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2.76.1');
+    
+    const supabaseVault = createClient(supabaseUrl, supabaseServiceKey, {
+      db: { schema: 'vault' },
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
+
+    // Read credentials from Vault
+    const { data: vaultSecret, error: vaultError } = await supabaseVault
+      .from('secrets')
       .select('decrypted_secret')
       .eq('id', data.vault_secret_id)
       .single();
