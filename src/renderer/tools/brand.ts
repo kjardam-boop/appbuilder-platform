@@ -1,37 +1,51 @@
 import type { ToolExecutionResult } from './toolExecutor';
+import { supabase } from '@/integrations/supabase/client';
 
 /**
  * Extract brand colors/fonts from a website
- * Uses external API or scraping service
+ * First tries to load from tenant_themes table, then falls back to mock/API
  */
 export async function executeBrand(
   tenantId: string,
   params: { url: string }
 ): Promise<any> {
-  // TODO: Call external brand extraction API
-  // For now, return tenant-specific mock data
-  
-  // Akselera branding (based on akselera.com)
-  if (params.url.includes('akselera.com') || tenantId === 'akselera') {
+  try {
+    // Try to load existing theme from database
+    const { data: existingTheme } = await supabase
+      .from('tenant_themes')
+      .select('tokens, extracted_from_url')
+      .eq('tenant_id', tenantId)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (existingTheme?.tokens) {
+      console.log('[brand] Using existing theme from database for tenant:', tenantId);
+      return existingTheme.tokens;
+    }
+
+    // TODO: Call external brand extraction API here
+    console.log('[brand] No theme found in database, using defaults for:', params.url);
+    
+    // Return sensible defaults
     return {
-      primary: '#2563EB', // Akselera blue
-      accent: '#10B981', // Green accent
+      primary: '#2563EB',
+      accent: '#10B981',
       surface: '#FFFFFF',
       textOnSurface: '#1F2937',
-      fontStack: 'Inter, ui-sans-serif, system-ui, -apple-system, sans-serif',
-      logoUrl: 'https://www.akselera.com/logo.png',
+      fontStack: 'Inter, ui-sans-serif, system-ui, sans-serif',
+      logoUrl: `${params.url}/logo.png`,
+    };
+  } catch (err) {
+    console.error('[brand] Error extracting brand:', err);
+    // Fallback to defaults
+    return {
+      primary: '#2563EB',
+      accent: '#10B981',
+      surface: '#FFFFFF',
+      textOnSurface: '#1F2937',
+      fontStack: 'Inter, ui-sans-serif, system-ui, sans-serif',
     };
   }
-  
-  // Default branding
-  return {
-    primary: '#0EA5E9',
-    accent: '#22C55E',
-    surface: '#0B1220',
-    textOnSurface: '#E5E7EB',
-    fontStack: 'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif',
-    logoUrl: `${params.url}/logo.png`,
-  };
 }
 
 // Legacy export for backward compatibility

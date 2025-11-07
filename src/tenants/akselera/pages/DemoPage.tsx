@@ -6,6 +6,7 @@ import { executeTool } from '@/renderer/tools/toolExecutor';
 import type { ExperienceJSON } from '@/renderer/schemas/experience.schema';
 import { toast } from 'sonner';
 import { ChatBox } from '../components/ChatBox';
+import { supabase } from '@/integrations/supabase/client';
 
 export const AkseleraDemoPage = () => {
   const [experience, setExperience] = useState<ExperienceJSON | null>(null);
@@ -14,13 +15,22 @@ export const AkseleraDemoPage = () => {
   const handleGenerate = async () => {
     setIsLoading(true);
     try {
+      // Get actual tenant ID from database
+      const { data: tenant } = await supabase
+        .from('tenants')
+        .select('id')
+        .eq('slug', 'akselera')
+        .single();
+
+      const actualTenantId = tenant?.id || 'akselera';
+
       // 1. Extract brand
-      const brandResult = await executeTool('akselera', 'brand.extractFromSite', {
+      const brandResult = await executeTool(actualTenantId, 'brand.extractFromSite', {
         url: 'https://www.akselera.com',
       });
 
       // 2. Scrape content
-      const contentResult = await executeTool('akselera', 'content.scrape', {
+      const contentResult = await executeTool(actualTenantId, 'content.scrape', {
         urls: ['https://www.akselera.com', 'https://www.akselera.com/services'],
       });
 
