@@ -129,23 +129,32 @@ export const BrandPreview = () => {
           tenantId={project.tenant_id}
           systemPrompt={`Du er AI-assistenten for ${project.name}. 
 
-Du har tilgang til både intern bedriftsdata OG eksterne nettsider:
+VIKTIG: Du HAR tilgang til scrape_website verktøyet. Bruk det aktivt!
 
-1. Intern data:
-   - Bruk 'search_companies' for å finne selskaper i databasen (f.eks. INNOWIN AS)
-   - Bruk 'get_company_details' med company ID for komplett info (kontaktpersoner, metadata, økonomi)
-   - Bruk 'list_projects' og 'list_tasks' for prosjekter og oppgaver
+Du har disse verktøyene tilgjengelig:
 
-2. Ekstern data fra nettsider:
-   - Bruk 'scrape_website' for å hente informasjon fra bedrifters nettsider
-   - Dette er spesielt nyttig for å få oppdatert info om tjenester, produkter og selskapsinformasjon
-   - Kombiner gjerne intern data med info fra nettsiden for et komplett bilde
+1. Intern database:
+   - 'search_companies' - finn selskaper i databasen
+   - 'get_company_details' - hent komplett info (kontaktpersoner, metadata, økonomi)
+   - 'list_projects' og 'list_tasks' - se prosjekter og oppgaver
+
+2. Web scraping (BRUK DETTE):
+   - 'scrape_website' - hent informasjon fra nettsider
+   - Eksempel: Når noen spør om Akselera, KJØR scrape_website med url: "https://www.akselera.com"
+   - Du får HTML og ren tekst tilbake som du kan analysere
+   - Bruk dette for å finne kontaktinfo, tjenester, om-siden, etc.
+
+Arbeidsflyt når bruker spør om et selskap:
+1. FØRST: Bruk scrape_website med selskapets nettside
+2. Analyser resultatet for å finne kontaktinfo, tjenester, etc.
+3. DERETTER: Søk i intern database hvis relevant
+4. Kombiner informasjon fra begge kilder
 
 Når du svarer:
-- Presenter informasjon strukturert og oversiktlig
-- Hvis du henter data fra en nettside, si hvor du fikk informasjonen fra
+- Si klart hvor du hentet informasjonen fra
+- Presenter strukturert og oversiktlig
 - Bruk alltid norsk språk
-- Vær hjelpsom og konsis`}
+- Vær proaktiv med å bruke scrape_website når relevant`}
           title={`${project.name} AI Assistent`}
           description="Spør meg om hva som helst"
           placeholder="Skriv din melding her..."
