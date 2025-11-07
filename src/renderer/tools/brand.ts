@@ -10,23 +10,59 @@ export async function executeBrand(
   params: { url: string }
 ): Promise<any> {
   try {
-    // Try to load existing theme from database
-    const { data: existingTheme } = await supabase
-      .from('tenant_themes')
-      .select('tokens, extracted_from_url')
-      .eq('tenant_id', tenantId)
-      .eq('is_active', true)
-      .maybeSingle();
+    const hostname = (() => {
+      try { return new URL(params.url).hostname; } catch { return params.url; }
+    })();
 
-    if (existingTheme?.tokens) {
-      console.log('[brand] Using existing theme from database for tenant:', tenantId);
-      return existingTheme.tokens;
+    // Try to load existing theme from database
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(tenantId);
+
+    if (isUuid) {
+      const { data: byTenant } = await supabase
+        .from('tenant_themes')
+        .select('tokens, extracted_from_url')
+        .eq('tenant_id', tenantId)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (byTenant?.tokens) {
+        console.log('[brand] Using theme by tenant_id for tenant:', tenantId);
+        return byTenant.tokens;
+      }
     }
 
-    // TODO: Call external brand extraction API here
+    // Fallback: try lookup by extracted_from_url hostname
+    try {
+      const { data: byUrl } = await supabase
+        .from('tenant_themes')
+        .select('tokens, extracted_from_url')
+        .ilike('extracted_from_url', `%${hostname}%`)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (byUrl?.tokens) {
+        console.log('[brand] Using theme by extracted_from_url for host:', hostname);
+        return byUrl.tokens;
+      }
+    } catch (e) {
+      console.warn('[brand] Lookup by URL failed (table might not exist):', e);
+    }
+
+    // Special-case: Akselera branding when URL matches
+    if (hostname.includes('akselera.com')) {
+      console.log('[brand] Falling back to built-in Akselera theme');
+      return {
+        primary: '#2563EB',
+        accent: '#10B981',
+        surface: '#FFFFFF',
+        textOnSurface: '#1F2937',
+        fontStack: 'Inter, ui-sans-serif, system-ui, sans-serif',
+        logoUrl: `${params.url}/logo.png`,
+      };
+    }
+
+    // Default sensible theme
     console.log('[brand] No theme found in database, using defaults for:', params.url);
-    
-    // Return sensible defaults
     return {
       primary: '#2563EB',
       accent: '#10B981',
