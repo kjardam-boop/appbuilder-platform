@@ -131,7 +131,7 @@ export const BrandPreview = () => {
 
   return (
     <div 
-      className="min-h-screen p-8"
+      className="min-h-screen w-full p-4 md:p-6 lg:p-8 overflow-x-hidden"
       style={{
         ...brandingStyle,
         backgroundColor: branding.surface,
@@ -139,7 +139,7 @@ export const BrandPreview = () => {
         fontFamily: branding.fontStack || 'Inter, ui-sans-serif, system-ui, sans-serif',
       }}
     >
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-6xl mx-auto space-y-4 md:space-y-6 w-full">
         {/* Header with branding */}
         <div className="text-center space-y-4">
           {branding.logoUrl && (

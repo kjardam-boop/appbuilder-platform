@@ -27,12 +27,12 @@ export const ExperienceRenderer = ({ experience, onAction, onToolCall }: Experie
   return (
     <div
       className={cn(
-        'experience-container bg-background text-foreground p-6 rounded-lg',
+        'experience-container w-full max-w-full bg-background text-foreground p-4 md:p-6 rounded-lg overflow-hidden',
         experience.layout.type === 'stack' && 'flex flex-col',
-        experience.layout.type === 'grid' && 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3',
-        experience.layout.gap === 'sm' && 'gap-4',
-        experience.layout.gap === 'md' && 'gap-6',
-        experience.layout.gap === 'lg' && 'gap-8',
+        experience.layout.type === 'grid' && 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
+        experience.layout.gap === 'sm' && 'gap-3 md:gap-4',
+        experience.layout.gap === 'md' && 'gap-4 md:gap-6',
+        experience.layout.gap === 'lg' && 'gap-6 md:gap-8',
       )}
       style={style}
     >
@@ -45,7 +45,7 @@ export const ExperienceRenderer = ({ experience, onAction, onToolCall }: Experie
         return (
           <div
             key={`${block.type}-${index}`}
-            className="animate-fade-in"
+            className="animate-fade-in w-full min-w-0"
             style={{ animationDelay: `${index * 0.1}s` }}
           >
             <Component
