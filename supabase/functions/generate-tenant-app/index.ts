@@ -61,41 +61,31 @@ serve(async (req) => {
       .maybeSingle()
       .then(res => res.data);
 
-    // If no theme exists and company has website, generate one
+    // If no theme exists and company has website, extract from website using AI
     if (!theme && company?.website) {
-      console.log(`Generating theme from company website: ${company.website}`);
+      console.log(`Extracting theme from company website: ${company.website}`);
       
       const websiteUrl = company.website.startsWith('http') 
         ? company.website 
         : `https://${company.website}`;
       
-      // Generate default theme tokens
-      const tokens = {
-        primary: '#2563EB',
-        accent: '#10B981',
-        surface: '#FFFFFF',
-        textOnSurface: '#1F2937',
-        fontStack: 'Inter, ui-sans-serif, system-ui, sans-serif',
-        logoUrl: `${websiteUrl}/logo.png`,
-      };
+      try {
+        // Call extract-brand edge function
+        const { data: brandData, error: brandError } = await supabase.functions.invoke(
+          'extract-brand',
+          {
+            body: { websiteUrl, tenantId }
+          }
+        );
 
-      // Save theme to database
-      const { data: newTheme, error: themeError } = await supabase
-        .from("tenant_themes")
-        .insert({
-          tenant_id: tenantId,
-          tokens,
-          extracted_from_url: websiteUrl,
-          is_active: true,
-        })
-        .select()
-        .single();
-
-      if (!themeError && newTheme) {
-        theme = newTheme;
-        console.log('Theme created and saved to database');
-      } else {
-        console.warn('Failed to save theme:', themeError);
+        if (brandError) {
+          console.error('Brand extraction error:', brandError);
+        } else if (brandData?.tokens) {
+          theme = { tokens: brandData.tokens, extracted_from_url: websiteUrl };
+          console.log('Successfully extracted brand from website');
+        }
+      } catch (extractErr) {
+        console.error('Failed to extract brand:', extractErr);
       }
     }
 
