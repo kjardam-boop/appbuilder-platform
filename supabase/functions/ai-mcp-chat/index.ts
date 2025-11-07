@@ -205,7 +205,7 @@ async function executeMcpTool(
     switch (toolName) {
       case "list_companies":
       case "search_companies": {
-        let query = supabaseClient.from('companies').select('id, name, org_number, industry, created_at');
+        let query = supabaseClient.from('companies').select('id, name, org_number, industry_code, created_at');
         
         const searchQuery = args.q || args.query;
         if (searchQuery) {

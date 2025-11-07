@@ -12,6 +12,8 @@ import { Badge } from '@/components/ui/badge';
 import { useAIMcpChat } from '@/modules/core/ai';
 import { Send, Bot, User, Loader2, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { ExperienceRenderer } from '@/renderer/ExperienceRenderer';
+import type { ExperienceJSON } from '@/renderer/schemas/experience.schema';
 
 interface AIMcpChatInterfaceProps {
   tenantId: string;
@@ -156,7 +158,7 @@ export function AIMcpChatInterface({
                         }
                   }
                 >
-                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                  <MessageContent content={message.content} />
                 </div>
 
                 {message.role === 'user' && (
@@ -215,4 +217,49 @@ export function AIMcpChatInterface({
       </CardContent>
     </Card>
   );
+}
+
+/**
+ * Parse and render message content with ExperienceJSON support
+ */
+function MessageContent({ content }: { content: string }) {
+  // Try to parse experience-json code block
+  const experienceMatch = content.match(/```experience-json\n([\s\S]*?)\n```/);
+  
+  if (experienceMatch) {
+    try {
+      const experienceData: ExperienceJSON = JSON.parse(experienceMatch[1]);
+      
+      // Apply theme from CSS variables if not already set
+      if (!experienceData.theme) {
+        experienceData.theme = {
+          primary: getComputedStyle(document.documentElement).getPropertyValue('--color-primary') || '#000',
+          accent: getComputedStyle(document.documentElement).getPropertyValue('--color-accent') || '#666',
+          surface: getComputedStyle(document.documentElement).getPropertyValue('--color-surface') || '#fff',
+          textOnSurface: getComputedStyle(document.documentElement).getPropertyValue('--color-text-on-surface') || '#000',
+          fontStack: getComputedStyle(document.documentElement).getPropertyValue('--font-stack') || 'system-ui, sans-serif',
+        };
+      }
+      
+      // Extract text before and after JSON
+      const beforeText = content.substring(0, content.indexOf('```experience-json')).trim();
+      const afterText = content.substring(content.indexOf('```', content.indexOf('```experience-json') + 3) + 3).trim();
+      
+      return (
+        <div className="space-y-3">
+          {beforeText && <p className="text-sm whitespace-pre-wrap">{beforeText}</p>}
+          <div className="my-2">
+            <ExperienceRenderer experience={experienceData} />
+          </div>
+          {afterText && <p className="text-sm whitespace-pre-wrap">{afterText}</p>}
+        </div>
+      );
+    } catch (error) {
+      console.error('Failed to parse ExperienceJSON:', error);
+      // Fallback to plain text
+    }
+  }
+  
+  // Default: plain text rendering
+  return <p className="text-sm whitespace-pre-wrap">{content}</p>;
 }
