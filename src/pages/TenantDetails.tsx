@@ -357,7 +357,11 @@ export default function TenantDetails() {
 
   return (
     <div className="container mx-auto py-8 space-y-6">
-      <AppBreadcrumbs customLabel={tenant.name} />
+      <AppBreadcrumbs levels={[
+        { label: "Admin", href: "/admin" },
+        { label: "Tenants", href: "/admin/tenants" },
+        { label: tenant.name }
+      ]} />
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -392,6 +396,12 @@ export default function TenantDetails() {
             <Link to={`/admin/tenants/${tenantId}/apps`}>
               <Package className="mr-2 h-4 w-4" />
               Administrer Apps
+            </Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link to={`/admin/tenants/${tenantId}/integrations`}>
+              <Settings className="mr-2 h-4 w-4" />
+              Integrasjoner
             </Link>
           </Button>
           <Button asChild>

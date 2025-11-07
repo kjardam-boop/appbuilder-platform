@@ -3,6 +3,7 @@ import { useCurrentUser } from "@/modules/core/user";
 import { UserList } from "@/modules/core/user";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Shield } from "lucide-react";
+import { AppBreadcrumbs } from "@/components/ui/app-breadcrumbs";
 
 const UserManagement = () => {
   const { currentUser, loading, isAdmin } = useCurrentUser();
@@ -28,6 +29,11 @@ const UserManagement = () => {
 
   return (
     <div className="space-y-8">
+      <AppBreadcrumbs levels={[
+        { label: "Admin", href: "/admin" },
+        { label: "Brukeradministrasjon" }
+      ]} />
+      
       <div>
         <h1 className="text-3xl font-bold mb-2">Brukeradministrasjon</h1>
         <p className="text-muted-foreground">

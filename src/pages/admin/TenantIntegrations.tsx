@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { McpProvidersTab } from "@/components/admin/integrations/McpProvidersTab";
 import { AIProvidersTab } from "@/components/admin/integrations/AIProvidersTab";
 import { ExternalSystemsTab } from "@/components/admin/integrations/ExternalSystemsTab";
+import { AppBreadcrumbs } from "@/components/ui/app-breadcrumbs";
 
 /**
  * Tenant Integrations Management
@@ -65,17 +66,24 @@ export default function TenantIntegrations() {
 
   return (
     <div className="container mx-auto py-8 space-y-6">
+      <AppBreadcrumbs levels={[
+        { label: "Admin", href: "/admin" },
+        { label: "Tenants", href: "/admin/tenants" },
+        { label: tenant.name, href: `/admin/tenants/${tenantId}` },
+        { label: "Integrasjoner" }
+      ]} />
+      
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="space-y-1">
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate("/admin/tenants")}
+            onClick={() => navigate(`/admin/tenants/${tenantId}`)}
             className="mb-2"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Tilbake til tenants
+            Tilbake
           </Button>
           <h1 className="text-3xl font-bold">Integrasjoner</h1>
           <p className="text-muted-foreground">

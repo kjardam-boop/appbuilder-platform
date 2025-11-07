@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Building2, Briefcase, FolderKanban, AlertCircle, Activity } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AppBreadcrumbs } from "@/components/ui/app-breadcrumbs";
 
 export default function AdminDashboard() {
   // Fetch platform statistics
@@ -79,6 +80,11 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
+      <AppBreadcrumbs levels={[
+        { label: "Admin", href: "/admin" },
+        { label: "Dashboard" }
+      ]} />
+      
       <div>
         <h1 className="text-3xl font-bold">Platform Dashboard</h1>
         <p className="text-muted-foreground mt-2">

@@ -13,9 +13,11 @@ export default function ProjectDetails() {
     <div className="min-h-screen bg-background">
       <Header />
       <div className="container mx-auto py-8 px-4">
-        <div className="text-sm text-muted-foreground mb-4">
-          Prosjekter / Prosjektdetaljer
-        </div>
+        <AppBreadcrumbs levels={[
+          { label: "Dashboard", href: "/dashboard" },
+          { label: "Prosjekter", href: "/projects" },
+          { label: "Prosjektdetaljer" }
+        ]} />
 
         <div className="mb-6 flex items-center justify-between">
           <Button

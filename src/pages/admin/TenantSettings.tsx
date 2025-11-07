@@ -139,7 +139,12 @@ export default function TenantSettings() {
 
   return (
     <div className="container mx-auto py-8 space-y-6">
-      <AppBreadcrumbs customLabel="Innstillinger" />
+      <AppBreadcrumbs levels={[
+        { label: "Admin", href: "/admin" },
+        { label: "Tenants", href: "/admin/tenants" },
+        { label: tenant.name, href: `/admin/tenants/${tenantId}` },
+        { label: "Innstillinger" }
+      ]} />
 
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>

@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
 import { useAuth } from "@/modules/core/user";
+import { AppBreadcrumbs } from "@/components/ui/app-breadcrumbs";
 
 interface Tenant {
   id: string;
@@ -156,6 +157,11 @@ export default function Tenants() {
 
   return (
     <div className="container mx-auto py-8 space-y-8">
+      <AppBreadcrumbs levels={[
+        { label: "Admin", href: "/admin" },
+        { label: "Tenant-administrasjon" }
+      ]} />
+      
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Tenant-administrasjon</h1>
