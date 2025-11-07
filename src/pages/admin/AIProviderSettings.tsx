@@ -12,9 +12,9 @@ import {
 import { AIProviderConfigModal } from '@/components/admin/AIProviderConfigModal';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/modules/core/user';
 import type { AIProviderType } from '@/modules/core/ai';
 import { PROVIDER_DISPLAY_NAMES } from '@/modules/core/ai';
+import { useTenantIsolation } from '@/hooks/useTenantIsolation';
 
 interface ProviderInfo {
   type: AIProviderType;
@@ -69,41 +69,26 @@ const PROVIDERS: ProviderInfo[] = [
 ];
 
 export default function AIProviderSettings() {
-  const { user } = useAuth();
+  const { tenantId } = useTenantIsolation();
   const [selectedProvider, setSelectedProvider] = useState<AIProviderType | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
-  // Fetch user's tenant_id from user_roles
-  const { data: tenantRole } = useQuery({
-    queryKey: ['tenant-role', user?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('scope_id')
-        .eq('user_id', user?.id)
-        .eq('scope_type', 'tenant')
-        .single();
-      
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user?.id
-  });
-
   // Fetch active AI integrations for tenant
   const { data: integrations, isLoading, refetch } = useQuery({
-    queryKey: ['ai-integrations', tenantRole?.scope_id],
+    queryKey: ['ai-integrations', tenantId],
     queryFn: async () => {
+      if (!tenantId) throw new Error('No tenant context');
+      
       const { data, error } = await supabase
         .from('tenant_integrations')
         .select('adapter_id, is_active, config')
-        .eq('tenant_id', tenantRole?.scope_id)
+        .eq('tenant_id', tenantId)
         .like('adapter_id', 'ai-%');
       
       if (error) throw error;
       return data;
     },
-    enabled: !!tenantRole?.scope_id
+    enabled: !!tenantId
   });
 
   const getProviderStatus = (providerType: AIProviderType) => {
@@ -223,12 +208,12 @@ export default function AIProviderSettings() {
         })}
       </div>
 
-      {selectedProvider && (
+      {selectedProvider && tenantId && (
         <AIProviderConfigModal
           open={modalOpen}
           onClose={handleModalClose}
           providerType={selectedProvider}
-          tenantId={tenantRole?.scope_id || ''}
+          tenantId={tenantId}
         />
       )}
     </div>
