@@ -1249,7 +1249,6 @@ export type Database = {
         Row: {
           approved_at: string | null
           approved_by: string | null
-          branding: Json | null
           created_at: string | null
           created_by: string | null
           deployed_to_preview_at: string | null
@@ -1268,7 +1267,6 @@ export type Database = {
         Insert: {
           approved_at?: string | null
           approved_by?: string | null
-          branding?: Json | null
           created_at?: string | null
           created_by?: string | null
           deployed_to_preview_at?: string | null
@@ -1287,7 +1285,6 @@ export type Database = {
         Update: {
           approved_at?: string | null
           approved_by?: string | null
-          branding?: Json | null
           created_at?: string | null
           created_by?: string | null
           deployed_to_preview_at?: string | null

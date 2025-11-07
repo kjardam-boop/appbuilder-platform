@@ -16,22 +16,37 @@ export const BrandPreview = () => {
       if (!projectId) return;
 
       try {
+        // Get project with tenant relationship
         const { data: project } = await supabase
           .from('customer_app_projects')
-          .select('name, branding')
+          .select('name, tenant_id')
           .eq('id', projectId)
           .single();
 
-        if (project?.branding) {
+        if (!project) {
+          setLoading(false);
+          return;
+        }
+
+        // Get tenant's active branding theme
+        const { data: theme } = await supabase
+          .from('tenant_themes')
+          .select('tokens')
+          .eq('tenant_id', project.tenant_id)
+          .eq('is_active', true)
+          .maybeSingle();
+
+        if (theme?.tokens) {
+          const branding = theme.tokens as any;
           const exp: ExperienceJSON = {
             version: '1.0',
             layout: { type: 'stack', gap: 'md' },
-            theme: project.branding as any,
+            theme: branding,
             blocks: [
               {
                 type: 'card',
                 headline: `${project.name} - Branding Preview`,
-                body: 'Dette er en forhåndsvisning av brandingen for dette prosjektet.',
+                body: 'Dette er en forhåndsvisning av brandingen for dette prosjektet. Branding oppdateres automatisk når tenant-temaet endres.',
               },
               {
                 type: 'cards.list',
@@ -39,19 +54,19 @@ export const BrandPreview = () => {
                 items: [
                   {
                     title: 'Primary Color',
-                    body: (project.branding as any).primary || 'N/A',
+                    body: branding.primary || 'N/A',
                   },
                   {
                     title: 'Accent Color',
-                    body: (project.branding as any).accent || 'N/A',
+                    body: branding.accent || 'N/A',
                   },
                   {
                     title: 'Surface Color',
-                    body: (project.branding as any).surface || 'N/A',
+                    body: branding.surface || 'N/A',
                   },
                   {
                     title: 'Text on Surface',
-                    body: (project.branding as any).textOnSurface || 'N/A',
+                    body: branding.textOnSurface || 'N/A',
                   },
                 ],
               },

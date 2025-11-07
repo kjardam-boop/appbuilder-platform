@@ -176,7 +176,7 @@ Return ONLY valid JSON, no markdown or explanations.`;
     let project;
     
     if (existingProject) {
-      // Update existing project
+      // Update existing project (branding comes from tenant_themes, not stored here)
       const { data: updatedProject, error: updateError } = await supabase
         .from("customer_app_projects")
         .update({
@@ -185,7 +185,6 @@ Return ONLY valid JSON, no markdown or explanations.`;
           subdomain: appConfig.subdomain || tenant.slug,
           status: "draft",
           selected_capabilities: appConfig.suggested_capabilities || [],
-          branding: theme?.tokens || null,
           updated_at: new Date().toISOString(),
         })
         .eq("id", existingProject.id)
@@ -203,7 +202,7 @@ Return ONLY valid JSON, no markdown or explanations.`;
       project = updatedProject;
       console.log("Updated existing project:", project.id);
     } else {
-      // Create new project
+      // Create new project (branding comes from tenant_themes, not stored here)
       const { data: newProject, error: createError } = await supabase
         .from("customer_app_projects")
         .insert({
@@ -213,7 +212,6 @@ Return ONLY valid JSON, no markdown or explanations.`;
           subdomain: appConfig.subdomain || tenant.slug,
           status: "draft",
           selected_capabilities: appConfig.suggested_capabilities || [],
-          branding: theme?.tokens || null,
         })
         .select()
         .single();
