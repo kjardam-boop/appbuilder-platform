@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -40,8 +39,8 @@ interface AIProviderConfigModalProps {
 }
 
 const formSchema = z.object({
-  vaultSecretId: z.string().min(1, 'Velg en Vault secret'),
-  model: z.string().min(1, 'Modell er påkrevd'),
+  secretName: z.string().min(1, "Vennligst skriv inn secret navn"),
+  model: z.string().min(1, "Vennligst velg en modell"),
   temperature: z.coerce.number().min(0).max(2).optional(),
   maxTokens: z.coerce.number().min(1).optional(),
   maxCompletionTokens: z.coerce.number().min(1).optional(),
@@ -79,12 +78,6 @@ const MODEL_OPTIONS: Record<AIProviderType, string[]> = {
   'lovable': ['google/gemini-2.5-flash'],
 };
 
-interface VaultSecret {
-  id: string;
-  name: string;
-  created_at: string;
-}
-
 export function AIProviderConfigModal({
   open,
   onClose,
@@ -92,70 +85,15 @@ export function AIProviderConfigModal({
   tenantId,
 }: AIProviderConfigModalProps) {
   const { toast } = useToast();
-  const [vaultSecrets, setVaultSecrets] = useState<VaultSecret[]>([]);
-  const [loadingSecrets, setLoadingSecrets] = useState(false);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      secretName: "",
       model: DEFAULT_MODELS[providerType],
       temperature: 0.7,
     },
   });
-
-  // Fetch vault secrets when modal opens
-  useEffect(() => {
-    if (open) {
-      fetchVaultSecrets();
-    }
-  }, [open]);
-
-  const fetchVaultSecrets = async () => {
-    setLoadingSecrets(true);
-    try {
-      console.log('[AIProviderConfig] Fetching vault secrets...');
-      
-      const { data, error } = await supabase.functions.invoke('manage-ai-credentials', {
-        body: { action: 'list' }
-      });
-
-      console.log('[AIProviderConfig] Response:', { data, error });
-
-      if (error) {
-        console.error('[AIProviderConfig] Invoke error:', error);
-        throw new Error(error.message || 'Failed to fetch secrets');
-      }
-
-      if (!data?.success) {
-        console.error('[AIProviderConfig] API returned error:', data?.error);
-        throw new Error(data?.error || 'Failed to fetch secrets');
-      }
-
-      const secrets = data.secrets || [];
-      console.log('[AIProviderConfig] Parsed secrets:', secrets);
-
-      setVaultSecrets(secrets.map((s: any) => ({
-        id: s.id,
-        name: s.name,
-        created_at: s.created_at,
-      })));
-
-      toast({
-        title: 'Secrets hentet',
-        description: `Fant ${secrets.length} vault secrets`,
-      });
-    } catch (error: any) {
-      console.error('[AIProviderConfig] Error fetching vault secrets:', error);
-      toast({
-        title: 'Feil',
-        description: error.message || 'Kunne ikke hente Vault secrets',
-        variant: 'destructive',
-      });
-      setVaultSecrets([]);
-    } finally {
-      setLoadingSecrets(false);
-    }
-  };
 
   const onSubmit = async (data: FormData) => {
     try {
@@ -164,13 +102,11 @@ export function AIProviderConfigModal({
           action: 'link',
           tenantId,
           provider: providerType,
-          vaultSecretId: data.vaultSecretId,
-          config: {
-            model: data.model,
-            temperature: data.temperature,
-            maxTokens: data.maxTokens,
-            maxCompletionTokens: data.maxCompletionTokens,
-          }
+          secretName: data.secretName,
+          model: data.model,
+          temperature: data.temperature,
+          maxTokens: data.maxTokens,
+          maxCompletionTokens: data.maxCompletionTokens,
         }
       });
 
@@ -180,9 +116,10 @@ export function AIProviderConfigModal({
 
       toast({
         title: 'AI Provider konfigurert',
-        description: `${PROVIDER_DISPLAY_NAMES[providerType]} bruker nå eksisterende Vault secret.`,
+        description: `${PROVIDER_DISPLAY_NAMES[providerType]} er nå koblet til secret "${data.secretName}".`,
       });
 
+      form.reset();
       onClose();
     } catch (error: any) {
       console.error('Error saving AI config:', error);
@@ -194,14 +131,13 @@ export function AIProviderConfigModal({
     }
   };
 
-
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Konfigurer {PROVIDER_DISPLAY_NAMES[providerType]}</DialogTitle>
           <DialogDescription>
-            Legg inn API-nøkkel og velg modell for AI-provideren.
+            Skriv inn navnet på Environment Secret og velg modell for AI-provideren.
           </DialogDescription>
         </DialogHeader>
 
@@ -209,34 +145,19 @@ export function AIProviderConfigModal({
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
-              name="vaultSecretId"
+              name="secretName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Vault Secret</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value} disabled={loadingSecrets}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder={loadingSecrets ? 'Laster secrets...' : 'Velg secret'} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {vaultSecrets.length === 0 ? (
-                        <SelectItem value="__none" disabled>
-                          Ingen secrets funnet – opprett i Vault
-                        </SelectItem>
-                      ) : (
-                        vaultSecrets.map((secret) => (
-                          <SelectItem key={secret.id} value={secret.id}>
-                            {secret.name}
-                            <span className="text-xs text-muted-foreground ml-2">
-                              ({new Date(secret.created_at).toLocaleDateString('nb-NO')})
-                            </span>
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>Velg en eksisterende API-nøkkel fra Vault.</FormDescription>
+                  <FormLabel>Secret Navn</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="f.eks. OPENAI_API_KEY" 
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Navnet på Environment Secret i Supabase (må legges inn manuelt i Project Settings → Edge Functions → Secrets)
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -301,8 +222,11 @@ export function AIProviderConfigModal({
             </div>
 
             <div className="flex gap-3 pt-4">
-              <Button type="submit" className="flex-1" disabled={loadingSecrets || !form.watch('vaultSecretId')}>
+              <Button type="submit" className="flex-1">
                 Lagre konfigurasjon
+              </Button>
+              <Button type="button" variant="outline" onClick={onClose}>
+                Avbryt
               </Button>
             </div>
           </form>
