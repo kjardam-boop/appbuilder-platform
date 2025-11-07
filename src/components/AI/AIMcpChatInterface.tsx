@@ -84,6 +84,12 @@ export function AIMcpChatInterface({
     }
   };
 
+  const handleExperienceAction = (actionId: string, context?: any) => {
+    // Bridge Experience buttons to the chat agent as explicit action commands
+    // The agent prompt should interpret ACTION:<id> and respond accordingly
+    sendMessage(`ACTION:${actionId}`);
+  };
+
   return (
     <Card 
       className="h-[80svh] md:h-[65vh] lg:h-[60vh] flex flex-col border-2 overflow-hidden min-h-0" 
@@ -170,7 +176,7 @@ export function AIMcpChatInterface({
                         }
                   }
                 >
-                  <MessageContent content={message.content} />
+                  <MessageContent content={message.content} onAction={handleExperienceAction} />
                 </div>
 
                 {message.role === 'user' && (
@@ -264,7 +270,7 @@ export function AIMcpChatInterface({
 /**
  * Parse and render message content with ExperienceJSON support
  */
-function MessageContent({ content }: { content: string }) {
+function MessageContent({ content, onAction }: { content: string; onAction?: (actionId: string, context?: any) => void }) {
   // Try to parse experience-json code block
   const experienceMatch = content.match(/```experience-json\n([\s\S]*?)\n```/);
   
@@ -291,7 +297,7 @@ function MessageContent({ content }: { content: string }) {
         <div className="space-y-3">
           {beforeText && <p className="text-sm whitespace-pre-wrap">{beforeText}</p>}
           <div className="my-2">
-            <ExperienceRenderer experience={experienceData} />
+            <ExperienceRenderer experience={experienceData} onAction={onAction} />
           </div>
           {afterText && <p className="text-sm whitespace-pre-wrap">{afterText}</p>}
         </div>
