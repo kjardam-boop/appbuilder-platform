@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, RefreshCw, ImageIcon, Save } from 'lucide-react';
+import { Loader2, RefreshCw, ImageIcon, Save, Pipette } from 'lucide-react';
 import { toast } from 'sonner';
 import { executeTool } from '@/renderer/tools/toolExecutor';
 import { fetchCompanyLogo } from '@/utils/logoFetcher';
@@ -136,6 +136,24 @@ export const TenantBranding = () => {
       toast.error('Feil ved lagring av tema');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleColorPick = async (tokenKey: keyof typeof editedTokens) => {
+    if (!('EyeDropper' in window)) {
+      toast.error('Eyedropper er ikke støttet i denne nettleseren. Prøv Chrome/Edge.');
+      return;
+    }
+
+    try {
+      // @ts-ignore - EyeDropper is experimental
+      const eyeDropper = new window.EyeDropper();
+      const result = await eyeDropper.open();
+      setEditedTokens(prev => ({ ...prev, [tokenKey]: result.sRGBHex }));
+      toast.success('Farge plukket!');
+    } catch (error) {
+      // User cancelled or error occurred
+      console.error('Color picking failed:', error);
     }
   };
 
@@ -272,6 +290,15 @@ export const TenantBranding = () => {
                   className="flex-1 font-mono"
                   placeholder="#000000"
                 />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => handleColorPick('primary')}
+                  title="Plukk farge fra skjermen"
+                >
+                  <Pipette className="h-4 w-4" />
+                </Button>
               </div>
             </div>
 
@@ -292,6 +319,15 @@ export const TenantBranding = () => {
                   className="flex-1 font-mono"
                   placeholder="#000000"
                 />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => handleColorPick('accent')}
+                  title="Plukk farge fra skjermen"
+                >
+                  <Pipette className="h-4 w-4" />
+                </Button>
               </div>
             </div>
 
@@ -312,6 +348,15 @@ export const TenantBranding = () => {
                   className="flex-1 font-mono"
                   placeholder="#FFFFFF"
                 />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => handleColorPick('surface')}
+                  title="Plukk farge fra skjermen"
+                >
+                  <Pipette className="h-4 w-4" />
+                </Button>
               </div>
             </div>
 
@@ -332,6 +377,15 @@ export const TenantBranding = () => {
                   className="flex-1 font-mono"
                   placeholder="#000000"
                 />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => handleColorPick('textOnSurface')}
+                  title="Plukk farge fra skjermen"
+                >
+                  <Pipette className="h-4 w-4" />
+                </Button>
               </div>
             </div>
 
