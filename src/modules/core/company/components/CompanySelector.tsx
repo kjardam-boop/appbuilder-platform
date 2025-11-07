@@ -90,20 +90,7 @@ const CompanySelector = ({ open, onOpenChange, onSelect }: CompanySelectorProps)
         return;
       }
 
-      // Fetch enhanced data including contact person from Brreg
-      const { data: enhancedData, error: enhancedError } = await supabase.functions.invoke('brreg-enhanced-lookup', {
-        body: { orgNumber: company.organisasjonsnummer },
-      });
-
-      let contactPerson = null;
-      let contactPersonRole = null;
-
-      if (!enhancedError && enhancedData) {
-        contactPerson = enhancedData.kontaktperson || null;
-        contactPersonRole = enhancedData.kontaktpersonRolle || null;
-      }
-
-      // Insert new company with contact person data
+      // Insert new company without contact person fields (they don't exist in schema)
       const { data: newCompany, error } = await supabase
         .from("companies")
         .insert({
@@ -112,20 +99,21 @@ const CompanySelector = ({ open, onOpenChange, onSelect }: CompanySelectorProps)
           org_form: company.organisasjonsform?.kode,
           industry_code: company.naeringskode1?.kode,
           industry_description: company.naeringskode1?.beskrivelse,
-          contact_person: contactPerson,
-          contact_person_role: contactPersonRole,
         })
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error inserting company:", error);
+        throw error;
+      }
       
       onSelect(newCompany.id);
       onOpenChange(false);
       toast.success("Bedrift lagt til");
     } catch (error) {
       console.error("Error selecting company:", error);
-      toast.error("Kunne ikke legge til bedrift");
+      toast.error("Kunne ikke lagre bedrift");
     }
   };
 
