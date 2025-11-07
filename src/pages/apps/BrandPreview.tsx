@@ -4,12 +4,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { AIMcpChatInterface } from '@/components/AI/AIMcpChatInterface';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
+import { fetchCompanyLogo } from '@/utils/logoFetcher';
 
 export const BrandPreview = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const [project, setProject] = useState<any>(null);
   const [branding, setBranding] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const loadProject = async () => {
@@ -77,7 +79,27 @@ export const BrandPreview = () => {
           .maybeSingle();
 
         if (theme?.tokens) {
-          setBranding(theme.tokens);
+          const tokens = theme.tokens as any;
+          setBranding(tokens);
+          
+          // Try to load logo with fallback
+          if (tokens.logoUrl) {
+            // Test if the logoUrl works
+            const img = new Image();
+            img.onload = () => setLogoUrl(tokens.logoUrl);
+            img.onerror = async () => {
+              // Fallback to fetching from website
+              if (companyData?.website) {
+                const fallbackLogo = await fetchCompanyLogo(companyData.website);
+                setLogoUrl(fallbackLogo);
+              }
+            };
+            img.src = tokens.logoUrl;
+          } else if (companyData?.website) {
+            // No logoUrl in branding, fetch from website
+            const fetchedLogo = await fetchCompanyLogo(companyData.website);
+            setLogoUrl(fetchedLogo);
+          }
         }
       } catch (error) {
         console.error('Failed to load project:', error);
@@ -142,11 +164,15 @@ export const BrandPreview = () => {
       <div className="max-w-6xl mx-auto space-y-4 md:space-y-6 w-full">
         {/* Header with branding */}
         <div className="text-center space-y-4">
-          {branding.logoUrl && (
+          {logoUrl && (
             <img 
-              src={branding.logoUrl} 
+              src={logoUrl} 
               alt={project.name}
               className="h-16 mx-auto object-contain"
+              onError={(e) => {
+                // Hide image if it fails to load
+                e.currentTarget.style.display = 'none';
+              }}
             />
           )}
           <h1 
