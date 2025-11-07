@@ -113,33 +113,42 @@ export function AIProviderConfigModal({
   const fetchVaultSecrets = async () => {
     setLoadingSecrets(true);
     try {
+      console.log('[AIProviderConfig] Fetching vault secrets...');
+      
       const { data, error } = await supabase.functions.invoke('manage-ai-credentials', {
         body: { action: 'list' }
       });
 
+      console.log('[AIProviderConfig] Response:', { data, error });
+
       if (error) {
+        console.error('[AIProviderConfig] Invoke error:', error);
         throw new Error(error.message || 'Failed to fetch secrets');
       }
 
-      // Accept multiple response shapes: { success, secrets }, { secrets }, or raw array
-      const secrets = Array.isArray((data as any)?.secrets)
-        ? (data as any).secrets
-        : Array.isArray(data)
-          ? (data as any)
-          : Array.isArray((data as any)?.data)
-            ? (data as any).data
-            : [];
+      if (!data?.success) {
+        console.error('[AIProviderConfig] API returned error:', data?.error);
+        throw new Error(data?.error || 'Failed to fetch secrets');
+      }
 
-      setVaultSecrets((secrets as any[]).map((s: any) => ({
+      const secrets = data.secrets || [];
+      console.log('[AIProviderConfig] Parsed secrets:', secrets);
+
+      setVaultSecrets(secrets.map((s: any) => ({
         id: s.id,
-        name: s.name || s.secret_name || 'Secret',
-        created_at: s.created_at || s.inserted_at || new Date().toISOString(),
+        name: s.name,
+        created_at: s.created_at,
       })));
+
+      toast({
+        title: 'Secrets hentet',
+        description: `Fant ${secrets.length} vault secrets`,
+      });
     } catch (error: any) {
-      console.error('Error fetching vault secrets:', error);
+      console.error('[AIProviderConfig] Error fetching vault secrets:', error);
       toast({
         title: 'Feil',
-        description: 'Kunne ikke hente Vault secrets',
+        description: error.message || 'Kunne ikke hente Vault secrets',
         variant: 'destructive',
       });
       setVaultSecrets([]);
