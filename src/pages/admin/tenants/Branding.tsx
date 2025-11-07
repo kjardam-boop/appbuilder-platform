@@ -24,8 +24,13 @@ export const TenantBranding = () => {
   const [editedTokens, setEditedTokens] = useState({
     primary: '',
     accent: '',
+    secondary: '',
     surface: '',
     textOnSurface: '',
+    destructive: '',
+    success: '',
+    warning: '',
+    muted: '',
     fontStack: '',
     logoUrl: '',
   });
@@ -64,8 +69,13 @@ export const TenantBranding = () => {
         setEditedTokens({
           primary: tokens.primary || '',
           accent: tokens.accent || '',
+          secondary: tokens.secondary || '',
           surface: tokens.surface || '',
           textOnSurface: tokens.textOnSurface || '',
+          destructive: tokens.destructive || '',
+          success: tokens.success || '',
+          warning: tokens.warning || '',
+          muted: tokens.muted || '',
           fontStack: tokens.fontStack || '',
           logoUrl: tokens.logoUrl || '',
         });
@@ -230,17 +240,54 @@ export const TenantBranding = () => {
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Kildedata</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <p><strong>Ekstrahert fra:</strong> {theme.extracted_from_url || 'N/A'}</p>
-          <p><strong>Opprettet:</strong> {new Date(theme.created_at).toLocaleString('no-NO')}</p>
-          <p><strong>Sist oppdatert:</strong> {new Date(theme.updated_at).toLocaleString('no-NO')}</p>
-          <p><strong>Aktiv:</strong> {theme.is_active ? 'Ja' : 'Nei'}</p>
-        </CardContent>
-      </Card>
+      <div className="grid lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Kildedata</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <p><strong>Ekstrahert fra:</strong> {theme.extracted_from_url || 'N/A'}</p>
+            <p><strong>Opprettet:</strong> {new Date(theme.created_at).toLocaleString('no-NO')}</p>
+            <p><strong>Sist oppdatert:</strong> {new Date(theme.updated_at).toLocaleString('no-NO')}</p>
+            <p><strong>Aktiv:</strong> {theme.is_active ? 'Ja' : 'Nei'}</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Fargepalett (9 farger)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { label: 'Primary', key: 'primary' },
+                { label: 'Accent', key: 'accent' },
+                { label: 'Secondary', key: 'secondary' },
+                { label: 'Destructive', key: 'destructive' },
+                { label: 'Success', key: 'success' },
+                { label: 'Warning', key: 'warning' },
+                { label: 'Surface', key: 'surface' },
+                { label: 'Text', key: 'textOnSurface' },
+                { label: 'Muted', key: 'muted' },
+              ].map(({ label, key }) => {
+                const color = editedTokens[key as keyof typeof editedTokens] || '#cccccc';
+                return (
+                  <div key={key} className="flex flex-col items-center gap-2">
+                    <div
+                      className="w-full h-16 rounded-lg border-2 shadow-sm"
+                      style={{ backgroundColor: color }}
+                    />
+                    <div className="text-center">
+                      <p className="text-xs font-medium">{label}</p>
+                      <p className="text-xs font-mono text-muted-foreground">{color}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Live Preview */}
@@ -402,6 +449,151 @@ export const TenantBranding = () => {
                   variant="outline"
                   size="icon"
                   onClick={() => handleColorPick('textOnSurface')}
+                  title="Plukk farge fra skjermen"
+                >
+                  <Pipette className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="secondary">Secondary</Label>
+              <div className="flex gap-2 items-center">
+                <Input
+                  id="secondary"
+                  type="color"
+                  value={editedTokens.secondary}
+                  onChange={(e) => setEditedTokens(prev => ({ ...prev, secondary: e.target.value }))}
+                  className="w-24 h-24 cursor-pointer p-1 rounded-lg border-2"
+                />
+                <Input
+                  type="text"
+                  value={editedTokens.secondary}
+                  onChange={(e) => setEditedTokens(prev => ({ ...prev, secondary: e.target.value }))}
+                  className="flex-1 font-mono"
+                  placeholder="#000000"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => handleColorPick('secondary')}
+                  title="Plukk farge fra skjermen"
+                >
+                  <Pipette className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="destructive">Destructive (Red)</Label>
+              <div className="flex gap-2 items-center">
+                <Input
+                  id="destructive"
+                  type="color"
+                  value={editedTokens.destructive}
+                  onChange={(e) => setEditedTokens(prev => ({ ...prev, destructive: e.target.value }))}
+                  className="w-24 h-24 cursor-pointer p-1 rounded-lg border-2"
+                />
+                <Input
+                  type="text"
+                  value={editedTokens.destructive}
+                  onChange={(e) => setEditedTokens(prev => ({ ...prev, destructive: e.target.value }))}
+                  className="flex-1 font-mono"
+                  placeholder="#EF4444"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => handleColorPick('destructive')}
+                  title="Plukk farge fra skjermen"
+                >
+                  <Pipette className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="success">Success (Green)</Label>
+              <div className="flex gap-2 items-center">
+                <Input
+                  id="success"
+                  type="color"
+                  value={editedTokens.success}
+                  onChange={(e) => setEditedTokens(prev => ({ ...prev, success: e.target.value }))}
+                  className="w-24 h-24 cursor-pointer p-1 rounded-lg border-2"
+                />
+                <Input
+                  type="text"
+                  value={editedTokens.success}
+                  onChange={(e) => setEditedTokens(prev => ({ ...prev, success: e.target.value }))}
+                  className="flex-1 font-mono"
+                  placeholder="#10B981"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => handleColorPick('success')}
+                  title="Plukk farge fra skjermen"
+                >
+                  <Pipette className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="warning">Warning (Orange/Yellow)</Label>
+              <div className="flex gap-2 items-center">
+                <Input
+                  id="warning"
+                  type="color"
+                  value={editedTokens.warning}
+                  onChange={(e) => setEditedTokens(prev => ({ ...prev, warning: e.target.value }))}
+                  className="w-24 h-24 cursor-pointer p-1 rounded-lg border-2"
+                />
+                <Input
+                  type="text"
+                  value={editedTokens.warning}
+                  onChange={(e) => setEditedTokens(prev => ({ ...prev, warning: e.target.value }))}
+                  className="flex-1 font-mono"
+                  placeholder="#F59E0B"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => handleColorPick('warning')}
+                  title="Plukk farge fra skjermen"
+                >
+                  <Pipette className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="muted">Muted (Gray)</Label>
+              <div className="flex gap-2 items-center">
+                <Input
+                  id="muted"
+                  type="color"
+                  value={editedTokens.muted}
+                  onChange={(e) => setEditedTokens(prev => ({ ...prev, muted: e.target.value }))}
+                  className="w-24 h-24 cursor-pointer p-1 rounded-lg border-2"
+                />
+                <Input
+                  type="text"
+                  value={editedTokens.muted}
+                  onChange={(e) => setEditedTokens(prev => ({ ...prev, muted: e.target.value }))}
+                  className="flex-1 font-mono"
+                  placeholder="#6B7280"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => handleColorPick('muted')}
                   title="Plukk farge fra skjermen"
                 >
                   <Pipette className="h-4 w-4" />
