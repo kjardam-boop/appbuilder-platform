@@ -69,6 +69,8 @@ import Categories from "./pages/admin/Categories";
 import TenantSystems from "./pages/admin/TenantSystems";
 import IntegrationRecommendations from "./pages/admin/IntegrationRecommendations";
 import IntegrationGraph from "./pages/admin/IntegrationGraph";
+import { PageBuilder } from "./platform/admin/PageBuilder";
+import { DynamicPage } from "./pages/DynamicPage";
 
 const queryClient = new QueryClient();
 
@@ -177,6 +179,10 @@ const App = () => (
             <Route path="/apps/jul25" element={<Jul25App />} />
             <Route path="/apps/jul25/admin" element={<Jul25FamilyAdmin />} />
             <Route path="/apps/jul25/member/:memberId" element={<Jul25MemberEdit />} />
+            
+            {/* Dynamic Pages */}
+            <Route path="/page/:pageKey" element={<DynamicPage />} />
+            <Route path="/admin/page-builder" element={<AdminLayout><PageBuilder /></AdminLayout>} />
             
             {/* Catch-all 404 route - MUST BE LAST */}
             <Route path="*" element={<NotFound />} />

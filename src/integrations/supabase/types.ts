@@ -2382,6 +2382,48 @@ export type Database = {
         }
         Relationships: []
       }
+      mcp_tool_registry: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          description: string | null
+          display_name: string
+          id: string
+          input_schema: Json
+          is_active: boolean | null
+          is_platform_tool: boolean | null
+          required_adapter_id: string | null
+          requires_integration: boolean | null
+          tool_key: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          display_name: string
+          id?: string
+          input_schema: Json
+          is_active?: boolean | null
+          is_platform_tool?: boolean | null
+          required_adapter_id?: string | null
+          requires_integration?: boolean | null
+          tool_key: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          display_name?: string
+          id?: string
+          input_schema?: Json
+          is_active?: boolean | null
+          is_platform_tool?: boolean | null
+          required_adapter_id?: string | null
+          requires_integration?: boolean | null
+          tool_key?: string
+        }
+        Relationships: []
+      }
       opportunities: {
         Row: {
           actual_close_date: string | null
@@ -2488,6 +2530,71 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      page_generation_sessions: {
+        Row: {
+          ai_model: string | null
+          ai_provider: string | null
+          completed_at: string | null
+          cost_estimate: number | null
+          created_at: string | null
+          created_by: string | null
+          error_message: string | null
+          generated_experience: Json | null
+          id: string
+          questionnaire_responses: Json | null
+          status: string | null
+          tenant_id: string
+          theme_used: string | null
+          tokens_used: number | null
+          tools_called: Json | null
+          user_prompt: string
+        }
+        Insert: {
+          ai_model?: string | null
+          ai_provider?: string | null
+          completed_at?: string | null
+          cost_estimate?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          error_message?: string | null
+          generated_experience?: Json | null
+          id?: string
+          questionnaire_responses?: Json | null
+          status?: string | null
+          tenant_id: string
+          theme_used?: string | null
+          tokens_used?: number | null
+          tools_called?: Json | null
+          user_prompt: string
+        }
+        Update: {
+          ai_model?: string | null
+          ai_provider?: string | null
+          completed_at?: string | null
+          cost_estimate?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          error_message?: string | null
+          generated_experience?: Json | null
+          id?: string
+          questionnaire_responses?: Json | null
+          status?: string | null
+          tenant_id?: string
+          theme_used?: string | null
+          tokens_used?: number | null
+          tools_called?: Json | null
+          user_prompt?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "page_generation_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -3401,6 +3508,103 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      tenant_pages: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          experience_json: Json
+          id: string
+          metadata: Json | null
+          page_key: string
+          published: boolean | null
+          published_at: string | null
+          tenant_id: string
+          theme_key: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          experience_json: Json
+          id?: string
+          metadata?: Json | null
+          page_key: string
+          published?: boolean | null
+          published_at?: string | null
+          tenant_id: string
+          theme_key?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          experience_json?: Json
+          id?: string
+          metadata?: Json | null
+          page_key?: string
+          published?: boolean | null
+          published_at?: string | null
+          tenant_id?: string
+          theme_key?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_pages_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_themes: {
+        Row: {
+          created_at: string | null
+          extracted_from_url: string | null
+          id: string
+          is_active: boolean | null
+          tenant_id: string
+          theme_key: string
+          tokens: Json
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          extracted_from_url?: string | null
+          id?: string
+          is_active?: boolean | null
+          tenant_id: string
+          theme_key?: string
+          tokens: Json
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          extracted_from_url?: string | null
+          id?: string
+          is_active?: boolean | null
+          tenant_id?: string
+          theme_key?: string
+          tokens?: Json
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_themes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tenants: {
         Row: {
