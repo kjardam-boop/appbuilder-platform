@@ -5,38 +5,67 @@ import type { TenantIntegration, TenantIntegrationInput } from "../types/tenantI
 
 export class TenantIntegrationService {
   /**
-   * Get tenant integration configuration
+   * Get tenant integration configuration with platform fallback
    */
   static async getIntegration(
     ctx: RequestContext,
     adapterId: string
   ): Promise<TenantIntegration | null> {
+    // Try tenant-specific first
     const { data, error } = await supabase
       .from("tenant_integrations")
       .select("*")
       .eq("tenant_id", ctx.tenant_id)
       .eq("adapter_id", adapterId)
-      .single();
+      .maybeSingle();
 
-    if (error) {
-      if (error.code === 'PGRST116') return null; // Not found
-      throw error;
+    if (error) throw error;
+    
+    // Fallback to platform default if not found
+    if (!data && ctx.tenant_id !== 'default') {
+      const { data: platformData, error: platformError } = await supabase
+        .from("tenant_integrations")
+        .select("*")
+        .eq("tenant_id", 'default')
+        .eq("adapter_id", adapterId)
+        .maybeSingle();
+      
+      if (platformError) throw platformError;
+      return platformData as TenantIntegration;
     }
+    
     return data as TenantIntegration;
   }
 
   /**
-   * Get all integrations for tenant
+   * Get all integrations with platform defaults as fallback
    */
   static async getAllIntegrations(ctx: RequestContext): Promise<TenantIntegration[]> {
-    const { data, error } = await supabase
+    const { data: tenantData, error } = await supabase
       .from("tenant_integrations")
       .select("*")
       .eq("tenant_id", ctx.tenant_id)
       .order("adapter_id");
 
     if (error) throw error;
-    return (data || []) as TenantIntegration[];
+    
+    // Include platform defaults if not platform tenant
+    if (ctx.tenant_id !== 'default') {
+      const { data: platformData, error: platformError } = await supabase
+        .from("tenant_integrations")
+        .select("*")
+        .eq("tenant_id", 'default')
+        .order("adapter_id");
+      
+      if (platformError) throw platformError;
+      
+      const tenantAdapterIds = new Set((tenantData || []).map(t => t.adapter_id));
+      const defaults = (platformData || []).filter(p => !tenantAdapterIds.has(p.adapter_id));
+      
+      return [...(tenantData || []), ...defaults] as TenantIntegration[];
+    }
+    
+    return (tenantData || []) as TenantIntegration[];
   }
 
   /**
