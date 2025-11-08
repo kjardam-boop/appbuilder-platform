@@ -136,7 +136,7 @@ export default function Jul25FamilyAdmin() {
   };
   
   // Check if member count matches expected
-  const memberCountMismatch = members.length !== family.number_of_people;
+  const memberCountMismatch = family ? members.length !== family.number_of_people : false;
   
   if (!family) {
     return (
