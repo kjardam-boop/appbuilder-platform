@@ -22,6 +22,7 @@ import {
   updateWorkflowMap,
 } from '@/modules/core/mcp/services/tenantWorkflowService';
 import { getTenantSecrets, setTenantSecrets } from '@/modules/core/integrations/services/tenantSecrets';
+import { setN8nBaseUrl } from '@/modules/core/integrations/services/integrationConfig';
 import { workflowMappingSchema } from '@/modules/core/mcp/validation/schemas';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, ExternalLink, Info, KeyRound, Pencil, Link as LinkIcon, Trash2, PlayCircle } from 'lucide-react';
@@ -126,12 +127,16 @@ export default function McpWorkflows() {
   });
 
   const saveSecretsMutation = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       if (!tenantId) throw new Error('No tenant ID');
-      return setTenantSecrets(tenantId, 'n8n', secrets);
+      // Save credentials AND mirror base URL into config for edge function resolver
+      await Promise.all([
+        setTenantSecrets(tenantId, 'n8n', secrets),
+        setN8nBaseUrl(tenantId, secrets.N8N_MCP_BASE_URL),
+      ]);
     },
     onSuccess: () => {
-      toast.success('n8n secrets saved');
+      toast.success('n8n secrets saved (credentials + config)');
       queryClient.invalidateQueries({ queryKey: ['mcp-secrets'] });
       setSecretsOpen(false);
     },
