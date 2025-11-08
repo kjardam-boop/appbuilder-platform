@@ -28,20 +28,40 @@ export const useTenantContext = (): RequestContext | null => {
         // Dev mode: fallback to static config if localhost
         const isDev = host === 'localhost' || host.startsWith('127.0.0.1');
         
-        if (isDev && window.location.pathname.startsWith('/akselera')) {
-          // Use static Akselera config for demo
-          const staticConfig = staticConfigs['akselera'];
-          const ctx: RequestContext = {
-            tenant_id: 'akselera-demo',
-            tenant: {
+        if (isDev) {
+          // Check for specific tenant paths
+          if (window.location.pathname.startsWith('/akselera')) {
+            const staticConfig = staticConfigs['akselera'];
+            const ctx: RequestContext = {
               tenant_id: 'akselera-demo',
-              name: staticConfig.name,
+              tenant: {
+                tenant_id: 'akselera-demo',
+                name: staticConfig.name,
+                host,
+                enabled_modules: [],
+                custom_config: staticConfig,
+              } as any,
+              user_id: user.id,
+              user_role: 'tenant_owner',
+              request_id: crypto.randomUUID(),
+              timestamp: new Date().toISOString(),
+            };
+            setContext(ctx);
+            return;
+          }
+          
+          // Default dev tenant for other paths (jul25, admin, etc.)
+          const ctx: RequestContext = {
+            tenant_id: 'dev-tenant',
+            tenant: {
+              tenant_id: 'dev-tenant',
+              name: 'Development Tenant',
               host,
               enabled_modules: [],
-              custom_config: staticConfig,
+              custom_config: {},
             } as any,
             user_id: user.id,
-            user_role: 'tenant_owner', // Mock for dev
+            user_role: 'tenant_owner',
             request_id: crypto.randomUUID(),
             timestamp: new Date().toISOString(),
           };

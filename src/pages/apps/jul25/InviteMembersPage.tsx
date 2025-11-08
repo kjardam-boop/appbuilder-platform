@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCurrentUser } from "@/modules/core/user";
+import { useTenantContext } from "@/hooks/useTenantContext";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,7 @@ import { ArrowLeft, Loader2, Mail, MessageSquare, Send } from "lucide-react";
 export default function InviteMembersPage() {
   const navigate = useNavigate();
   const { currentUser } = useCurrentUser();
+  const context = useTenantContext();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   
@@ -44,25 +46,20 @@ export default function InviteMembersPage() {
       return;
     }
 
+    if (!context?.tenant_id) {
+      toast({
+        title: "Feil",
+        description: "Ingen tenant funnet - vennligst last inn siden på nytt",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // Get tenant_id from user_roles
-      const { data: roles } = await supabase
-        .from('user_roles')
-        .select('scope_id, scope_type')
-        .eq('user_id', currentUser.id)
-        .eq('scope_type', 'tenant')
-        .single();
-
-      if (!roles?.scope_id) {
-        throw new Error('Ingen tenant funnet');
-      }
-
-      const tenantId = roles.scope_id;
-
-      // Use notification service
-      const result = await sendInvitation(tenantId, currentUser.id, {
+      // Use notification service with tenant context
+      const result = await sendInvitation(context.tenant_id, currentUser.id, {
         recipient: formData.recipient,
         method: formData.method,
         message: formData.message,
