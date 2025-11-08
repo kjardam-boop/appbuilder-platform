@@ -56,6 +56,7 @@ export default function McpWorkflows() {
   const [resolvedUrl, setResolvedUrl] = useState<string | null>(null);
   const [secretsOpen, setSecretsOpen] = useState(false);
   const [isTestingTrigger, setIsTestingTrigger] = useState(false);
+  const [testPayloads, setTestPayloads] = useState<Record<string, string>>({});
   const [secrets, setSecrets] = useState({
     N8N_MCP_BASE_URL: '',
     N8N_MCP_API_KEY: '',
@@ -326,16 +327,28 @@ export default function McpWorkflows() {
 
     setIsTestingTrigger(true);
     try {
+      // Parse custom payload if provided, otherwise use default
+      let inputPayload = {
+        test: true,
+        timestamp: new Date().toISOString(),
+        message: 'Test trigger from MCP Workflows admin',
+      };
+
+      const customPayloadStr = testPayloads[workflowKey];
+      if (customPayloadStr?.trim()) {
+        try {
+          inputPayload = JSON.parse(customPayloadStr);
+        } catch (e) {
+          toast.error('Invalid JSON payload. Using default payload.');
+        }
+      }
+
       const { data, error } = await supabase.functions.invoke('trigger-n8n-workflow', {
         body: {
           tenantId: tenantId,
           workflowKey: workflowKey,
           action: 'test_trigger',
-          input: {
-            test: true,
-            timestamp: new Date().toISOString(),
-            message: 'Test trigger from MCP Workflows admin',
-          },
+          input: inputPayload,
         },
       });
 
@@ -657,6 +670,25 @@ export default function McpWorkflows() {
                     <p className="text-xs text-muted-foreground">
                       Updated: {new Date(workflow.updated_at).toLocaleString()}
                     </p>
+                    
+                    {/* Test Payload JSON */}
+                    <div className="pt-2 space-y-1">
+                      <Label htmlFor={`payload-${workflow.workflow_key}`} className="text-xs">
+                        Test Payload (JSON)
+                      </Label>
+                      <Textarea
+                        id={`payload-${workflow.workflow_key}`}
+                        placeholder='{"email": "test@example.com", "phone": "+4712345678", "message": "Test"}'
+                        value={testPayloads[workflow.workflow_key] || ''}
+                        onChange={(e) =>
+                          setTestPayloads({ ...testPayloads, [workflow.workflow_key]: e.target.value })
+                        }
+                        className="font-mono text-xs h-20"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Optional: Custom JSON payload for test trigger
+                      </p>
+                    </div>
                   </div>
                   <div className="flex gap-2">
                     <Button
