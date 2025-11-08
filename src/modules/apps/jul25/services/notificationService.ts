@@ -42,6 +42,9 @@ export async function sendInvitation(
     const invitationUrl = `${window.location.origin}/apps/jul25`;
     const registrationUrl = `${window.location.origin}/apps/jul25/register`;
     
+    // Convert line breaks to HTML <br> tags for email formatting
+    const formattedMessage = params.message.replace(/\n/g, '<br>');
+    
     const { data, error } = await supabase.functions.invoke('trigger-n8n-workflow', {
       body: {
         workflowKey: 'jul25_send_invitation',
@@ -51,7 +54,7 @@ export async function sendInvitation(
           recipient: params.recipient,
           method: params.method,
           subject: params.subject,
-          message: params.message,
+          message: formattedMessage,
           invitation_type: params.invitationType,
           family_id: params.familyId,
           sent_by: userId,

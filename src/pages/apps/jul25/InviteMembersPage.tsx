@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCurrentUser } from "@/modules/core/user";
 import { useTenantContext } from "@/hooks/useTenantContext";
@@ -12,6 +12,9 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { sendInvitation } from "@/modules/apps/jul25/services/notificationService";
 import { ArrowLeft, Loader2, Mail, MessageSquare, Send } from "lucide-react";
+import { useAutoSave } from "@/hooks/useAutoSave";
+
+const STORAGE_KEY = 'jul25_invitation_draft';
 
 export default function InviteMembersPage() {
   const navigate = useNavigate();
@@ -20,13 +23,54 @@ export default function InviteMembersPage() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   
-  const [formData, setFormData] = useState({
-    recipient: "",
-    method: "sms" as "sms" | "email",
-    subject: "Velkommen til jul 2025",
-    message: "Du er invitert til å bli med i julkalenderen! 🎄",
-    invitationType: "family_member" as "family_member" | "guest",
+  const [formData, setFormData] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return {
+          recipient: "",
+          method: parsed.method || "sms" as "sms" | "email",
+          subject: parsed.subject || "Velkommen til jul 2025",
+          message: parsed.message || "Du er invitert til å bli med i julkalenderen! 🎄",
+          invitationType: "family_member" as "family_member" | "guest",
+        };
+      } catch {
+        // Ignore parse errors
+      }
+    }
+    return {
+      recipient: "",
+      method: "sms" as "sms" | "email",
+      subject: "Velkommen til jul 2025",
+      message: "Du er invitert til å bli med i julkalenderen! 🎄",
+      invitationType: "family_member" as "family_member" | "guest",
+    };
   });
+
+  // Auto-save subject and message to localStorage
+  const { status: autoSaveStatus } = useAutoSave({
+    onSave: async () => {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        subject: formData.subject,
+        message: formData.message,
+        method: formData.method,
+      }));
+    },
+    delay: 500,
+    enabled: true,
+  });
+
+  // Trigger auto-save when subject or message changes
+  useEffect(() => {
+    if (formData.subject || formData.message) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        subject: formData.subject,
+        message: formData.message,
+        method: formData.method,
+      }));
+    }
+  }, [formData.subject, formData.message, formData.method]);
 
   const handleSendInvitation = async () => {
     if (!currentUser) {
@@ -165,7 +209,7 @@ export default function InviteMembersPage() {
               }
             />
             <p className="text-sm text-muted-foreground">
-              Dette vil brukes som emne/overskrift i invitasjonen
+              Dette vil brukes som emne/overskrift i invitasjonen. Lagres automatisk.
             </p>
           </div>
 
@@ -181,7 +225,7 @@ export default function InviteMembersPage() {
               rows={4}
             />
             <p className="text-sm text-muted-foreground">
-              Dette er meldingen mottakeren vil få sammen med invitasjonslenken
+              Meldingen lagres automatisk. Linjeskift støttes og vises korrekt i e-posten.
             </p>
           </div>
 
