@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useCurrentUser } from "@/modules/core/user";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,9 +9,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Mail, MessageSquare, Send } from "lucide-react";
+import { sendInvitation } from "@/modules/apps/jul25/services/notificationService";
+import { ArrowLeft, Loader2, Mail, MessageSquare, Send } from "lucide-react";
 
 export default function InviteMembersPage() {
+  const navigate = useNavigate();
   const { currentUser } = useCurrentUser();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -19,7 +22,7 @@ export default function InviteMembersPage() {
     recipient: "",
     method: "sms" as "sms" | "email",
     message: "Du er invitert til å bli med i julkalenderen! 🎄",
-    invitationType: "family_member",
+    invitationType: "family_member" as "family_member" | "guest",
   });
 
   const handleSendInvitation = async () => {
@@ -58,28 +61,17 @@ export default function InviteMembersPage() {
 
       const tenantId = roles.scope_id;
 
-      // Call trigger-n8n-workflow edge function
-      const { data, error } = await supabase.functions.invoke('trigger-n8n-workflow', {
-        body: {
-          workflowKey: 'jul25_send_invitation',
-          action: 'send_invitation',
-          tenantId: tenantId,
-          input: {
-            recipient: formData.recipient,
-            method: formData.method,
-            message: formData.message,
-            invitation_type: formData.invitationType,
-            sent_by: currentUser.id,
-            sent_by_email: currentUser.email,
-          },
-        },
+      // Use notification service
+      const result = await sendInvitation(tenantId, currentUser.id, {
+        recipient: formData.recipient,
+        method: formData.method,
+        message: formData.message,
+        invitationType: formData.invitationType,
       });
 
-      if (error) {
-        throw error;
+      if (!result.ok) {
+        throw new Error(result.error || 'Kunne ikke sende invitasjon');
       }
-
-      console.log('[InviteMembersPage] n8n response:', data);
 
       toast({
         title: "Invitasjon sendt!",
@@ -104,13 +96,19 @@ export default function InviteMembersPage() {
   };
 
   return (
-    <div className="container mx-auto p-6 max-w-2xl">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Send invitasjon</h1>
-        <p className="text-muted-foreground">
-          Inviter familiemedlemmer til julkalenderen
-        </p>
-      </div>
+    <div className="min-h-screen bg-gradient-to-b from-green-50 to-white p-4 md:p-8">
+      <div className="container mx-auto max-w-2xl">
+        <Button variant="ghost" onClick={() => navigate("/apps/jul25")} className="mb-4">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Tilbake til Jul25
+        </Button>
+        
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-green-800 mb-2">Send invitasjon</h1>
+          <p className="text-muted-foreground">
+            Inviter familiemedlemmer til julkalenderen
+          </p>
+        </div>
 
       <Card className="p-6">
         <div className="space-y-6">
@@ -220,6 +218,7 @@ export default function InviteMembersPage() {
           med workflow_key: <code className="bg-background px-1 py-0.5 rounded">jul25_send_invitation</code>
         </p>
       </Card>
+      </div>
     </div>
   );
 }

@@ -634,6 +634,17 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
                     Admin
                   </Badge>
                 )}
+                {isAdmin && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate("/apps/jul25/invite")}
+                    className="gap-2 bg-green-600 text-white hover:bg-green-700 border-green-600"
+                  >
+                    <Mail className="w-4 h-4" />
+                    Inviter
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   size="sm"
