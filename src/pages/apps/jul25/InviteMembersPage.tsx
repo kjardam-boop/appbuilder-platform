@@ -220,10 +220,13 @@ export default function InviteMembersPage() {
   "input": {
     "recipient": "${formData.method === "sms" ? "+4712345678" : "email@example.com"}",
     "method": "${formData.method}",
+    "subject": "${formData.subject}",
     "message": "${formData.message}",
     "invitation_type": "family_member",
     "sent_by": "uuid",
-    "sent_by_email": "user@example.com"
+    "sent_by_email": "user@example.com",
+    "invitation_url": "${window.location.origin}/apps/jul25",
+    "registration_url": "${window.location.origin}/apps/jul25/register"
   }
 }`}
         </pre>

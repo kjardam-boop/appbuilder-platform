@@ -38,6 +38,10 @@ export async function sendInvitation(
   params: SendInvitationParams
 ): Promise<{ ok: boolean; error?: string }> {
   try {
+    // Generate invitation link
+    const invitationUrl = `${window.location.origin}/apps/jul25`;
+    const registrationUrl = `${window.location.origin}/apps/jul25/register`;
+    
     const { data, error } = await supabase.functions.invoke('trigger-n8n-workflow', {
       body: {
         workflowKey: 'jul25_send_invitation',
@@ -51,6 +55,8 @@ export async function sendInvitation(
           invitation_type: params.invitationType,
           family_id: params.familyId,
           sent_by: userId,
+          invitation_url: invitationUrl,
+          registration_url: registrationUrl,
         },
       },
     });
