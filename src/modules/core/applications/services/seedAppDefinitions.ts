@@ -28,7 +28,8 @@ const PLATFORM_APPS: Omit<AppDefinition, 'id' | 'created_at' | 'updated_at'>[] =
     routes: [
       '/apps/jul25',
       '/apps/jul25/admin',
-      '/apps/jul25/member/:memberId'
+      '/apps/jul25/member/:memberId',
+      '/apps/jul25/invite'
     ],
     modules: ['task_management', 'calendar', 'family_coordination'],
     extension_points: {

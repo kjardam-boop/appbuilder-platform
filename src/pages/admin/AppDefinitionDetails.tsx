@@ -9,15 +9,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Package, Settings, History } from "lucide-react";
+import { ArrowLeft, Package, Settings, History, ExternalLink, Zap, Sparkles } from "lucide-react";
 import { AppRegistryService } from "@/modules/core/applications/services/appRegistryService";
 import { AppCapabilityService, CapabilityCard, AppCapabilityDrawer } from "@/modules/core/capabilities";
 import { useState } from "react";
 import type { Capability } from "@/modules/core/capabilities";
+import { supabase } from "@/integrations/supabase/client";
+import { useCurrentUser } from "@/modules/core/user";
 
 export default function AppDefinitionDetails() {
   const { appKey } = useParams<{ appKey: string }>();
   const navigate = useNavigate();
+  const { currentUser } = useCurrentUser();
   const [selectedCapability, setSelectedCapability] = useState<Capability | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -32,6 +35,44 @@ export default function AppDefinitionDetails() {
     queryFn: () => AppCapabilityService.getCapabilitiesForApp(appDef!.id),
     enabled: !!appDef?.id,
   });
+
+  // Fetch workflows for this app
+  const { data: workflows } = useQuery({
+    queryKey: ["app-workflows", appKey],
+    queryFn: async () => {
+      if (!currentUser) return [];
+      
+      // Get tenant from user_roles
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('scope_id')
+        .eq('user_id', currentUser.id)
+        .eq('scope_type', 'tenant')
+        .maybeSingle();
+
+      if (!roles?.scope_id) return [];
+
+      const { data } = await supabase
+        .from('mcp_tenant_workflow_map')
+        .select('*')
+        .eq('tenant_id', roles.scope_id)
+        .eq('is_active', true)
+        .ilike('workflow_key', `${appKey}%`);
+
+      return data || [];
+    },
+    enabled: !!appKey && !!currentUser,
+  });
+
+  // Get app URL based on routes
+  const getAppUrl = () => {
+    if (appDef?.routes && appDef.routes.length > 0) {
+      // Get the first non-parameterized route
+      const mainRoute = appDef.routes.find(r => !r.includes(':')) || appDef.routes[0];
+      return mainRoute;
+    }
+    return null;
+  };
 
   if (isLoading) {
     return (
@@ -68,6 +109,14 @@ export default function AppDefinitionDetails() {
           </div>
         </div>
         <div className="flex gap-2">
+          {getAppUrl() && (
+            <Button variant="default" asChild>
+              <Link to={getAppUrl()!}>
+                <ExternalLink className="mr-2 h-4 w-4" />
+                Åpne app
+              </Link>
+            </Button>
+          )}
           <Button variant="outline" asChild>
             <Link to={`/admin/apps/${appKey}/versions`}>
               <History className="mr-2 h-4 w-4" />
@@ -228,6 +277,78 @@ export default function AppDefinitionDetails() {
             </CardContent>
           </Card>
         )}
+
+        {workflows && workflows.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Zap className="h-5 w-5 text-purple-600" />
+                Workflows
+              </CardTitle>
+              <CardDescription>
+                n8n workflows configured for this app
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {workflows.map((workflow) => (
+                  <div key={workflow.id} className="flex items-start justify-between p-3 border rounded-lg">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="font-mono text-xs">
+                          {workflow.workflow_key}
+                        </Badge>
+                        <Badge variant="secondary" className="text-xs">
+                          {workflow.provider}
+                        </Badge>
+                      </div>
+                      {workflow.description && (
+                        <p className="text-sm text-muted-foreground">{workflow.description}</p>
+                      )}
+                      <code className="text-xs text-muted-foreground block mt-1">
+                        {workflow.webhook_path}
+                      </code>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-blue-600" />
+              AI Models
+            </CardTitle>
+            <CardDescription>
+              AI capabilities powered by Lovable AI
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <div className="flex items-start justify-between p-3 border rounded-lg bg-blue-50/50 dark:bg-blue-950/20">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="font-mono text-xs">
+                      generate-text
+                    </Badge>
+                    <Badge className="text-xs bg-blue-600">
+                      Lovable AI
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Text generation for Christmas calendar content
+                  </p>
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    <Badge variant="secondary" className="text-xs">google/gemini-2.5-flash</Badge>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <AppCapabilityDrawer
