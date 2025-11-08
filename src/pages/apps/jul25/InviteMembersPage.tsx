@@ -23,6 +23,7 @@ export default function InviteMembersPage() {
   const [formData, setFormData] = useState({
     recipient: "",
     method: "sms" as "sms" | "email",
+    subject: "Velkommen til jul 2025",
     message: "Du er invitert til å bli med i julkalenderen! 🎄",
     invitationType: "family_member" as "family_member" | "guest",
   });
@@ -62,6 +63,7 @@ export default function InviteMembersPage() {
       const result = await sendInvitation(context.tenant_id, currentUser.id, {
         recipient: formData.recipient,
         method: formData.method,
+        subject: formData.subject,
         message: formData.message,
         invitationType: formData.invitationType,
       });
@@ -149,6 +151,22 @@ export default function InviteMembersPage() {
                 setFormData({ ...formData, recipient: e.target.value })
               }
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="subject">Emne</Label>
+            <Input
+              id="subject"
+              type="text"
+              placeholder="Velkommen til jul 2025"
+              value={formData.subject}
+              onChange={(e) =>
+                setFormData({ ...formData, subject: e.target.value })
+              }
+            />
+            <p className="text-sm text-muted-foreground">
+              Dette vil brukes som emne/overskrift i invitasjonen
+            </p>
           </div>
 
           <div className="space-y-2">

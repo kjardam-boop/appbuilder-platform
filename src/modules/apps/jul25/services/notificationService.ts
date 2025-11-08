@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 export interface SendInvitationParams {
   recipient: string; // phone or email
   method: 'sms' | 'email';
+  subject: string;
   message: string;
   invitationType: 'family_member' | 'guest';
   familyId?: string;
@@ -45,6 +46,7 @@ export async function sendInvitation(
         input: {
           recipient: params.recipient,
           method: params.method,
+          subject: params.subject,
           message: params.message,
           invitation_type: params.invitationType,
           family_id: params.familyId,
