@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { toDateOnlyString } from "@/lib/date";
 
 export interface Jul25Family {
   id: string;
@@ -187,8 +188,8 @@ export const useCreateFamily = () => {
         .insert({
           family_id: data.id,
           location: "Jajabo",
-          arrival_date: new Date(2025, 11, 20).toISOString(),
-          departure_date: new Date(2025, 11, 25).toISOString(),
+          arrival_date: toDateOnlyString(new Date(2025, 11, 20)),
+          departure_date: toDateOnlyString(new Date(2025, 11, 25)),
         })
         .select()
         .single();

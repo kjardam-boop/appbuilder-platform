@@ -24,6 +24,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { toDateOnlyString } from "@/lib/date";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -102,7 +103,7 @@ export default function Jul25App() {
   const BASE_UTC = Date.UTC(2025, 10, 1); // 10 = november
   const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-  const toStartOfDayUTC = (d: Date) => Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+  const toStartOfDayUTC = (d: Date) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
 
   // Konverter ISO/Date til fortløpende dagnummer (1 = 1. nov 2025)
   const timestampToDay = (input: string | Date): number => {
@@ -313,7 +314,7 @@ export default function Jul25App() {
         await updateTask.mutateAsync({
           id: editingTask.id,
           text: taskText,
-          deadline: taskDeadline ? taskDeadline.toISOString() : null,
+          deadline: taskDeadline ? toDateOnlyString(taskDeadline) : null,
           assigned_family_id: null, // Deprecated - using assignments instead
         });
         
@@ -328,7 +329,7 @@ export default function Jul25App() {
         const newTask = await createTask.mutateAsync({
           text: taskText,
           done: false,
-          deadline: taskDeadline ? taskDeadline.toISOString() : null,
+          deadline: taskDeadline ? toDateOnlyString(taskDeadline) : null,
           assigned_family_id: null, // Deprecated - using assignments instead
           created_by: user?.id || null,
         });

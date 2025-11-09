@@ -20,6 +20,7 @@ import { useMemberCustomPeriods, useCreateMemberCustomPeriod, useUpdateMemberCus
 import { useDebounce } from "@/hooks/useDebounce";
 import { useAuth } from "@/modules/core/user/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { toDateOnlyString } from "@/lib/date";
 
 export default function Jul25MemberEdit() {
   const navigate = useNavigate();
@@ -112,16 +113,16 @@ export default function Jul25MemberEdit() {
           await updateCustom.mutateAsync({
             id: editingCustomId,
             location: customLocation,
-            start_date: customArrival.toISOString(),
-            end_date: customDeparture.toISOString(),
+            start_date: toDateOnlyString(customArrival),
+            end_date: toDateOnlyString(customDeparture),
           });
           setEditingCustomId(null);
         } else {
           await createCustom.mutateAsync({
             member_id: member.id,
             location: customLocation,
-            start_date: customArrival.toISOString(),
-            end_date: customDeparture.toISOString(),
+            start_date: toDateOnlyString(customArrival),
+            end_date: toDateOnlyString(customDeparture),
           });
         }
         // Clear form after save
