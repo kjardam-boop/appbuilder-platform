@@ -197,12 +197,8 @@ export default function Jul25App() {
     setChristmasWords(words);
   }, [doorContents]);
   
-  // Check if user needs family onboarding
-  useEffect(() => {
-    if (user && !userMembership && !isAdmin) {
-      setShowFamilyOnboarding(true);
-    }
-  }, [user, userMembership, isAdmin]);
+  // Note: Family onboarding is no longer automatic - users must click "Register" button
+  // to open the family registration dialog
   
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -242,8 +238,9 @@ export default function Jul25App() {
       if (error) throw error;
       
       if (data.user) {
-        toast.success("Konto opprettet! Nå kan du registrere familie. 🎄");
+        toast.success("Konto opprettet! 🎄");
         setShowLoginDialog(false);
+        // Open family onboarding immediately after signup
         setShowFamilyOnboarding(true);
       }
     } catch (error: any) {
@@ -668,6 +665,17 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
                     <Users className="w-3 h-3 mr-1" />
                     {userFamily?.name}
                   </Badge>
+                )}
+                {!userMembership && !isAdmin && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowFamilyOnboarding(true)}
+                    className="gap-2 bg-green-600 text-white hover:bg-green-700 border-green-600"
+                  >
+                    <Users className="w-4 h-4" />
+                    Registrer familie
+                  </Button>
                 )}
                 {isAdmin && (
                   <Badge variant="secondary" className="bg-amber-100 text-amber-900">
