@@ -38,6 +38,7 @@ import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useJul25DoorContent, useUpsertDoorContent } from "@/hooks/useJul25DoorContent";
+import { useJul25ChristmasWords } from "@/hooks/useJul25ChristmasWords";
 
 interface ChristmasWord {
   date: number;
@@ -65,6 +66,9 @@ export default function Jul25App() {
   // Fetch door content from database
   const { data: doorContents = [] } = useJul25DoorContent();
   const upsertDoorContent = useUpsertDoorContent();
+  
+  // Fetch pre-seeded christmas words (fallback)
+  const { data: christmasWordsDb = [] } = useJul25ChristmasWords();
   
   // Mutations
   const createFamily = useCreateFamily();
@@ -184,19 +188,21 @@ export default function Jul25App() {
   
   const currentDay = getCurrentDecemberDay();
   
-  // Initialize christmas words from database
+  // Initialize christmas words from database with fallback to pre-seeded content
   useEffect(() => {
     const words: ChristmasWord[] = [];
     for (let i = 1; i <= 24; i++) {
       const dbContent = doorContents.find(dc => dc.door_number === i);
+      const preSeeded = christmasWordsDb.find(cw => cw.day === i);
+      
       words.push({ 
         date: i, 
-        word: dbContent?.content || "", 
+        word: dbContent?.content || preSeeded?.word || "", 
         generated: !!dbContent 
       });
     }
     setChristmasWords(words);
-  }, [doorContents]);
+  }, [doorContents, christmasWordsDb]);
   
   // Note: Family onboarding is no longer automatic - users must click "Register" button
   // to open the family registration dialog
@@ -363,16 +369,25 @@ export default function Jul25App() {
       return;
     }
     
-    // Check if content already exists in database
+    // Check if custom content already exists in database
     const dbContent = doorContents.find(dc => dc.door_number === day);
     if (dbContent) {
-      // Content exists, show it
+      // Custom content exists, show it
       const existingWord = { date: day, word: dbContent.content, generated: true };
       setSelectedWord(existingWord);
       return;
     }
     
-    // Content doesn't exist, generate it
+    // Check if pre-seeded content exists
+    const preSeeded = christmasWordsDb.find(cw => cw.day === day);
+    if (preSeeded) {
+      // Pre-seeded content exists, show it
+      const seededWord = { date: day, word: preSeeded.word, generated: false };
+      setSelectedWord(seededWord);
+      return;
+    }
+    
+    // No content exists, generate it with AI
     const currentDate = new Date(2025, 11, day); // December 2025
     const dateStr = `${day}. desember 2025`;
     
