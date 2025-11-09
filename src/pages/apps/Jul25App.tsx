@@ -471,29 +471,18 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
     });
   };
   
-  // Get effective family dates based on actual member dates
+  // Get effective family dates based on periods and member dates
   const getEffectiveFamilyDates = (family: any) => {
     const familyMembers = allMembers.filter(m => m.family_id === family.id);
+    const familyPeriods = allPeriods.filter(p => p.family_id === family.id);
     
-    // If no members, fall back to family's own dates
-    if (familyMembers.length === 0) {
-      return {
-        arrival_date: new Date(family.arrival_date),
-        departure_date: new Date(family.departure_date),
-      };
-    }
-    
-    // With members: compute union (min arrival, max departure) based on member-effective dates
     let earliestArrival: Date | null = null;
     let latestDeparture: Date | null = null;
     
-    familyMembers.forEach(member => {
-      const arrDate = member.arrival_date
-        ? new Date(member.arrival_date)
-        : (family.arrival_date ? new Date(family.arrival_date) : null);
-      const depDate = member.departure_date
-        ? new Date(member.departure_date)
-        : (family.departure_date ? new Date(family.departure_date) : null);
+    // First, consider all family periods
+    familyPeriods.forEach(period => {
+      const arrDate = period.arrival_date ? new Date(period.arrival_date) : null;
+      const depDate = period.departure_date ? new Date(period.departure_date) : null;
       
       if (arrDate) {
         earliestArrival = !earliestArrival || arrDate < earliestArrival ? arrDate : earliestArrival;
@@ -503,38 +492,92 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
       }
     });
     
-    // Fallback to family dates if members are missing both
+    // Then, consider member-specific dates if they exist
+    familyMembers.forEach(member => {
+      if (member.arrival_date) {
+        const arrDate = new Date(member.arrival_date);
+        earliestArrival = !earliestArrival || arrDate < earliestArrival ? arrDate : earliestArrival;
+      }
+      if (member.departure_date) {
+        const depDate = new Date(member.departure_date);
+        latestDeparture = !latestDeparture || depDate > latestDeparture ? depDate : latestDeparture;
+      }
+    });
+    
+    // Fallback to Nov 1 - Jan 4 if no dates found
+    if (!earliestArrival || !latestDeparture) {
+      const baseDate = new Date(2025, 10, 1); // Nov 1, 2025
+      return {
+        arrival_date: earliestArrival || baseDate,
+        departure_date: latestDeparture || new Date(2026, 0, 4), // Jan 4, 2026
+      };
+    }
+    
     return {
-      arrival_date: earliestArrival || new Date(family.arrival_date),
-      departure_date: latestDeparture || new Date(family.departure_date),
+      arrival_date: earliestArrival,
+      departure_date: latestDeparture,
     };
   };
   
   const getMembersPerDay = (family: any): Record<number, number> => {
     const membersPerDay: Record<number, number> = {};
     const familyMembers = allMembers.filter(m => m.family_id === family.id);
+    const familyPeriods = allPeriods.filter(p => p.family_id === family.id);
     
-    // Always use fresh effective dates
-    const effectiveDates = getEffectiveFamilyDates(family);
+    // Get all unique days where the family or any member is present
+    const allDays = new Set<number>();
     
-    const startDay = timestampToDay(effectiveDates.arrival_date);
-    const endDay = timestampToDay(effectiveDates.departure_date);
+    // Add days from family periods
+    familyPeriods.forEach(period => {
+      const startDay = timestampToDay(period.arrival_date);
+      const endDay = timestampToDay(period.departure_date);
+      for (let day = startDay; day <= endDay; day++) {
+        allDays.add(day);
+      }
+    });
     
-    // Loop through all days in the effective range
-    for (let day = startDay; day <= endDay; day++) {
+    // Add days from member custom dates
+    familyMembers.forEach(member => {
+      if (member.arrival_date && member.departure_date) {
+        const startDay = timestampToDay(member.arrival_date);
+        const endDay = timestampToDay(member.departure_date);
+        for (let day = startDay; day <= endDay; day++) {
+          allDays.add(day);
+        }
+      }
+    });
+    
+    // If no days found, return empty
+    if (allDays.size === 0) {
+      return {};
+    }
+    
+    // Count members present on each day
+    Array.from(allDays).sort((a, b) => a - b).forEach(day => {
       if (familyMembers.length === 0) {
+        // If no members defined, use family's number_of_people
         membersPerDay[day] = family.number_of_people;
       } else {
         // Count how many members are present on this specific day
         const count = familyMembers.filter(member => {
-          // Use member's custom dates if set, otherwise use family's effective dates
-          const arrDay = member.arrival_date ? timestampToDay(member.arrival_date) : startDay;
-          const depDay = member.departure_date ? timestampToDay(member.departure_date) : endDay;
-          return day >= arrDay && day <= depDay;
+          // Check if member has custom dates
+          if (member.arrival_date && member.departure_date) {
+            const arrDay = timestampToDay(member.arrival_date);
+            const depDay = timestampToDay(member.departure_date);
+            return day >= arrDay && day <= depDay;
+          }
+          
+          // Otherwise, check if day is within any family period
+          return familyPeriods.some(period => {
+            const arrDay = timestampToDay(period.arrival_date);
+            const depDay = timestampToDay(period.departure_date);
+            return day >= arrDay && day <= depDay;
+          });
         }).length;
+        
         membersPerDay[day] = count;
       }
-    }
+    });
     
     return membersPerDay;
   };
