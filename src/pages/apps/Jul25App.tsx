@@ -33,8 +33,10 @@ import { useJul25Tasks, useCreateTask, useUpdateTask, useDeleteTask, useTaskAssi
 import { useJul25FamilyPeriods, useMemberPeriods } from "@/hooks/useJul25FamilyPeriods";
 import { useMemberCustomPeriods } from "@/hooks/useJul25MemberCustomPeriods";
 import { useAppAdmin } from "@/hooks/useAppRole";
+import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
+import { useJul25DoorContent, useUpsertDoorContent } from "@/hooks/useJul25DoorContent";
 
 interface ChristmasWord {
   date: number;
@@ -46,6 +48,7 @@ export default function Jul25App() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { isAppAdmin, isLoading: isLoadingAppRole } = useAppAdmin('jul25');
+  const { isPlatformAdmin } = usePlatformAdmin();
   
   // Data fra database
   const { data: families = [] } = useJul25Families();
@@ -57,6 +60,10 @@ export default function Jul25App() {
   // Fetch member periods for all members at once
   const { data: allMemberPeriods = [] } = useMemberPeriods();
   const { data: allCustomPeriods = [] } = useMemberCustomPeriods();
+  
+  // Fetch door content from database
+  const { data: doorContents = [] } = useJul25DoorContent();
+  const upsertDoorContent = useUpsertDoorContent();
   
   // Mutations
   const createFamily = useCreateFamily();
@@ -160,15 +167,35 @@ export default function Jul25App() {
   // Christmas calendar
   const [christmasWords, setChristmasWords] = useState<ChristmasWord[]>([]);
   const [selectedWord, setSelectedWord] = useState<ChristmasWord | null>(null);
-  const [mockToday] = useState(15);
   
+  // Get current day of December (1-24)
+  const getCurrentDecemberDay = () => {
+    const now = new Date();
+    const month = now.getMonth(); // 0-indexed: 11 = December
+    const day = now.getDate();
+    
+    // Only return day if we're in December, otherwise return 0 (no doors can be opened)
+    if (month === 11) { // December
+      return Math.min(day, 24); // Cap at 24
+    }
+    return 0;
+  };
+  
+  const currentDay = getCurrentDecemberDay();
+  
+  // Initialize christmas words from database
   useEffect(() => {
     const words: ChristmasWord[] = [];
     for (let i = 1; i <= 24; i++) {
-      words.push({ date: i, word: "", generated: false });
+      const dbContent = doorContents.find(dc => dc.door_number === i);
+      words.push({ 
+        date: i, 
+        word: dbContent?.content || "", 
+        generated: !!dbContent 
+      });
     }
     setChristmasWords(words);
-  }, []);
+  }, [doorContents]);
   
   // Check if user needs family onboarding
   useEffect(() => {
@@ -331,17 +358,23 @@ export default function Jul25App() {
   };
   
   const generateWordForDay = async (day: number) => {
-    if (day > mockToday) {
+    // Check if door can be opened
+    // Platform admins can open all doors, others only current day and earlier
+    if (!isPlatformAdmin && day > currentDay) {
       toast.error("Du kan ikke åpne fremtidige luker!");
       return;
     }
     
-    const existing = christmasWords.find(w => w.date === day);
-    if (existing?.generated) {
-      setSelectedWord(existing);
+    // Check if content already exists in database
+    const dbContent = doorContents.find(dc => dc.door_number === day);
+    if (dbContent) {
+      // Content exists, show it
+      const existingWord = { date: day, word: dbContent.content, generated: true };
+      setSelectedWord(existingWord);
       return;
     }
     
+    // Content doesn't exist, generate it
     const currentDate = new Date(2025, 11, day); // December 2025
     const dateStr = `${day}. desember 2025`;
     
@@ -408,13 +441,21 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
 
       if (error) throw error;
 
-      const newWord = { date: day, word: data.content || data.text || "God jul! 🎄", generated: true };
+      const content = data.content || data.text || "God jul! 🎄";
+      
+      // Save to database
+      await upsertDoorContent.mutateAsync({
+        door_number: day,
+        content: content
+      });
+      
+      const newWord = { date: day, word: content, generated: true };
       setChristmasWords(prev => prev.map(w => 
         w.date === day ? newWord : w
       ));
       setSelectedWord(newWord);
       
-      toast.success(`Dagens tekst generert! 🎄`);
+      toast.success(`Dagens tekst generert og lagret! 🎄`);
     } catch (error) {
       console.error('Error generating word:', error);
       toast.error('Kunne ikke generere tekst');
@@ -1085,8 +1126,8 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
               <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
                 {christmasWords.map((item) => {
                   const isOpened = item.generated;
-                  const canOpen = item.date <= mockToday;
-                  const isFuture = item.date > mockToday;
+                  const canOpen = isPlatformAdmin || item.date <= currentDay;
+                  const isFuture = !isPlatformAdmin && item.date > currentDay;
                   
                   return (
                     <button

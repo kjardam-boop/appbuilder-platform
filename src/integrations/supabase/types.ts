@@ -1755,6 +1755,30 @@ export type Database = {
         }
         Relationships: []
       }
+      jul25_door_content: {
+        Row: {
+          content: string
+          created_at: string | null
+          door_number: number
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          door_number: number
+          id?: string
+          updated_at?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          door_number?: number
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       jul25_families: {
         Row: {
           created_at: string
