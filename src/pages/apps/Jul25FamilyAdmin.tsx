@@ -14,7 +14,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { useJul25Families, useJul25FamilyMembers, useUpdateFamily, useSyncFamilyMembers } from "@/hooks/useJul25Families";
+import { useJul25Families, useJul25FamilyMembers, useUpdateFamily, useSyncFamilyMembers, useDeleteFamily } from "@/hooks/useJul25Families";
 import { useJul25FamilyPeriods, useCreatePeriod, useUpdatePeriod, useDeletePeriod, useMemberPeriods } from "@/hooks/useJul25FamilyPeriods";
 import { useDebounce } from "@/hooks/useDebounce";
 
@@ -33,6 +33,7 @@ export default function Jul25FamilyAdmin() {
   const periods = allPeriods.filter(p => p.family_id === familyId);
   
   const updateFamily = useUpdateFamily();
+  const deleteFamily = useDeleteFamily();
   const createPeriod = useCreatePeriod();
   const updatePeriod = useUpdatePeriod();
   const deletePeriod = useDeletePeriod();
@@ -60,12 +61,34 @@ export default function Jul25FamilyAdmin() {
     }
   }, [debouncedFamilyName, family]);
   
-  // Autosave people count
+  // Autosave people count and auto-sync members
   const handlePeopleCountChange = (delta: number) => {
     const newCount = Math.max(1, peopleCount + delta);
     setPeopleCount(newCount);
     if (family) {
-      updateFamily.mutate({ id: family.id, number_of_people: newCount });
+      updateFamily.mutate({ id: family.id, number_of_people: newCount }, {
+        onSuccess: () => {
+          // After updating count, automatically sync members
+          syncMembers.mutate({
+            familyId: family.id,
+            familyName: family.name,
+            targetCount: newCount,
+          });
+        }
+      });
+    }
+  };
+  
+  const handleDeleteFamily = () => {
+    if (!family) return;
+    
+    const confirmMessage = `Er du sikker på at du vil slette familien "${family.name}"? Dette vil også slette alle perioder og medlemmer.`;
+    if (confirm(confirmMessage)) {
+      deleteFamily.mutate(family.id, {
+        onSuccess: () => {
+          navigate("/apps/jul25");
+        }
+      });
     }
   };
   
@@ -161,7 +184,17 @@ export default function Jul25FamilyAdmin() {
           Tilbake til Jul25
         </Button>
         
-        <h1 className="text-3xl font-bold text-green-800 mb-6">Familieadministrasjon</h1>
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-3xl font-bold text-green-800">Familieadministrasjon</h1>
+          <Button
+            variant="destructive"
+            onClick={handleDeleteFamily}
+            className="gap-2"
+          >
+            <Trash2 className="h-4 w-4" />
+            Slett familie
+          </Button>
+        </div>
         
         {/* Family Info Card */}
         <Card className={cn(
@@ -181,40 +214,30 @@ export default function Jul25FamilyAdmin() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6 space-y-4">
-            {/* Mismatch Warning */}
-            {memberCountMismatch && (
-              <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4 space-y-3">
+            {/* Mismatch Warning - Now only shown during sync */}
+            {memberCountMismatch && !syncMembers.isPending && (
+              <div className="bg-amber-50 border-2 border-amber-300 rounded-lg p-4">
                 <div className="flex items-start gap-3">
-                  <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
                   <div className="flex-1">
-                    <div className="font-semibold text-red-900">
-                      Antall medlemmer matcher ikke
+                    <div className="font-semibold text-amber-900">
+                      Medlemslisten synkroniseres automatisk
                     </div>
-                    <div className="text-sm text-red-700 mt-1">
-                      Forventet: {family.number_of_people} medlemmer
-                      <br />
-                      Faktisk: {members.length} medlemmer
+                    <div className="text-sm text-amber-700 mt-1">
+                      Medlemmer legges til eller fjernes automatisk når du endrer antall personer.
                     </div>
                   </div>
                 </div>
-                <Button
-                  onClick={handleSyncMembers}
-                  disabled={syncMembers.isPending}
-                  className="w-full bg-red-600 hover:bg-red-700 text-white"
-                  size="sm"
-                >
-                  {syncMembers.isPending ? (
-                    <>
-                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                      Synkroniserer...
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw className="mr-2 h-4 w-4" />
-                      Synkroniser medlemmer
-                    </>
-                  )}
-                </Button>
+              </div>
+            )}
+            {syncMembers.isPending && (
+              <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4">
+                <div className="flex items-center gap-3">
+                  <RefreshCw className="h-5 w-5 text-blue-600 animate-spin" />
+                  <div className="font-semibold text-blue-900">
+                    Synkroniserer medlemmer...
+                  </div>
+                </div>
               </div>
             )}
             {/* Family Name */}
