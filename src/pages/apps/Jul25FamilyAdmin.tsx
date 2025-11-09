@@ -13,6 +13,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { toDateOnlyString } from "@/lib/date";
 import { toast } from "sonner";
 import { useJul25Families, useJul25FamilyMembers, useUpdateFamily, useSyncFamilyMembers, useDeleteFamily } from "@/hooks/useJul25Families";
 import { useJul25FamilyPeriods, useCreatePeriod, useUpdatePeriod, useDeletePeriod, useMemberPeriods } from "@/hooks/useJul25FamilyPeriods";
@@ -106,8 +107,8 @@ export default function Jul25FamilyAdmin() {
     const periodData = {
       family_id: familyId!,
       location: periodLocation,
-      arrival_date: periodArrival.toISOString(),
-      departure_date: periodDeparture.toISOString(),
+      arrival_date: toDateOnlyString(periodArrival),
+      departure_date: toDateOnlyString(periodDeparture),
     };
     
     if (editingPeriod) {

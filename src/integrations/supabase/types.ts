@@ -3911,6 +3911,23 @@ export type Database = {
         Args: { _company_id: string; _user_id: string }
         Returns: boolean
       }
+      is_jul25_app_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_jul25_can_manage_family: {
+        Args: { _family_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_jul25_can_manage_member: {
+        Args: { _member_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_jul25_can_manage_period: {
+        Args: { _period_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_jul25_family_admin: {
+        Args: { _family_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_jul25_family_admin_for_member: {
         Args: { _member_id: string }
         Returns: boolean

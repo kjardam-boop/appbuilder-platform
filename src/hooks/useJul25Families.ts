@@ -258,6 +258,40 @@ export const useDeleteFamily = () => {
   
   return useMutation({
     mutationFn: async (familyId: string) => {
+      // Manual cascade delete to avoid FK issues
+      // 1) Fetch member ids in this family
+      const { data: members, error: mErr } = await supabase
+        .from("jul25_family_members")
+        .select("id")
+        .eq("family_id", familyId);
+      if (mErr) throw mErr;
+
+      const memberIds = (members || []).map(m => m.id);
+
+      // 2) Delete member_periods by member ids
+      if (memberIds.length > 0) {
+        const { error: mpErr } = await supabase
+          .from("jul25_member_periods")
+          .delete()
+          .in("member_id", memberIds);
+        if (mpErr) throw mpErr;
+      }
+
+      // 3) Delete family_members
+      const { error: fmErr } = await supabase
+        .from("jul25_family_members")
+        .delete()
+        .eq("family_id", familyId);
+      if (fmErr) throw fmErr;
+
+      // 4) Delete family_periods
+      const { error: fpErr } = await supabase
+        .from("jul25_family_periods")
+        .delete()
+        .eq("family_id", familyId);
+      if (fpErr) throw fpErr;
+
+      // 5) Delete family
       const { error } = await supabase
         .from("jul25_families")
         .delete()
@@ -365,6 +399,8 @@ export const useSyncFamilyMembers = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["jul25-family-members"] });
       queryClient.invalidateQueries({ queryKey: ["jul25-families"] });
+      queryClient.invalidateQueries({ queryKey: ["jul25-member-periods"] });
+      queryClient.invalidateQueries({ queryKey: ["jul25-family-periods"] });
       toast.success("Familiemedlemmer synkronisert! ✓");
     },
     onError: (error: any) => {
