@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, User, CalendarIcon, MapPin, Trash2, Pencil } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,11 +18,14 @@ import { useJul25FamilyMembers, useUpdateFamilyMember } from "@/hooks/useJul25Fa
 import { useJul25FamilyPeriods, useMemberPeriods, useSetMemberPeriods } from "@/hooks/useJul25FamilyPeriods";
 import { useMemberCustomPeriods, useCreateMemberCustomPeriod, useUpdateMemberCustomPeriod, useDeleteMemberCustomPeriod } from "@/hooks/useJul25MemberCustomPeriods";
 import { useDebounce } from "@/hooks/useDebounce";
+import { useAuth } from "@/modules/core/user/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Jul25MemberEdit() {
   const navigate = useNavigate();
   const { memberId } = useParams<{ memberId: string }>();
   const [searchParams] = useSearchParams();
+  const { user } = useAuth();
   
   const { data: allMembers = [] } = useJul25FamilyMembers();
   const member = allMembers.find(m => m.id === memberId);
@@ -30,6 +34,22 @@ export default function Jul25MemberEdit() {
   const { data: periods = [] } = useJul25FamilyPeriods(familyId);
   const { data: memberPeriods = [] } = useMemberPeriods(memberId);
   const { data: customPeriods = [] } = useMemberCustomPeriods(memberId);
+  
+  // Check if current user is admin for this family
+  const { data: currentUserMember, isLoading: isLoadingAdmin } = useQuery({
+    queryKey: ["current-user-member", user?.id, familyId],
+    queryFn: async () => {
+      if (!user?.id || !familyId) return null;
+      const { data } = await supabase
+        .from('jul25_family_members')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('family_id', familyId)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!user?.id && !!familyId,
+  });
   
   const updateMember = useUpdateFamilyMember();
   const setMemberPeriods = useSetMemberPeriods();
@@ -82,39 +102,59 @@ export default function Jul25MemberEdit() {
     );
   };
   
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!member) return;
 
-    // Save or update one custom period from the form if set
-    if (customArrival && customDeparture && customLocation) {
-      if (editingCustomId) {
-        updateCustom.mutate({
-          id: editingCustomId,
-          location: customLocation,
-          start_date: customArrival.toISOString(),
-          end_date: customDeparture.toISOString(),
-        }, { onSuccess: () => setEditingCustomId(null) });
-      } else {
-        createCustom.mutate({
-          member_id: member.id,
-          location: customLocation,
-          start_date: customArrival.toISOString(),
-          end_date: customDeparture.toISOString(),
-        });
+    try {
+      // 1. Save custom period first if set
+      if (customArrival && customDeparture && customLocation) {
+        if (editingCustomId) {
+          await updateCustom.mutateAsync({
+            id: editingCustomId,
+            location: customLocation,
+            start_date: customArrival.toISOString(),
+            end_date: customDeparture.toISOString(),
+          });
+          setEditingCustomId(null);
+        } else {
+          await createCustom.mutateAsync({
+            member_id: member.id,
+            location: customLocation,
+            start_date: customArrival.toISOString(),
+            end_date: customDeparture.toISOString(),
+          });
+        }
+        // Clear form after save
+        setCustomArrival(undefined);
+        setCustomDeparture(undefined);
+        setCustomLocation(undefined);
       }
+      
+      // 2. Save period selections
+      await setMemberPeriods.mutateAsync({
+        memberId: member.id,
+        periodIds: selectedPeriodIds,
+      });
+
+      // 3. Navigate back after all saves complete
+      toast.success("Endringer lagret");
+      navigate(`/apps/jul25/admin?familyId=${familyId}`);
+    } catch (error: any) {
+      console.error('Save error:', error);
+      toast.error(error.message || "Kunne ikke lagre endringer");
     }
-    
-    // Save period selections
-    setMemberPeriods.mutate({
-      memberId: member.id,
-      periodIds: selectedPeriodIds,
-    }, {
-      onSuccess: () => {
-        navigate(`/apps/jul25/admin?familyId=${familyId}`);
-      },
-    });
   };
   
+  if (isLoadingAdmin) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-green-50 to-white p-8">
+        <div className="max-w-4xl mx-auto">
+          <p className="text-muted-foreground">Laster...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!member) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-green-50 to-white p-8">
@@ -124,6 +164,27 @@ export default function Jul25MemberEdit() {
             Tilbake
           </Button>
           <p className="mt-4 text-muted-foreground">Medlem ikke funnet</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Check if user is admin for this family
+  if (!currentUserMember?.is_admin) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-green-50 to-white p-8">
+        <div className="max-w-4xl mx-auto">
+          <Button variant="ghost" onClick={() => navigate(`/apps/jul25/admin?familyId=${familyId}`)}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Tilbake
+          </Button>
+          <Card className="mt-8 border-2 border-amber-300">
+            <CardContent className="pt-6">
+              <p className="text-center text-muted-foreground">
+                Du må være familieadministrator for å redigere medlemmer.
+              </p>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
