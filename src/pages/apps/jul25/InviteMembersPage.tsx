@@ -142,7 +142,7 @@ export default function InviteMembersPage() {
 
       toast({
         title: "Invitasjon sendt!",
-        description: `Invitasjonen ble sendt via ${formData.method === 'sms' ? 'SMS' : 'e-post'}. Token: ${token}`,
+        description: `Invitasjonen ble sendt til ${formData.recipient} via ${formData.method === 'sms' ? 'SMS' : 'e-post'}.`,
       });
 
       // Reset form

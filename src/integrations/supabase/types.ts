@@ -3887,6 +3887,10 @@ export type Database = {
         Args: { _email: string; _token: string }
         Returns: Json
       }
+      accept_jul25_invitation: {
+        Args: { _identifier: string; _token: string }
+        Returns: Json
+      }
       admin_has_platform_role: {
         Args: { check_user_id: string }
         Returns: boolean
@@ -4012,6 +4016,10 @@ export type Database = {
       }
       validate_invitation_token: {
         Args: { _email: string; _token: string }
+        Returns: Json
+      }
+      validate_jul25_invitation_token: {
+        Args: { _identifier: string; _token: string }
         Returns: Json
       }
     }
