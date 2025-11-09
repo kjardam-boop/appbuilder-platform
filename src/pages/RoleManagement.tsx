@@ -279,32 +279,19 @@ const RoleManagement = () => {
         });
       }
 
-      // Load app names with app definition
+      // Load app names via SECURITY DEFINER RPC to bypass RLS for admin views
       if (scopeIds.apps.size > 0) {
-        const { data: apps, error: appsError } = await supabase
-          .from('applications')
-          .select(`
-            id,
-            tenant_id,
-            app_definitions!inner (
-              name
-            ),
-            tenants!inner (
-              name
-            )
-          `)
-          .in('id', Array.from(scopeIds.apps));
-        
-        if (appsError) {
-          console.error('[RoleManagement] Error loading apps:', appsError);
+        const { data: appNames, error: rpcError } = await supabase.rpc('get_app_names', {
+          p_app_ids: Array.from(scopeIds.apps),
+        });
+        if (rpcError) {
+          console.error('[RoleManagement] Error loading app names via RPC:', rpcError);
         }
         
-        apps?.forEach(a => {
-          const appDefName = (a.app_definitions as any)?.name || 'Unknown App';
-          const tenantName = (a.tenants as any)?.name;
-          newScopeNames.apps[a.id] = tenantName 
-            ? `${appDefName} (${tenantName})`
-            : appDefName;
+        (appNames || []).forEach((row: any) => {
+          newScopeNames.apps[row.id] = row.tenant_name 
+            ? `${row.name} (${row.tenant_name})`
+            : row.name;
         });
       }
 

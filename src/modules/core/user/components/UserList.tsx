@@ -148,26 +148,18 @@ export function UserList() {
         });
       }
 
-      // Load app names (join with app_definitions to get name)
+      // Load app names via SECURITY DEFINER RPC to bypass RLS for admin views
       if (appIds.size > 0) {
-        const { data: apps, error: appsError } = await supabase
-          .from('applications')
-          .select(`
-            id,
-            app_definitions!inner (
-              name
-            )
-          `)
-          .in('id', Array.from(appIds));
-        
-        if (appsError) {
-          console.error('Error loading app names:', appsError);
-        }
-        
-        apps?.forEach(a => {
-          const appDef = a.app_definitions as any;
-          newScopeNames.apps[a.id] = appDef?.name || 'Unknown App';
+        const { data: appNames, error: rpcError } = await supabase.rpc('get_app_names', {
+          p_app_ids: Array.from(appIds),
         });
+        if (rpcError) {
+          console.error('Error loading app names via RPC:', rpcError);
+        } else {
+          (appNames || []).forEach((row: any) => {
+            newScopeNames.apps[row.id] = row.tenant_name ? `${row.name} (${row.tenant_name})` : row.name;
+          });
+        }
       }
 
       setScopeNames(newScopeNames);

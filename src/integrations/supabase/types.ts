@@ -3869,6 +3869,14 @@ export type Database = {
         Args: { p_current_time?: string; p_tenant_id: string }
         Returns: Json
       }
+      get_app_names: {
+        Args: { p_app_ids: string[] }
+        Returns: {
+          id: string
+          name: string
+          tenant_name: string
+        }[]
+      }
       get_platform_tenant: { Args: never; Returns: string }
       get_provider_health: {
         Args: { p_provider: string }
