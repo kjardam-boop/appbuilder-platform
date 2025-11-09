@@ -72,14 +72,17 @@ interface TenantUser {
 
 interface TenantApplication {
   id: string;
-  app_definition_id: string;
+  app_definition_id: string | null;
+  app_type: string;
+  subdomain: string | null;
+  deployed_at: string | null;
   is_active: boolean;
   installed_at: string;
   app_definitions: {
     name: string;
     key: string;
     icon_name: string;
-  };
+  } | null;
 }
 
 export default function TenantDetails() {
@@ -179,12 +182,15 @@ export default function TenantDetails() {
         setTenantUsers(usersWithProfiles);
       }
 
-      // Load tenant applications
+      // Load tenant applications (active apps from applications table)
       const { data: appsData, error: appsError } = await supabase
         .from('applications')
         .select(`
           id,
           app_definition_id,
+          app_type,
+          subdomain,
+          deployed_at,
           is_active,
           installed_at,
           app_definitions (
@@ -193,7 +199,9 @@ export default function TenantDetails() {
             icon_name
           )
         `)
-        .eq('tenant_id', tenantId);
+        .eq('tenant_id', tenantId)
+        .eq('is_active', true)
+        .order('installed_at', { ascending: false });
 
       if (appsError) throw appsError;
       setTenantApplications(appsData || []);
@@ -524,13 +532,25 @@ export default function TenantDetails() {
           <div className="grid gap-4 md:grid-cols-3">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Applikasjoner</CardTitle>
+                <CardTitle className="text-sm font-medium">Aktive Applikasjoner</CardTitle>
                 <Package className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{appProjects.length}</div>
+                <div className="text-2xl font-bold">{tenantApplications.length}</div>
                 <p className="text-xs text-muted-foreground">
-                  {appProjects.filter(p => p.status === 'active').length} aktive
+                  Tilgjengelige for brukere
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Prosjekter Under Bygging</CardTitle>
+                <Package className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{appProjects.filter(p => p.status !== 'deployed').length}</div>
+                <p className="text-xs text-muted-foreground">
+                  {appProjects.filter(p => p.status === 'draft').length} draft, {appProjects.filter(p => p.status === 'preview').length} preview
                 </p>
               </CardContent>
             </Card>
@@ -546,175 +566,202 @@ export default function TenantDetails() {
                 </p>
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Platform Applikasjoner</CardTitle>
-                <Package className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{tenantApplications.length}</div>
-                <p className="text-xs text-muted-foreground">
-                  {tenantApplications.filter(a => a.is_active).length} aktive globale apps
-                </p>
-              </CardContent>
-            </Card>
           </div>
         </TabsContent>
 
         <TabsContent value="applications" className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold">Kundetilpassede Applikasjoner</h2>
-              <p className="text-muted-foreground">Kundespesifikke applikasjoner bygget for denne tenanten (customer_app_projects)</p>
+          {/* Active Applications Section */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-2xl font-bold">Aktive Applikasjoner</h2>
+                <p className="text-muted-foreground">Applikasjoner som er aktivert og tilgjengelige</p>
+              </div>
             </div>
-            <Button onClick={handleGenerateApp} disabled={isGenerating}>
-              {isGenerating ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Sparkles className="mr-2 h-4 w-4" />
-              )}
-              Generer applikasjon med AI
-            </Button>
-          </div>
 
-          {appProjects.length === 0 ? (
-            <Card>
-              <CardContent className="pt-6 text-center">
-                <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Ingen applikasjoner</h3>
-                <p className="text-muted-foreground mb-4">
-                  Denne tenanten har ingen applikasjoner ennå
-                </p>
-                <Button onClick={handleGenerateApp} disabled={isGenerating}>
-                  {isGenerating ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Sparkles className="mr-2 h-4 w-4" />
-                  )}
-                  Generer første applikasjon
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-6">
-              {appProjects.map((project) => (
-                <Card key={project.id}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle>{project.name}</CardTitle>
-                        <CardDescription>
-                          {project.description || "Ingen beskrivelse"}
-                        </CardDescription>
+            {tenantApplications.length === 0 ? (
+              <Card>
+                <CardContent className="pt-6 text-center">
+                  <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Ingen aktive applikasjoner</h3>
+                  <p className="text-muted-foreground">
+                    Deploy et prosjekt til produksjon for å aktivere det
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-4">
+                {tenantApplications.map((app) => (
+                  <Card key={app.id}>
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <CardTitle>{app.app_definitions?.name || 'Ukjent app'}</CardTitle>
+                          <CardDescription>
+                            Installert {new Date(app.installed_at).toLocaleDateString('nb-NO')}
+                          </CardDescription>
+                        </div>
+                        <Badge variant="default">Aktiv</Badge>
                       </div>
-                      <Badge variant={project.status === "active" ? "default" : "secondary"}>
-                        {project.status}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {project.subdomain && (
-                      <div className="space-y-2">
-                        <div className="text-sm font-medium">Subdomain</div>
-                        <div className="text-sm text-muted-foreground">{project.subdomain}</div>
-                      </div>
-                    )}
-
-                    <Separator />
-
-                    <div className="flex flex-wrap gap-2">
+                    </CardHeader>
+                    <CardContent>
                       <Button size="sm" variant="secondary" asChild>
                         <Link 
-                          to={project.app_key ? `/apps/${project.app_key}` : `/apps/${project.id}/brand-preview`} 
+                          to={`/apps/${app.app_definitions?.key || app.id}`} 
                           className="flex items-center gap-2"
                         >
                           <Eye className="h-4 w-4" />
                           Åpne app
                         </Link>
                       </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => openDomainDialog(project)}
-                      >
-                        <Settings className="h-4 w-4 mr-2" />
-                        Domene
-                      </Button>
-                      
-                      {/* Publish to Preview button - show if subdomain set but not yet deployed */}
-                      {project.subdomain && !project.deployed_to_preview_at && (
-                        <Button 
-                          size="sm" 
-                          variant="default"
-                          onClick={() => handlePublishToPreview(project)}
-                          disabled={isPublishingPreview}
-                        >
-                          {isPublishingPreview ? (
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          ) : (
-                            <Eye className="h-4 w-4 mr-2" />
-                          )}
-                          Publiser til Preview
-                        </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <Separator className="my-8" />
+
+          {/* Projects Under Construction Section */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-2xl font-bold">Prosjekter Under Bygging</h2>
+                <p className="text-muted-foreground">Applikasjoner under utvikling og testing</p>
+              </div>
+              <Button onClick={handleGenerateApp} disabled={isGenerating}>
+                {isGenerating ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="mr-2 h-4 w-4" />
+                )}
+                Generer ny applikasjon
+              </Button>
+            </div>
+
+            {appProjects.filter(p => p.status !== 'deployed').length === 0 ? (
+              <Card>
+                <CardContent className="pt-6 text-center">
+                  <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Ingen prosjekter under bygging</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Opprett et nytt prosjekt for å komme i gang
+                  </p>
+                  <Button onClick={handleGenerateApp} disabled={isGenerating}>
+                    {isGenerating ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="mr-2 h-4 w-4" />
+                    )}
+                    Generer første applikasjon
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-6">
+                {appProjects.filter(p => p.status !== 'deployed').map((project) => (
+                  <Card key={project.id}>
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <CardTitle>{project.name}</CardTitle>
+                          <CardDescription>
+                            {project.description || "Ingen beskrivelse"}
+                          </CardDescription>
+                        </div>
+                        <Badge variant={project.status === "production" ? "default" : "secondary"}>
+                          {project.status}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {project.subdomain && (
+                        <div className="space-y-2">
+                          <div className="text-sm font-medium">Subdomain</div>
+                          <div className="text-sm text-muted-foreground font-mono">{project.subdomain}</div>
+                        </div>
                       )}
 
-                      {/* Preview link - show if deployed to preview */}
-                      {project.deployed_to_preview_at && getPreviewUrl(project) && (
-                        <Button variant="outline" size="sm" asChild>
-                          <a
-                            href={getPreviewUrl(project)!}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                      <Separator />
+
+                      <div className="flex flex-wrap gap-2">
+                        <Button size="sm" variant="secondary" asChild>
+                          <Link 
+                            to={project.app_key ? `/apps/${project.app_key}` : `/apps/${project.id}/brand-preview`} 
                             className="flex items-center gap-2"
                           >
                             <Eye className="h-4 w-4" />
-                            Åpne Preview
-                            <ExternalLink className="h-3 w-3" />
-                          </a>
+                            Åpne app
+                          </Link>
                         </Button>
-                      )}
-
-                      {/* Production link - show if deployed to production */}
-                      {project.deployed_to_production_at && getProductionUrl(project) && (
-                        <Button size="sm" asChild>
-                          <a
-                            href={getProductionUrl(project)!}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-2"
-                          >
-                            <Globe className="h-4 w-4" />
-                            Live
-                            <ExternalLink className="h-3 w-3" />
-                          </a>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => openDomainDialog(project)}
+                        >
+                          <Settings className="h-4 w-4 mr-2" />
+                          Domene
                         </Button>
-                      )}
-                    </div>
+                        
+                        {/* Preview link - show if deployed to preview */}
+                        {project.deployed_to_preview_at && getPreviewUrl(project) && (
+                          <Button variant="outline" size="sm" asChild>
+                            <a
+                              href={getPreviewUrl(project)!}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2"
+                            >
+                              <Eye className="h-4 w-4" />
+                              Preview
+                              <ExternalLink className="h-3 w-3" />
+                            </a>
+                          </Button>
+                        )}
 
-                    {project.selected_capabilities && (
-                      <div className="space-y-2">
-                        <div className="text-sm font-medium">Capabilities</div>
-                        <div className="flex flex-wrap gap-2">
-                          {Array.isArray(project.selected_capabilities) 
-                            ? project.selected_capabilities.map((cap: any, idx: number) => (
-                                <Badge key={idx} variant="outline">
-                                  {typeof cap === 'string' ? cap : cap.key || cap.name}
-                                </Badge>
-                              ))
-                            : <span className="text-xs text-muted-foreground">Ingen capabilities valgt</span>
-                          }
-                        </div>
+                        {/* Production link - show if deployed to production */}
+                        {project.deployed_to_production_at && getProductionUrl(project) && (
+                          <Button size="sm" asChild>
+                            <a
+                              href={getProductionUrl(project)!}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2"
+                            >
+                              <Globe className="h-4 w-4" />
+                              Live
+                              <ExternalLink className="h-3 w-3" />
+                            </a>
+                          </Button>
+                        )}
                       </div>
-                    )}
 
-                    <div className="text-xs text-muted-foreground">
-                      Opprettet: {new Date(project.created_at).toLocaleDateString('nb-NO')}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+                      {project.selected_capabilities && (
+                        <div className="space-y-2">
+                          <div className="text-sm font-medium">Capabilities</div>
+                          <div className="flex flex-wrap gap-2">
+                            {Array.isArray(project.selected_capabilities) 
+                              ? project.selected_capabilities.map((cap: any, idx: number) => (
+                                  <Badge key={idx} variant="outline">
+                                    {typeof cap === 'string' ? cap : cap.key || cap.name}
+                                  </Badge>
+                                ))
+                              : <span className="text-xs text-muted-foreground">Ingen capabilities valgt</span>
+                            }
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="text-xs text-muted-foreground">
+                        Opprettet: {new Date(project.created_at).toLocaleDateString('nb-NO')}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
         </TabsContent>
 
         <TabsContent value="users" className="space-y-6">

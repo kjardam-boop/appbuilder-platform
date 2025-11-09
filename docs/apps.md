@@ -149,3 +149,169 @@ const stats = await ObservabilityService.getAppUsageStats(tenantId, 'jul25');
 - **ui_components**: UI-komponenter
 - **capabilities**: Funksjonalitet
 - **integration_requirements**: Påkrevde integrasjoner
+
+---
+
+## Application Instance Types (`applications` table)
+
+`applications`-tabellen er hovedtabellen for ALLE aktive app-instanser i systemet.
+
+### App Types
+
+#### 1. Platform Apps (`app_type = 'platform'`)
+Globale apper installert fra `app_definitions`:
+- **Eksempel**: jul25 installert hos Tenant A
+- **Kjennetegn**: 
+  - `app_definition_id` er satt (peker til app_definitions)
+  - `source_project_id` er NULL
+  - Samme app kan installeres hos flere tenants
+
+#### 2. Tenant AI-Generated Apps (`app_type = 'tenant_ai_generated'`)
+AI-genererte applikasjoner bygget spesifikt for én tenant:
+- **Eksempel**: "SILDRE AS App", "INNOWIN AS App"
+- **Kjennetegn**:
+  - `app_definition_id` er NULL (ikke basert på global template)
+  - `source_project_id` peker til opprinnelig prosjekt i `customer_app_projects`
+  - Unik for én tenant
+
+#### 3. Tenant Custom Apps (`app_type = 'tenant_custom'`)
+Manuelt bygget applikasjoner for én tenant:
+- **Kjennetegn**:
+  - `app_definition_id` er NULL
+  - `source_project_id` peker til opprinnelig prosjekt
+  - Skreddersydd løsning
+
+---
+
+## Application Lifecycle: Fra Prosjekt til Aktiv App
+
+### Workflow
+
+```mermaid
+graph TD
+    A[Generer app med AI] --> B[customer_app_projects<br/>status: draft]
+    B --> C[Sett subdomain]
+    C --> D[Deploy to Preview<br/>status: preview]
+    D --> E[Deploy to Production<br/>status: production]
+    E --> F[Aktiver App]
+    F --> G[applications<br/>app_type: tenant_ai_generated<br/>status: active]
+    F --> H[customer_app_projects<br/>status: deployed]
+```
+
+### Status-flow i `customer_app_projects`
+
+| Status | Beskrivelse | Neste steg |
+|--------|-------------|------------|
+| `draft` | Under planlegging/utvikling | Sett subdomain → Deploy to Preview |
+| `planning` | I planleggingsfase | Fortsett utvikling |
+| `building` | Under bygging | Fortsett utvikling |
+| `preview` | Deployed til preview-miljø | Test → Deploy to Production |
+| `production` | Deployed til produksjon | Aktiver app (migrer til `applications`) |
+| `deployed` | Migrert til `applications` | Ferdig (arkivert i prosjekt-tabellen) |
+
+### Tabeller i Lifecycle
+
+#### `customer_app_projects` (Prosjekter under bygging)
+- KUN prosjekter som er under utvikling eller testing
+- Når status = 'deployed' → appen er flyttet til `applications`
+
+#### `applications` (Aktive apper)
+- ALLE apper som er tilgjengelige for brukere
+- Inkluderer både platform-apper og tenant-spesifikke apper
+
+---
+
+## Database Queries
+
+### Hente alle aktive apps for en tenant
+```sql
+SELECT 
+  a.*,
+  ad.name as definition_name,
+  ad.key as definition_key,
+  cap.name as project_name
+FROM applications a
+LEFT JOIN app_definitions ad ON a.app_definition_id = ad.id
+LEFT JOIN customer_app_projects cap ON a.source_project_id = cap.id
+WHERE a.tenant_id = '...' 
+  AND a.is_active = true
+  AND a.status = 'active'
+ORDER BY a.installed_at DESC;
+```
+
+### Hente prosjekter under bygging
+```sql
+SELECT * FROM customer_app_projects
+WHERE tenant_id = '...'
+  AND status IN ('draft', 'planning', 'building', 'preview', 'production')
+ORDER BY created_at DESC;
+```
+
+### Skille mellom app-typer
+```sql
+-- Platform apps
+SELECT * FROM applications 
+WHERE app_type = 'platform' AND app_definition_id IS NOT NULL;
+
+-- Tenant-spesifikke apps
+SELECT * FROM applications 
+WHERE app_type IN ('tenant_ai_generated', 'tenant_custom') 
+  AND app_definition_id IS NULL;
+```
+
+---
+
+## UI-visning
+
+### TenantDetails - Applications Tab
+
+**Seksjon 1: Aktive Applikasjoner**
+- Datakilde: `applications` table
+- Filter: `is_active = true`, `status = 'active'`
+- Viser: Alle apper tilgjengelige for brukere
+
+**Seksjon 2: Prosjekter Under Bygging**
+- Datakilde: `customer_app_projects` table
+- Filter: `status != 'deployed'`
+- Viser: Status-workflow-knapper (Deploy to Preview/Production/Aktiver)
+
+### AppSelector (i rolle-administrasjon)
+- Datakilde: `applications` table
+- Formål: Velge app-scope for roller
+- Filter: Kun aktive apper
+
+---
+
+## Migrering og Testing
+
+### Verifisere migrering
+```sql
+-- Sjekk at apps er migrert korrekt
+SELECT 
+  'applications' as source,
+  COUNT(*) as count,
+  app_type,
+  status
+FROM applications
+GROUP BY app_type, status
+UNION ALL
+SELECT 
+  'customer_app_projects' as source,
+  COUNT(*) as count,
+  NULL as app_type,
+  status
+FROM customer_app_projects
+GROUP BY status;
+```
+
+### Testing workflow
+1. Gå til `/admin/tenants/:tenantId`
+2. Klikk "Applikasjoner"-tab
+3. Verifiser to seksjoner vises:
+   - "Aktive Applikasjoner" (fra `applications`)
+   - "Prosjekter Under Bygging" (fra `customer_app_projects`)
+4. Test status-endringer:
+   - Draft → Preview
+   - Preview → Production
+   - Production → Aktiver (migreres til `applications`)
+5. Verifiser at AppSelector viser korrekte apper

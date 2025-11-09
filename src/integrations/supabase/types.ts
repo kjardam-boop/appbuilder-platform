@@ -759,10 +759,12 @@ export type Database = {
       }
       applications: {
         Row: {
-          app_definition_id: string
+          app_definition_id: string | null
+          app_type: string | null
           channel: string
           config: Json | null
           created_at: string
+          deployed_at: string | null
           id: string
           installed_at: string
           installed_version: string
@@ -772,15 +774,19 @@ export type Database = {
           last_updated_at: string | null
           migration_status: string | null
           overrides: Json | null
+          source_project_id: string | null
           status: string
+          subdomain: string | null
           tenant_id: string
           updated_at: string
         }
         Insert: {
-          app_definition_id: string
+          app_definition_id?: string | null
+          app_type?: string | null
           channel?: string
           config?: Json | null
           created_at?: string
+          deployed_at?: string | null
           id?: string
           installed_at?: string
           installed_version: string
@@ -790,15 +796,19 @@ export type Database = {
           last_updated_at?: string | null
           migration_status?: string | null
           overrides?: Json | null
+          source_project_id?: string | null
           status?: string
+          subdomain?: string | null
           tenant_id: string
           updated_at?: string
         }
         Update: {
-          app_definition_id?: string
+          app_definition_id?: string | null
+          app_type?: string | null
           channel?: string
           config?: Json | null
           created_at?: string
+          deployed_at?: string | null
           id?: string
           installed_at?: string
           installed_version?: string
@@ -808,7 +818,9 @@ export type Database = {
           last_updated_at?: string | null
           migration_status?: string | null
           overrides?: Json | null
+          source_project_id?: string | null
           status?: string
+          subdomain?: string | null
           tenant_id?: string
           updated_at?: string
         }
@@ -818,6 +830,13 @@ export type Database = {
             columns: ["app_definition_id"]
             isOneToOne: false
             referencedRelation: "app_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "applications_source_project_id_fkey"
+            columns: ["source_project_id"]
+            isOneToOne: false
+            referencedRelation: "customer_app_projects"
             referencedColumns: ["id"]
           },
         ]
@@ -3501,42 +3520,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      tenant_generated_apps: {
-        Row: {
-          created_at: string | null
-          description: string | null
-          icon_name: string | null
-          id: string
-          is_active: boolean | null
-          key: string
-          name: string
-          tenant_id: string
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          description?: string | null
-          icon_name?: string | null
-          id?: string
-          is_active?: boolean | null
-          key: string
-          name: string
-          tenant_id: string
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          description?: string | null
-          icon_name?: string | null
-          id?: string
-          is_active?: boolean | null
-          key?: string
-          name?: string
-          tenant_id?: string
-          updated_at?: string | null
-        }
-        Relationships: []
       }
       tenant_integrations: {
         Row: {
