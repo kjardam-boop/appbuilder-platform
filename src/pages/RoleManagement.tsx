@@ -279,16 +279,29 @@ const RoleManagement = () => {
         });
       }
 
-      // Load app names with app definition; derive tenant name from cache (no FK join on tenants)
+      // Load app names with app definition
       if (scopeIds.apps.size > 0) {
-        const { data: apps } = await supabase
+        const { data: apps, error: appsError } = await supabase
           .from('applications')
-          .select('id, tenant_id, app_definition:app_definitions(name)')
+          .select(`
+            id,
+            tenant_id,
+            app_definitions!inner (
+              name
+            ),
+            tenants!inner (
+              name
+            )
+          `)
           .in('id', Array.from(scopeIds.apps));
         
+        if (appsError) {
+          console.error('[RoleManagement] Error loading apps:', appsError);
+        }
+        
         apps?.forEach(a => {
-          const tenantName = newScopeNames.tenants[a.tenant_id as string];
-          const appDefName = (a.app_definition as any)?.name || 'Unknown App';
+          const appDefName = (a.app_definitions as any)?.name || 'Unknown App';
+          const tenantName = (a.tenants as any)?.name;
           newScopeNames.apps[a.id] = tenantName 
             ? `${appDefName} (${tenantName})`
             : appDefName;
