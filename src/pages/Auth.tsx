@@ -20,6 +20,7 @@ const Auth = () => {
   const [invitationToken, setInvitationToken] = useState<string | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [defaultTab, setDefaultTab] = useState<"login" | "signup">("login");
+  const [invitationData, setInvitationData] = useState<any>(null);
 
   useEffect(() => {
     // Check for existing session
@@ -38,7 +39,7 @@ const Auth = () => {
       // Fetch invitation details
       supabase
         .from('invitations')
-        .select('email, contact_person_name, company_id, expires_at')
+        .select('email, contact_person_name, company_id, expires_at, status, intended_role')
         .eq('token', token)
         .single()
         .then(({ data, error }) => {
@@ -53,10 +54,17 @@ const Auth = () => {
             return;
           }
 
+          // Check if already accepted
+          if (data.status === 'accepted') {
+            toast.error("Denne invitasjonen er allerede brukt");
+            return;
+          }
+
           // Pre-fill form fields
           setEmail(data.email);
           setFullName(data.contact_person_name || "");
           setCompanyId(data.company_id);
+          setInvitationData(data);
         });
     }
   }, [navigate, searchParams]);
@@ -84,6 +92,19 @@ const Auth = () => {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Block signup without invitation token
+    if (!invitationToken) {
+      toast.error("Registrering krever invitasjon. Kontakt administrator for tilgang.");
+      return;
+    }
+
+    // Validate that email matches invitation
+    if (invitationData && invitationData.email !== email) {
+      toast.error("E-postadressen matcher ikke invitasjonen");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -102,44 +123,20 @@ const Auth = () => {
 
       if (error) throw error;
 
-      // If this is from an invitation
-      if (invitationToken && companyId && data.user) {
+      if (data.user) {
         // Mark invitation as accepted
         await supabase
           .from('invitations')
           .update({ 
             accepted_at: new Date().toISOString(),
+            accepted_by: data.user.id,
             status: 'accepted'
           })
           .eq('token', invitationToken);
 
-        // Add user role for the company
-        await supabase
-          .from('user_roles')
-          .insert({
-            user_id: data.user.id,
-            role: 'contributor',
-            scope_type: 'company',
-            scope_id: companyId,
-          });
-
-        toast.success("Konto opprettet! Du har nå tilgang til bedriften.");
+        // Role will be assigned automatically by trigger based on intended_role
+        toast.success("Konto opprettet! Du har nå tilgang til plattformen.");
         navigate("/dashboard");
-      } else {
-        // Regular signup - continue with onboarding
-        if (data.user) {
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .update({ onboarding_step: 'company_registration' })
-            .eq('user_id', data.user.id);
-
-          if (profileError) {
-            console.error('Error updating profile:', profileError);
-          }
-        }
-
-        toast.success("Konto opprettet! La oss registrere din bedrift.");
-        navigate("/onboarding/company");
       }
     } catch (error: any) {
       toast.error(error.message || "Registrering feilet");
@@ -164,7 +161,9 @@ const Auth = () => {
           <Tabs value={defaultTab} onValueChange={(v) => setDefaultTab(v as "login" | "signup")} className="space-y-4">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="login">Logg inn</TabsTrigger>
-              <TabsTrigger value="signup">Registrer</TabsTrigger>
+              <TabsTrigger value="signup" disabled={!invitationToken}>
+                {invitationToken ? "Registrer" : "Kun invitasjon"}
+              </TabsTrigger>
             </TabsList>
             
             <TabsContent value="login">
@@ -206,7 +205,28 @@ const Auth = () => {
             </TabsContent>
             
             <TabsContent value="signup">
-              <form onSubmit={handleSignup} className="space-y-4">
+              {!invitationToken ? (
+                <div className="p-6 text-center space-y-3">
+                  <p className="text-muted-foreground">
+                    Registrering er kun mulig med invitasjon.
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Kontakt en administrator for å få tilgang til plattformen.
+                  </p>
+                </div>
+              ) : invitationData ? (
+                <div className="space-y-4">
+                  <div className="p-4 bg-muted/50 rounded-lg mb-4">
+                    <p className="text-sm text-muted-foreground">
+                      Du registrerer deg med invitasjon
+                      {invitationData.intended_role && (
+                        <span className="font-medium text-foreground">
+                          {' '}som {invitationData.intended_role}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                  <form onSubmit={handleSignup} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="signup-name">Fullt navn</Label>
                   <Input
@@ -256,6 +276,8 @@ const Auth = () => {
                   {isLoading ? "Oppretter konto..." : "Opprett konto"}
                 </Button>
               </form>
+                </div>
+              ) : null}
             </TabsContent>
           </Tabs>
         </CardContent>

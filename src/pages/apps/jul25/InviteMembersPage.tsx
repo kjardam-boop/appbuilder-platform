@@ -103,13 +103,37 @@ export default function InviteMembersPage() {
     setLoading(true);
 
     try {
-      // Use notification service with tenant context
+      // Generate unique token for jul25 invitation
+      const token = crypto.randomUUID();
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
+
+      // Create jul25_invitations record
+      const { error: dbError } = await supabase
+        .from('jul25_invitations')
+        .insert({
+          token,
+          email: formData.method === 'email' ? formData.recipient : null,
+          phone: formData.method === 'sms' ? formData.recipient : null,
+          invited_by: currentUser.id,
+          expires_at: expiresAt.toISOString(),
+          status: 'pending',
+        });
+
+      if (dbError) throw dbError;
+
+      // Generate invitation URL
+      const invitationUrl = `${window.location.origin}/apps/jul25?invite=${token}`;
+
+      // Send invitation via n8n workflow
       const result = await sendInvitation(context.tenant_id, currentUser.id, {
         recipient: formData.recipient,
         method: formData.method,
         subject: formData.subject,
         message: formData.message,
         invitationType: formData.invitationType,
+        invitationUrl,
+        token,
       });
 
       if (!result.ok) {
@@ -118,7 +142,7 @@ export default function InviteMembersPage() {
 
       toast({
         title: "Invitasjon sendt!",
-        description: `Invitasjonen ble sendt via ${formData.method === 'sms' ? 'SMS' : 'e-post'}`,
+        description: `Invitasjonen ble sendt via ${formData.method === 'sms' ? 'SMS' : 'e-post'}. Token: ${token}`,
       });
 
       // Reset form

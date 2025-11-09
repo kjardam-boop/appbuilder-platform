@@ -1712,6 +1712,7 @@ export type Database = {
           email: string
           expires_at: string
           id: string
+          intended_role: Database["public"]["Enums"]["app_role"] | null
           invited_by: string | null
           status: string
           token: string
@@ -1725,6 +1726,7 @@ export type Database = {
           email: string
           expires_at: string
           id?: string
+          intended_role?: Database["public"]["Enums"]["app_role"] | null
           invited_by?: string | null
           status?: string
           token: string
@@ -1738,6 +1740,7 @@ export type Database = {
           email?: string
           expires_at?: string
           id?: string
+          intended_role?: Database["public"]["Enums"]["app_role"] | null
           invited_by?: string | null
           status?: string
           token?: string
@@ -1900,6 +1903,59 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "jul25_family_periods_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "jul25_families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jul25_invitations: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          created_at: string | null
+          email: string | null
+          expires_at: string
+          family_id: string | null
+          id: string
+          invited_by: string | null
+          phone: string | null
+          status: string | null
+          token: string
+          updated_at: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string | null
+          email?: string | null
+          expires_at: string
+          family_id?: string | null
+          id?: string
+          invited_by?: string | null
+          phone?: string | null
+          status?: string | null
+          token: string
+          updated_at?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string | null
+          email?: string | null
+          expires_at?: string
+          family_id?: string | null
+          id?: string
+          invited_by?: string | null
+          phone?: string | null
+          status?: string | null
+          token?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jul25_invitations_family_id_fkey"
             columns: ["family_id"]
             isOneToOne: false
             referencedRelation: "jul25_families"

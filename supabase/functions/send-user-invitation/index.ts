@@ -32,7 +32,8 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    const { email, contactPersonName, companyId, companyName } = await req.json();
+    // Parse the request body
+    const { email, contactPersonName, companyId, companyName, intendedRole } = await req.json();
 
     if (!email) {
       throw new Error('Email is required');
@@ -70,6 +71,7 @@ serve(async (req) => {
         contact_person_name: contactPersonName,
         invited_by: user.id,
         expires_at: expiresAt.toISOString(),
+        intended_role: intendedRole || null,
       });
 
     if (inviteError) {

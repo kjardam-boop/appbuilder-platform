@@ -12,6 +12,8 @@ export interface SendInvitationParams {
   message: string;
   invitationType: 'family_member' | 'guest';
   familyId?: string;
+  invitationUrl?: string;
+  token?: string;
 }
 
 export interface NotifyTaskParams {
@@ -38,8 +40,8 @@ export async function sendInvitation(
   params: SendInvitationParams
 ): Promise<{ ok: boolean; error?: string }> {
   try {
-    // Generate invitation link
-    const invitationUrl = `${window.location.origin}/apps/jul25`;
+    // Use provided invitationUrl or generate default
+    const invitationUrl = params.invitationUrl || `${window.location.origin}/apps/jul25`;
     const registrationUrl = `${window.location.origin}/apps/jul25/register`;
     
     // Convert line breaks to HTML <br> tags for email formatting
@@ -60,6 +62,7 @@ export async function sendInvitation(
           sent_by: userId,
           invitation_url: invitationUrl,
           registration_url: registrationUrl,
+          token: params.token,
         },
       },
     });

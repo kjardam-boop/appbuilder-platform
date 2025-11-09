@@ -80,6 +80,10 @@ import { AkseleraDemoPage } from "./tenants/akselera/pages/DemoPage";
 import { BrandPreview } from "./pages/apps/BrandPreview";
 import { TenantBranding } from "./pages/admin/tenants/Branding";
 import Demo from "./pages/Demo";
+import LandingPage from "./pages/LandingPage";
+import PlatformInvitationsPage from "./pages/admin/PlatformInvitationsPage";
+import { PlatformProtectedRoute } from "./components/auth/PlatformProtectedRoute";
+import { useAuth } from "@/modules/core/user/hooks/useAuth";
 
 const queryClient = new QueryClient();
 
@@ -93,6 +97,18 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
+function RootRoute() {
+  const { session, loading } = useAuth();
+  
+  if (loading) {
+    return <div className="flex items-center justify-center min-h-screen">
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+    </div>;
+  }
+  
+  return session ? <Index /> : <LandingPage />;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
@@ -102,19 +118,20 @@ const App = () => (
         <SidebarProvider defaultOpen>
           <BrowserRouter>
             <Routes>
-            <Route path="/" element={<Index />} />
+            <Route path="/" element={<RootRoute />} />
             <Route path="/auth" element={<Auth />} />
-            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/dashboard" element={<PlatformProtectedRoute><Dashboard /></PlatformProtectedRoute>} />
             <Route path="/supplier/:token" element={<SupplierAuth />} />
             
             {/* Onboarding Routes */}
-            <Route path="/onboarding/company" element={<CompanyRegistration />} />
-            <Route path="/onboarding/project" element={<ProjectCreation />} />
-            <Route path="/modules" element={<Modules />} />
+            <Route path="/onboarding/company" element={<PlatformProtectedRoute><CompanyRegistration /></PlatformProtectedRoute>} />
+            <Route path="/onboarding/project" element={<PlatformProtectedRoute><ProjectCreation /></PlatformProtectedRoute>} />
+            <Route path="/modules" element={<PlatformProtectedRoute><Modules /></PlatformProtectedRoute>} />
             
             {/* Admin Panel with sidebar */}
-            <Route path="/admin" element={<AdminLayout><Admin /></AdminLayout>}>
+            <Route path="/admin" element={<PlatformProtectedRoute><AdminLayout><Admin /></AdminLayout></PlatformProtectedRoute>}>
               <Route index element={<AdminDashboard />} />
+              <Route path="invitations" element={<PlatformInvitationsPage />} />
               <Route path="tenants" element={<Tenants />} />
               <Route path="tenants/:tenantId" element={<TenantDetails />} />
               <Route path="tenants/:tenantId/integrations" element={<TenantIntegrations />} />
@@ -155,40 +172,40 @@ const App = () => (
             </Route>
             
             {/* Legacy admin routes - redirect to new structure */}
-            <Route path="/admin/bootstrap" element={<AdminLayout><AdminBootstrap /></AdminLayout>} />
-            <Route path="/admin/questions" element={<AdminLayout><AdminQuestions /></AdminLayout>} />
-            <Route path="/admin/app-vendors" element={<AdminLayout><AppVendorAdmin /></AdminLayout>} />
-            <Route path="/tenants" element={<Tenants />} />
+            <Route path="/admin/bootstrap" element={<PlatformProtectedRoute><AdminLayout><AdminBootstrap /></AdminLayout></PlatformProtectedRoute>} />
+            <Route path="/admin/questions" element={<PlatformProtectedRoute><AdminLayout><AdminQuestions /></AdminLayout></PlatformProtectedRoute>} />
+            <Route path="/admin/app-vendors" element={<PlatformProtectedRoute><AdminLayout><AppVendorAdmin /></AdminLayout></PlatformProtectedRoute>} />
+            <Route path="/tenants" element={<PlatformProtectedRoute><Tenants /></PlatformProtectedRoute>} />
             
             {/* Applications */}
-            <Route path="/applications" element={<ApplicationsPage />} />
-            <Route path="/applications/:id" element={<AppProductDetails />} />
-            <Route path="/system-vendors" element={<SystemVendorsPage />} />
-            <Route path="/capabilities" element={<CapabilityCatalog />} />
+            <Route path="/applications" element={<PlatformProtectedRoute><ApplicationsPage /></PlatformProtectedRoute>} />
+            <Route path="/applications/:id" element={<PlatformProtectedRoute><AppProductDetails /></PlatformProtectedRoute>} />
+            <Route path="/system-vendors" element={<PlatformProtectedRoute><SystemVendorsPage /></PlatformProtectedRoute>} />
+            <Route path="/capabilities" element={<PlatformProtectedRoute><CapabilityCatalog /></PlatformProtectedRoute>} />
             
             {/* Companies */}
-            <Route path="/companies" element={<CompaniesHub />} />
-            <Route path="/companies/search" element={<CompanySearch />} />
-            <Route path="/companies/:id" element={<CompanyDetails />} />
-            <Route path="/saved-companies" element={<SavedCompanies />} />
-            <Route path="/customers" element={<CustomersPage />} />
-            <Route path="/implementation-partners" element={<ImplementationPartnersPage />} />
+            <Route path="/companies" element={<PlatformProtectedRoute><CompaniesHub /></PlatformProtectedRoute>} />
+            <Route path="/companies/search" element={<PlatformProtectedRoute><CompanySearch /></PlatformProtectedRoute>} />
+            <Route path="/companies/:id" element={<PlatformProtectedRoute><CompanyDetails /></PlatformProtectedRoute>} />
+            <Route path="/saved-companies" element={<PlatformProtectedRoute><SavedCompanies /></PlatformProtectedRoute>} />
+            <Route path="/customers" element={<PlatformProtectedRoute><CustomersPage /></PlatformProtectedRoute>} />
+            <Route path="/implementation-partners" element={<PlatformProtectedRoute><ImplementationPartnersPage /></PlatformProtectedRoute>} />
             
             {/* Projects */}
-            <Route path="/projects" element={<ProjectsHub />} />
-            <Route path="/projects/:id" element={<ProjectDetails />} />
+            <Route path="/projects" element={<PlatformProtectedRoute><ProjectsHub /></PlatformProtectedRoute>} />
+            <Route path="/projects/:id" element={<PlatformProtectedRoute><ProjectDetails /></PlatformProtectedRoute>} />
             
             {/* Opportunities */}
-            <Route path="/opportunities" element={<OpportunitiesPage />} />
-            <Route path="/opportunities/:id" element={<OpportunityDetails />} />
+            <Route path="/opportunities" element={<PlatformProtectedRoute><OpportunitiesPage /></PlatformProtectedRoute>} />
+            <Route path="/opportunities/:id" element={<PlatformProtectedRoute><OpportunityDetails /></PlatformProtectedRoute>} />
             
             {/* Supplier routes */}
             <Route path="/supplier/auth" element={<SupplierAuth />} />
             <Route path="/supplier/scoring/:projectId/:supplierId" element={<SupplierScoringPage />} />
             
             {/* Customer Apps */}
-            <Route path="/apps" element={<AppsPage />} />
-            <Route path="/apps/:projectId/brand-preview" element={<BrandPreview />} />
+            <Route path="/apps" element={<PlatformProtectedRoute><AppsPage /></PlatformProtectedRoute>} />
+            <Route path="/apps/:projectId/brand-preview" element={<PlatformProtectedRoute><BrandPreview /></PlatformProtectedRoute>} />
             <Route path="/apps/jul25" element={<Jul25App />} />
             <Route path="/apps/jul25/admin" element={<Jul25FamilyAdmin />} />
             <Route path="/apps/jul25/member/:memberId" element={<Jul25MemberEdit />} />
