@@ -38,27 +38,39 @@ export default function AppDefinitionDetails() {
 
   // Fetch workflows for this app
   const { data: workflows } = useQuery({
-    queryKey: ["app-workflows", appKey],
+    queryKey: ["app-workflows", appKey, currentUser?.id],
     queryFn: async () => {
       if (!currentUser) return [];
       
-      // Get tenant from user_roles
-      const { data: roles } = await supabase
+      // Check if user is platform admin
+      const { data: platformRole } = await supabase
         .from('user_roles')
-        .select('scope_id')
+        .select('role')
         .eq('user_id', currentUser.id)
-        .eq('scope_type', 'tenant')
+        .eq('scope_type', 'platform')
+        .in('role', ['platform_owner', 'platform_support'])
         .maybeSingle();
 
-      if (!roles?.scope_id) return [];
-
-      const { data } = await supabase
+      let query = supabase
         .from('mcp_tenant_workflow_map')
         .select('*')
-        .eq('tenant_id', roles.scope_id)
         .eq('is_active', true)
         .ilike('workflow_key', `${appKey}%`);
 
+      // If NOT platform admin, filter on user's tenant
+      if (!platformRole) {
+        const { data: tenantRole } = await supabase
+          .from('user_roles')
+          .select('scope_id')
+          .eq('user_id', currentUser.id)
+          .eq('scope_type', 'tenant')
+          .maybeSingle();
+
+        if (!tenantRole?.scope_id) return [];
+        query = query.eq('tenant_id', tenantRole.scope_id);
+      }
+
+      const { data } = await query.order('created_at', { ascending: false });
       return data || [];
     },
     enabled: !!appKey && !!currentUser,
@@ -283,7 +295,7 @@ export default function AppDefinitionDetails() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Zap className="h-5 w-5 text-purple-600" />
-                Workflows
+                Workflows ({workflows.length})
               </CardTitle>
               <CardDescription>
                 n8n workflows configured for this app
@@ -293,8 +305,8 @@ export default function AppDefinitionDetails() {
               <div className="space-y-2">
                 {workflows.map((workflow) => (
                   <div key={workflow.id} className="flex items-start justify-between p-3 border rounded-lg">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
+                    <div className="space-y-1 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <Badge variant="outline" className="font-mono text-xs">
                           {workflow.workflow_key}
                         </Badge>
@@ -305,10 +317,19 @@ export default function AppDefinitionDetails() {
                       {workflow.description && (
                         <p className="text-sm text-muted-foreground">{workflow.description}</p>
                       )}
-                      <code className="text-xs text-muted-foreground block mt-1">
+                      <code className="text-xs text-muted-foreground block mt-1 break-all">
                         {workflow.webhook_path}
                       </code>
                     </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      asChild
+                    >
+                      <Link to="/admin/mcp/workflows">
+                        <ExternalLink className="h-4 w-4" />
+                      </Link>
+                    </Button>
                   </div>
                 ))}
               </div>
