@@ -1,9 +1,19 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.1';
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Input validation schema
+const TriggerRequestSchema = z.object({
+  workflowKey: z.string().min(1).max(100).regex(/^[a-zA-Z0-9_-]+$/, 'Invalid workflow key format'),
+  action: z.string().min(1).max(100).regex(/^[a-zA-Z0-9_-]+$/, 'Invalid action format'),
+  input: z.record(z.unknown()).optional(),
+  idempotencyKey: z.string().uuid().optional(),
+  tenantId: z.string().uuid().optional()
+});
 
 interface TriggerRequest {
   workflowKey: string;
@@ -106,6 +116,46 @@ async function resolveWebhook(
 }
 
 /**
+ * Sanitize payload to redact sensitive fields before logging
+ */
+function sanitizePayload(payload: any): any {
+  if (!payload || typeof payload !== 'object') {
+    return payload;
+  }
+
+  const sensitiveKeys = [
+    'password', 'passwd', 'pwd', 'secret', 'token', 'apikey', 'api_key',
+    'authorization', 'auth', 'credential', 'private_key', 'access_token',
+    'refresh_token', 'client_secret', 'bearer'
+  ];
+
+  const redact = (obj: any): any => {
+    if (Array.isArray(obj)) {
+      return obj.map(item => redact(item));
+    }
+    
+    if (obj !== null && typeof obj === 'object') {
+      const sanitized: any = {};
+      for (const [key, value] of Object.entries(obj)) {
+        const lowerKey = key.toLowerCase();
+        if (sensitiveKeys.some(sensitive => lowerKey.includes(sensitive))) {
+          sanitized[key] = '***REDACTED***';
+        } else if (typeof value === 'object') {
+          sanitized[key] = redact(value);
+        } else {
+          sanitized[key] = value;
+        }
+      }
+      return sanitized;
+    }
+    
+    return obj;
+  };
+
+  return redact(payload);
+}
+
+/**
  * Trigger an n8n workflow with retry logic
  */
 async function triggerN8nWorkflow(
@@ -126,6 +176,9 @@ async function triggerN8nWorkflow(
 
   const startTime = Date.now();
 
+  // Sanitize input before logging to database
+  const sanitizedInput = sanitizePayload(input);
+
   // Create integration_run record
   const { data: runRecord, error: insertError } = await supabase
     .from('integration_run')
@@ -137,6 +190,7 @@ async function triggerN8nWorkflow(
       action_name: action,
       status: 'started',
       idempotency_key: idempotencyKey,
+      request_payload: sanitizedInput, // Store sanitized payload
     })
     .select()
     .single();
@@ -232,6 +286,7 @@ async function triggerN8nWorkflow(
       // Handle 2xx success
       if (httpStatus >= 200 && httpStatus < 300) {
         const responseData = await response.json().catch(() => ({}));
+        const sanitizedResponse = sanitizePayload(responseData);
 
         await supabase
           .from('integration_run')
@@ -239,7 +294,7 @@ async function triggerN8nWorkflow(
             status: 'succeeded',
             http_status: httpStatus,
             finished_at: new Date().toISOString(),
-            response_json: responseData,
+            response_json: sanitizedResponse, // Store sanitized response
           })
           .eq('id', runId);
 
@@ -475,9 +530,23 @@ Deno.serve(async (req) => {
       .select('role, scope_type, scope_id')
       .eq('user_id', user.id);
 
-    // Parse request body
-    const body: TriggerRequest = await req.json();
-    const { workflowKey, action, input, idempotencyKey, tenantId: requestTenantId } = body;
+    // Parse and validate request body
+    const body = await req.json();
+    
+    // Validate input with zod schema
+    const validationResult = TriggerRequestSchema.safeParse(body);
+    if (!validationResult.success) {
+      console.error('[Validation Error]', validationResult.error.format());
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid request parameters',
+          details: validationResult.error.format()
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { workflowKey, action, input, idempotencyKey, tenantId: requestTenantId } = validationResult.data;
 
     // Use tenant ID from request if provided, otherwise from user role
     const tenantRole = userRoles?.find(r => r.scope_type === 'tenant');
@@ -491,13 +560,6 @@ Deno.serve(async (req) => {
     }
 
     const roles = userRoles?.map(r => r.role) || [];
-
-    if (!workflowKey || !action) {
-      return new Response(
-        JSON.stringify({ error: 'Missing required fields: workflowKey, action' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
 
     // Generate request ID
     const requestId = crypto.randomUUID();
