@@ -36,35 +36,34 @@ const Auth = () => {
       setInvitationToken(token);
       setDefaultTab("signup");
       
-      // Fetch invitation details
+      // Validate invitation using secure RPC function
       supabase
-        .from('invitations')
-        .select('email, contact_person_name, company_id, expires_at, status, intended_role')
-        .eq('token', token)
-        .single()
+        .rpc('validate_invitation_token', {
+          _token: token,
+          _email: '' // Empty string to just fetch invitation data
+        })
         .then(({ data, error }) => {
           if (error || !data) {
             toast.error("Ugyldig eller utløpt invitasjon");
             return;
           }
 
-          // Check if expired
-          if (new Date(data.expires_at) < new Date()) {
-            toast.error("Denne invitasjonen har utløpt");
-            return;
-          }
-
-          // Check if already accepted
-          if (data.status === 'accepted') {
-            toast.error("Denne invitasjonen er allerede brukt");
+          const inviteData = data as any;
+          if (!inviteData.valid) {
+            toast.error("Ugyldig eller utløpt invitasjon");
             return;
           }
 
           // Pre-fill form fields
-          setEmail(data.email);
-          setFullName(data.contact_person_name || "");
-          setCompanyId(data.company_id);
-          setInvitationData(data);
+          setEmail(inviteData.email);
+          setFullName(inviteData.contact_person_name || "");
+          setCompanyId(inviteData.company_id);
+          setInvitationData({
+            email: inviteData.email,
+            contact_person_name: inviteData.contact_person_name,
+            company_id: inviteData.company_id,
+            intended_role: inviteData.intended_role
+          });
         });
     }
   }, [navigate, searchParams]);
@@ -124,15 +123,18 @@ const Auth = () => {
       if (error) throw error;
 
       if (data.user) {
-        // Mark invitation as accepted
-        await supabase
-          .from('invitations')
-          .update({ 
-            accepted_at: new Date().toISOString(),
-            accepted_by: data.user.id,
-            status: 'accepted'
-          })
-          .eq('token', invitationToken);
+        // Accept invitation using secure RPC function
+        const { data: acceptResult, error: acceptError } = await supabase
+          .rpc('accept_invitation', {
+            _token: invitationToken,
+            _email: email
+          });
+
+        const acceptData = acceptResult as any;
+        if (acceptError || !acceptData?.success) {
+          toast.error("Kunne ikke fullføre invitasjonen");
+          return;
+        }
 
         // Role will be assigned automatically by trigger based on intended_role
         toast.success("Konto opprettet! Du har nå tilgang til plattformen.");

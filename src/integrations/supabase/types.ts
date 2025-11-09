@@ -3883,6 +3883,10 @@ export type Database = {
       }
     }
     Functions: {
+      accept_invitation: {
+        Args: { _email: string; _token: string }
+        Returns: Json
+      }
       admin_has_platform_role: {
         Args: { check_user_id: string }
         Returns: boolean
@@ -4005,6 +4009,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      validate_invitation_token: {
+        Args: { _email: string; _token: string }
+        Returns: Json
       }
     }
     Enums: {
