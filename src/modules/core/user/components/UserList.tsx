@@ -150,13 +150,22 @@ export function UserList() {
 
       // Load app names (join with app_definitions to get name)
       if (appIds.size > 0) {
-        const { data: apps } = await supabase
+        const { data: apps, error: appsError } = await supabase
           .from('applications')
-          .select('id, app_definition:app_definitions(name)')
+          .select(`
+            id,
+            app_definitions!inner (
+              name
+            )
+          `)
           .in('id', Array.from(appIds));
         
+        if (appsError) {
+          console.error('Error loading app names:', appsError);
+        }
+        
         apps?.forEach(a => {
-          const appDef = a.app_definition as any;
+          const appDef = a.app_definitions as any;
           newScopeNames.apps[a.id] = appDef?.name || 'Unknown App';
         });
       }
