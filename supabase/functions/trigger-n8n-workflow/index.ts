@@ -176,9 +176,6 @@ async function triggerN8nWorkflow(
 
   const startTime = Date.now();
 
-  // Sanitize input before logging to database
-  const sanitizedInput = sanitizePayload(input);
-
   // Create integration_run record
   const { data: runRecord, error: insertError } = await supabase
     .from('integration_run')
@@ -190,7 +187,6 @@ async function triggerN8nWorkflow(
       action_name: action,
       status: 'started',
       idempotency_key: idempotencyKey,
-      request_payload: sanitizedInput, // Store sanitized payload
     })
     .select()
     .single();
