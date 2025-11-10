@@ -17,7 +17,7 @@ export const useUserPermissions = () => {
     queryFn: async () => {
       if (!user?.id) return [];
 
-      // 1. Get all user's roles
+      // 1. Get all user's roles (using app_role type from database)
       const { data: userRoles, error: rolesError } = await supabase
         .from('user_roles')
         .select('role')
@@ -27,7 +27,9 @@ export const useUserPermissions = () => {
       if (!userRoles || userRoles.length === 0) return [];
 
       // 2. Get all permissions for these roles
+      // Map from user_roles.role (which is app_role enum) to role_permissions
       const roles = userRoles.map(r => r.role);
+      
       const { data: permissions, error: permError } = await supabase
         .from('role_permissions')
         .select('*')
