@@ -5,11 +5,11 @@ import { Link } from "react-router-dom";
 import type { ExternalSystem } from "../types/application.types";
 import { APP_TYPES } from "../types/application.types";
 
-interface AppProductCardProps {
+interface ExternalSystemCardProps {
   product: ExternalSystem & { vendor?: { name: string } };
 }
 
-export const AppProductCard = ({ product }: AppProductCardProps) => {
+export const ExternalSystemCard = ({ product }: ExternalSystemCardProps) => {
   return (
     <Link to={`/applications/${product.id}`}>
       <Card className="h-full hover:bg-accent/50 transition-colors cursor-pointer">

@@ -4,11 +4,11 @@ import { Badge } from "@/components/ui/badge";
 import { Server, ExternalLink } from "lucide-react";
 import { Link } from "react-router-dom";
 
-interface CompanyAppsListProps {
+interface CompanyExternalSystemsListProps {
   companyId: string;
 }
 
-export const CompanyAppsList = ({ companyId }: CompanyAppsListProps) => {
+export const CompanyExternalSystemsList = ({ companyId }: CompanyExternalSystemsListProps) => {
   const { data: apps = [], isLoading } = useCompanyExternalSystems(companyId);
 
   if (isLoading) {

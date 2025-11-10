@@ -141,10 +141,10 @@ export { useApplicationGeneration } from "./hooks/useApplicationGeneration";
 export { useAppUsageStats } from "./hooks/useObservability";
 
 // Components
-export { AppProductCard } from "./components/AppProductCard";
+export { ExternalSystemCard } from "./components/ExternalSystemCard";
 export { AppVendorSelector } from "./components/AppVendorSelector";
 export { SKUManager } from "./components/SKUManager";
-export { CompanyAppsList } from "./components/CompanyAppsList";
+export { CompanyExternalSystemsList } from "./components/CompanyExternalSystemsList";
 export { ApplicationForm } from "./components/ApplicationForm";
 export { UnknownTypeDialog } from "./components/UnknownTypeDialog";
 

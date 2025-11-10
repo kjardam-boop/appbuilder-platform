@@ -419,7 +419,7 @@ const initialCapabilities: CapabilityInput[] = [
     tags: ["applications", "catalog", "products", "vendors"],
     icon_name: "Package",
     frontend_files: [
-      "src/modules/core/applications/components/AppProductCard.tsx",
+      "src/modules/core/applications/components/ExternalSystemCard.tsx",
       "src/modules/core/applications/components/ApplicationForm.tsx",
       "src/modules/core/applications/hooks/useApplications.ts",
       "src/modules/core/applications/hooks/useCompanyApps.ts",
