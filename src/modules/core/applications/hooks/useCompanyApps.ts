@@ -7,12 +7,12 @@ export function useCompanyApps(companyId: string) {
   return useQuery({
     queryKey: ["company-apps", companyId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("company_apps")
+      const { data, error } = await (supabase as any)
+        .from("company_external_systems")
         .select(`
           *,
-          app_product:app_products(*),
-          sku:skus(*)
+          external_system:external_systems(*),
+          sku:external_system_skus(*)
         `)
         .eq("company_id", companyId)
         .order("created_at", { ascending: false });
@@ -31,28 +31,28 @@ export function useCreateCompanyApp() {
     mutationFn: async (input: CompanyAppInput) => {
       const payload = {
         company_id: input.company_id!,
-        app_product_id: input.app_product_id!,
+        external_system_id: input.external_system_id || input.app_product_id!,
         sku_id: input.sku_id || null,
         environment: input.environment || null,
         version: input.version || null,
         notes: input.notes || null,
       };
       
-      const { data, error } = await supabase
-        .from("company_apps")
+      const { data, error } = await (supabase as any)
+        .from("company_external_systems")
         .insert([payload])
         .select()
         .single();
 
       if (error) throw error;
-      return data as CompanyApp;
+      return data as any as CompanyApp;
     },
     onSuccess: (_, input) => {
       queryClient.invalidateQueries({ queryKey: ["company-apps", input.company_id] });
-      toast.success("Applikasjon lagt til");
+      toast.success("System lagt til");
     },
     onError: (error: Error) => {
-      toast.error(`Kunne ikke legge til applikasjon: ${error.message}`);
+      toast.error(`Kunne ikke legge til system: ${error.message}`);
     },
   });
 }
@@ -62,8 +62,8 @@ export function useDeleteCompanyApp() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("company_apps")
+      const { error } = await (supabase as any)
+        .from("company_external_systems")
         .delete()
         .eq("id", id);
 
@@ -71,10 +71,10 @@ export function useDeleteCompanyApp() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["company-apps"] });
-      toast.success("Applikasjon fjernet");
+      toast.success("System fjernet");
     },
     onError: (error: Error) => {
-      toast.error(`Kunne ikke fjerne applikasjon: ${error.message}`);
+      toast.error(`Kunne ikke fjerne system: ${error.message}`);
     },
   });
 }

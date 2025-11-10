@@ -104,7 +104,7 @@ export default function AppProductDetails() {
         input: {
           name: data.product_name,
           short_name: data.short_name,
-          app_types: data.app_types || [],
+          system_types: data.system_types || data.app_types || [],
           deployment_models: data.deployment_models || [],
           market_segments: data.market_segments || [],
           description: data.description,

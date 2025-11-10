@@ -1,6 +1,6 @@
 import { BaseEntity } from "@/core/types/common.types";
 import { z } from "zod";
-import type { ERPExtension } from "./erpExtension.types";
+import type { ExternalSystemERPData } from "./erpExtension.types";
 
 export type AppType = "ERP" | "CRM" | "EmailSuite" | "HRPayroll" | "BI" | "iPaaS" | "CMS" | "eCommerce" | "WMS" | "TMS" | "PLM" | "MES" | "ITSM" | "IAM" | "RPA" | "ProjectMgmt" | "ServiceMgmt";
 export type DeploymentModel = "SaaS" | "Hosted" | "On-premises" | "Hybrid";
@@ -9,7 +9,7 @@ export type AppStatus = "Active" | "Legacy";
 export type IntegrationType = "API" | "iPaaS" | "Connector";
 export type ProjectAppStage = "Longlist" | "Shortlist" | "Winner" | "Rejected";
 
-export interface AppVendor extends BaseEntity {
+export interface ExternalSystemVendor extends BaseEntity {
   company_id: string;
   name: string;
   org_number: string;
@@ -23,12 +23,12 @@ export interface UseCase {
   industry_specific?: boolean;
 }
 
-export interface AppProduct extends BaseEntity {
+export interface ExternalSystem extends BaseEntity {
   name: string;
   short_name: string | null;
   slug: string;
   vendor_id: string;
-  app_types: string[];
+  system_types: string[];
   deployment_models: DeploymentModel[];
   target_industries: string[] | null;
   market_segments: MarketSegment[] | null;
@@ -47,44 +47,51 @@ export interface AppProduct extends BaseEntity {
     pipedream?: boolean;
     zapier?: boolean;
   };
-  vendor?: AppVendor;
-  skus?: SKU[];
-  erp_extension?: ERPExtension;
+  vendor?: ExternalSystemVendor;
+  skus?: ExternalSystemSKU[];
+  erp_extension?: ExternalSystemERPData;
+  // Backward compat: DB still uses old column name
+  app_types?: string[]; // Maps to system_types
 }
 
-export interface SKU extends BaseEntity {
-  app_product_id: string;
+export interface ExternalSystemSKU extends BaseEntity {
+  external_system_id: string;
   edition_name: string;
   code: string | null;
   notes: string | null;
+  // Backward compat: DB still returns old column name
+  app_product_id?: string; // Maps to external_system_id
 }
 
-export interface AppIntegration extends BaseEntity {
-  app_product_id: string;
+export interface ExternalSystemIntegration extends BaseEntity {
+  external_system_id: string;
   type: IntegrationType;
   name: string;
   spec_url: string | null;
   notes: string | null;
 }
 
-export interface CompanyApp extends BaseEntity {
+export interface CompanyExternalSystem extends BaseEntity {
   company_id: string;
-  app_product_id: string;
+  external_system_id: string;
   sku_id: string | null;
   environment: string | null;
   version: string | null;
   notes: string | null;
-  app_product?: AppProduct;
-  sku?: SKU;
+  external_system?: ExternalSystem;
+  sku?: ExternalSystemSKU;
+  // Backward compat: DB still returns old column names
+  app_product_id?: string; // Maps to external_system_id
+  app_product?: ExternalSystem; // Maps to external_system
 }
 
-export interface ProjectAppProduct extends BaseEntity {
+export interface ProjectExternalSystem extends BaseEntity {
   project_id: string;
-  app_product_id: string;
+  external_system_id: string;
   stage: ProjectAppStage;
   rationale: string | null;
   partner_company_id: string | null;
-  app_product?: AppProduct;
+  external_system?: ExternalSystem;
   partner?: {
     id: string;
     name: string;
@@ -92,9 +99,9 @@ export interface ProjectAppProduct extends BaseEntity {
   };
 }
 
-export interface PartnerCertification extends BaseEntity {
+export interface PartnerSystemCertification extends BaseEntity {
   partner_company_id: string;
-  app_product_id: string;
+  external_system_id: string;
   certification_level: string | null;
   certification_date: string | null;
   notes: string | null;
@@ -103,10 +110,10 @@ export interface PartnerCertification extends BaseEntity {
     name: string;
     org_number: string;
   };
-  app_product?: AppProduct;
+  external_system?: ExternalSystem;
 }
 
-export const appVendorSchema = z.object({
+export const externalSystemVendorSchema = z.object({
   company_id: z.string().uuid("Ugyldig selskap-ID"),
   name: z.string().min(1, "Navn er påkrevd").max(200),
   org_number: z.string().optional().or(z.literal("")),
@@ -116,13 +123,13 @@ export const appVendorSchema = z.object({
   contact_url: z.string().url("Ugyldig URL").optional().or(z.literal("")),
 });
 
-export const appProductSchema = z.object({
+export const externalSystemSchema = z.object({
   name: z.string().min(1, "Navn er påkrevd").max(200),
   short_name: z.string().max(50).optional().or(z.literal("")),
   slug: z.string().min(1, "Slug er påkrevd").regex(/^[a-z0-9-]+$/, "Slug må være kebab-case"),
   vendor_id: z.string().uuid("Ugyldig leverandør-ID"),
-  category_id: z.string().uuid().optional().or(z.literal("")), // New: FK to app_categories
-  app_types: z.array(z.enum(["ERP", "CRM", "EmailSuite", "HRPayroll", "BI", "iPaaS", "CMS", "eCommerce", "WMS", "TMS", "PLM", "MES", "ITSM", "IAM", "RPA", "ProjectMgmt", "ServiceMgmt"])).min(1, "Minst én applikasjonstype er påkrevd"),
+  category_id: z.string().uuid().optional().or(z.literal("")),
+  system_types: z.array(z.enum(["ERP", "CRM", "EmailSuite", "HRPayroll", "BI", "iPaaS", "CMS", "eCommerce", "WMS", "TMS", "PLM", "MES", "ITSM", "IAM", "RPA", "ProjectMgmt", "ServiceMgmt"])).min(1, "Minst én systemtype er påkrevd"),
   deployment_models: z.array(z.enum(["SaaS", "Hosted", "On-premises", "Hybrid"])).min(1, "Minst én deployment-modell er påkrevd"),
   target_industries: z.array(z.string()).optional(),
   market_segments: z.array(z.enum(["SMB", "Midmarket", "Enterprise"])).optional(),
@@ -172,49 +179,103 @@ export const appProductSchema = z.object({
   api_docs_url: z.string().url("Ugyldig URL").optional().or(z.literal("")),
 });
 
-export const skuSchema = z.object({
+export const externalSystemSKUSchema = z.object({
   edition_name: z.string().min(1, "Utgavenavn er påkrevd").max(100),
   code: z.string().max(100).optional().or(z.literal("")),
   notes: z.string().max(500).optional().or(z.literal("")),
 });
 
-export const appIntegrationSchema = z.object({
+export const externalSystemIntegrationSchema = z.object({
   type: z.enum(["API", "iPaaS", "Connector"]),
   name: z.string().min(1, "Navn er påkrevd").max(200),
   spec_url: z.string().url("Ugyldig URL").optional().or(z.literal("")),
   notes: z.string().max(500).optional().or(z.literal("")),
 });
 
-export const companyAppSchema = z.object({
+export const companyExternalSystemSchema = z.object({
   company_id: z.string().uuid("Ugyldig selskap-ID"),
-  app_product_id: z.string().uuid("Ugyldig produkt-ID"),
+  external_system_id: z.string().uuid("Ugyldig system-ID").optional(),
   sku_id: z.string().uuid().optional().or(z.literal("")),
   environment: z.string().max(100).optional().or(z.literal("")),
   version: z.string().max(100).optional().or(z.literal("")),
   notes: z.string().max(500).optional().or(z.literal("")),
+  // Backward compat: allow old column name
+  app_product_id: z.string().uuid().optional(),
 });
 
-export const projectAppProductSchema = z.object({
+export const projectExternalSystemSchema = z.object({
   stage: z.enum(["Longlist", "Shortlist", "Winner", "Rejected"]),
   rationale: z.string().max(1000).optional().or(z.literal("")),
   partner_company_id: z.string().uuid().optional().or(z.literal("")),
 });
 
-export const partnerCertificationSchema = z.object({
+export const partnerSystemCertificationSchema = z.object({
   partner_company_id: z.string().uuid("Ugyldig partner-ID"),
-  app_product_id: z.string().uuid("Ugyldig produkt-ID"),
+  external_system_id: z.string().uuid("Ugyldig system-ID"),
   certification_level: z.string().max(100).optional().or(z.literal("")),
   certification_date: z.string().optional().or(z.literal("")),
   notes: z.string().max(500).optional().or(z.literal("")),
 });
 
-export type AppVendorInput = z.infer<typeof appVendorSchema>;
-export type AppProductInput = z.infer<typeof appProductSchema>;
-export type SKUInput = z.infer<typeof skuSchema>;
-export type AppIntegrationInput = z.infer<typeof appIntegrationSchema>;
-export type CompanyAppInput = z.infer<typeof companyAppSchema>;
-export type ProjectAppProductInput = z.infer<typeof projectAppProductSchema>;
-export type PartnerCertificationInput = z.infer<typeof partnerCertificationSchema>;
+export type ExternalSystemVendorInput = z.infer<typeof externalSystemVendorSchema>;
+export type ExternalSystemInput = z.infer<typeof externalSystemSchema>;
+export type ExternalSystemSKUInput = z.infer<typeof externalSystemSKUSchema>;
+export type ExternalSystemIntegrationInput = z.infer<typeof externalSystemIntegrationSchema>;
+export type CompanyExternalSystemInput = z.infer<typeof companyExternalSystemSchema>;
+export type ProjectExternalSystemInput = z.infer<typeof projectExternalSystemSchema>;
+export type PartnerSystemCertificationInput = z.infer<typeof partnerSystemCertificationSchema>;
+
+// ============================================================
+// BACKWARD COMPATIBILITY ALIASES (to be removed in Phase 4-6)
+// ============================================================
+
+// Type aliases for old names (allows existing code to compile)
+/** @deprecated Use ExternalSystemVendor instead */
+export type AppVendor = ExternalSystemVendor;
+/** @deprecated Use ExternalSystem instead */
+export type AppProduct = ExternalSystem;
+/** @deprecated Use ExternalSystemSKU instead */
+export type SKU = ExternalSystemSKU;
+/** @deprecated Use ExternalSystemIntegration instead */
+export type AppIntegration = ExternalSystemIntegration;
+/** @deprecated Use CompanyExternalSystem instead */
+export type CompanyApp = CompanyExternalSystem;
+/** @deprecated Use ProjectExternalSystem instead */
+export type ProjectAppProduct = ProjectExternalSystem;
+/** @deprecated Use PartnerSystemCertification instead */
+export type PartnerCertification = PartnerSystemCertification;
+
+// Input type aliases
+/** @deprecated Use ExternalSystemVendorInput instead */
+export type AppVendorInput = ExternalSystemVendorInput;
+/** @deprecated Use ExternalSystemInput instead */
+export type AppProductInput = ExternalSystemInput;
+/** @deprecated Use ExternalSystemSKUInput instead */
+export type SKUInput = ExternalSystemSKUInput;
+/** @deprecated Use ExternalSystemIntegrationInput instead */
+export type AppIntegrationInput = ExternalSystemIntegrationInput;
+/** @deprecated Use CompanyExternalSystemInput instead */
+export type CompanyAppInput = CompanyExternalSystemInput;
+/** @deprecated Use ProjectExternalSystemInput instead */
+export type ProjectAppProductInput = ProjectExternalSystemInput;
+/** @deprecated Use PartnerSystemCertificationInput instead */
+export type PartnerCertificationInput = PartnerSystemCertificationInput;
+
+// Schema aliases
+/** @deprecated Use externalSystemVendorSchema instead */
+export const appVendorSchema = externalSystemVendorSchema;
+/** @deprecated Use externalSystemSchema instead */
+export const appProductSchema = externalSystemSchema;
+/** @deprecated Use externalSystemSKUSchema instead */
+export const skuSchema = externalSystemSKUSchema;
+/** @deprecated Use externalSystemIntegrationSchema instead */
+export const appIntegrationSchema = externalSystemIntegrationSchema;
+/** @deprecated Use companyExternalSystemSchema instead */
+export const companyAppSchema = companyExternalSystemSchema;
+/** @deprecated Use projectExternalSystemSchema instead */
+export const projectAppProductSchema = projectExternalSystemSchema;
+/** @deprecated Use partnerSystemCertificationSchema instead */
+export const partnerCertificationSchema = partnerSystemCertificationSchema;
 
 export const APP_TYPES: Record<AppType, string> = {
   ERP: "ERP",

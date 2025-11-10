@@ -7,10 +7,10 @@ export function useSKUs(appProductId: string) {
   return useQuery({
     queryKey: ["skus", appProductId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("skus")
+      const { data, error } = await (supabase as any)
+        .from("external_system_skus")
         .select("*")
-        .eq("app_product_id", appProductId)
+        .eq("external_system_id", appProductId)
         .order("edition_name");
 
       if (error) throw error;
@@ -26,14 +26,14 @@ export function useCreateSKU() {
   return useMutation({
     mutationFn: async (input: SKUInput & { app_product_id: string }) => {
       const payload = {
-        app_product_id: input.app_product_id,
+        external_system_id: input.app_product_id,
         edition_name: input.edition_name!,
         code: input.code || null,
         notes: input.notes || null,
       };
       
-      const { data, error } = await supabase
-        .from("skus")
+      const { data, error } = await (supabase as any)
+        .from("external_system_skus")
         .insert([payload])
         .select()
         .single();
@@ -56,8 +56,8 @@ export function useDeleteSKU() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("skus")
+      const { error } = await (supabase as any)
+        .from("external_system_skus")
         .delete()
         .eq("id", id);
 
