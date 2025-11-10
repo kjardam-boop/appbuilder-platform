@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { SKUManager } from "@/modules/core/applications/components/SKUManager";
+import { ExternalSystemSKUManager } from "@/modules/core/applications/components/ExternalSystemSKUManager";
 import { UnknownTypeDialog } from "@/modules/core/applications/components/UnknownTypeDialog";
 import { 
   ArrowLeft, 
@@ -369,7 +369,7 @@ export default function AppProductDetails() {
           )}
 
           {/* SKU Manager */}
-          <SKUManager appProductId={product.id} />
+          <ExternalSystemSKUManager appProductId={product.id} />
         </div>
       </main>
 

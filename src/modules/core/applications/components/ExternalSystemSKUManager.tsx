@@ -10,11 +10,11 @@ import { Plus, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import type { ExternalSystemSKUInput } from "../types/application.types";
 
-interface SKUManagerProps {
+interface ExternalSystemSKUManagerProps {
   appProductId: string;
 }
 
-export const SKUManager = ({ appProductId }: SKUManagerProps) => {
+export const ExternalSystemSKUManager = ({ appProductId }: ExternalSystemSKUManagerProps) => {
   const { data: skus = [], isLoading } = useSKUs(appProductId);
   const createMutation = useCreateSKU();
   const deleteMutation = useDeleteSKU();
