@@ -19,8 +19,10 @@ import ProjectCreation from "./pages/onboarding/ProjectCreation";
 import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
+import { useHasAdminPermissions } from "@/modules/core/permissions/hooks/useHasAdminPermissions";
 import AppAdminSidebar from "@/components/admin/AppAdminSidebar";
+import { PermissionProtectedRoute } from "@/components/admin/PermissionProtectedRoute";
+import { getRoutePermission } from "@/config/adminNavigation";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminBootstrap from "./pages/admin/AdminBootstrap";
 import ApplicationCreate from "./pages/admin/ApplicationCreate";
@@ -89,9 +91,9 @@ import { Shield } from "lucide-react";
 
 const queryClient = new QueryClient();
 
-// Global layout that shows admin sidebar for platform admins on all pages
+// Global layout that shows admin sidebar for users with admin permissions
 function GlobalLayout({ children }: { children: React.ReactNode }) {
-  const { isPlatformAdmin, isLoading } = usePlatformAdmin();
+  const { hasAdminAccess, isLoading } = useHasAdminPermissions();
   const { user } = useAuth();
   
   if (isLoading) {
@@ -100,7 +102,7 @@ function GlobalLayout({ children }: { children: React.ReactNode }) {
     </div>;
   }
 
-  if (!isPlatformAdmin) {
+  if (!hasAdminAccess) {
     // Regular users see content without admin sidebar
     return <>{children}</>;
   }
@@ -168,47 +170,47 @@ const App = () => (
             <Route path="/onboarding/project" element={<PlatformProtectedRoute><ProjectCreation /></PlatformProtectedRoute>} />
             <Route path="/modules" element={<PlatformProtectedRoute><Modules /></PlatformProtectedRoute>} />
             
-            {/* Admin Panel routes */}
-            <Route path="/admin" element={<PlatformProtectedRoute><Admin /></PlatformProtectedRoute>}>
-              <Route index element={<AdminDashboard />} />
-              <Route path="invitations" element={<PlatformInvitationsPage />} />
-              <Route path="tenants" element={<Tenants />} />
-              <Route path="tenants/:tenantId" element={<TenantDetails />} />
-              <Route path="tenants/:tenantId/integrations" element={<TenantIntegrations />} />
-              <Route path="tenants/:tenantId/mcp-actions" element={<McpActionsRegistry />} />
-              <Route path="tenants/:tenantId/settings" element={<TenantSettings />} />
-              <Route path="users" element={<UserManagement />} />
-              <Route path="roles" element={<RoleManagement />} />
-              <Route path="roles/config" element={<RoleConfiguration />} />
-              <Route path="permissions/health" element={<PermissionHealth />} />
-              <Route path="companies" element={<AdminCompanies />} />
-              <Route path="archived" element={<ArchivedResources />} />
-              <Route path="settings" element={<AdminSettings />} />
-              <Route path="industries" element={<IndustryAdmin />} />
-              <Route path="applications" element={<ApplicationsPage />} />
-              <Route path="applications/new" element={<ApplicationCreate />} />
-              <Route path="capabilities" element={<CapabilityCatalog />} />
-              <Route path="capabilities/:capabilityId" element={<CapabilityDetailsPage />} />
-              <Route path="database" element={<AdminSeed />} />
-              <Route path="integrations" element={<PlatformIntegrations />} />
-              <Route path="ai-providers" element={<AIProviderSettings />} />
-              <Route path="security" element={<AdminSettings />} />
-              <Route path="apps" element={<AppCatalog />} />
-              <Route path="apps/new" element={<AppDefinitionCreate />} />
-              <Route path="apps/:appKey" element={<AppDefinitionDetails />} />
-              <Route path="apps/:appKey/versions" element={<AppVersionsPage />} />
-              <Route path="tenants/:tenantId/apps" element={<TenantAppsPage />} />
-              <Route path="tenants/:tenantId/apps/catalog" element={<TenantAppCatalog />} />
-              <Route path="mcp/policy" element={<McpPolicy />} />
-              <Route path="mcp/workflows" element={<McpWorkflows />} />
-              <Route path="mcp/secrets" element={<McpSecrets />} />
-              <Route path="mcp/observability" element={<McpObservability />} />
-              <Route path="ai/mcp-demo" element={<AIMcpDemo />} />
-              <Route path="compatibility" element={<Compatibility />} />
-              <Route path="categories" element={<Categories />} />
-              <Route path="tenant-systems" element={<TenantSystems />} />
-              <Route path="integration-recommendations" element={<IntegrationRecommendations />} />
-              <Route path="integration-graph" element={<IntegrationGraph />} />
+            {/* Admin Panel routes - protected by permissions */}
+            <Route path="/admin" element={<Admin />}>
+              <Route index element={<PermissionProtectedRoute><AdminDashboard /></PermissionProtectedRoute>} />
+              <Route path="invitations" element={<PermissionProtectedRoute resource="user" action="admin"><PlatformInvitationsPage /></PermissionProtectedRoute>} />
+              <Route path="tenants" element={<PermissionProtectedRoute resource="tenant" action="admin"><Tenants /></PermissionProtectedRoute>} />
+              <Route path="tenants/:tenantId" element={<PermissionProtectedRoute resource="tenant" action="admin"><TenantDetails /></PermissionProtectedRoute>} />
+              <Route path="tenants/:tenantId/integrations" element={<PermissionProtectedRoute resource="integration" action="admin"><TenantIntegrations /></PermissionProtectedRoute>} />
+              <Route path="tenants/:tenantId/mcp-actions" element={<PermissionProtectedRoute resource="integration" action="admin"><McpActionsRegistry /></PermissionProtectedRoute>} />
+              <Route path="tenants/:tenantId/settings" element={<PermissionProtectedRoute resource="tenant" action="admin"><TenantSettings /></PermissionProtectedRoute>} />
+              <Route path="users" element={<PermissionProtectedRoute resource="user" action="admin"><UserManagement /></PermissionProtectedRoute>} />
+              <Route path="roles" element={<PermissionProtectedRoute resource="user" action="list"><RoleManagement /></PermissionProtectedRoute>} />
+              <Route path="roles/config" element={<PermissionProtectedRoute resource="user" action="admin"><RoleConfiguration /></PermissionProtectedRoute>} />
+              <Route path="permissions/health" element={<PermissionProtectedRoute resource="user" action="admin"><PermissionHealth /></PermissionProtectedRoute>} />
+              <Route path="companies" element={<PermissionProtectedRoute resource="company" action="admin"><AdminCompanies /></PermissionProtectedRoute>} />
+              <Route path="archived" element={<PermissionProtectedRoute resource="document" action="list"><ArchivedResources /></PermissionProtectedRoute>} />
+              <Route path="settings" element={<PermissionProtectedRoute resource="tenant" action="admin"><AdminSettings /></PermissionProtectedRoute>} />
+              <Route path="industries" element={<PermissionProtectedRoute resource="industry" action="admin"><IndustryAdmin /></PermissionProtectedRoute>} />
+              <Route path="applications" element={<PermissionProtectedRoute resource="application" action="admin"><ApplicationsPage /></PermissionProtectedRoute>} />
+              <Route path="applications/new" element={<PermissionProtectedRoute resource="application" action="admin"><ApplicationCreate /></PermissionProtectedRoute>} />
+              <Route path="capabilities" element={<PermissionProtectedRoute resource="capability" action="admin"><CapabilityCatalog /></PermissionProtectedRoute>} />
+              <Route path="capabilities/:capabilityId" element={<PermissionProtectedRoute resource="capability" action="admin"><CapabilityDetailsPage /></PermissionProtectedRoute>} />
+              <Route path="database" element={<PermissionProtectedRoute resource="tenant" action="admin"><AdminSeed /></PermissionProtectedRoute>} />
+              <Route path="integrations" element={<PermissionProtectedRoute resource="integration" action="admin"><PlatformIntegrations /></PermissionProtectedRoute>} />
+              <Route path="ai-providers" element={<PermissionProtectedRoute resource="tenant" action="admin"><AIProviderSettings /></PermissionProtectedRoute>} />
+              <Route path="security" element={<PermissionProtectedRoute resource="audit_log" action="admin"><AdminSettings /></PermissionProtectedRoute>} />
+              <Route path="apps" element={<PermissionProtectedRoute resource="app_definition" action="admin"><AppCatalog /></PermissionProtectedRoute>} />
+              <Route path="apps/new" element={<PermissionProtectedRoute resource="app_definition" action="admin"><AppDefinitionCreate /></PermissionProtectedRoute>} />
+              <Route path="apps/:appKey" element={<PermissionProtectedRoute resource="app_definition" action="admin"><AppDefinitionDetails /></PermissionProtectedRoute>} />
+              <Route path="apps/:appKey/versions" element={<PermissionProtectedRoute resource="app_definition" action="admin"><AppVersionsPage /></PermissionProtectedRoute>} />
+              <Route path="tenants/:tenantId/apps" element={<PermissionProtectedRoute resource="application" action="list"><TenantAppsPage /></PermissionProtectedRoute>} />
+              <Route path="tenants/:tenantId/apps/catalog" element={<PermissionProtectedRoute resource="application" action="list"><TenantAppCatalog /></PermissionProtectedRoute>} />
+              <Route path="mcp/policy" element={<PermissionProtectedRoute resource="mcp_secret" action="admin"><McpPolicy /></PermissionProtectedRoute>} />
+              <Route path="mcp/workflows" element={<PermissionProtectedRoute resource="integration" action="admin"><McpWorkflows /></PermissionProtectedRoute>} />
+              <Route path="mcp/secrets" element={<PermissionProtectedRoute resource="mcp_secret" action="admin"><McpSecrets /></PermissionProtectedRoute>} />
+              <Route path="mcp/observability" element={<PermissionProtectedRoute resource="mcp_audit_log" action="list"><McpObservability /></PermissionProtectedRoute>} />
+              <Route path="ai/mcp-demo" element={<PermissionProtectedRoute resource="integration" action="admin"><AIMcpDemo /></PermissionProtectedRoute>} />
+              <Route path="compatibility" element={<PermissionProtectedRoute resource="capability" action="admin"><Compatibility /></PermissionProtectedRoute>} />
+              <Route path="categories" element={<PermissionProtectedRoute resource="capability" action="admin"><Categories /></PermissionProtectedRoute>} />
+              <Route path="tenant-systems" element={<PermissionProtectedRoute resource="application" action="list"><TenantSystems /></PermissionProtectedRoute>} />
+              <Route path="integration-recommendations" element={<PermissionProtectedRoute resource="integration" action="list"><IntegrationRecommendations /></PermissionProtectedRoute>} />
+              <Route path="integration-graph" element={<PermissionProtectedRoute resource="integration" action="list"><IntegrationGraph /></PermissionProtectedRoute>} />
             </Route>
             
             {/* Legacy admin routes */}

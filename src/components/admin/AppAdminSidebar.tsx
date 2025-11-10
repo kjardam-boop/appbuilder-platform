@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { NavLink } from "react-router-dom";
 import {
   Sidebar,
@@ -25,6 +26,8 @@ import {
   Sparkles,
   Network,
 } from "lucide-react";
+import { useUserPermissions } from "@/modules/core/permissions/hooks/useUserPermissions";
+import { adminNavigationMapping } from "@/config/adminNavigation";
 
 const adminNavItems = [
   {
@@ -80,6 +83,30 @@ const adminNavItems = [
 
 export default function AppAdminSidebar() {
   const { state } = useSidebar();
+  const { data: permissions } = useUserPermissions();
+
+  // Filter navigation items based on user permissions
+  const visibleNavItems = useMemo(() => {
+    if (!permissions) return [];
+
+    return adminNavItems
+      .map(section => ({
+        ...section,
+        items: section.items.filter(item => {
+          const requirement = adminNavigationMapping[item.url];
+          
+          // No requirement = always visible
+          if (!requirement || !requirement.resource) return true;
+          
+          // Check if user has required permission
+          return permissions.some(p => 
+            p.resource_key === requirement.resource &&
+            (p.action_key === requirement.requiredAction || p.action_key === 'admin')
+          );
+        })
+      }))
+      .filter(section => section.items.length > 0); // Remove empty sections
+  }, [permissions]);
 
   return (
     <Sidebar collapsible="icon">
@@ -89,7 +116,7 @@ export default function AppAdminSidebar() {
       </div>
 
       <SidebarContent>
-        {adminNavItems.map((section) => (
+        {visibleNavItems.map((section) => (
           <SidebarGroup key={section.title}>
             {state === "expanded" && (
               <SidebarGroupLabel>{section.title}</SidebarGroupLabel>
@@ -99,9 +126,9 @@ export default function AppAdminSidebar() {
                 {section.items.map((item) => (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild>
-                      <NavLink
+                       <NavLink
                         to={item.url}
-                        end={item.end}
+                        end={('end' in item && item.end) === true}
                         className={({ isActive }) =>
                           isActive
                             ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"

@@ -4002,6 +4002,7 @@ export type Database = {
       }
       is_platform_admin: { Args: { _user_id: string }; Returns: boolean }
       is_tenant_admin: { Args: { _user_id: string }; Returns: boolean }
+      user_has_admin_access: { Args: { p_user_id: string }; Returns: boolean }
       user_has_any_role: {
         Args: {
           _roles: Database["public"]["Enums"]["app_role"][]
