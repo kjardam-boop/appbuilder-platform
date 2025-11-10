@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { SKU, SKUInput } from "../types/application.types";
+import type { ExternalSystemSKU, ExternalSystemSKUInput } from "../types/application.types";
 import { toast } from "sonner";
 
 export function useSKUs(appProductId: string) {
@@ -14,7 +14,7 @@ export function useSKUs(appProductId: string) {
         .order("edition_name");
 
       if (error) throw error;
-      return data as SKU[];
+      return data as ExternalSystemSKU[];
     },
     enabled: !!appProductId,
   });
@@ -24,7 +24,7 @@ export function useCreateSKU() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: SKUInput & { app_product_id: string }) => {
+    mutationFn: async (input: ExternalSystemSKUInput & { app_product_id: string }) => {
       const payload = {
         external_system_id: input.app_product_id,
         edition_name: input.edition_name!,
@@ -39,7 +39,7 @@ export function useCreateSKU() {
         .single();
 
       if (error) throw error;
-      return data as SKU;
+      return data as ExternalSystemSKU;
     },
     onSuccess: (_, input) => {
       queryClient.invalidateQueries({ queryKey: ["skus", input.app_product_id] });

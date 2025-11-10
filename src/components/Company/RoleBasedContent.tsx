@@ -82,16 +82,16 @@ export function RoleBasedContent({
             certifications.map((cert) => (
               <Card key={cert.id}>
                 <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1">
-                      <CardTitle className="text-base">
-                        <Link 
-                          to={`/applications/${cert.app_product?.id}`}
-                          className="hover:underline"
-                        >
-                          {cert.app_product?.name}
-                        </Link>
-                      </CardTitle>
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1">
+                        <CardTitle className="text-base">
+                          <Link 
+                            to={`/applications/${cert.external_system?.id}`}
+                            className="hover:underline"
+                          >
+                            {cert.external_system?.name}
+                          </Link>
+                        </CardTitle>
                       {cert.certification_level && (
                         <Badge variant="secondary" className="text-xs">
                           {cert.certification_level}

@@ -73,10 +73,10 @@ export function ExternalSystemsTab({ tenantId }: ExternalSystemsTabProps) {
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
                     <CardTitle className="text-base">
-                      {system.app_product?.name || "Ukjent system"}
+                      {system.external_system?.name || "Ukjent system"}
                     </CardTitle>
                     <CardDescription>
-                      {system.app_product?.vendor?.name || ""}
+                      {system.external_system?.vendor?.name || ""}
                     </CardDescription>
                   </div>
                   <Badge variant={system.configuration_state === "active" ? "default" : "secondary"}>

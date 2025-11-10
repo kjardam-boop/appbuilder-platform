@@ -1,10 +1,10 @@
 // @ts-nocheck
 import { supabase } from "@/integrations/supabase/client";
 import type { RequestContext } from "@/shared/types";
-import type { PartnerCertification, PartnerCertificationInput } from "../types/application.types";
+import type { PartnerSystemCertification, PartnerSystemCertificationInput } from "../types/application.types";
 
 export class PartnerCertificationService {
-  static async getCertifiedPartners(ctx: RequestContext, appProductId: string): Promise<PartnerCertification[]> {
+  static async getCertifiedPartners(ctx: RequestContext, appProductId: string): Promise<PartnerSystemCertification[]> {
     const { data, error } = await supabase
       .from("partner_certifications")
       .select(`
@@ -16,10 +16,10 @@ export class PartnerCertificationService {
       .order("certification_date", { ascending: false });
 
     if (error) throw error;
-    return (data || []) as PartnerCertification[];
+    return (data || []) as PartnerSystemCertification[];
   }
 
-  static async getPartnerCertifications(ctx: RequestContext, partnerCompanyId: string): Promise<PartnerCertification[]> {
+  static async getPartnerCertifications(ctx: RequestContext, partnerCompanyId: string): Promise<PartnerSystemCertification[]> {
     const { data, error } = await supabase
       .from("partner_certifications")
       .select(`
@@ -31,10 +31,10 @@ export class PartnerCertificationService {
       .order("certification_date", { ascending: false });
 
     if (error) throw error;
-    return (data || []) as PartnerCertification[];
+    return (data || []) as PartnerSystemCertification[];
   }
 
-  static async getCertificationsByProduct(ctx: RequestContext, appProductId: string): Promise<PartnerCertification[]> {
+  static async getCertificationsByProduct(ctx: RequestContext, appProductId: string): Promise<PartnerSystemCertification[]> {
     const { data, error } = await supabase
       .from("partner_certifications")
       .select(`
@@ -46,10 +46,10 @@ export class PartnerCertificationService {
       .order("certification_date", { ascending: false });
 
     if (error) throw error;
-    return (data || []) as PartnerCertification[];
+    return (data || []) as PartnerSystemCertification[];
   }
 
-  static async addCertification(ctx: RequestContext, input: PartnerCertificationInput): Promise<PartnerCertification> {
+  static async addCertification(ctx: RequestContext, input: PartnerSystemCertificationInput): Promise<PartnerSystemCertification> {
     // Check if certification already exists
     const { data: existing } = await supabase
       .from("partner_certifications")
@@ -73,7 +73,7 @@ export class PartnerCertificationService {
       .single();
 
     if (error) throw error;
-    return data as PartnerCertification;
+    return data as PartnerSystemCertification;
   }
 
   static async removeCertification(ctx: RequestContext, id: string): Promise<void> {

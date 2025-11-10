@@ -88,7 +88,7 @@ export function ExternalSystemDialog({ tenantId, system, onClose }: ExternalSyst
     <Dialog open onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Konfigurer MCP for {system.app_product?.name}</DialogTitle>
+          <DialogTitle>Konfigurer MCP for {system.external_system?.name}</DialogTitle>
           <DialogDescription>
             Koble dette systemet til en MCP adapter for automatiseringer.
           </DialogDescription>

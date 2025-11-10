@@ -68,11 +68,11 @@ export default function TenantSystems() {
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
                         <Building2 className="h-4 w-4 text-muted-foreground" />
-                        {system.app_product?.name}
+                        {system.external_system?.name}
                       </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {system.app_product?.vendor?.name}
+                      {system.external_system?.vendor?.name}
                     </TableCell>
                     <TableCell>
                       <Badge variant={getStateColor(system.configuration_state)}>

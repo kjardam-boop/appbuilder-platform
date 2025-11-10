@@ -104,7 +104,7 @@ export function EvaluationTargetFilter({ projectId, value, onChange }: Evaluatio
             <SelectContent>
               {companyApps?.map(app => (
                 <SelectItem key={app.id} value={app.id}>
-                  {app.app_product?.name} ({app.environment})
+                  {app.external_system?.name} ({app.environment})
                 </SelectItem>
               ))}
             </SelectContent>

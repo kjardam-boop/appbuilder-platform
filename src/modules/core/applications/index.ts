@@ -32,7 +32,7 @@ export {
 export type { AppManifest, Migration } from "./types/manifest.types";
 export { appManifestSchema } from "./types/manifest.types";
 
-// Application Types (New names)
+// Application Types
 export type {
   ExternalSystemVendor,
   ExternalSystem,
@@ -48,21 +48,6 @@ export type {
   CompanyExternalSystemInput,
   ProjectExternalSystemInput,
   PartnerSystemCertificationInput,
-  // Backward compatibility aliases (deprecated)
-  AppVendor,
-  AppProduct,
-  SKU,
-  AppIntegration,
-  CompanyApp,
-  ProjectAppProduct,
-  PartnerCertification,
-  AppVendorInput,
-  AppProductInput,
-  SKUInput,
-  AppIntegrationInput,
-  CompanyAppInput,
-  ProjectAppProductInput,
-  PartnerCertificationInput,
   AppType,
   DeploymentModel,
   MarketSegment,
@@ -73,26 +58,18 @@ export type {
 } from "./types/application.types";
 
 export type {
-  // New type names
   ExternalSystemERPData,
   ExternalSystemERPDataInput,
-  // Backward compatibility aliases
-  ERPExtension,
-  ERPExtensionInput,
 } from "./types/erpExtension.types";
 
 export {
-  // New schema name
   externalSystemERPDataSchema,
-  // Backward compatibility alias
-  erpExtensionSchema,
   ERP_MODULES,
   ERP_LOCALIZATIONS,
   ERP_INDUSTRIES,
 } from "./types/erpExtension.types";
 
 export {
-  // New schema names
   externalSystemVendorSchema,
   externalSystemSchema,
   externalSystemSKUSchema,
@@ -100,14 +77,6 @@ export {
   companyExternalSystemSchema,
   projectExternalSystemSchema,
   partnerSystemCertificationSchema,
-  // Backward compatibility aliases
-  appVendorSchema,
-  appProductSchema,
-  skuSchema,
-  appIntegrationSchema,
-  companyAppSchema,
-  projectAppProductSchema,
-  partnerCertificationSchema,
   APP_TYPES,
   DEPLOYMENT_MODELS,
   MARKET_SEGMENTS,

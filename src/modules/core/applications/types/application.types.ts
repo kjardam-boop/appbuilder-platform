@@ -80,9 +80,6 @@ export interface CompanyExternalSystem extends BaseEntity {
   notes: string | null;
   external_system?: ExternalSystem;
   sku?: ExternalSystemSKU;
-  // Backward compat: DB still returns old column names
-  app_product_id?: string; // Maps to external_system_id
-  app_product?: ExternalSystem; // Maps to external_system
 }
 
 export interface ProjectExternalSystem extends BaseEntity {
@@ -226,56 +223,8 @@ export type ProjectExternalSystemInput = z.infer<typeof projectExternalSystemSch
 export type PartnerSystemCertificationInput = z.infer<typeof partnerSystemCertificationSchema>;
 
 // ============================================================
-// BACKWARD COMPATIBILITY ALIASES (to be removed in Phase 4-6)
+// TYPE MAPPINGS
 // ============================================================
-
-// Type aliases for old names (allows existing code to compile)
-/** @deprecated Use ExternalSystemVendor instead */
-export type AppVendor = ExternalSystemVendor;
-/** @deprecated Use ExternalSystem instead */
-export type AppProduct = ExternalSystem;
-/** @deprecated Use ExternalSystemSKU instead */
-export type SKU = ExternalSystemSKU;
-/** @deprecated Use ExternalSystemIntegration instead */
-export type AppIntegration = ExternalSystemIntegration;
-/** @deprecated Use CompanyExternalSystem instead */
-export type CompanyApp = CompanyExternalSystem;
-/** @deprecated Use ProjectExternalSystem instead */
-export type ProjectAppProduct = ProjectExternalSystem;
-/** @deprecated Use PartnerSystemCertification instead */
-export type PartnerCertification = PartnerSystemCertification;
-
-// Input type aliases
-/** @deprecated Use ExternalSystemVendorInput instead */
-export type AppVendorInput = ExternalSystemVendorInput;
-/** @deprecated Use ExternalSystemInput instead */
-export type AppProductInput = ExternalSystemInput;
-/** @deprecated Use ExternalSystemSKUInput instead */
-export type SKUInput = ExternalSystemSKUInput;
-/** @deprecated Use ExternalSystemIntegrationInput instead */
-export type AppIntegrationInput = ExternalSystemIntegrationInput;
-/** @deprecated Use CompanyExternalSystemInput instead */
-export type CompanyAppInput = CompanyExternalSystemInput;
-/** @deprecated Use ProjectExternalSystemInput instead */
-export type ProjectAppProductInput = ProjectExternalSystemInput;
-/** @deprecated Use PartnerSystemCertificationInput instead */
-export type PartnerCertificationInput = PartnerSystemCertificationInput;
-
-// Schema aliases
-/** @deprecated Use externalSystemVendorSchema instead */
-export const appVendorSchema = externalSystemVendorSchema;
-/** @deprecated Use externalSystemSchema instead */
-export const appProductSchema = externalSystemSchema;
-/** @deprecated Use externalSystemSKUSchema instead */
-export const skuSchema = externalSystemSKUSchema;
-/** @deprecated Use externalSystemIntegrationSchema instead */
-export const appIntegrationSchema = externalSystemIntegrationSchema;
-/** @deprecated Use companyExternalSystemSchema instead */
-export const companyAppSchema = companyExternalSystemSchema;
-/** @deprecated Use projectExternalSystemSchema instead */
-export const projectAppProductSchema = projectExternalSystemSchema;
-/** @deprecated Use partnerSystemCertificationSchema instead */
-export const partnerCertificationSchema = partnerSystemCertificationSchema;
 
 export const APP_TYPES: Record<AppType, string> = {
   ERP: "ERP",

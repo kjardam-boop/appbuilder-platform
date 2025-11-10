@@ -29,16 +29,6 @@ export const externalSystemERPDataSchema = z.object({
 
 export type ExternalSystemERPDataInput = z.infer<typeof externalSystemERPDataSchema>;
 
-// ============================================================
-// BACKWARD COMPATIBILITY ALIASES (to be removed in Phase 4-6)
-// ============================================================
-
-/** @deprecated Use ExternalSystemERPData instead */
-export type ERPExtension = ExternalSystemERPData;
-/** @deprecated Use ExternalSystemERPDataInput instead */
-export type ERPExtensionInput = ExternalSystemERPDataInput;
-/** @deprecated Use externalSystemERPDataSchema instead */
-export const erpExtensionSchema = externalSystemERPDataSchema;
 
 // Common ERP modules
 export const ERP_MODULES = [

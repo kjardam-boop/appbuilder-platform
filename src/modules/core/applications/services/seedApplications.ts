@@ -3,7 +3,7 @@ import { CompanyService } from "@/modules/core/company";
 import { VendorService } from "./vendorService";
 import { ApplicationService } from "./applicationService";
 import { buildClientContextSync } from "@/shared/lib/buildContext";
-import type { AppProductInput } from "../types/application.types";
+import type { ExternalSystemInput } from "../types/application.types";
 
 /** ---------- Datadefinisjoner ---------- */
 
@@ -17,7 +17,7 @@ interface SeedData {
     country?: string;
     contact_url?: string;
   };
-  product: Omit<AppProductInput, "vendor_id"> & { 
+  product: Omit<ExternalSystemInput, "vendor_id"> & { 
     vendorSlug: string;
     app_types?: string[]; // Temporary for migration - will map to category_id
   };
@@ -193,7 +193,7 @@ export async function seedApplications(tenantId?: string): Promise<void> {
         }
       }
 
-      const normalized: AppProductInput = {
+      const normalized: ExternalSystemInput = {
         ...productData,
         deployment_models: productData.deployment_models.map(m =>
           m === "On-premises" ? "OnPrem" : m
