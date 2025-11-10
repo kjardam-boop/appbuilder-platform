@@ -2,7 +2,7 @@
 // @ts-nocheck
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Building2, Copy, RefreshCw, Globe, ExternalLink, Phone, Users, ChevronRight, ChevronDown } from "lucide-react";
+import { ArrowLeft, Building2, Copy, RefreshCw, Globe, ExternalLink, Phone, Users, ChevronRight, ChevronDown, Plug } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -648,7 +648,7 @@ const CompanyDetails = () => {
         </Button>
 
           <div className="mb-8">
-          <div className="flex items-start justify-between mb-4">
+            <div className="flex items-start justify-between mb-4">
             <div className="flex items-center gap-3">
               <CompanyLogo 
                 websiteUrl={company.website || undefined}
@@ -662,10 +662,19 @@ const CompanyDetails = () => {
                 <Copy className="h-4 w-4" />
               </Button>
             </div>
-            <Button onClick={handleUpdateData} disabled={isUpdating} variant="outline">
-              <RefreshCw className={`mr-2 h-4 w-4 ${isUpdating ? 'animate-spin' : ''}`} />
-              Oppdater data
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => navigate(`/companies/${id}/integrations`)}
+              >
+                <Plug className="mr-2 h-4 w-4" />
+                Integrasjoner
+              </Button>
+              <Button onClick={handleUpdateData} disabled={isUpdating} variant="outline">
+                <RefreshCw className={`mr-2 h-4 w-4 ${isUpdating ? 'animate-spin' : ''}`} />
+                Oppdater data
+              </Button>
+            </div>
           </div>
 
           <div className="flex items-center gap-4 text-muted-foreground mb-4">

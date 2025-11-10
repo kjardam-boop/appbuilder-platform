@@ -44,6 +44,7 @@ import PermissionHealth from "./pages/admin/PermissionHealth";
 import CompaniesHub from "./pages/CompaniesHub";
 import CompanySearch from "./pages/CompanySearch";
 import CompanyDetails from "./pages/CompanyDetails";
+import CompanyIntegrations from "./pages/CompanyIntegrations";
 import CustomersPage from "./pages/CustomersPage";
 import ImplementationPartnersPage from "./pages/ImplementationPartnersPage";
 
@@ -263,6 +264,7 @@ const App = () => (
             <Route path="/companies" element={<PlatformProtectedRoute><CompaniesHub /></PlatformProtectedRoute>} />
             <Route path="/companies/search" element={<PlatformProtectedRoute><CompanySearch /></PlatformProtectedRoute>} />
             <Route path="/companies/:id" element={<PlatformProtectedRoute><CompanyDetails /></PlatformProtectedRoute>} />
+            <Route path="/companies/:id/integrations" element={<PlatformProtectedRoute><CompanyIntegrations /></PlatformProtectedRoute>} />
             <Route path="/customers" element={<PlatformProtectedRoute><CustomersPage /></PlatformProtectedRoute>} />
             <Route path="/implementation-partners" element={<PlatformProtectedRoute><ImplementationPartnersPage /></PlatformProtectedRoute>} />
             
