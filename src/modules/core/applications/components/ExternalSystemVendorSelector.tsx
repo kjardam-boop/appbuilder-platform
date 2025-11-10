@@ -8,17 +8,17 @@ import {
 } from "@/components/ui/select";
 import { Building2 } from "lucide-react";
 
-interface AppVendorSelectorProps {
+interface ExternalSystemVendorSelectorProps {
   value?: string;
   onValueChange: (value: string) => void;
   placeholder?: string;
 }
 
-export const AppVendorSelector = ({
+export const ExternalSystemVendorSelector = ({
   value,
   onValueChange,
   placeholder = "Velg leverandør",
-}: AppVendorSelectorProps) => {
+}: ExternalSystemVendorSelectorProps) => {
   const { data: vendors = [], isLoading } = useExternalSystemVendors();
 
   if (isLoading) {

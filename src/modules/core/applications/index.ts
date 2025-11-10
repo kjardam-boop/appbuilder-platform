@@ -142,7 +142,7 @@ export { useAppUsageStats } from "./hooks/useObservability";
 
 // Components
 export { ExternalSystemCard } from "./components/ExternalSystemCard";
-export { AppVendorSelector } from "./components/AppVendorSelector";
+export { ExternalSystemVendorSelector } from "./components/ExternalSystemVendorSelector";
 export { SKUManager } from "./components/SKUManager";
 export { CompanyExternalSystemsList } from "./components/CompanyExternalSystemsList";
 export { ApplicationForm } from "./components/ApplicationForm";

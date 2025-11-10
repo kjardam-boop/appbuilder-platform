@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sparkles, Loader2 } from "lucide-react";
 import { useApplicationGeneration } from "../hooks/useApplicationGeneration";
-import { AppVendorSelector } from "./AppVendorSelector";
+import { ExternalSystemVendorSelector } from "./ExternalSystemVendorSelector";
 import { APP_TYPES, DEPLOYMENT_MODELS, MARKET_SEGMENTS } from "../types/application.types";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { Badge } from "@/components/ui/badge";
@@ -290,7 +290,7 @@ export function ApplicationForm({ initialData, onSubmit, isLoading }: Applicatio
         <CardContent className="space-y-4">
           <div>
             <Label htmlFor="vendor_id">Leverandør *</Label>
-            <AppVendorSelector
+            <ExternalSystemVendorSelector
               value={watch("vendor_id")}
               onValueChange={(value) => setValue("vendor_id", value)}
             />
