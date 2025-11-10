@@ -88,15 +88,29 @@ import PlatformInvitationsPage from "./pages/admin/PlatformInvitationsPage";
 import { PlatformProtectedRoute } from "./components/auth/PlatformProtectedRoute";
 import { useAuth } from "@/modules/core/user/hooks/useAuth";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { Shield } from "lucide-react";
+import { Shield, LogOut } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 const queryClient = new QueryClient();
 
 // Global layout that shows admin sidebar for users with admin permissions
 function GlobalLayout({ children }: { children: React.ReactNode }) {
   const { hasAdminAccess, isLoading } = useHasAdminPermissions();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast.success("Du er nå logget ut");
+      navigate("/");
+    } catch (error) {
+      toast.error("Feil ved utlogging");
+    }
+  };
+
   if (isLoading) {
     return <div className="flex items-center justify-center min-h-screen">
       <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -122,11 +136,17 @@ function GlobalLayout({ children }: { children: React.ReactNode }) {
                 <span>Platform Admin</span>
               </div>
               {user && (
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="font-medium">{user.user_metadata?.full_name || user.email?.split('@')[0]}</span>
-                  <span className="text-muted-foreground">•</span>
-                  <span className="text-muted-foreground">{user.email}</span>
-                </div>
+                <>
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="font-medium">{user.user_metadata?.full_name || user.email?.split('@')[0]}</span>
+                    <span className="text-muted-foreground">•</span>
+                    <span className="text-muted-foreground">{user.email}</span>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={handleSignOut}>
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Logg ut
+                  </Button>
+                </>
               )}
             </div>
           </div>
