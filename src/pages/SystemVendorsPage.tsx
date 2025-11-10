@@ -24,6 +24,8 @@ import {
   Building,
   ArrowLeft
 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { CompanyService } from "@/modules/core/company/services/companyService";
 
@@ -52,6 +54,7 @@ const SystemVendorsPage = () => {
   const [searchName, setSearchName] = useState("");
   const [searchOrgNr, setSearchOrgNr] = useState("");
   const [searchIndustry, setSearchIndustry] = useState("");
+  const [filterHasProducts, setFilterHasProducts] = useState<string>("all");
   
   // Sort
   const [sortField, setSortField] = useState<SortField | null>(null);
@@ -67,7 +70,7 @@ const SystemVendorsPage = () => {
 
   useEffect(() => {
     applyFiltersAndSort();
-  }, [vendors, searchName, searchOrgNr, searchIndustry, sortField, sortDirection]);
+  }, [vendors, searchName, searchOrgNr, searchIndustry, filterHasProducts, sortField, sortDirection]);
 
   const fetchVendors = async () => {
     try {
@@ -115,6 +118,11 @@ const SystemVendorsPage = () => {
       filtered = filtered.filter(v => 
         v.industry_description?.toLowerCase().includes(searchIndustry.toLowerCase())
       );
+    }
+    if (filterHasProducts === "with_products") {
+      filtered = filtered.filter(v => (v.erp_count ?? 0) > 0);
+    } else if (filterHasProducts === "without_products") {
+      filtered = filtered.filter(v => (v.erp_count ?? 0) === 0);
     }
 
     if (sortField && sortDirection) {
@@ -209,6 +217,27 @@ const SystemVendorsPage = () => {
           <p className="text-muted-foreground mb-4">
             Selskaper som utvikler og lisenserer ERP-systemer
           </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardDescription>Totalt antall</CardDescription>
+                <CardTitle className="text-3xl">{filteredVendors.length}</CardTitle>
+              </CardHeader>
+            </Card>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardDescription>Med ERP-produkter</CardDescription>
+                <CardTitle className="text-3xl">{filteredVendors.filter(v => (v.erp_count ?? 0) > 0).length}</CardTitle>
+              </CardHeader>
+            </Card>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardDescription>Totalt ERP-produkter</CardDescription>
+                <CardTitle className="text-3xl">{filteredVendors.reduce((sum, v) => sum + (v.erp_count ?? 0), 0)}</CardTitle>
+              </CardHeader>
+            </Card>
+          </div>
           
           <div className="flex items-center gap-4 mb-4">
             <span className="text-sm text-muted-foreground">
@@ -321,7 +350,19 @@ const SystemVendorsPage = () => {
                       className="h-8"
                     />
                   </TableHead>
-                  <TableHead colSpan={4}></TableHead>
+                  <TableHead>
+                    <Select value={filterHasProducts} onValueChange={setFilterHasProducts}>
+                      <SelectTrigger className="h-8">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Alle</SelectItem>
+                        <SelectItem value="with_products">Med produkter</SelectItem>
+                        <SelectItem value="without_products">Uten produkter</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </TableHead>
+                  <TableHead colSpan={3}></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
