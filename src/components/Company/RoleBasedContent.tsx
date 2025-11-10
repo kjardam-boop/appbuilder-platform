@@ -27,7 +27,7 @@ export function RoleBasedContent({
   onUpdateMetadata 
 }: RoleBasedContentProps) {
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
-  const { data: appProductsData } = useExternalSystems();
+  const { data: externalSystemsData } = useExternalSystems();
   const { data: certifications } = usePartnerCertifications(company.id);
 
   // Auto-expand if only one role
@@ -58,7 +58,7 @@ export function RoleBasedContent({
     }));
   };
 
-  const supplierSystemsCount = appProductsData?.data?.filter(
+  const supplierSystemsCount = externalSystemsData?.data?.filter(
     product => product.vendor?.company_id === company.id
   ).length || 0;
   const certificationsCount = certifications?.length || 0;

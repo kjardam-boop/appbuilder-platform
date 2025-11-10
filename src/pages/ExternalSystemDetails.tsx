@@ -24,7 +24,7 @@ import { APP_TYPES } from "@/modules/core/applications/types/application.types";
 import { toast } from "sonner";
 import { useState } from "react";
 
-export default function AppProductDetails() {
+export default function ExternalSystemDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: product, isLoading } = useExternalSystem(id!);
@@ -369,7 +369,7 @@ export default function AppProductDetails() {
           )}
 
           {/* SKU Manager */}
-          <ExternalSystemSKUManager appProductId={product.id} />
+          <ExternalSystemSKUManager externalSystemId={product.id} />
         </div>
       </main>
 

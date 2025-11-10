@@ -11,11 +11,11 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import type { ExternalSystemSKUInput } from "../types/application.types";
 
 interface ExternalSystemSKUManagerProps {
-  appProductId: string;
+  externalSystemId: string;
 }
 
-export const ExternalSystemSKUManager = ({ appProductId }: ExternalSystemSKUManagerProps) => {
-  const { data: skus = [], isLoading } = useSKUs(appProductId);
+export const ExternalSystemSKUManager = ({ externalSystemId }: ExternalSystemSKUManagerProps) => {
+  const { data: skus = [], isLoading } = useSKUs(externalSystemId);
   const createMutation = useCreateSKU();
   const deleteMutation = useDeleteSKU();
 
@@ -28,7 +28,7 @@ export const ExternalSystemSKUManager = ({ appProductId }: ExternalSystemSKUMana
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await createMutation.mutateAsync({ ...formData, app_product_id: appProductId });
+    await createMutation.mutateAsync({ ...formData, external_system_id: externalSystemId });
     setDialogOpen(false);
     setFormData({
       edition_name: "",

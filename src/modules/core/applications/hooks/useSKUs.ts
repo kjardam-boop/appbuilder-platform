@@ -3,20 +3,20 @@ import { supabase } from "@/integrations/supabase/client";
 import type { ExternalSystemSKU, ExternalSystemSKUInput } from "../types/application.types";
 import { toast } from "sonner";
 
-export function useSKUs(appProductId: string) {
+export function useSKUs(externalSystemId: string) {
   return useQuery({
-    queryKey: ["skus", appProductId],
+    queryKey: ["skus", externalSystemId],
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("external_system_skus")
         .select("*")
-        .eq("external_system_id", appProductId)
+        .eq("external_system_id", externalSystemId)
         .order("edition_name");
 
       if (error) throw error;
       return data as ExternalSystemSKU[];
     },
-    enabled: !!appProductId,
+    enabled: !!externalSystemId,
   });
 }
 
@@ -24,9 +24,9 @@ export function useCreateSKU() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: ExternalSystemSKUInput & { app_product_id: string }) => {
+    mutationFn: async (input: ExternalSystemSKUInput & { external_system_id: string }) => {
       const payload = {
-        external_system_id: input.app_product_id,
+        external_system_id: input.external_system_id,
         edition_name: input.edition_name!,
         code: input.code || null,
         notes: input.notes || null,
@@ -42,7 +42,7 @@ export function useCreateSKU() {
       return data as ExternalSystemSKU;
     },
     onSuccess: (_, input) => {
-      queryClient.invalidateQueries({ queryKey: ["skus", input.app_product_id] });
+      queryClient.invalidateQueries({ queryKey: ["skus", input.external_system_id] });
       toast.success("Variant opprettet");
     },
     onError: (error: Error) => {

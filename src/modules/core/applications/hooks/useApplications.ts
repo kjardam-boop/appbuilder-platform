@@ -88,15 +88,15 @@ export function useAttachAppToProject() {
   return useMutation({
     mutationFn: async ({
       projectId,
-      appProductId,
+      externalSystemId,
       input,
     }: {
       projectId: string;
-      appProductId: string;
+      externalSystemId: string;
       input: ProjectExternalSystemInput;
     }) => {
       const ctx = await buildClientContext();
-      return ApplicationService.attachToProject(ctx, projectId, appProductId, input);
+      return ApplicationService.attachToProject(ctx, projectId, externalSystemId, input);
     },
     onSuccess: (_, { projectId }) => {
       queryClient.invalidateQueries({ queryKey: ["project-external-systems", projectId] });
@@ -118,14 +118,14 @@ export function useExternalSystemVendors() {
   });
 }
 
-export function useCertifiedPartners(appProductId: string) {
+export function useCertifiedPartners(externalSystemId: string) {
   return useQuery({
-    queryKey: ["certified-partners", appProductId],
+    queryKey: ["certified-partners", externalSystemId],
     queryFn: async () => {
       const ctx = await buildClientContext();
-      return PartnerCertificationService.getCertifiedPartners(ctx, appProductId);
+      return PartnerCertificationService.getCertifiedPartners(ctx, externalSystemId);
     },
-    enabled: !!appProductId,
+    enabled: !!externalSystemId,
   });
 }
 

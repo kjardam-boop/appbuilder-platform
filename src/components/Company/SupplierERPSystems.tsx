@@ -10,10 +10,10 @@ interface SupplierERPSystemsProps {
 }
 
 export function SupplierERPSystems({ companyId }: SupplierERPSystemsProps) {
-  const { data: appProductsData, isLoading } = useExternalSystems();
+  const { data: externalSystemsData, isLoading } = useExternalSystems();
   
   // Filter products where the vendor's company_id matches this company
-  const supplierSystems = appProductsData?.data?.filter(
+  const supplierSystems = externalSystemsData?.data?.filter(
     product => product.vendor?.company_id === companyId
   ) || [];
 

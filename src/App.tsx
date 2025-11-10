@@ -35,8 +35,8 @@ import CapabilityCatalog from "./pages/CapabilityCatalog";
 import CapabilityDetailsPage from "./pages/admin/CapabilityDetailsPage";
 import IndustryAdmin from "./pages/IndustryAdmin";
 import ApplicationsPage from "./pages/ApplicationsPage";
-import AppProductDetails from "./pages/AppProductDetails";
-import AppVendorAdmin from "./pages/AppVendorAdmin";
+import ExternalSystemDetails from "./pages/ExternalSystemDetails";
+import ExternalSystemVendorAdmin from "./pages/ExternalSystemVendorAdmin";
 import SystemVendorsPage from "./pages/SystemVendorsPage";
 import RoleManagement from "./pages/RoleManagement";
 import RoleConfiguration from "./pages/admin/RoleConfiguration";
@@ -216,12 +216,12 @@ const App = () => (
             {/* Legacy admin routes */}
             <Route path="/admin/bootstrap" element={<PlatformProtectedRoute><AdminBootstrap /></PlatformProtectedRoute>} />
             <Route path="/admin/questions" element={<PlatformProtectedRoute><AdminQuestions /></PlatformProtectedRoute>} />
-            <Route path="/admin/app-vendors" element={<PlatformProtectedRoute><AppVendorAdmin /></PlatformProtectedRoute>} />
+            <Route path="/admin/app-vendors" element={<PlatformProtectedRoute><ExternalSystemVendorAdmin /></PlatformProtectedRoute>} />
             <Route path="/tenants" element={<PlatformProtectedRoute><Tenants /></PlatformProtectedRoute>} />
             
             {/* Applications */}
             <Route path="/applications" element={<PlatformProtectedRoute><ApplicationsPage /></PlatformProtectedRoute>} />
-            <Route path="/applications/:id" element={<PlatformProtectedRoute><AppProductDetails /></PlatformProtectedRoute>} />
+            <Route path="/applications/:id" element={<PlatformProtectedRoute><ExternalSystemDetails /></PlatformProtectedRoute>} />
             <Route path="/system-vendors" element={<PlatformProtectedRoute><SystemVendorsPage /></PlatformProtectedRoute>} />
             <Route path="/capabilities" element={<PlatformProtectedRoute><CapabilityCatalog /></PlatformProtectedRoute>} />
             

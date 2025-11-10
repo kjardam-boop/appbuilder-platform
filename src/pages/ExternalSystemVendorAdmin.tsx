@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Building2, Server, Search, Package } from "lucide-react";
 import { Link } from "react-router-dom";
 
-export default function AppVendorAdmin() {
+export default function ExternalSystemVendorAdmin() {
   const [searchQuery, setSearchQuery] = useState("");
   const { data: vendors = [], isLoading: loadingVendors } = useExternalSystemVendors();
   const { data: productsData, isLoading: loadingProducts } = useExternalSystems();
