@@ -7,11 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import { SmartDataTable } from "@/components/DataTable/SmartDataTable";
 import { ColumnDef } from "@/components/DataTable/types";
 import { Plus, Plug, ExternalLink } from "lucide-react";
+import { useState } from "react";
+import { IntegrationDefinitionDialog } from "../dialogs/IntegrationDefinitionDialog";
 
 export default function IntegrationDefinitionsTab() {
   const navigate = useNavigate();
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
 
-  const { data: definitions, isLoading } = useQuery({
+  const { data: definitions, isLoading, refetch } = useQuery({
     queryKey: ["integration-definitions"],
     queryFn: () => IntegrationDefinitionService.list(),
   });
@@ -132,7 +135,7 @@ export default function IntegrationDefinitionsTab() {
             Definisjoner av hvilke systemer som kan integreres og hvordan
           </p>
         </div>
-        <Button onClick={() => navigate("/admin/integrations/definitions/new")}>
+        <Button onClick={() => setIsCreateOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Ny Definisjon
         </Button>
@@ -167,6 +170,15 @@ export default function IntegrationDefinitionsTab() {
           )}
         </CardContent>
       </Card>
+
+      <IntegrationDefinitionDialog
+        open={isCreateOpen}
+        onOpenChange={setIsCreateOpen}
+        onSuccess={() => {
+          refetch();
+          setIsCreateOpen(false);
+        }}
+      />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { DeliveryMethodService } from "@/modules/core/integrations/services/deliveryMethodService";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,66 +8,16 @@ import { Badge } from "@/components/ui/badge";
 import { SmartDataTable } from "@/components/DataTable/SmartDataTable";
 import { ColumnDef } from "@/components/DataTable/types";
 import { Plus, Plug, ExternalLink, Check, X } from "lucide-react";
-import { toast } from "sonner";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { deliveryMethodSchema, type DeliveryMethodInput } from "@/modules/core/integrations/types/deliveryMethod.types";
+import { DeliveryMethodDialog } from "../dialogs/DeliveryMethodDialog";
 
 export default function DeliveryMethodsTab() {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
 
-  const { data: methods, isLoading } = useQuery({
+  const { data: methods, isLoading, refetch } = useQuery({
     queryKey: ["delivery-methods"],
     queryFn: () => DeliveryMethodService.list(),
   });
-
-  const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<DeliveryMethodInput>({
-    resolver: zodResolver(deliveryMethodSchema),
-  });
-
-  const createMutation = useMutation({
-    mutationFn: (input: DeliveryMethodInput) => DeliveryMethodService.create(input),
-    onSuccess: () => {
-      toast.success("Leveringsmetode opprettet");
-      queryClient.invalidateQueries({ queryKey: ["delivery-methods"] });
-      setIsDialogOpen(false);
-      reset();
-    },
-    onError: (error: any) => {
-      toast.error("Feil ved opprettelse", { description: error.message });
-    },
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: ({ id, input }: { id: string; input: Partial<DeliveryMethodInput> }) =>
-      DeliveryMethodService.update(id, input),
-    onSuccess: () => {
-      toast.success("Leveringsmetode oppdatert");
-      queryClient.invalidateQueries({ queryKey: ["delivery-methods"] });
-      setIsDialogOpen(false);
-      setEditingId(null);
-      reset();
-    },
-    onError: (error: any) => {
-      toast.error("Feil ved oppdatering", { description: error.message });
-    },
-  });
-
-  const onSubmit = (data: DeliveryMethodInput) => {
-    if (editingId) {
-      updateMutation.mutate({ id: editingId, input: data });
-    } else {
-      createMutation.mutate(data);
-    }
-  };
 
   const columns: ColumnDef<any>[] = [
     {
@@ -141,76 +91,10 @@ export default function DeliveryMethodsTab() {
             Protokoller og metoder for hvordan integrasjoner kommuniserer (MCP, REST API, Webhook, etc.)
           </p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => { setEditingId(null); reset(); }}>
-              <Plus className="h-4 w-4 mr-2" />
-              Ny Leveringsmetode
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>{editingId ? "Rediger Leveringsmetode" : "Opprett Leveringsmetode"}</DialogTitle>
-              <DialogDescription>
-                Definer en ny metode for hvordan integrasjoner kan kommunisere
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="key">Key *</Label>
-                  <Input id="key" {...register("key")} placeholder="rest_api" />
-                  {errors.key && <p className="text-sm text-destructive">{errors.key.message}</p>}
-                </div>
-                <div>
-                  <Label htmlFor="name">Navn *</Label>
-                  <Input id="name" {...register("name")} placeholder="REST API" />
-                  {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="description">Beskrivelse</Label>
-                <Textarea id="description" {...register("description")} placeholder="RESTful HTTP API with standard CRUD operations" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="icon_name">Ikon Navn</Label>
-                  <Input id="icon_name" {...register("icon_name")} placeholder="Globe" />
-                </div>
-                <div>
-                  <Label htmlFor="documentation_url">Dokumentasjon URL</Label>
-                  <Input id="documentation_url" {...register("documentation_url")} placeholder="https://..." />
-                </div>
-              </div>
-              <div className="flex gap-4">
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="requires_auth" 
-                    checked={watch("requires_auth")}
-                    onCheckedChange={(checked) => setValue("requires_auth", checked as boolean)}
-                  />
-                  <Label htmlFor="requires_auth">Krever autentisering</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="supports_bidirectional" 
-                    checked={watch("supports_bidirectional")}
-                    onCheckedChange={(checked) => setValue("supports_bidirectional", checked as boolean)}
-                  />
-                  <Label htmlFor="supports_bidirectional">Støtter toveis kommunikasjon</Label>
-                </div>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Avbryt
-                </Button>
-                <Button type="submit">
-                  {editingId ? "Oppdater" : "Opprett"}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <Button onClick={() => setIsCreateOpen(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Ny Leveringsmetode
+        </Button>
       </div>
 
       <Card>
@@ -242,6 +126,15 @@ export default function DeliveryMethodsTab() {
           )}
         </CardContent>
       </Card>
+
+      <DeliveryMethodDialog
+        open={isCreateOpen}
+        onOpenChange={setIsCreateOpen}
+        onSuccess={() => {
+          refetch();
+          setIsCreateOpen(false);
+        }}
+      />
     </div>
   );
 }
