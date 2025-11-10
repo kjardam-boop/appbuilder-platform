@@ -44,7 +44,7 @@ export function CustomerERPUsage({ companyId }: CustomerERPUsageProps) {
               <div className="space-y-1">
                 <CardTitle className="text-base">
                   <Link 
-                    to={`/applications/${companyApp.external_system?.id}`}
+                    to={`/external-systems/${companyApp.external_system?.id}`}
                     className="hover:underline"
                   >
                     {companyApp.external_system?.name}
@@ -81,7 +81,7 @@ export function CustomerERPUsage({ companyId }: CustomerERPUsageProps) {
             </div>
             <div className="flex gap-2 mt-3">
               <Button variant="outline" size="sm" asChild>
-                <Link to={`/applications/${companyApp.external_system?.id}`}>
+                <Link to={`/external-systems/${companyApp.external_system?.id}`}>
                   <ExternalLink className="h-3 w-3 mr-1" />
                   Detaljer
                 </Link>

@@ -49,7 +49,7 @@ export function SupplierERPSystems({ companyId }: SupplierERPSystemsProps) {
               <div className="space-y-1">
                 <CardTitle className="text-base">
                   <Link 
-                    to={`/applications/${system.id}`}
+                    to={`/external-systems/${system.id}`}
                     className="hover:underline"
                   >
                     {system.name}
@@ -74,7 +74,7 @@ export function SupplierERPSystems({ companyId }: SupplierERPSystemsProps) {
             )}
             <div className="flex gap-2">
               <Button variant="outline" size="sm" asChild>
-                <Link to={`/applications/${system.id}`}>
+                <Link to={`/external-systems/${system.id}`}>
                   <ExternalLink className="h-3 w-3 mr-1" />
                   Detaljer
                 </Link>

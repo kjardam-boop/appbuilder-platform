@@ -11,7 +11,7 @@ interface ExternalSystemCardProps {
 
 export const ExternalSystemCard = ({ product }: ExternalSystemCardProps) => {
   return (
-    <Link to={`/applications/${product.id}`}>
+    <Link to={`/external-systems/${product.id}`}>
       <Card className="h-full hover:bg-accent/50 transition-colors cursor-pointer">
         <CardHeader>
           <div className="flex items-start justify-between gap-2">

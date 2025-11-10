@@ -141,7 +141,7 @@ export default function ExternalSystemDetails() {
           <Card>
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground">Produkt ikke funnet</p>
-              <Button className="mt-4" onClick={() => navigate("/applications")}>
+              <Button className="mt-4" onClick={() => navigate("/external-systems")}>
                 Tilbake til oversikt
               </Button>
             </CardContent>
@@ -160,7 +160,7 @@ export default function ExternalSystemDetails() {
         
         <Button
           variant="ghost"
-          onClick={() => navigate("/applications")}
+          onClick={() => navigate("/external-systems")}
           className="mb-6"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />

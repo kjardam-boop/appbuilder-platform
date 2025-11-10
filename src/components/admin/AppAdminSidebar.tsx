@@ -65,7 +65,7 @@ const adminNavItems = [
       { title: "Industries", url: "/admin/industries", icon: Briefcase },
       { title: "App Catalog", url: "/admin/apps", icon: Package },
       { title: "App Vendors", url: "/admin/app-vendors", icon: Briefcase },
-      { title: "External Systems", url: "/admin/applications", icon: Server },
+      { title: "External Systems", url: "/admin/external-systems", icon: Server },
       { title: "Capabilities", url: "/admin/capabilities", icon: Package },
     ],
   },

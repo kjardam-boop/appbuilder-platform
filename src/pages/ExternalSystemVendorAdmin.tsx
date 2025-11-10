@@ -136,7 +136,7 @@ export default function ExternalSystemVendorAdmin() {
             ) : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {filteredProducts.map((product) => (
-                  <Link key={product.id} to={`/applications/${product.id}`}>
+                  <Link key={product.id} to={`/external-systems/${product.id}`}>
                     <Card className="h-full hover:bg-accent/50 transition-colors cursor-pointer">
                       <CardHeader>
                         <div className="flex items-start justify-between gap-2">

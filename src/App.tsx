@@ -222,8 +222,8 @@ const App = () => (
             <Route path="/tenants" element={<PlatformProtectedRoute><Tenants /></PlatformProtectedRoute>} />
             
             {/* Applications */}
-            <Route path="/applications" element={<PlatformProtectedRoute><ApplicationsPage /></PlatformProtectedRoute>} />
-            <Route path="/applications/:id" element={<PlatformProtectedRoute><ExternalSystemDetails /></PlatformProtectedRoute>} />
+            <Route path="/external-systems" element={<PlatformProtectedRoute><ApplicationsPage /></PlatformProtectedRoute>} />
+            <Route path="/external-systems/:id" element={<PlatformProtectedRoute><ExternalSystemDetails /></PlatformProtectedRoute>} />
             <Route path="/system-vendors" element={<PlatformProtectedRoute><SystemVendorsPage /></PlatformProtectedRoute>} />
             <Route path="/capabilities" element={<PlatformProtectedRoute><CapabilityCatalog /></PlatformProtectedRoute>} />
             

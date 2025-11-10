@@ -86,7 +86,7 @@ export function RoleBasedContent({
                       <div className="space-y-1">
                         <CardTitle className="text-base">
                           <Link 
-                            to={`/applications/${cert.external_system?.id}`}
+                            to={`/external-systems/${cert.external_system?.id}`}
                             className="hover:underline"
                           >
                             {cert.external_system?.name}

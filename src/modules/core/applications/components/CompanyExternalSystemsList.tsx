@@ -46,7 +46,7 @@ export const CompanyExternalSystemsList = ({ companyId }: CompanyExternalSystems
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <Link
-                      to={`/applications/${app.external_system?.id}`}
+                      to={`/external-systems/${app.external_system?.id}`}
                       className="font-medium hover:underline"
                     >
                       {app.external_system?.name}

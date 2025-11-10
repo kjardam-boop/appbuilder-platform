@@ -35,7 +35,7 @@ export default function ApplicationCreate() {
       });
 
       toast.success("Applikasjon opprettet!");
-      navigate(`/applications/${product.id}`);
+      navigate(`/external-systems/${product.id}`);
     } catch (error) {
       console.error("Error creating application:", error);
       toast.error(
@@ -57,7 +57,7 @@ export default function ApplicationCreate() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate("/admin/applications")}
+              onClick={() => navigate("/admin/external-systems")}
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
