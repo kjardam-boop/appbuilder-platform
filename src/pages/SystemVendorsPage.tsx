@@ -28,6 +28,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { CompanyService } from "@/modules/core/company/services/companyService";
+import { CreateVendorDialog } from "@/modules/core/applications/components/CreateVendorDialog";
+import { Plus } from "lucide-react";
 
 interface SystemVendor {
   id: string;
@@ -49,6 +51,7 @@ const SystemVendorsPage = () => {
   const [vendors, setVendors] = useState<SystemVendor[]>([]);
   const [filteredVendors, setFilteredVendors] = useState<SystemVendor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   
   // Filters
   const [searchName, setSearchName] = useState("");
@@ -210,9 +213,15 @@ const SystemVendorsPage = () => {
         </Button>
 
         <div className="mb-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Building className="h-6 w-6 text-muted-foreground" />
-            <h1 className="text-3xl font-bold">Systemleverandører ({filteredVendors.length})</h1>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Building className="h-6 w-6 text-muted-foreground" />
+              <h1 className="text-3xl font-bold">Systemleverandører ({filteredVendors.length})</h1>
+            </div>
+            <Button onClick={() => setIsCreateDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Ny leverandør
+            </Button>
           </div>
           <p className="text-muted-foreground mb-4">
             Selskaper som utvikler og lisenserer ERP-systemer
@@ -395,6 +404,16 @@ const SystemVendorsPage = () => {
           </div>
         </div>
       </main>
+
+      <CreateVendorDialog
+        open={isCreateDialogOpen}
+        onCreated={(vendor) => {
+          setIsCreateDialogOpen(false);
+          fetchVendors();
+          toast.success("Systemleverandør opprettet");
+        }}
+        onCancel={() => setIsCreateDialogOpen(false)}
+      />
     </div>
   );
 };
