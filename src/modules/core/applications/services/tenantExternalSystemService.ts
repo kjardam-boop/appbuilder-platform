@@ -7,17 +7,14 @@ import type { TenantSystem, TenantSystemInput } from "../types/tenantExternalSys
  */
 export class TenantSystemService {
   /**
-   * List tenant's systems
+   * List tenant's systems using optimized view
    */
   static async listByTenant(tenantId: string): Promise<TenantSystem[]> {
     const { data, error } = await supabase
-      .from("tenant_external_systems" as any)
-      .select(`
-        *,
-        external_system:external_systems(id, name, slug, vendor:external_system_vendors(name))
-      `)
+      .from("tenant_systems_with_details" as any)
+      .select("*")
       .eq("tenant_id", tenantId)
-      .order("created_at", { ascending: false });
+      .order("installed_at", { ascending: false });
 
     if (error) throw error;
     return data as any[];

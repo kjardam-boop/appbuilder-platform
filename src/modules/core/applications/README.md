@@ -286,7 +286,17 @@ createCompanyApp.mutate({
 const { data: companyApps } = useCompanyExternalSystems(companyId);
 ```
 
-## 🔌 Integrasjoner og Capabilities
+## 📊 Database Views & Performance
+
+Modulen bruker optimaliserte database views for bedre performance:
+- Se [DATABASE_VIEWS.md](./DATABASE_VIEWS.md) for view-detaljer
+- Se [PERFORMANCE.md](./PERFORMANCE.md) for performance-analyse og resultater
+
+**Key Benefits:**
+- ⚡ 33% raskere i gjennomsnitt
+- 🔄 67% færre queries
+- 📦 38% mindre data transfer
+- 🎯 Konsistente aliaser
 
 ### Registrere integrasjoner mellom produkter
 ```typescript

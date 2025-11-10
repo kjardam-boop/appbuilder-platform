@@ -104,8 +104,9 @@ export { CompatibilityService } from "./services/compatibilityService";
 export { RuntimeLoader } from "./services/runtimeLoader";
 export { DeploymentService } from "./services/deploymentService";
 
-// Application Services
+// Services
 export { ApplicationService } from "./services/applicationService";
+export { ApplicationServiceOptimized } from "./services/applicationService.optimized";
 export { VendorService } from "./services/vendorService";
 export { PartnerCertificationService } from "./services/partnerCertificationService";
 export { ERPExtensionService } from "./services/erpExtensionService";
