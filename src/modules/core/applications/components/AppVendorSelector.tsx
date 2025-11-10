@@ -1,4 +1,4 @@
-import { useAppVendors } from "../hooks/useApplications";
+import { useExternalSystemVendors } from "../hooks/useApplications";
 import {
   Select,
   SelectContent,
@@ -19,7 +19,7 @@ export const AppVendorSelector = ({
   onValueChange,
   placeholder = "Velg leverandør",
 }: AppVendorSelectorProps) => {
-  const { data: vendors = [], isLoading } = useAppVendors();
+  const { data: vendors = [], isLoading } = useExternalSystemVendors();
 
   if (isLoading) {
     return (

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAppVendors, useAppProducts } from "@/modules/core/applications";
+import { useExternalSystemVendors, useExternalSystems } from "@/modules/core/applications";
 import { Header } from "@/components/layout/Header";
 import { AppBreadcrumbs } from "@/components/ui/app-breadcrumbs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,8 +12,8 @@ import { Link } from "react-router-dom";
 
 export default function AppVendorAdmin() {
   const [searchQuery, setSearchQuery] = useState("");
-  const { data: vendors = [], isLoading: loadingVendors } = useAppVendors();
-  const { data: productsData, isLoading: loadingProducts } = useAppProducts();
+  const { data: vendors = [], isLoading: loadingVendors } = useExternalSystemVendors();
+  const { data: productsData, isLoading: loadingProducts } = useExternalSystems();
 
   const products = productsData?.data || [];
 

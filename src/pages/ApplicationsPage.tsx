@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAppProducts, APP_TYPES } from "@/modules/core/applications";
+import { useExternalSystems, APP_TYPES } from "@/modules/core/applications";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,7 @@ export default function ApplicationsPage() {
   const [appType, setAppType] = useState<string>("all");
   const [status, setStatus] = useState<string>("Active");
   
-  const { data, isLoading } = useAppProducts({ 
+  const { data, isLoading } = useExternalSystems({ 
     query, 
     appType: appType === "all" ? undefined : appType,
     status 

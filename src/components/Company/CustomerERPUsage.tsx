@@ -2,7 +2,7 @@ import { Package, ExternalLink } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useCompanyApps } from "@/modules/core/applications";
+import { useCompanyExternalSystems } from "@/modules/core/applications";
 import { Link } from "react-router-dom";
 
 interface CustomerERPUsageProps {
@@ -10,7 +10,7 @@ interface CustomerERPUsageProps {
 }
 
 export function CustomerERPUsage({ companyId }: CustomerERPUsageProps) {
-  const { data: companyApps, isLoading } = useCompanyApps(companyId);
+  const { data: companyApps, isLoading } = useCompanyExternalSystems(companyId);
 
   if (isLoading) {
     return (

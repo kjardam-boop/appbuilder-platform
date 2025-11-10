@@ -2,7 +2,7 @@ import { Building2, ExternalLink, Globe } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useAppProducts } from "@/modules/core/applications";
+import { useExternalSystems } from "@/modules/core/applications";
 import { Link } from "react-router-dom";
 
 interface SupplierERPSystemsProps {
@@ -10,7 +10,7 @@ interface SupplierERPSystemsProps {
 }
 
 export function SupplierERPSystems({ companyId }: SupplierERPSystemsProps) {
-  const { data: appProductsData, isLoading } = useAppProducts();
+  const { data: appProductsData, isLoading } = useExternalSystems();
   
   // Filter products where the vendor's company_id matches this company
   const supplierSystems = appProductsData?.data?.filter(

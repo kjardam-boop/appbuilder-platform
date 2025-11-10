@@ -18,7 +18,7 @@ import { UnknownTypeDialog } from "./UnknownTypeDialog";
 import { CreateVendorDialog } from "./CreateVendorDialog";
 import type { AppType } from "../types/application.types";
 import { toast } from "sonner";
-import { useAppVendors } from "../hooks/useApplications";
+import { useExternalSystemVendors } from "../hooks/useApplications";
 import { supabase } from "@/integrations/supabase/client";
 
 const applicationFormSchema = z.object({
@@ -59,7 +59,7 @@ export function ApplicationForm({ initialData, onSubmit, isLoading }: Applicatio
   } | null>(null);
   const [customTypeInput, setCustomTypeInput] = useState("");
   const { generate, isGenerating } = useApplicationGeneration();
-  const { data: vendors = [], refetch: refetchVendors } = useAppVendors();
+  const { data: vendors = [], refetch: refetchVendors } = useExternalSystemVendors();
   
   const form = useForm<ApplicationFormData>({
     resolver: zodResolver(applicationFormSchema),

@@ -7,7 +7,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { SupplierERPSystems } from "./SupplierERPSystems";
 import { CustomerERPUsage } from "./CustomerERPUsage";
 import { Company, CompanyMetadata, EnhancedCompanyData, FinancialData, COMPANY_ROLES } from "@/modules/core/company/types/company.types";
-import { useAppProducts, usePartnerCertifications } from "@/modules/core/applications";
+import { useExternalSystems, usePartnerCertifications } from "@/modules/core/applications";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
 
@@ -27,7 +27,7 @@ export function RoleBasedContent({
   onUpdateMetadata 
 }: RoleBasedContentProps) {
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
-  const { data: appProductsData } = useAppProducts();
+  const { data: appProductsData } = useExternalSystems();
   const { data: certifications } = usePartnerCertifications(company.id);
 
   // Auto-expand if only one role

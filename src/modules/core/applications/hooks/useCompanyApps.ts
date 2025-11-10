@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { CompanyExternalSystem, CompanyExternalSystemInput } from "../types/application.types";
 import { toast } from "sonner";
 
-export function useCompanyApps(companyId: string) {
+export function useCompanyExternalSystems(companyId: string) {
   return useQuery({
     queryKey: ["company-apps", companyId],
     queryFn: async () => {

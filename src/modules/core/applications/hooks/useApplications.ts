@@ -6,7 +6,7 @@ import { buildClientContext, buildClientContextSync } from "@/shared/lib/buildCo
 import type { ExternalSystemInput, ProjectExternalSystemInput, PartnerSystemCertificationInput } from "../types/application.types";
 import { toast } from "sonner";
 
-export function useAppProducts(filters?: {
+export function useExternalSystems(filters?: {
   query?: string;
   vendor?: string;
   appType?: string;
@@ -15,7 +15,7 @@ export function useAppProducts(filters?: {
   limit?: number;
 }) {
   return useQuery({
-    queryKey: ["app-products", filters],
+    queryKey: ["external-systems", filters],
     queryFn: async () => {
       const ctx = await buildClientContext();
       return ApplicationService.listProducts(ctx, filters);
@@ -23,9 +23,9 @@ export function useAppProducts(filters?: {
   });
 }
 
-export function useAppProduct(id: string) {
+export function useExternalSystem(id: string) {
   return useQuery({
-    queryKey: ["app-product", id],
+    queryKey: ["external-system", id],
     queryFn: async () => {
       const ctx = await buildClientContext();
       return ApplicationService.getProductById(ctx, id);
@@ -34,7 +34,7 @@ export function useAppProduct(id: string) {
   });
 }
 
-export function useCreateAppProduct() {
+export function useCreateExternalSystem() {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -43,7 +43,7 @@ export function useCreateAppProduct() {
       return ApplicationService.createProduct(ctx, input);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["app-products"] });
+      queryClient.invalidateQueries({ queryKey: ["external-systems"] });
       toast.success("Produkt opprettet");
     },
     onError: (error: Error) => {
@@ -52,7 +52,7 @@ export function useCreateAppProduct() {
   });
 }
 
-export function useUpdateAppProduct() {
+export function useUpdateExternalSystem() {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -61,8 +61,8 @@ export function useUpdateAppProduct() {
       return ApplicationService.updateProduct(ctx, id, input);
     },
     onSuccess: (_, { id }) => {
-      queryClient.invalidateQueries({ queryKey: ["app-products"] });
-      queryClient.invalidateQueries({ queryKey: ["app-product", id] });
+      queryClient.invalidateQueries({ queryKey: ["external-systems"] });
+      queryClient.invalidateQueries({ queryKey: ["external-system", id] });
       toast.success("Produkt oppdatert");
     },
     onError: (error: Error) => {
@@ -71,9 +71,9 @@ export function useUpdateAppProduct() {
   });
 }
 
-export function useProjectAppProducts(projectId: string) {
+export function useProjectExternalSystems(projectId: string) {
   return useQuery({
-    queryKey: ["project-app-products", projectId],
+    queryKey: ["project-external-systems", projectId],
     queryFn: async () => {
       const ctx = await buildClientContext();
       return ApplicationService.getProjectApps(ctx, projectId);
@@ -99,7 +99,7 @@ export function useAttachAppToProject() {
       return ApplicationService.attachToProject(ctx, projectId, appProductId, input);
     },
     onSuccess: (_, { projectId }) => {
-      queryClient.invalidateQueries({ queryKey: ["project-app-products", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["project-external-systems", projectId] });
       toast.success("Produkt lagt til prosjekt");
     },
     onError: (error: Error) => {
@@ -108,9 +108,9 @@ export function useAttachAppToProject() {
   });
 }
 
-export function useAppVendors() {
+export function useExternalSystemVendors() {
   return useQuery({
-    queryKey: ["app-vendors"],
+    queryKey: ["external-system-vendors"],
     queryFn: async () => {
       const ctx = await buildClientContext();
       return VendorService.listVendors(ctx);
@@ -160,22 +160,22 @@ export function useAddCertification() {
 }
 
 /**
- * Get app products by capability
+ * Get external systems by capability
  */
-export function useAppProductsByCapability(capability: string) {
+export function useExternalSystemsByCapability(capability: string) {
   return useQuery({
-    queryKey: ["app-products-by-capability", capability],
+    queryKey: ["external-systems-by-capability", capability],
     queryFn: () => ApplicationService.getByCapability(capability),
     enabled: !!capability,
   });
 }
 
 /**
- * Get app products by use case
+ * Get external systems by use case
  */
-export function useAppProductsByUseCase(useCaseKey: string) {
+export function useExternalSystemsByUseCase(useCaseKey: string) {
   return useQuery({
-    queryKey: ["app-products-by-usecase", useCaseKey],
+    queryKey: ["external-systems-by-usecase", useCaseKey],
     queryFn: () => ApplicationService.getByUseCase(useCaseKey),
     enabled: !!useCaseKey,
   });
@@ -186,7 +186,7 @@ export function useAppProductsByUseCase(useCaseKey: string) {
  */
 export function useMcpReference(productId: string) {
   return useQuery({
-    queryKey: ["app-product-mcp", productId],
+    queryKey: ["external-system-mcp", productId],
     queryFn: () => ApplicationService.getMcpReference(productId),
     enabled: !!productId,
   });

@@ -1,5 +1,5 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { useAppProduct, useUpdateAppProduct } from "@/modules/core/applications";
+import { useExternalSystem, useUpdateExternalSystem } from "@/modules/core/applications";
 import { useApplicationGeneration } from "@/modules/core/applications/hooks/useApplicationGeneration";
 import { Header } from "@/components/layout/Header";
 import { AppBreadcrumbs } from "@/components/ui/app-breadcrumbs";
@@ -27,8 +27,8 @@ import { useState } from "react";
 export default function AppProductDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data: product, isLoading } = useAppProduct(id!);
-  const updateProduct = useUpdateAppProduct();
+  const { data: product, isLoading } = useExternalSystem(id!);
+  const updateProduct = useUpdateExternalSystem();
   const [unknownTypeDialog, setUnknownTypeDialog] = useState<{
     unknownType: string;
     suggestedKnownTypes: string[];

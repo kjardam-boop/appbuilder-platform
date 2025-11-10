@@ -120,23 +120,23 @@ export {
 
 // Application Hooks
 export {
-  useAppProducts,
-  useAppProduct,
-  useCreateAppProduct,
-  useUpdateAppProduct,
-  useProjectAppProducts,
+  useExternalSystems,
+  useExternalSystem,
+  useCreateExternalSystem,
+  useUpdateExternalSystem,
+  useProjectExternalSystems,
   useAttachAppToProject,
-  useAppVendors,
+  useExternalSystemVendors,
   useCertifiedPartners,
   usePartnerCertifications,
   useAddCertification,
-  useAppProductsByCapability,
-  useAppProductsByUseCase,
+  useExternalSystemsByCapability,
+  useExternalSystemsByUseCase,
   useMcpReference,
 } from "./hooks/useApplications";
 
 export { useSKUs, useCreateSKU, useDeleteSKU } from "./hooks/useSKUs";
-export { useCompanyApps, useCreateCompanyApp, useDeleteCompanyApp } from "./hooks/useCompanyApps";
+export { useCompanyExternalSystems, useCreateCompanyApp, useDeleteCompanyApp } from "./hooks/useCompanyApps";
 export { useApplicationGeneration } from "./hooks/useApplicationGeneration";
 export { useAppUsageStats } from "./hooks/useObservability";
 

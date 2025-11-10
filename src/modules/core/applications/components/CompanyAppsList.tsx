@@ -1,4 +1,4 @@
-import { useCompanyApps } from "../hooks/useCompanyApps";
+import { useCompanyExternalSystems } from "../hooks/useCompanyApps";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Server, ExternalLink } from "lucide-react";
@@ -9,7 +9,7 @@ interface CompanyAppsListProps {
 }
 
 export const CompanyAppsList = ({ companyId }: CompanyAppsListProps) => {
-  const { data: apps = [], isLoading } = useCompanyApps(companyId);
+  const { data: apps = [], isLoading } = useCompanyExternalSystems(companyId);
 
   if (isLoading) {
     return <div className="text-sm text-muted-foreground">Laster applikasjoner...</div>;

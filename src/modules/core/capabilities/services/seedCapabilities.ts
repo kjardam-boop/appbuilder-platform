@@ -428,7 +428,7 @@ const initialCapabilities: CapabilityInput[] = [
     ],
     backend_files: [],
     domain_tables: ["external_system_vendors", "external_systems", "external_system_skus", "company_external_systems", "external_system_integrations"],
-    hooks: ["useApplications", "useCompanyApps", "useSKUs"],
+    hooks: ["useExternalSystems", "useCompanyExternalSystems", "useSKUs"],
     database_migrations: [],
   },
   {
