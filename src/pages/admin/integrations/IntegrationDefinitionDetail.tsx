@@ -4,7 +4,7 @@ import { IntegrationDefinitionService } from "@/modules/core/integrations/servic
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Edit, Trash2 } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { IntegrationDefinitionDialog } from "./dialogs/IntegrationDefinitionDialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -15,6 +15,7 @@ export default function IntegrationDefinitionDetail() {
   const navigate = useNavigate();
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isResyncing, setIsResyncing] = useState(false);
 
   const { data: definition, isLoading, refetch } = useQuery({
     queryKey: ["integration-definition", id],
@@ -44,6 +45,20 @@ export default function IntegrationDefinitionDetail() {
     }
   };
 
+  const handleResync = async () => {
+    if (!id) return;
+    setIsResyncing(true);
+    try {
+      await IntegrationDefinitionService.resyncFromExternalSystem(id);
+      toast.success("Integrasjonsdefinisjon synkronisert fra external_systems");
+      refetch();
+    } catch (error: any) {
+      toast.error(error.message || "Feil ved synkronisering");
+    } finally {
+      setIsResyncing(false);
+    }
+  };
+
   if (isLoading) {
     return <div className="p-6">Laster...</div>;
   }
@@ -65,6 +80,12 @@ export default function IntegrationDefinitionDetail() {
           </div>
         </div>
         <div className="flex gap-2">
+          {definition.external_system_name && (
+            <Button variant="outline" onClick={handleResync} disabled={isResyncing}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${isResyncing ? 'animate-spin' : ''}`} />
+              Re-sync fra {definition.external_system_name}
+            </Button>
+          )}
           <Button variant="outline" onClick={handleToggleActive}>
             {definition.is_active ? "Deaktiver" : "Aktiver"}
           </Button>

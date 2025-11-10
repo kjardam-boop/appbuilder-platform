@@ -203,4 +203,56 @@ export class IntegrationDefinitionService {
 
     if (error) throw error;
   }
+
+  /**
+   * Re-sync an integration definition from its external_system
+   */
+  static async resyncFromExternalSystem(definitionId: string): Promise<IntegrationDefinition> {
+    // Get the definition with its external_system_id
+    const { data: definition, error: defError } = await supabase
+      .from("integration_definitions" as any)
+      .select("external_system_id")
+      .eq("id", definitionId)
+      .maybeSingle();
+
+    if (defError) throw defError;
+    
+    const def = definition as any;
+    if (!def?.external_system_id) {
+      throw new Error("Definition not found or not linked to external system");
+    }
+
+    // Fetch the external system
+    const { data: system, error: sysError } = await supabase
+      .from("external_systems" as any)
+      .select("*")
+      .eq("id", def.external_system_id)
+      .maybeSingle();
+
+    if (sysError) throw sysError;
+    if (!system) throw new Error("External system not found");
+
+    // Transform and update
+    const transformed = transformExternalSystemToDefinition(system as any);
+    const { data: updated, error: updateError } = await supabase
+      .from("integration_definitions" as any)
+      .update({
+        name: transformed.name,
+        description: transformed.description,
+        supported_delivery_methods: transformed.supported_delivery_methods,
+        default_delivery_method: transformed.default_delivery_method,
+        documentation_url: transformed.documentation_url,
+        setup_guide_url: transformed.setup_guide_url,
+        requires_credentials: transformed.requires_credentials,
+        capabilities: transformed.capabilities,
+        is_active: transformed.is_active,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", definitionId)
+      .select()
+      .single();
+
+    if (updateError) throw updateError;
+    return updated as unknown as IntegrationDefinition;
+  }
 }
