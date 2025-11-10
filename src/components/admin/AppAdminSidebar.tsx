@@ -29,6 +29,8 @@ import {
   Target,
   Truck,
   CheckSquare,
+  Bookmark,
+  Wrench,
 } from "lucide-react";
 import { useUserPermissions } from "@/modules/core/permissions/hooks/useUserPermissions";
 import { adminNavigationMapping } from "@/config/adminNavigation";
@@ -56,6 +58,16 @@ const adminNavItems = [
     items: [
       { title: "Projects", url: "/projects", icon: FolderKanban },
       { title: "Opportunities", url: "/opportunities", icon: Target },
+    ],
+  },
+  {
+    title: "Companies",
+    items: [
+      { title: "Alle selskaper", url: "/companies", icon: Building2 },
+      { title: "Lagrede selskaper", url: "/saved-companies", icon: Bookmark },
+      { title: "Kunder", url: "/customers", icon: Users },
+      { title: "Systemleverandører", url: "/system-vendors", icon: Server },
+      { title: "Implementeringspartnere", url: "/implementation-partners", icon: Wrench },
     ],
   },
   {
