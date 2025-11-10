@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { TenantExternalSystemService } from "@/modules/core/applications/services/tenantExternalSystemService";
+import { TenantSystemService } from "@/modules/core/applications/services/tenantExternalSystemService";
 import { useTenantContext } from "@/hooks/useTenantContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -13,8 +13,8 @@ export default function TenantSystems() {
   const tenantId = context?.tenant_id || "";
 
   const { data: systems, isLoading } = useQuery({
-    queryKey: ["tenant-external-systems", tenantId],
-    queryFn: () => TenantExternalSystemService.listByTenant(tenantId),
+    queryKey: ["tenant-systems", tenantId],
+    queryFn: () => TenantSystemService.listByTenant(tenantId),
     enabled: !!tenantId,
   });
 

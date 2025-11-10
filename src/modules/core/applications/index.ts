@@ -58,6 +58,19 @@ export type {
 } from "./types/application.types";
 
 export type {
+  TenantSystem,
+  TenantSystemInput,
+  ConfigurationState,
+  TenantExternalSystem,
+  TenantExternalSystemInput,
+} from "./types/tenantExternalSystem.types";
+
+export {
+  tenantSystemSchema,
+  tenantExternalSystemSchema,
+} from "./types/tenantExternalSystem.types";
+
+export type {
   ExternalSystemERPData,
   ExternalSystemERPDataInput,
 } from "./types/erpExtension.types";
@@ -96,6 +109,7 @@ export { ApplicationService } from "./services/applicationService";
 export { VendorService } from "./services/vendorService";
 export { PartnerCertificationService } from "./services/partnerCertificationService";
 export { ERPExtensionService } from "./services/erpExtensionService";
+export { TenantSystemService, TenantExternalSystemService } from "./services/tenantExternalSystemService";
 export { seedApplications } from "./services/seedApplications";
 export { seedAppDefinitions } from "./services/seedAppDefinitions";
 export { ManifestLoader } from "./services/manifestLoader";
@@ -137,6 +151,7 @@ export {
 
 export { useSKUs, useCreateSKU, useDeleteSKU } from "./hooks/useSKUs";
 export { useCompanyExternalSystems, useCreateCompanyApp, useDeleteCompanyApp } from "./hooks/useCompanyApps";
+export { useTenantSystems, useTenantSystem, useCreateTenantSystem, useUpdateTenantSystem, useDeleteTenantSystem, useToggleTenantSystemMcp } from "./hooks/useTenantSystems";
 export { useApplicationGeneration } from "./hooks/useApplicationGeneration";
 export { useAppUsageStats } from "./hooks/useObservability";
 

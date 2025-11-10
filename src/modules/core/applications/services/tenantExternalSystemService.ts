@@ -1,11 +1,15 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { TenantExternalSystem, TenantExternalSystemInput } from "../types/tenantExternalSystem.types";
+import type { TenantSystem, TenantSystemInput } from "../types/tenantExternalSystem.types";
 
-export class TenantExternalSystemService {
+/**
+ * Tenant System Service
+ * Manages tenant installations of external systems
+ */
+export class TenantSystemService {
   /**
-   * List tenant's external systems
+   * List tenant's systems
    */
-  static async listByTenant(tenantId: string): Promise<TenantExternalSystem[]> {
+  static async listByTenant(tenantId: string): Promise<TenantSystem[]> {
     const { data, error } = await supabase
       .from("tenant_external_systems" as any)
       .select(`
@@ -22,7 +26,7 @@ export class TenantExternalSystemService {
   /**
    * Get by ID
    */
-  static async getById(id: string): Promise<TenantExternalSystem | null> {
+  static async getById(id: string): Promise<TenantSystem | null> {
     const { data, error } = await supabase
       .from("tenant_external_systems" as any)
       .select("*")
@@ -30,27 +34,38 @@ export class TenantExternalSystemService {
       .single();
 
     if (error) throw error;
-    return data as unknown as TenantExternalSystem;
+    return data as unknown as TenantSystem;
   }
 
   /**
-   * Create external system instance
+   * Create system instance
    */
-  static async create(tenantId: string, input: TenantExternalSystemInput): Promise<TenantExternalSystem> {
+  static async create(tenantId: string, input: TenantSystemInput): Promise<TenantSystem> {
     const { data, error } = await supabase
       .from("tenant_external_systems" as any)
-      .insert({ ...input, tenant_id: tenantId, external_system_id: input.app_product_id } as any)
+      .insert({ 
+        tenant_id: tenantId,
+        external_system_id: input.external_system_id,
+        sku_id: input.sku_id || null,
+        enabled_modules: input.enabled_modules || [],
+        domain: input.domain || null,
+        configuration_state: input.configuration_state || "draft",
+        mcp_enabled: input.mcp_enabled || false,
+        version: input.version || null,
+        environment: input.environment || null,
+        notes: input.notes || null,
+      } as any)
       .select()
       .single();
 
     if (error) throw error;
-    return data as unknown as TenantExternalSystem;
+    return data as unknown as TenantSystem;
   }
 
   /**
-   * Update external system
+   * Update system
    */
-  static async update(id: string, input: Partial<TenantExternalSystemInput>): Promise<TenantExternalSystem> {
+  static async update(id: string, input: Partial<TenantSystemInput>): Promise<TenantSystem> {
     const { data, error } = await supabase
       .from("tenant_external_systems" as any)
       .update(input as any)
@@ -59,11 +74,11 @@ export class TenantExternalSystemService {
       .single();
 
     if (error) throw error;
-    return data as unknown as TenantExternalSystem;
+    return data as unknown as TenantSystem;
   }
 
   /**
-   * Delete external system
+   * Delete system
    */
   static async delete(id: string): Promise<void> {
     const { error } = await supabase
@@ -86,3 +101,6 @@ export class TenantExternalSystemService {
     if (error) throw error;
   }
 }
+
+// Deprecated alias for backward compatibility
+export const TenantExternalSystemService = TenantSystemService;

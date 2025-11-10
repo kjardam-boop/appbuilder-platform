@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { TenantExternalSystemService } from "@/modules/core/applications/services/tenantExternalSystemService";
+import { TenantSystemService } from "@/modules/core/applications/services/tenantExternalSystemService";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,8 +16,8 @@ export function ExternalSystemsTab({ tenantId }: ExternalSystemsTabProps) {
   const [selectedSystem, setSelectedSystem] = useState<any>(null);
 
   const { data: systems, isLoading, refetch } = useQuery({
-    queryKey: ["tenant-external-systems", tenantId],
-    queryFn: () => TenantExternalSystemService.listByTenant(tenantId),
+    queryKey: ["tenant-systems", tenantId],
+    queryFn: () => TenantSystemService.listByTenant(tenantId),
   });
 
   const handleConfigure = (system: any) => {

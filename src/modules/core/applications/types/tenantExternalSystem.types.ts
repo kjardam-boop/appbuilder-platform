@@ -2,12 +2,19 @@ import { BaseEntity } from "@/core/types/common.types";
 import { z } from "zod";
 
 /**
- * Tenant External System Instance
- * Replaces company_apps with proper tenant isolation
+ * Tenant System Instance
+ * Represents a tenant's installation of an external system
+ * @deprecated Use TenantSystem instead - being phased out for naming consistency
  */
-export interface TenantExternalSystem extends BaseEntity {
+export type TenantExternalSystem = TenantSystem;
+
+/**
+ * Tenant System Instance
+ * Represents a tenant's installation/configuration of an external system
+ */
+export interface TenantSystem extends BaseEntity {
   tenant_id: string;
-  app_product_id: string;
+  external_system_id: string;
   sku_id: string | null;
   enabled_modules: string[];
   domain: string | null;
@@ -20,8 +27,8 @@ export interface TenantExternalSystem extends BaseEntity {
 
 export type ConfigurationState = "draft" | "active" | "suspended" | "archived";
 
-export const tenantExternalSystemSchema = z.object({
-  app_product_id: z.string().uuid("Invalid product ID"),
+export const tenantSystemSchema = z.object({
+  external_system_id: z.string().uuid("Invalid product ID"),
   sku_id: z.string().uuid().optional().or(z.literal("")),
   enabled_modules: z.array(z.string()).default([]),
   domain: z.string().max(255).optional().or(z.literal("")),
@@ -32,4 +39,8 @@ export const tenantExternalSystemSchema = z.object({
   notes: z.string().max(1000).optional().or(z.literal("")),
 });
 
-export type TenantExternalSystemInput = z.infer<typeof tenantExternalSystemSchema>;
+export type TenantSystemInput = z.infer<typeof tenantSystemSchema>;
+
+// Deprecated aliases for backward compatibility
+export const tenantExternalSystemSchema = tenantSystemSchema;
+export type TenantExternalSystemInput = TenantSystemInput;
