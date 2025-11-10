@@ -122,8 +122,8 @@ export default function InviteMembersPage() {
 
       if (dbError) throw dbError;
 
-      // Generate invitation URL
-      const invitationUrl = `${window.location.origin}/apps/jul25?invite=${token}`;
+      // Generate invitation URL (production domain)
+      const invitationUrl = `https://jardam.no/apps/jul25?invite=${token}`;
 
       // Send invitation via n8n workflow
       const result = await sendInvitation(context.tenant_id, currentUser.id, {
@@ -293,8 +293,8 @@ export default function InviteMembersPage() {
     "invitation_type": "family_member",
     "sent_by": "uuid",
     "sent_by_email": "user@example.com",
-    "invitation_url": "${window.location.origin}/apps/jul25",
-    "registration_url": "${window.location.origin}/apps/jul25/register"
+    "invitation_url": "https://jardam.no/apps/jul25",
+    "registration_url": "https://jardam.no/apps/jul25/register"
   }
 }`}
         </pre>
