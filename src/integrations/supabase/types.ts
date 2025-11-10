@@ -772,7 +772,7 @@ export type Database = {
             foreignKeyName: "company_apps_sku_id_fkey"
             columns: ["sku_id"]
             isOneToOne: false
-            referencedRelation: "skus"
+            referencedRelation: "external_system_skus"
             referencedColumns: ["id"]
           },
         ]
@@ -1315,6 +1315,44 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "app_product_mcp_actions_app_product_id_fkey"
+            columns: ["external_system_id"]
+            isOneToOne: false
+            referencedRelation: "external_systems"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      external_system_skus: {
+        Row: {
+          code: string | null
+          created_at: string
+          edition_name: string
+          external_system_id: string
+          id: string
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          code?: string | null
+          created_at?: string
+          edition_name: string
+          external_system_id: string
+          id?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          code?: string | null
+          created_at?: string
+          edition_name?: string
+          external_system_id?: string
+          id?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "skus_app_product_id_fkey"
             columns: ["external_system_id"]
             isOneToOne: false
             referencedRelation: "external_systems"
@@ -3170,44 +3208,6 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
-      }
-      skus: {
-        Row: {
-          app_product_id: string
-          code: string | null
-          created_at: string
-          edition_name: string
-          id: string
-          notes: string | null
-          updated_at: string
-        }
-        Insert: {
-          app_product_id: string
-          code?: string | null
-          created_at?: string
-          edition_name: string
-          id?: string
-          notes?: string | null
-          updated_at?: string
-        }
-        Update: {
-          app_product_id?: string
-          code?: string | null
-          created_at?: string
-          edition_name?: string
-          id?: string
-          notes?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "skus_app_product_id_fkey"
-            columns: ["app_product_id"]
-            isOneToOne: false
-            referencedRelation: "external_systems"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       supplier_evaluations: {
         Row: {

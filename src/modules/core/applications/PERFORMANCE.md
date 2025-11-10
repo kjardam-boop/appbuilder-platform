@@ -88,9 +88,9 @@ await supabase
     *,
     external_system:app_products(
       id, name, slug,
-      vendor:app_vendors(name)
+      vendor:external_system_vendors(name)
     ),
-    sku:app_skus(code, edition_name)
+    sku:external_system_skus(code, edition_name)
   `)
   .eq("tenant_id", tenantId);
 ```

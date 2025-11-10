@@ -106,7 +106,7 @@ class PerformanceAnalyzer {
           .single();
 
         const { data: skus } = await supabase
-          .from("app_skus" as any)
+          .from("external_system_skus" as any)
           .select("*")
           .eq("external_system_id", productId);
 
@@ -212,9 +212,9 @@ class PerformanceAnalyzer {
               id, 
               name, 
               slug, 
-              vendor:app_vendors(name)
+              vendor:external_system_vendors(name)
             ),
-            sku:app_skus(code, edition_name)
+            sku:external_system_skus(code, edition_name)
           `)
           .eq("tenant_id", tenantId)
           .order("created_at", { ascending: false });

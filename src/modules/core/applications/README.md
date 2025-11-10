@@ -102,14 +102,14 @@ applications/
 
 | Tabell | Formål | TypeScript Type |
 |--------|--------|-----------------|
-| `app_products` | Globalt produktkatalog | `ExternalSystem` |
-| `app_vendors` | Leverandører av produkter | `ExternalSystemVendor` |
-| `app_skus` | Produktvarianter/editions | `ExternalSystemSKU` |
+| `external_systems` | Globalt produktkatalog | `ExternalSystem` |
+| `external_system_vendors` | Leverandører av produkter | `ExternalSystemVendor` |
+| `external_system_skus` | Produktvarianter/editions | `ExternalSystemSKU` |
 | `tenant_external_systems` | Tenant-installerte systemer | `TenantSystem` |
-| `company_apps` | Selskapers systemer | `CompanyExternalSystem` |
-| `project_apps` | Prosjekters systemer | `ProjectExternalSystem` |
+| `company_external_systems` | Selskapers systemer | `CompanyExternalSystem` |
+| `project_external_systems` | Prosjekters systemer | `ProjectExternalSystem` |
 
-**Viktig:** Database bruker `app_*` prefiks, mens TypeScript bruker `ExternalSystem*` for klarhet.
+**Viktig:** Database og TypeScript bruker begge `external_system*` navnekonvensjon for konsistens.
 
 ### Database Views
 
