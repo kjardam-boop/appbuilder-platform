@@ -22,14 +22,14 @@ export default function CompaniesHub() {
       title: "Søk bedrifter",
       description: "Søk i Brønnøysundregistrene etter bedrifter",
       icon: Search,
-      path: "/company-search",
+      path: "/admin/companies?tab=search",
       color: "text-blue-600"
     },
     {
       title: "Lagrede bedrifter",
       description: "Se alle bedrifter du har lagret og CRM-data",
       icon: Bookmark,
-      path: "/saved-companies",
+      path: "/admin/companies",
       color: "text-green-600"
     },
     {
@@ -70,7 +70,7 @@ export default function CompaniesHub() {
               <Button 
                 onClick={() => {
                   setShowAddExisting(false);
-                  navigate('/company-search');
+                  navigate('/admin/companies?tab=search');
                 }}
                 className="w-full"
               >
@@ -162,7 +162,7 @@ export default function CompaniesHub() {
             </CardHeader>
             <CardContent>
               <Button 
-                onClick={() => navigate("/systemleverandorer")}
+                onClick={() => navigate("/system-vendors")}
                 className="w-full"
               >
                 Se alle systemleverandører
@@ -182,7 +182,7 @@ export default function CompaniesHub() {
             </CardHeader>
             <CardContent>
               <Button 
-                onClick={() => navigate("/implementeringspartnere")}
+                onClick={() => navigate("/implementation-partners")}
                 className="w-full"
               >
                 Se alle partnere
@@ -202,7 +202,7 @@ export default function CompaniesHub() {
             <p className="text-sm text-muted-foreground mb-4">
               Start med å søke etter bedrifter eller opprette en mulighet
             </p>
-            <Button onClick={() => navigate("/company-search")}>
+            <Button onClick={() => navigate("/admin/companies?tab=search")}>
               <Search className="h-4 w-4 mr-2" />
               Søk bedrifter
             </Button>

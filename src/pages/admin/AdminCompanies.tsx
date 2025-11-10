@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Search, Building2, Bookmark, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,10 +36,15 @@ interface SavedCompany {
   crm_status: string;
   company_roles: string[];
   created_at: string;
+  for_followup?: boolean;
+  has_potential?: boolean;
+  score?: number;
 }
 
 export default function AdminCompanies() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const defaultTab = searchParams.get('tab') === 'search' ? 'search' : 'saved';
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<Company[]>([]);
@@ -113,6 +118,34 @@ export default function AdminCompanies() {
       sortable: true,
       filterable: true,
       render: (value) => value ? <Badge variant="outline">{value}</Badge> : null,
+    },
+    {
+      key: 'score',
+      label: 'Score',
+      type: 'number',
+      sortable: true,
+      filterable: true,
+      render: (value) => value ? <Badge variant="secondary">{value}</Badge> : '-',
+    },
+    {
+      key: 'for_followup',
+      label: 'Oppfølging',
+      type: 'boolean',
+      sortable: true,
+      filterable: true,
+      render: (value) => (
+        <span className="text-sm">{value ? '✓' : '-'}</span>
+      ),
+    },
+    {
+      key: 'has_potential',
+      label: 'Potensial',
+      type: 'boolean',
+      sortable: true,
+      filterable: true,
+      render: (value) => (
+        <span className="text-sm">{value ? '✓' : '-'}</span>
+      ),
     },
     {
       key: 'created_at',
@@ -369,7 +402,7 @@ export default function AdminCompanies() {
         </Card>
       </div>
 
-      <Tabs defaultValue="saved" className="space-y-6">
+      <Tabs defaultValue={defaultTab} className="space-y-6">
         <TabsList>
           <TabsTrigger value="saved">Lagrede bedrifter ({savedCompanies.length})</TabsTrigger>
           <TabsTrigger value="search">Søk i Brreg</TabsTrigger>
