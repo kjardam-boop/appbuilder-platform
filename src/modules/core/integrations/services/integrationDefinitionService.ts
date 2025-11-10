@@ -207,6 +207,89 @@ export class IntegrationDefinitionService {
   /**
    * Re-sync an integration definition from its external_system
    */
+  /**
+   * Bulk sync all external systems to integration definitions
+   * Creates new definitions or updates existing ones based on external_system_id
+   */
+  static async bulkSyncFromExternalSystems(): Promise<{
+    created: number;
+    updated: number;
+    errors: Array<{ id: string; error: string }>;
+  }> {
+    const results = {
+      created: 0,
+      updated: 0,
+      errors: [] as Array<{ id: string; error: string }>,
+    };
+
+    try {
+      // Get all active external systems
+      const { data: systems, error: systemsError } = await supabase
+        .from("external_systems")
+        .select("*")
+        .eq("status", "Active");
+
+      if (systemsError) throw systemsError;
+      if (!systems || systems.length === 0) return results;
+
+      // Process each system
+      for (const system of systems) {
+        try {
+          // Check if definition already exists for this external_system_id
+          const { data: existing } = await supabase
+            .from("integration_definitions")
+            .select("id")
+            .eq("external_system_id", system.id)
+            .maybeSingle();
+
+          const transformed = transformExternalSystemToDefinition(system as any);
+
+          if (existing) {
+            // Update existing definition
+            const { error: updateError } = await supabase
+              .from("integration_definitions")
+              .update({
+                name: transformed.name,
+                description: transformed.description,
+                category_id: transformed.category_id,
+                vendor_id: transformed.vendor_id,
+                supported_delivery_methods: transformed.supported_delivery_methods,
+                default_delivery_method: transformed.default_delivery_method,
+                documentation_url: transformed.documentation_url,
+                setup_guide_url: transformed.setup_guide_url,
+                requires_credentials: transformed.requires_credentials,
+                default_config: transformed.default_config,
+                capabilities: transformed.capabilities,
+                tags: transformed.tags,
+                is_active: transformed.is_active,
+              })
+              .eq("id", existing.id);
+
+            if (updateError) throw updateError;
+            results.updated++;
+          } else {
+            // Create new definition
+            const { error: insertError } = await supabase
+              .from("integration_definitions")
+              .insert(transformed);
+
+            if (insertError) throw insertError;
+            results.created++;
+          }
+        } catch (err: any) {
+          results.errors.push({
+            id: system.id,
+            error: err.message || "Unknown error",
+          });
+        }
+      }
+
+      return results;
+    } catch (err: any) {
+      throw new Error(`Bulk sync failed: ${err.message}`);
+    }
+  }
+
   static async resyncFromExternalSystem(definitionId: string): Promise<IntegrationDefinition> {
     // Get the definition with its external_system_id
     const { data: definition, error: defError } = await supabase

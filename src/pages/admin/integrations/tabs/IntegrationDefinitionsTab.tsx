@@ -6,18 +6,51 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SmartDataTable } from "@/components/DataTable/SmartDataTable";
 import { ColumnDef } from "@/components/DataTable/types";
-import { Plus, Plug, ExternalLink } from "lucide-react";
+import { Plus, Plug, ExternalLink, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { IntegrationDefinitionDialog } from "../dialogs/IntegrationDefinitionDialog";
+import { toast } from "sonner";
 
 export default function IntegrationDefinitionsTab() {
   const navigate = useNavigate();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const { data: definitions, isLoading, refetch } = useQuery({
     queryKey: ["integration-definitions"],
     queryFn: () => IntegrationDefinitionService.list(),
   });
+
+  const handleBulkSync = async () => {
+    setIsSyncing(true);
+    try {
+      const results = await IntegrationDefinitionService.bulkSyncFromExternalSystems();
+      
+      if (results.errors.length > 0) {
+        toast.warning(
+          `Synkronisering fullført med feil: ${results.created} opprettet, ${results.updated} oppdatert, ${results.errors.length} feil`,
+          {
+            description: `Feil på: ${results.errors.map(e => e.id).join(", ")}`,
+          }
+        );
+      } else {
+        toast.success(
+          `Synkronisering fullført: ${results.created} opprettet, ${results.updated} oppdatert`
+        );
+      }
+      
+      refetch();
+    } catch (error) {
+      console.error("Bulk sync error:", error);
+      toast.error(
+        error instanceof Error 
+          ? error.message 
+          : "Kunne ikke synkronisere external systems"
+      );
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const columns: ColumnDef<any>[] = [
     {
@@ -135,10 +168,20 @@ export default function IntegrationDefinitionsTab() {
             Definisjoner av hvilke systemer som kan integreres og hvordan
           </p>
         </div>
-        <Button onClick={() => setIsCreateOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Ny Definisjon
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={handleBulkSync}
+            disabled={isSyncing}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
+            {isSyncing ? 'Synkroniserer...' : 'Synkroniser fra External Systems'}
+          </Button>
+          <Button onClick={() => setIsCreateOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Ny Definisjon
+          </Button>
+        </div>
       </div>
 
       <Card>
