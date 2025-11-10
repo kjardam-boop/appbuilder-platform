@@ -1,6 +1,6 @@
 import { BaseEntity } from "@/core/types/common.types";
 
-export type CompanyRole = 'supplier' | 'customer' | 'partner' | 'prospect';
+export type CompanyRole = 'external_system_vendor' | 'customer' | 'partner' | 'prospect';
 
 export interface Company extends BaseEntity {
   org_number: string;
@@ -144,7 +144,7 @@ export const INTERACTION_TYPES: Record<string, string> = {
 };
 
 export const COMPANY_ROLES: Record<CompanyRole, string> = {
-  supplier: 'Systemleverandør',
+  external_system_vendor: 'Systemleverandør',
   customer: 'Kunde',
   partner: 'Implementeringspartner',
   prospect: 'Prospekt',

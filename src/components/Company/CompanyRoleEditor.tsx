@@ -15,7 +15,7 @@ interface CompanyRoleEditorProps {
 }
 
 const AVAILABLE_ROLES = [
-  { value: "supplier", label: "Systemleverandør", description: "Utvikler og lisenserer ERP-systemer" },
+  { value: "external_system_vendor", label: "Systemleverandør", description: "Utvikler og lisenserer ERP-systemer" },
   { value: "partner", label: "Implementeringspartner", description: "Implementerer og tilpasser ERP-løsninger" },
   { value: "customer", label: "Kunde", description: "Bruker av ERP-systemer" },
   { value: "prospect", label: "Prospekt", description: "Potensiell kunde" },

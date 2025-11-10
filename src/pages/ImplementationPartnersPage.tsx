@@ -362,7 +362,7 @@ const ImplementationPartnersPage = () => {
                         {partner.company_roles.includes('partner') && (
                           <Badge variant="secondary">Partner</Badge>
                         )}
-                        {partner.company_roles.includes('supplier') && (
+                        {partner.company_roles.includes('external_system_vendor') && (
                           <Badge variant="outline">Systemleverandør</Badge>
                         )}
                       </div>

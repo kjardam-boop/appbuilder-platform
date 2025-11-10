@@ -86,8 +86,8 @@ export class ERPSystemService {
       .eq("id", input.vendor_company_id)
       .single();
 
-    if (!vendor || !vendor.company_roles?.includes("supplier")) {
-      throw new Error("Vendor must have 'supplier' role");
+    if (!vendor || !vendor.company_roles?.includes("external_system_vendor")) {
+      throw new Error("Vendor must have 'external_system_vendor' role");
     }
 
     const { data, error } = await supabase
@@ -111,8 +111,8 @@ export class ERPSystemService {
         .eq("id", input.vendor_company_id)
         .single();
 
-      if (!vendor || !vendor.company_roles?.includes("supplier")) {
-        throw new Error("Vendor must have 'supplier' role");
+      if (!vendor || !vendor.company_roles?.includes("external_system_vendor")) {
+        throw new Error("Vendor must have 'external_system_vendor' role");
       }
     }
 

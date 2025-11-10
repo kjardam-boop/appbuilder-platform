@@ -161,7 +161,7 @@ export async function seedApplications(tenantId?: string): Promise<void> {
         org_number: v.org_number ?? null,
         slug: v.slug,
         website: v.website ?? null,
-        company_roles: ["supplier"],
+        company_roles: ["external_system_vendor"],
         source: v.org_number ? "brreg" : "manual",
       });
 

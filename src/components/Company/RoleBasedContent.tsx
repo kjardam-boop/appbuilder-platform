@@ -64,7 +64,7 @@ export function RoleBasedContent({
   const certificationsCount = certifications?.length || 0;
 
   const roleConfigs = {
-    supplier: {
+    external_system_vendor: {
       icon: Building2,
       title: "Systemleverandør",
       description: "Utvikler og lisenserer ERP-systemer",

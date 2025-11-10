@@ -72,7 +72,7 @@ const SystemVendorsPage = () => {
   const fetchVendors = async () => {
     try {
       setIsLoading(true);
-      const companies = await CompanyService.getCompaniesByRole('supplier');
+      const companies = await CompanyService.getCompaniesByRole('external_system_vendor');
       
       // Enrich with ERP system count
       const enrichedVendors = await Promise.all(
@@ -339,7 +339,7 @@ const SystemVendorsPage = () => {
                     <TableCell className="text-right">{formatNumber(vendor.driftsinntekter)}</TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
-                        {vendor.company_roles.includes('supplier') && (
+                        {vendor.company_roles.includes('external_system_vendor') && (
                           <Badge variant="secondary">Systemleverandør</Badge>
                         )}
                         {vendor.company_roles.includes('partner') && (

@@ -515,7 +515,7 @@ const SavedCompanies = () => {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Alle roller</SelectItem>
-                        <SelectItem value="supplier">Systemleverandør</SelectItem>
+                        <SelectItem value="external_system_vendor">Systemleverandør</SelectItem>
                         <SelectItem value="partner">Implementeringspartner</SelectItem>
                         <SelectItem value="customer">Kunde</SelectItem>
                         <SelectItem value="prospect">Prospekt</SelectItem>

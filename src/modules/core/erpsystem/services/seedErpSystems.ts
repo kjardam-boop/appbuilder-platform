@@ -18,7 +18,7 @@ const SEED_ERP_SYSTEMS: SeedData[] = [
     vendor: {
       name: "Microsoft",
       slug: "microsoft",
-      roles: ["supplier"],
+      roles: ["external_system_vendor"],
       website: "https://dynamics.microsoft.com",
     },
     system: {
@@ -37,7 +37,7 @@ const SEED_ERP_SYSTEMS: SeedData[] = [
     },
   },
   {
-    vendor: { name: "Microsoft", slug: "microsoft", roles: ["supplier"] },
+    vendor: { name: "Microsoft", slug: "microsoft", roles: ["external_system_vendor"] },
     system: {
       name: "Dynamics 365 Finance & Operations",
       short_name: "D365 FO",
@@ -56,7 +56,7 @@ const SEED_ERP_SYSTEMS: SeedData[] = [
     vendor: {
       name: "SAP",
       slug: "sap",
-      roles: ["supplier"],
+      roles: ["external_system_vendor"],
       website: "https://www.sap.com",
     },
     system: {
@@ -77,7 +77,7 @@ const SEED_ERP_SYSTEMS: SeedData[] = [
     vendor: {
       name: "Oracle",
       slug: "oracle",
-      roles: ["supplier"],
+      roles: ["external_system_vendor"],
       website: "https://www.oracle.com",
     },
     system: {
@@ -98,7 +98,7 @@ const SEED_ERP_SYSTEMS: SeedData[] = [
     vendor: {
       name: "Unit4",
       slug: "unit4",
-      roles: ["supplier"],
+      roles: ["external_system_vendor"],
       website: "https://www.unit4.com",
     },
     system: {
@@ -119,7 +119,7 @@ const SEED_ERP_SYSTEMS: SeedData[] = [
     vendor: {
       name: "Visma",
       slug: "visma",
-      roles: ["supplier"],
+      roles: ["external_system_vendor"],
       website: "https://www.visma.no",
       org_number: "995568217",
     },
@@ -141,7 +141,7 @@ const SEED_ERP_SYSTEMS: SeedData[] = [
     vendor: {
       name: "Xledger",
       slug: "xledger",
-      roles: ["supplier"],
+      roles: ["external_system_vendor"],
       website: "https://www.xledger.com",
       org_number: "980283954",
     },
@@ -162,7 +162,7 @@ const SEED_ERP_SYSTEMS: SeedData[] = [
     vendor: {
       name: "24SevenOffice",
       slug: "24sevenoffice",
-      roles: ["supplier"],
+      roles: ["external_system_vendor"],
       website: "https://24sevenoffice.com",
       org_number: "990912502",
     },
@@ -183,7 +183,7 @@ const SEED_ERP_SYSTEMS: SeedData[] = [
     vendor: {
       name: "IFS",
       slug: "ifs",
-      roles: ["supplier"],
+      roles: ["external_system_vendor"],
       website: "https://www.ifs.com",
     },
     system: {
@@ -203,7 +203,7 @@ const SEED_ERP_SYSTEMS: SeedData[] = [
     vendor: {
       name: "RamBase",
       slug: "rambase",
-      roles: ["supplier"],
+      roles: ["external_system_vendor"],
       website: "https://www.rambase.com",
       org_number: "971530278",
     },
@@ -245,7 +245,7 @@ export async function seedErpSystems(): Promise<void> {
             employees: match.employees,
             founding_date: match.foundingDate,
             website: entry.vendor.website || match.website,
-            company_roles: entry.vendor.roles || ["supplier"],
+            company_roles: entry.vendor.roles || ["external_system_vendor"],
             is_saved: false,
           }, 'default');
         } else {
@@ -254,14 +254,14 @@ export async function seedErpSystems(): Promise<void> {
             name: entry.vendor.name,
             org_number: entry.vendor.org_number || `PLACEHOLDER-${entry.vendor.slug}`,
             website: entry.vendor.website || null,
-            company_roles: entry.vendor.roles || ["supplier"],
+            company_roles: entry.vendor.roles || ["external_system_vendor"],
             is_saved: false,
           }, 'default');
         }
       } else {
-        // Ensure vendor has supplier role
-        if (!vendor.company_roles.includes("supplier")) {
-          await CompanyService.updateCompanyRoles(vendor.id, [...vendor.company_roles, "supplier"]);
+        // Ensure vendor has external_system_vendor role
+        if (!vendor.company_roles.includes("external_system_vendor")) {
+          await CompanyService.updateCompanyRoles(vendor.id, [...vendor.company_roles, "external_system_vendor"]);
         }
       }
 

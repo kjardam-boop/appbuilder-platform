@@ -56,7 +56,6 @@ const adminNavItems = [
     items: [
       { title: "Projects", url: "/projects", icon: FolderKanban },
       { title: "Opportunities", url: "/opportunities", icon: Target },
-      { title: "Suppliers", url: "/suppliers", icon: Truck },
     ],
   },
   {

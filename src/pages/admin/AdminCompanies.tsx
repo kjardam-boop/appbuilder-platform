@@ -45,7 +45,7 @@ export default function AdminCompanies() {
   const [searchResults, setSearchResults] = useState<Company[]>([]);
   const [savedCompanies, setSavedCompanies] = useState<SavedCompany[]>([]);
   const [isLoadingSaved, setIsLoadingSaved] = useState(true);
-  const [stats, setStats] = useState({ total: 0, customers: 0, suppliers: 0 });
+  const [stats, setStats] = useState({ total: 0, customers: 0, systemVendors: 0 });
 
   // Column definitions for saved companies
   const savedCompaniesColumns: ColumnDef<SavedCompany>[] = [
@@ -241,9 +241,9 @@ export default function AdminCompanies() {
       // Calculate stats
       const total = data?.length || 0;
       const customers = data?.filter(c => c.crm_status).length || 0;
-      const suppliers = data?.filter(c => c.company_roles?.includes('supplier')).length || 0;
+      const systemVendors = data?.filter(c => c.company_roles?.includes('external_system_vendor')).length || 0;
       
-      setStats({ total, customers, suppliers });
+      setStats({ total, customers, systemVendors });
     } catch (error) {
       console.error('Error loading companies:', error);
       toast.error("Kunne ikke laste bedrifter");
@@ -360,11 +360,11 @@ export default function AdminCompanies() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Leverandører</CardTitle>
+            <CardTitle className="text-sm font-medium">Systemleverandører</CardTitle>
             <Building2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.suppliers}</div>
+            <div className="text-2xl font-bold">{stats.systemVendors}</div>
           </CardContent>
         </Card>
       </div>

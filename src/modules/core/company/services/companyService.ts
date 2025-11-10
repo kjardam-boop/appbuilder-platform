@@ -591,7 +591,7 @@ export class CompanyService {
           org_number: companyData.org_number,
           slug: companyData.slug,
           website: companyData.website,
-          company_roles: companyData.company_roles || ['supplier'],
+          company_roles: companyData.company_roles || ['external_system_vendor'],
           source: companyData.source || 'manual',
         })
         .select()
