@@ -44,15 +44,15 @@ export function CustomerERPUsage({ companyId }: CustomerERPUsageProps) {
               <div className="space-y-1">
                 <CardTitle className="text-base">
                   <Link 
-                    to={`/applications/${companyApp.app_product?.id}`}
+                    to={`/applications/${(companyApp.external_system || companyApp.app_product)?.id}`}
                     className="hover:underline"
                   >
-                    {companyApp.app_product?.name}
+                    {(companyApp.external_system || companyApp.app_product)?.name}
                   </Link>
                 </CardTitle>
-                {companyApp.app_product?.short_name && (
+                {(companyApp.external_system || companyApp.app_product)?.short_name && (
                   <CardDescription className="text-xs">
-                    {companyApp.app_product.short_name}
+                    {(companyApp.external_system || companyApp.app_product).short_name}
                   </CardDescription>
                 )}
               </div>
@@ -81,7 +81,7 @@ export function CustomerERPUsage({ companyId }: CustomerERPUsageProps) {
             </div>
             <div className="flex gap-2 mt-3">
               <Button variant="outline" size="sm" asChild>
-                <Link to={`/applications/${companyApp.app_product?.id}`}>
+                <Link to={`/applications/${(companyApp.external_system || companyApp.app_product)?.id}`}>
                   <ExternalLink className="h-3 w-3 mr-1" />
                   Detaljer
                 </Link>

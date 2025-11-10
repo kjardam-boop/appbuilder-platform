@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import type { SKUInput } from "../types/application.types";
+import type { ExternalSystemSKUInput } from "../types/application.types";
 
 interface SKUManagerProps {
   appProductId: string;
@@ -20,7 +20,7 @@ export const SKUManager = ({ appProductId }: SKUManagerProps) => {
   const deleteMutation = useDeleteSKU();
 
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [formData, setFormData] = useState<SKUInput>({
+  const [formData, setFormData] = useState<ExternalSystemSKUInput>({
     edition_name: "",
     code: "",
     notes: "",

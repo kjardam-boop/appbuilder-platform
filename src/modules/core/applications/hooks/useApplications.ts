@@ -3,7 +3,7 @@ import { ApplicationService } from "../services/applicationService";
 import { VendorService } from "../services/vendorService";
 import { PartnerCertificationService } from "../services/partnerCertificationService";
 import { buildClientContext, buildClientContextSync } from "@/shared/lib/buildContext";
-import type { AppProductInput, ProjectAppProductInput, PartnerCertificationInput } from "../types/application.types";
+import type { ExternalSystemInput, ProjectExternalSystemInput, PartnerSystemCertificationInput } from "../types/application.types";
 import { toast } from "sonner";
 
 export function useAppProducts(filters?: {
@@ -38,7 +38,7 @@ export function useCreateAppProduct() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: AppProductInput) => {
+    mutationFn: async (input: ExternalSystemInput) => {
       const ctx = await buildClientContext();
       return ApplicationService.createProduct(ctx, input);
     },
@@ -56,7 +56,7 @@ export function useUpdateAppProduct() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, input }: { id: string; input: Partial<AppProductInput> }) => {
+    mutationFn: async ({ id, input }: { id: string; input: Partial<ExternalSystemInput> }) => {
       const ctx = await buildClientContext();
       return ApplicationService.updateProduct(ctx, id, input);
     },
@@ -93,7 +93,7 @@ export function useAttachAppToProject() {
     }: {
       projectId: string;
       appProductId: string;
-      input: ProjectAppProductInput;
+      input: ProjectExternalSystemInput;
     }) => {
       const ctx = await buildClientContext();
       return ApplicationService.attachToProject(ctx, projectId, appProductId, input);
@@ -144,7 +144,7 @@ export function useAddCertification() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: PartnerCertificationInput) => {
+    mutationFn: async (input: PartnerSystemCertificationInput) => {
       const ctx = await buildClientContext();
       return PartnerCertificationService.addCertification(ctx, input);
     },

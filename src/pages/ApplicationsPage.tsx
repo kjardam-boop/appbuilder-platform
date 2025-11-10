@@ -112,9 +112,9 @@ export default function ApplicationsPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {product.app_types && product.app_types.length > 0 && (
+                  {(product.system_types || product.app_types) && (product.system_types || product.app_types)!.length > 0 && (
                     <div className="flex flex-wrap gap-1">
-                      {product.app_types.map((type) => (
+                      {(product.system_types || product.app_types)!.map((type) => (
                         <Badge key={type} variant="outline" className="text-xs">
                           {APP_TYPES[type as any] || type}
                         </Badge>

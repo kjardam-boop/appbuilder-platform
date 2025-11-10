@@ -183,7 +183,7 @@ export default function AppProductDetails() {
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2 mt-4">
-                    {product.app_types?.map((type) => (
+                    {(product.system_types || product.app_types)?.map((type) => (
                       <Badge key={type}>{APP_TYPES[type as any] || type}</Badge>
                     ))}
                     <Badge variant={product.status === "Active" ? "default" : "secondary"}>

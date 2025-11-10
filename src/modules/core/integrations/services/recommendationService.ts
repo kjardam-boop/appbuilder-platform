@@ -42,12 +42,12 @@ export class RecommendationService {
     if (!app) return [];
 
     // Get all candidate external systems
-    const { data: systems } = await supabase
-      .from("app_products")
+    const { data: systems } = await (supabase as any)
+      .from("external_systems")
       .select(`
         *,
-        vendor:app_vendors(*),
-        integrations:app_integrations(*)
+        vendor:external_system_vendors(*),
+        integrations:external_system_integrations(*)
       `);
 
     if (!systems) return [];
@@ -128,8 +128,8 @@ export class RecommendationService {
         
         if (!matrix.has(key)) {
           // Get system name
-          const { data: product } = await supabase
-            .from("app_products")
+          const { data: product } = await (supabase as any)
+            .from("external_systems")
             .select("name")
             .eq("id", key)
             .single();
@@ -194,11 +194,11 @@ export class RecommendationService {
   static async getRecommendations(
     options: RecommendOptions
   ): Promise<ComputeResult[]> {
-    let query = supabase
+    let query = (supabase as any)
       .from("integration_recommendation")
       .select(`
         *,
-        product:app_products(id, name, slug, vendor:app_vendors(name))
+        product:external_systems(id, name, slug, vendor:external_system_vendors(name))
       `)
       .eq("tenant_id", options.tenantId)
       .order("score", { ascending: false });

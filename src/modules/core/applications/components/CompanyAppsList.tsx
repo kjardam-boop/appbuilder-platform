@@ -46,10 +46,10 @@ export const CompanyAppsList = ({ companyId }: CompanyAppsListProps) => {
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <Link
-                      to={`/applications/${app.app_product?.id}`}
+                      to={`/applications/${(app.external_system || app.app_product)?.id}`}
                       className="font-medium hover:underline"
                     >
-                      {app.app_product?.name}
+                      {(app.external_system || app.app_product)?.name}
                     </Link>
                     <ExternalLink className="h-3 w-3" />
                   </div>

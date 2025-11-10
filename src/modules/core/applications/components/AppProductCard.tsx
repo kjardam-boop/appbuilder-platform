@@ -2,11 +2,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Server, Building2 } from "lucide-react";
 import { Link } from "react-router-dom";
-import type { AppProduct } from "../types/application.types";
+import type { ExternalSystem } from "../types/application.types";
 import { APP_TYPES } from "../types/application.types";
 
 interface AppProductCardProps {
-  product: AppProduct & { vendor?: { name: string } };
+  product: ExternalSystem & { vendor?: { name: string } };
 }
 
 export const AppProductCard = ({ product }: AppProductCardProps) => {
@@ -32,9 +32,9 @@ export const AppProductCard = ({ product }: AppProductCardProps) => {
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
-          {product.app_types && product.app_types.length > 0 && (
+          {(product.system_types || product.app_types) && (product.system_types || product.app_types)!.length > 0 && (
             <div className="flex flex-wrap gap-1">
-              {product.app_types.map((type) => (
+              {(product.system_types || product.app_types)!.map((type) => (
                 <Badge key={type} variant="outline" className="text-xs">
                   {APP_TYPES[type as any] || type}
                 </Badge>

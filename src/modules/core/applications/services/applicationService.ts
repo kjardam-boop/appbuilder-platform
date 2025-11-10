@@ -2,16 +2,16 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { RequestContext } from "@/shared/types";
 import type {
-  AppProduct,
-  AppProductInput,
-  SKU,
-  SKUInput,
-  AppIntegration,
-  AppIntegrationInput,
-  CompanyApp,
-  CompanyAppInput,
-  ProjectAppProduct,
-  ProjectAppProductInput,
+  ExternalSystem,
+  ExternalSystemInput,
+  ExternalSystemSKU,
+  ExternalSystemSKUInput,
+  ExternalSystemIntegration,
+  ExternalSystemIntegrationInput,
+  CompanyExternalSystem,
+  CompanyExternalSystemInput,
+  ProjectExternalSystem,
+  ProjectExternalSystemInput,
 } from "../types/application.types";
 
 export class ApplicationService {
@@ -26,12 +26,12 @@ export class ApplicationService {
       limit?: number;
       includeArchived?: boolean;
     }
-  ): Promise<{ data: AppProduct[]; count: number }> {
-    let query = supabase
-      .from("app_products")
+  ): Promise<{ data: ExternalSystem[]; count: number }> {
+    let query = (supabase as any)
+      .from("external_systems")
       .select(`
         *,
-        vendor:app_vendors!vendor_id(*)
+        vendor:external_system_vendors!vendor_id(*)
       `, { count: "exact" });
 
     if (filters?.query) {
@@ -45,7 +45,7 @@ export class ApplicationService {
     }
 
     if (filters?.appType) {
-      query = query.contains("app_types", [filters.appType]);
+      query = query.contains("system_types", [filters.appType]);
     }
 
     if (filters?.status) {
@@ -59,71 +59,71 @@ export class ApplicationService {
     const { data, error, count } = await query;
 
     if (error) throw error;
-    return { data: (data || []) as AppProduct[], count: count || 0 };
+    return { data: (data || []) as ExternalSystem[], count: count || 0 };
   }
 
-  static async getProductById(ctx: RequestContext, id: string): Promise<AppProduct | null> {
-    const { data, error } = await supabase
-      .from("app_products")
+  static async getProductById(ctx: RequestContext, id: string): Promise<ExternalSystem | null> {
+    const { data, error } = await (supabase as any)
+      .from("external_systems")
       .select(`
         *,
-        vendor:app_vendors!vendor_id(*),
-        skus:skus(*)
+        vendor:external_system_vendors!vendor_id(*),
+        skus:external_system_skus(*)
       `)
       .eq("id", id)
       .single();
 
     if (error) throw error;
-    return data as AppProduct;
+    return data as ExternalSystem;
   }
 
-  static async getProductBySlug(ctx: RequestContext, slug: string): Promise<AppProduct | null> {
-    const { data, error } = await supabase
-      .from("app_products")
+  static async getProductBySlug(ctx: RequestContext, slug: string): Promise<ExternalSystem | null> {
+    const { data, error } = await (supabase as any)
+      .from("external_systems")
       .select(`
         *,
-        vendor:app_vendors!vendor_id(*)
+        vendor:external_system_vendors!vendor_id(*)
       `)
       .eq("slug", slug)
       .single();
 
     if (error && error.code !== "PGRST116") throw error;
-    return data as AppProduct | null;
+    return data as ExternalSystem | null;
   }
 
-  static async createProduct(ctx: RequestContext, input: AppProductInput): Promise<AppProduct> {
-    const { data, error } = await supabase
-      .from("app_products")
+  static async createProduct(ctx: RequestContext, input: ExternalSystemInput): Promise<ExternalSystem> {
+    const { data, error } = await (supabase as any)
+      .from("external_systems")
       .insert(input)
       .select(`
         *,
-        vendor:app_vendors!vendor_id(*)
+        vendor:external_system_vendors!vendor_id(*)
       `)
       .single();
 
     if (error) throw error;
-    return data as AppProduct;
+    return data as ExternalSystem;
   }
 
-  static async updateProduct(ctx: RequestContext, id: string, input: Partial<AppProductInput>): Promise<AppProduct> {
-    const { data, error } = await supabase
-      .from("app_products")
+  static async updateProduct(ctx: RequestContext, id: string, input: Partial<ExternalSystemInput>): Promise<ExternalSystem> {
+    const { data, error } = await (supabase as any)
+      .from("external_systems")
       .update(input)
       .eq("id", id)
       .select(`
         *,
-        vendor:app_vendors!vendor_id(*)
+        vendor:external_system_vendors!vendor_id(*)
       `)
       .single();
 
     if (error) throw error;
-    return data as AppProduct;
+    return data as ExternalSystem;
   }
 
   static async deleteProduct(ctx: RequestContext, id: string): Promise<void> {
     // Platform owner only: hard delete
-    const { error } = await supabase
-      .from("app_products")
+    const { error } = await (supabase as any)
+      .from("external_systems")
       .delete()
       .eq("id", id);
 
@@ -143,21 +143,21 @@ export class ApplicationService {
   }
 
   // SKU methods
-  static async getSkus(ctx: RequestContext, appProductId: string): Promise<SKU[]> {
-    const { data, error } = await supabase
-      .from("skus")
+  static async getSkus(ctx: RequestContext, externalSystemId: string): Promise<ExternalSystemSKU[]> {
+    const { data, error } = await (supabase as any)
+      .from("external_system_skus")
       .select("*")
-      .eq("app_product_id", appProductId)
+      .eq("external_system_id", externalSystemId)
       .order("edition_name");
 
     if (error) throw error;
     return data || [];
   }
 
-  static async createSku(ctx: RequestContext, appProductId: string, input: SKUInput): Promise<SKU> {
-    const { data, error } = await supabase
-      .from("skus")
-      .insert({ ...input, app_product_id: appProductId })
+  static async createSku(ctx: RequestContext, externalSystemId: string, input: ExternalSystemSKUInput): Promise<ExternalSystemSKU> {
+    const { data, error } = await (supabase as any)
+      .from("external_system_skus")
+      .insert({ ...input, external_system_id: externalSystemId })
       .select()
       .single();
 
@@ -166,71 +166,71 @@ export class ApplicationService {
   }
 
   static async deleteSku(ctx: RequestContext, id: string): Promise<void> {
-    const { error } = await supabase.from("skus").delete().eq("id", id);
+    const { error } = await (supabase as any).from("external_system_skus").delete().eq("id", id);
     if (error) throw error;
   }
 
   // Integration methods
-  static async getIntegrations(ctx: RequestContext, appProductId: string): Promise<AppIntegration[]> {
-    const { data, error } = await supabase
-      .from("app_integrations")
+  static async getIntegrations(ctx: RequestContext, externalSystemId: string): Promise<ExternalSystemIntegration[]> {
+    const { data, error } = await (supabase as any)
+      .from("external_system_integrations")
       .select("*")
-      .eq("app_product_id", appProductId)
+      .eq("external_system_id", externalSystemId)
       .order("name");
 
     if (error) throw error;
-    return (data || []) as AppIntegration[];
+    return (data || []) as ExternalSystemIntegration[];
   }
 
-  static async createIntegration(ctx: RequestContext, appProductId: string, input: AppIntegrationInput): Promise<AppIntegration> {
-    const { data, error } = await supabase
-      .from("app_integrations")
-      .insert({ ...input, app_product_id: appProductId })
+  static async createIntegration(ctx: RequestContext, externalSystemId: string, input: ExternalSystemIntegrationInput): Promise<ExternalSystemIntegration> {
+    const { data, error } = await (supabase as any)
+      .from("external_system_integrations")
+      .insert({ ...input, external_system_id: externalSystemId })
       .select()
       .single();
 
     if (error) throw error;
-    return data as AppIntegration;
+    return data as ExternalSystemIntegration;
   }
 
   static async deleteIntegration(ctx: RequestContext, id: string): Promise<void> {
-    const { error } = await supabase.from("app_integrations").delete().eq("id", id);
+    const { error } = await (supabase as any).from("external_system_integrations").delete().eq("id", id);
     if (error) throw error;
   }
 
-  // CompanyApp methods
-  static async getCompanyApps(ctx: RequestContext, companyId: string): Promise<CompanyApp[]> {
-    const { data, error } = await supabase
-      .from("company_apps")
+  // CompanyExternalSystem methods
+  static async getCompanyApps(ctx: RequestContext, companyId: string): Promise<CompanyExternalSystem[]> {
+    const { data, error } = await (supabase as any)
+      .from("company_external_systems")
       .select(`
         *,
-        app_product:app_products(*),
-        sku:skus(*)
+        external_system:external_systems(*),
+        sku:external_system_skus(*)
       `)
       .eq("company_id", companyId)
       .order("created_at");
 
     if (error) throw error;
-    return (data || []) as CompanyApp[];
+    return (data || []) as CompanyExternalSystem[];
   }
 
-  static async createCompanyApp(ctx: RequestContext, input: CompanyAppInput): Promise<CompanyApp> {
-    const { data, error } = await supabase
-      .from("company_apps")
+  static async createCompanyApp(ctx: RequestContext, input: CompanyExternalSystemInput): Promise<CompanyExternalSystem> {
+    const { data, error } = await (supabase as any)
+      .from("company_external_systems")
       .insert(input)
       .select(`
         *,
-        app_product:app_products(*),
-        sku:skus(*)
+        external_system:external_systems(*),
+        sku:external_system_skus(*)
       `)
       .single();
 
     if (error) throw error;
-    return data as CompanyApp;
+    return data as CompanyExternalSystem;
   }
 
   static async deleteCompanyApp(ctx: RequestContext, id: string): Promise<void> {
-    const { error } = await supabase.from("company_apps").delete().eq("id", id);
+    const { error } = await (supabase as any).from("company_external_systems").delete().eq("id", id);
     if (error) throw error;
   }
 
@@ -238,60 +238,60 @@ export class ApplicationService {
   static async attachToProject(
     ctx: RequestContext,
     projectId: string,
-    appProductId: string,
-    input: ProjectAppProductInput
-  ): Promise<ProjectAppProduct> {
-    const { data, error } = await supabase
-      .from("project_app_products")
-      .insert({ project_id: projectId, app_product_id: appProductId, ...input })
+    externalSystemId: string,
+    input: ProjectExternalSystemInput
+  ): Promise<ProjectExternalSystem> {
+    const { data, error } = await (supabase as any)
+      .from("project_external_systems")
+      .insert({ project_id: projectId, external_system_id: externalSystemId, ...input })
       .select(`
         *,
-        app_product:app_products(*, vendor:app_vendors!vendor_id(*)),
+        external_system:external_systems(*, vendor:external_system_vendors!vendor_id(*)),
         partner:companies!partner_company_id(id, name, org_number)
       `)
       .single();
 
     if (error) throw error;
-    return data as ProjectAppProduct;
+    return data as ProjectExternalSystem;
   }
 
-  static async updateProjectApp(ctx: RequestContext, id: string, input: Partial<ProjectAppProductInput>): Promise<ProjectAppProduct> {
-    const { data, error } = await supabase
-      .from("project_app_products")
+  static async updateProjectApp(ctx: RequestContext, id: string, input: Partial<ProjectExternalSystemInput>): Promise<ProjectExternalSystem> {
+    const { data, error } = await (supabase as any)
+      .from("project_external_systems")
       .update(input)
       .eq("id", id)
       .select(`
         *,
-        app_product:app_products(*, vendor:app_vendors!vendor_id(*)),
+        external_system:external_systems(*, vendor:external_system_vendors!vendor_id(*)),
         partner:companies!partner_company_id(id, name, org_number)
       `)
       .single();
 
     if (error) throw error;
-    return data as ProjectAppProduct;
+    return data as ProjectExternalSystem;
   }
 
   static async removeFromProject(ctx: RequestContext, id: string): Promise<void> {
-    const { error } = await supabase.from("project_app_products").delete().eq("id", id);
+    const { error } = await (supabase as any).from("project_external_systems").delete().eq("id", id);
     if (error) throw error;
   }
 
-  static async getProjectApps(ctx: RequestContext, projectId: string): Promise<ProjectAppProduct[]> {
-    const { data, error } = await supabase
-      .from("project_app_products")
+  static async getProjectApps(ctx: RequestContext, projectId: string): Promise<ProjectExternalSystem[]> {
+    const { data, error } = await (supabase as any)
+      .from("project_external_systems")
       .select(`
         *,
-        app_product:app_products(*, vendor:app_vendors!vendor_id(*)),
+        external_system:external_systems(*, vendor:external_system_vendors!vendor_id(*)),
         partner:companies!partner_company_id(id, name, org_number)
       `)
       .eq("project_id", projectId)
       .order("created_at");
 
     if (error) throw error;
-    return (data || []) as ProjectAppProduct[];
+    return (data || []) as ProjectExternalSystem[];
   }
 
-  static async upsertBySlug(ctx: RequestContext, slug: string, input: AppProductInput): Promise<AppProduct> {
+  static async upsertBySlug(ctx: RequestContext, slug: string, input: ExternalSystemInput): Promise<ExternalSystem> {
     const existing = await this.getProductBySlug(ctx, slug);
     
     if (existing) {
@@ -301,45 +301,45 @@ export class ApplicationService {
     }
   }
 
-  static async listAllProducts(ctx: RequestContext): Promise<AppProduct[]> {
-    const { data, error } = await supabase
-      .from("app_products")
+  static async listAllProducts(ctx: RequestContext): Promise<ExternalSystem[]> {
+    const { data, error } = await (supabase as any)
+      .from("external_systems")
       .select(`
         *,
-        vendor:app_vendors!vendor_id(*)
+        vendor:external_system_vendors!vendor_id(*)
       `)
       .order("name");
 
     if (error) throw error;
-    return (data || []) as AppProduct[];
+    return (data || []) as ExternalSystem[];
   }
 
   /**
    * Get external systems by capability
    */
-  static async getByCapability(capability: string): Promise<AppProduct[]> {
+  static async getByCapability(capability: string): Promise<ExternalSystem[]> {
     const { data, error } = await (supabase as any)
-      .from('app_products')
-      .select('*, vendor:app_vendors(*)')
+      .from('external_systems')
+      .select('*, vendor:external_system_vendors(*)')
       .contains('capabilities', [capability])
       .eq('status', 'Active');
     
     if (error) throw error;
-    return data as AppProduct[];
+    return data as ExternalSystem[];
   }
 
   /**
    * Get external systems by use case
    */
-  static async getByUseCase(useCaseKey: string): Promise<AppProduct[]> {
+  static async getByUseCase(useCaseKey: string): Promise<ExternalSystem[]> {
     const { data, error } = await (supabase as any)
-      .from('app_products')
-      .select('*, vendor:app_vendors(*)')
+      .from('external_systems')
+      .select('*, vendor:external_system_vendors(*)')
       .filter('use_cases', 'cs', JSON.stringify([{ key: useCaseKey }]))
       .eq('status', 'Active');
     
     if (error) throw error;
-    return data as AppProduct[];
+    return data as ExternalSystem[];
   }
 
   /**
@@ -347,7 +347,7 @@ export class ApplicationService {
    */
   static async getMcpReference(productId: string): Promise<string | null> {
     const { data, error } = await (supabase as any)
-      .from('app_products')
+      .from('external_systems')
       .select('mcp_reference')
       .eq('id', productId)
       .maybeSingle();
@@ -361,7 +361,7 @@ export class ApplicationService {
    */
   static async getSupportedIntegrationProviders(productId: string): Promise<Record<string, boolean>> {
     const { data, error } = await (supabase as any)
-      .from('app_products')
+      .from('external_systems')
       .select('integration_providers')
       .eq('id', productId)
       .maybeSingle();

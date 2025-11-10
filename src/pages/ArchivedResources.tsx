@@ -54,9 +54,9 @@ export default function ArchivedResourcesPage() {
       setArchivedCompanies(companies);
 
       // Load archived app products
-      const { data: products } = await supabase
-        .from('app_products')
-        .select('*, app_vendors(name)')
+      const { data: products } = await (supabase as any)
+        .from('external_systems')
+        .select('*, external_system_vendors(name)')
         .not('archived_at', 'is', null)
         .order('archived_at', { ascending: false });
       
@@ -97,8 +97,8 @@ export default function ArchivedResourcesPage() {
     if (!user) return;
 
     try {
-      const { error } = await supabase
-        .from('app_products')
+      const { error } = await (supabase as any)
+        .from('external_systems')
         .update({ archived_at: null })
         .eq('id', productId);
 
@@ -204,7 +204,7 @@ export default function ArchivedResourcesPage() {
                       <div>
                         <CardTitle>{product.name}</CardTitle>
                         <CardDescription>
-                          {product.app_vendors?.name} • Arkivert {formatDistanceToNow(
+                          {product.external_system_vendors?.name} • Arkivert {formatDistanceToNow(
                             new Date(product.archived_at), 
                             { addSuffix: true, locale: nb }
                           )}

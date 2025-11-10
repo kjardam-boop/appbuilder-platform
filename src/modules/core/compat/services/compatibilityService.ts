@@ -32,10 +32,10 @@ export async function computeFit(
     throw new Error(`App ${appKey} not found`);
   }
 
-  // Fetch external system (app_products)
-  const { data: system } = await supabase
-    .from("app_products")
-    .select("*, app_integrations(*), erp_extensions(*)")
+  // Fetch external system
+  const { data: system } = await (supabase as any)
+    .from("external_systems")
+    .select("*, external_system_integrations(*), external_system_erp_data(*)")
     .eq("slug", externalSystemSlug)
     .single();
 
@@ -129,8 +129,8 @@ export async function computeMatrix(
   filters?: { provider?: string; minScore?: number }
 ): Promise<SystemScore[]> {
   // Fetch all external systems
-  const { data: systems } = await supabase
-    .from("app_products")
+  const { data: systems } = await (supabase as any)
+    .from("external_systems")
     .select("slug, name")
     .order("name");
 
@@ -227,7 +227,7 @@ function computeIntegrationReadiness(
     string,
     string[]
   >;
-  const systemIntegrations = system.app_integrations || [];
+  const systemIntegrations = system.external_system_integrations || [];
 
   const details: IntegrationReadiness[] = [];
 
@@ -304,8 +304,8 @@ function computeComplianceMatch(
 function computeEcosystemMaturity(
   system: any
 ): ScoreBreakdown["ecosystemMaturity"] {
-  const integrationCount = system.app_integrations?.length || 0;
-  const mcpRefCount = system.app_integrations?.filter(
+  const integrationCount = system.external_system_integrations?.length || 0;
+  const mcpRefCount = system.external_system_integrations?.filter(
     (i: any) => i.type === "mcp"
   ).length || 0;
 
