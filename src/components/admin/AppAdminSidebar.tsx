@@ -63,6 +63,7 @@ const adminNavItems = [
   {
     title: "Companies",
     items: [
+      { title: "Alle selskaper", url: "/companies", icon: Building2 },
       { title: "Lagrede selskaper", url: "/admin/companies", icon: Bookmark },
       { title: "Kunder", url: "/customers", icon: Users },
       { title: "Systemleverandører", url: "/system-vendors", icon: Server },
