@@ -77,6 +77,7 @@ import TenantSystems from "./pages/admin/TenantSystems";
 import PerformanceTest from "./pages/admin/PerformanceTest";
 import IntegrationRecommendations from "./pages/admin/IntegrationRecommendations";
 import IntegrationGraph from "./pages/admin/IntegrationGraph";
+import IntegrationsHub from "./pages/admin/integrations/IntegrationsHub";
 import { PageBuilder } from "./platform/admin/PageBuilder";
 import { DynamicPage } from "./pages/DynamicPage";
 import { AkseleraDemoPage } from "./tenants/akselera/pages/DemoPage";
@@ -213,7 +214,8 @@ const App = () => (
               <Route path="capabilities" element={<PermissionProtectedRoute resource="capability" action="admin"><CapabilityCatalog /></PermissionProtectedRoute>} />
               <Route path="capabilities/:capabilityId" element={<PermissionProtectedRoute resource="capability" action="admin"><CapabilityDetailsPage /></PermissionProtectedRoute>} />
               <Route path="database" element={<PermissionProtectedRoute resource="tenant" action="admin"><AdminSeed /></PermissionProtectedRoute>} />
-              <Route path="integrations" element={<PermissionProtectedRoute resource="integration" action="admin"><PlatformIntegrations /></PermissionProtectedRoute>} />
+              <Route path="integrations" element={<PermissionProtectedRoute resource="integration" action="admin"><IntegrationsHub /></PermissionProtectedRoute>} />
+              <Route path="integrations-old" element={<PermissionProtectedRoute resource="integration" action="admin"><PlatformIntegrations /></PermissionProtectedRoute>} />
               <Route path="ai-providers" element={<PermissionProtectedRoute resource="tenant" action="admin"><AIProviderSettings /></PermissionProtectedRoute>} />
               <Route path="security" element={<PermissionProtectedRoute resource="audit_log" action="admin"><AdminSettings /></PermissionProtectedRoute>} />
               <Route path="apps" element={<PermissionProtectedRoute resource="app_definition" action="admin"><AppCatalog /></PermissionProtectedRoute>} />
