@@ -3,7 +3,7 @@
  * View integration run logs and webhook callbacks
  */
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { format, parseISO } from "date-fns";
-import { RefreshCw, ArrowUpDown } from "lucide-react";
+import { RefreshCw, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface McpIntegrationRunsViewProps {
   tenantId: string;
@@ -32,6 +32,16 @@ export function McpIntegrationRunsView({ tenantId }: McpIntegrationRunsViewProps
   });
   const [sortColumn, setSortColumn] = useState<SortColumn>('time');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  
+  // Pagination
+  const [pageSize, setPageSize] = useState(25);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters, sortColumn, sortDirection]);
+
   const { data: runs, isLoading, refetch } = useQuery({
     queryKey: ["integration-runs", tenantId],
     queryFn: async () => {
@@ -122,6 +132,12 @@ export function McpIntegrationRunsView({ tenantId }: McpIntegrationRunsViewProps
     return filtered;
   }, [runs, filters, sortColumn, sortDirection]);
 
+  // Pagination
+  const totalPages = Math.ceil(filteredAndSortedRuns.length / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedRuns = filteredAndSortedRuns.slice(startIndex, endIndex);
+
   return (
     <>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -143,6 +159,59 @@ export function McpIntegrationRunsView({ tenantId }: McpIntegrationRunsViewProps
           <div className="text-center py-8 text-muted-foreground">No integration runs found</div>
         ) : (
           <div className="space-y-4">
+            {/* Pagination controls */}
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-muted-foreground">
+                Viser {startIndex + 1}-{Math.min(endIndex, filteredAndSortedRuns.length)} av {filteredAndSortedRuns.length} kjøringer
+              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm">Vis:</span>
+                <Button
+                  variant={pageSize === 10 ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => { setPageSize(10); setCurrentPage(1); }}
+                >
+                  10
+                </Button>
+                <Button
+                  variant={pageSize === 25 ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => { setPageSize(25); setCurrentPage(1); }}
+                >
+                  25
+                </Button>
+                <Button
+                  variant={pageSize === 50 ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => { setPageSize(50); setCurrentPage(1); }}
+                >
+                  50
+                </Button>
+              </div>
+              
+              <div className="ml-auto flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Forrige
+                </Button>
+                <span className="text-sm">Side {currentPage} av {totalPages || 1}</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages || totalPages === 0}
+                >
+                  Neste
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
             <Table>
               <TableHeader>
                 <TableRow className="border-b-2">
@@ -230,14 +299,14 @@ export function McpIntegrationRunsView({ tenantId }: McpIntegrationRunsViewProps
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredAndSortedRuns.length === 0 ? (
+                {paginatedRuns.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                       Ingen kjøringer matcher filtrene
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredAndSortedRuns.map((run: any) => (
+                  paginatedRuns.map((run: any) => (
                     <TableRow key={run.id}>
                       <TableCell className="font-mono text-xs">
                         {format(parseISO(run.started_at), "dd.MM.yyyy HH:mm:ss")}
@@ -252,9 +321,6 @@ export function McpIntegrationRunsView({ tenantId }: McpIntegrationRunsViewProps
                 )}
               </TableBody>
             </Table>
-            <div className="text-xs text-muted-foreground">
-              Viser {filteredAndSortedRuns.length} av {runs.length} kjøringer
-            </div>
           </div>
         )}
       </CardContent>
