@@ -25,6 +25,10 @@ import {
   Archive,
   Sparkles,
   Network,
+  FolderKanban,
+  Target,
+  Truck,
+  CheckSquare,
 } from "lucide-react";
 import { useUserPermissions } from "@/modules/core/permissions/hooks/useUserPermissions";
 import { adminNavigationMapping } from "@/config/adminNavigation";
@@ -48,10 +52,19 @@ const adminNavItems = [
     ],
   },
   {
+    title: "Business Management",
+    items: [
+      { title: "Projects", url: "/projects", icon: FolderKanban },
+      { title: "Opportunities", url: "/opportunities", icon: Target },
+      { title: "Suppliers", url: "/suppliers", icon: Truck },
+    ],
+  },
+  {
     title: "Content Management",
     items: [
       { title: "Industries", url: "/admin/industries", icon: Briefcase },
       { title: "App Catalog", url: "/admin/apps", icon: Package },
+      { title: "App Vendors", url: "/admin/app-vendors", icon: Briefcase },
       { title: "External Systems", url: "/admin/applications", icon: Server },
       { title: "Capabilities", url: "/admin/capabilities", icon: Package },
     ],
