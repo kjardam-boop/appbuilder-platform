@@ -152,6 +152,11 @@ export default function Jul25App() {
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
   
+  // Invitation handling
+  const [inviteToken, setInviteToken] = useState<string | null>(null);
+  const [invitationData, setInvitationData] = useState<any>(null);
+  const [isValidatingInvite, setIsValidatingInvite] = useState(false);
+  
   // Family onboarding form
   const [onboardingMode, setOnboardingMode] = useState<"join" | "create">("create");
   const [selectedFamilyId, setSelectedFamilyId] = useState("");
@@ -204,6 +209,105 @@ export default function Jul25App() {
     setChristmasWords(words);
   }, [doorContents, christmasWordsDb]);
   
+  // Handle invitation token from URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('invite');
+    
+    if (!token) return;
+    
+    setInviteToken(token);
+    setIsValidatingInvite(true);
+    
+    // Validate token
+    const validateInvite = async () => {
+      try {
+        const { data, error } = await supabase.rpc('validate_jul25_invitation_token', {
+          _token: token,
+          _identifier: '' // Will be checked against email/phone during signup
+        });
+        
+        if (error) {
+          console.error('[Jul25] Invitation validation error:', error);
+          toast.error("Invitasjonslinken er ugyldig eller utløpt");
+          setInviteToken(null);
+          return;
+        }
+        
+        const result = data as any;
+        
+        if (!result?.valid) {
+          toast.error("Invitasjonslinken er ugyldig eller utløpt");
+          setInviteToken(null);
+          return;
+        }
+        
+        // Store invitation data
+        setInvitationData(result);
+        
+        // Pre-fill signup email if available
+        if (result.email) {
+          setSignupEmail(result.email);
+        }
+        
+        // If user is NOT logged in, open registration dialog
+        if (!user) {
+          setShowLoginDialog(true);
+          toast.success("Velkommen! Registrer deg for å akseptere invitasjonen 🎄");
+        } else {
+          // If user IS logged in, accept invitation immediately
+          acceptInvitationForLoggedInUser(token, result);
+        }
+      } catch (err) {
+        console.error('[Jul25] Invitation validation error:', err);
+        toast.error("Kunne ikke validere invitasjon");
+        setInviteToken(null);
+      } finally {
+        setIsValidatingInvite(false);
+      }
+    };
+    
+    validateInvite();
+  }, [user]); // Re-run when user login state changes
+  
+  const acceptInvitationForLoggedInUser = async (token: string, invData: any) => {
+    try {
+      const identifier = invData.email || invData.phone;
+      
+      const { data, error } = await supabase.rpc('accept_jul25_invitation', {
+        _token: token,
+        _identifier: identifier
+      });
+      
+      if (error) throw error;
+      
+      const result = data as any;
+      
+      if (!result?.success) {
+        toast.error(`Kunne ikke godta invitasjon: ${result?.error || 'Ukjent feil'}`);
+        return;
+      }
+      
+      toast.success("Invitasjon akseptert! Velkommen til jul25 🎄");
+      
+      // Remove invite param from URL
+      const url = new URL(window.location.href);
+      url.searchParams.delete('invite');
+      window.history.replaceState({}, '', url.toString());
+      
+      setInviteToken(null);
+      setInvitationData(null);
+      
+      // Show family onboarding if user doesn't have a family yet
+      if (!userFamily) {
+        setShowFamilyOnboarding(true);
+      }
+    } catch (error: any) {
+      console.error('[Jul25] Accept invitation error:', error);
+      toast.error(error.message || "Kunne ikke godta invitasjon");
+    }
+  };
+  
   // Note: Family onboarding is no longer automatic - users must click "Register" button
   // to open the family registration dialog
   
@@ -228,6 +332,17 @@ export default function Jul25App() {
   
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // If there's an invitation, validate identifier match
+    if (inviteToken && invitationData) {
+      const invitedIdentifier = invitationData.email || invitationData.phone;
+      
+      if (invitationData.email && signupEmail !== invitationData.email) {
+        toast.error(`Du må registrere deg med den inviterte e-posten: ${invitationData.email}`);
+        return;
+      }
+    }
+    
     try {
       const redirectUrl = `${window.location.origin}/apps/jul25`;
       
@@ -246,7 +361,38 @@ export default function Jul25App() {
       
       if (data.user) {
         toast.success("Konto opprettet! 🎄");
+        
+        // If there's an invitation token, accept it
+        if (inviteToken && invitationData) {
+          const identifier = invitationData.email || invitationData.phone;
+          
+          const { data: acceptData, error: acceptError } = await supabase.rpc('accept_jul25_invitation', {
+            _token: inviteToken,
+            _identifier: identifier
+          });
+          
+          const result = acceptData as any;
+          
+          if (acceptError) {
+            console.error('[Jul25] Accept invitation error:', acceptError);
+            toast.error("Kontoen ble opprettet, men invitasjonen kunne ikke godtas");
+          } else if (!result?.success) {
+            toast.error(`Invitasjon kunne ikke godtas: ${result?.error || 'Ukjent feil'}`);
+          } else {
+            toast.success("Invitasjon akseptert! 🎄");
+            
+            // Remove invite param from URL
+            const url = new URL(window.location.href);
+            url.searchParams.delete('invite');
+            window.history.replaceState({}, '', url.toString());
+            
+            setInviteToken(null);
+            setInvitationData(null);
+          }
+        }
+        
         setShowLoginDialog(false);
+        
         // Open family onboarding immediately after signup
         setShowFamilyOnboarding(true);
       }
@@ -1260,9 +1406,14 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
         <Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Velkommen til Familiejul 2025</DialogTitle>
+              <DialogTitle>
+                {inviteToken ? "Velkommen til Familiejul 2025" : "Logg inn eller opprett konto"}
+              </DialogTitle>
               <DialogDescription>
-                Logg inn eller opprett konto for å melde deg på
+                {inviteToken 
+                  ? "Du har blitt invitert! Registrer deg for å akseptere invitasjonen."
+                  : "Logg inn eller opprett konto for å melde deg på"
+                }
               </DialogDescription>
             </DialogHeader>
             <Tabs defaultValue="login">
@@ -1317,7 +1468,15 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
                       value={signupEmail}
                       onChange={(e) => setSignupEmail(e.target.value)}
                       required
+                      disabled={!!(inviteToken && invitationData?.email)}
+                      placeholder={invitationData?.email ? "E-post fra invitasjon" : "din@epost.no"}
+                      className={invitationData?.email ? "bg-muted" : ""}
                     />
+                    {invitationData?.email && (
+                      <p className="text-xs text-muted-foreground">
+                        ✉️ Du må registrere deg med denne e-posten
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-password">Passord</Label>
