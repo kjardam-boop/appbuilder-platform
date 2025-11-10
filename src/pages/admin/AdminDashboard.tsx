@@ -21,7 +21,7 @@ export default function AdminDashboard() {
         supabase.from('profiles').select('id', { count: 'exact', head: true }),
         supabase.from('companies').select('id', { count: 'exact', head: true }),
         supabase.from('projects').select('id', { count: 'exact', head: true }),
-        supabase.from('app_products').select('id', { count: 'exact', head: true }),
+        (supabase as any).from('external_systems').select('id', { count: 'exact', head: true }),
       ]);
 
       return {

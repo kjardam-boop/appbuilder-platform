@@ -32,8 +32,23 @@ export {
 export type { AppManifest, Migration } from "./types/manifest.types";
 export { appManifestSchema } from "./types/manifest.types";
 
-// Application Types
+// Application Types (New names)
 export type {
+  ExternalSystemVendor,
+  ExternalSystem,
+  ExternalSystemSKU,
+  ExternalSystemIntegration,
+  CompanyExternalSystem,
+  ProjectExternalSystem,
+  PartnerSystemCertification,
+  ExternalSystemVendorInput,
+  ExternalSystemInput,
+  ExternalSystemSKUInput,
+  ExternalSystemIntegrationInput,
+  CompanyExternalSystemInput,
+  ProjectExternalSystemInput,
+  PartnerSystemCertificationInput,
+  // Backward compatibility aliases (deprecated)
   AppVendor,
   AppProduct,
   SKU,
@@ -58,11 +73,18 @@ export type {
 } from "./types/application.types";
 
 export type {
+  // New type names
+  ExternalSystemERPData,
+  ExternalSystemERPDataInput,
+  // Backward compatibility aliases
   ERPExtension,
   ERPExtensionInput,
 } from "./types/erpExtension.types";
 
 export {
+  // New schema name
+  externalSystemERPDataSchema,
+  // Backward compatibility alias
   erpExtensionSchema,
   ERP_MODULES,
   ERP_LOCALIZATIONS,
@@ -70,6 +92,15 @@ export {
 } from "./types/erpExtension.types";
 
 export {
+  // New schema names
+  externalSystemVendorSchema,
+  externalSystemSchema,
+  externalSystemSKUSchema,
+  externalSystemIntegrationSchema,
+  companyExternalSystemSchema,
+  projectExternalSystemSchema,
+  partnerSystemCertificationSchema,
+  // Backward compatibility aliases
   appVendorSchema,
   appProductSchema,
   skuSchema,

@@ -189,7 +189,7 @@ export class McpResourceService {
       case 'task':
         return 'tasks';
       case 'external_system':
-        return 'app_products';
+        return 'external_systems';
       case 'application':
         return 'applications';
       default:

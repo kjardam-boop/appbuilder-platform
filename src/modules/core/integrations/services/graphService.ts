@@ -36,7 +36,7 @@ export class IntegrationGraphService {
         app_product_id,
         mcp_enabled,
         configuration_state,
-        product:app_products(id, name, slug, vendor:app_vendors(name, slug))
+        product:external_systems(id, name, slug, vendor:external_system_vendors(name, slug))
       `)
       .eq("tenant_id", tenantId);
 
@@ -54,7 +54,7 @@ export class IntegrationGraphService {
         .from("integration_recommendation")
         .select(`
           *,
-          product:app_products(id, name, slug)
+          product:external_systems(id, name, slug)
         `)
         .eq("tenant_id", tenantId)
         .gte("score", 60)

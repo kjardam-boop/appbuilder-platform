@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { CompanyApp, CompanyAppInput } from "../types/application.types";
+import type { CompanyExternalSystem, CompanyExternalSystemInput } from "../types/application.types";
 import { toast } from "sonner";
 
 export function useCompanyApps(companyId: string) {
@@ -18,7 +18,7 @@ export function useCompanyApps(companyId: string) {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data as CompanyApp[];
+      return data as CompanyExternalSystem[];
     },
     enabled: !!companyId,
   });
@@ -28,7 +28,7 @@ export function useCreateCompanyApp() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: CompanyAppInput) => {
+    mutationFn: async (input: CompanyExternalSystemInput) => {
       const payload = {
         company_id: input.company_id!,
         external_system_id: input.external_system_id || input.app_product_id!,
@@ -45,7 +45,7 @@ export function useCreateCompanyApp() {
         .single();
 
       if (error) throw error;
-      return data as any as CompanyApp;
+      return data as any as CompanyExternalSystem;
     },
     onSuccess: (_, input) => {
       queryClient.invalidateQueries({ queryKey: ["company-apps", input.company_id] });

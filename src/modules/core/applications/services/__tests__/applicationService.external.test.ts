@@ -37,7 +37,7 @@ describe('ApplicationService - External Systems', () => {
       const result = await ApplicationService.getByCapability('accounting');
       
       expect(result).toEqual(mockProducts);
-      expect(supabase.from).toHaveBeenCalledWith('app_products');
+      expect(supabase.from).toHaveBeenCalledWith('external_systems');
     });
 
     it('should filter by Active status', async () => {

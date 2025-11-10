@@ -10,7 +10,7 @@ export class TenantExternalSystemService {
       .from("tenant_external_systems" as any)
       .select(`
         *,
-        app_product:app_products(id, name, slug, vendor:app_vendors(name))
+        external_system:external_systems(id, name, slug, vendor:external_system_vendors(name))
       `)
       .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false });
@@ -39,7 +39,7 @@ export class TenantExternalSystemService {
   static async create(tenantId: string, input: TenantExternalSystemInput): Promise<TenantExternalSystem> {
     const { data, error } = await supabase
       .from("tenant_external_systems" as any)
-      .insert({ ...input, tenant_id: tenantId } as any)
+      .insert({ ...input, tenant_id: tenantId, external_system_id: input.app_product_id } as any)
       .select()
       .single();
 

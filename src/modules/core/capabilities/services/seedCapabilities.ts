@@ -427,7 +427,7 @@ const initialCapabilities: CapabilityInput[] = [
       "src/pages/ApplicationsPage.tsx",
     ],
     backend_files: [],
-    domain_tables: ["app_vendors", "app_products", "app_skus", "company_apps", "app_integrations"],
+    domain_tables: ["external_system_vendors", "external_systems", "external_system_skus", "company_external_systems", "external_system_integrations"],
     hooks: ["useApplications", "useCompanyApps", "useSKUs"],
     database_migrations: [],
   },

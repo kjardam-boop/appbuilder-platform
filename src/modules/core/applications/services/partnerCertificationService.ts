@@ -10,9 +10,9 @@ export class PartnerCertificationService {
       .select(`
         *,
         partner:companies!partner_company_id(id, name, org_number),
-        app_product:app_products(*)
+        external_system:external_systems(*)
       `)
-      .eq("app_product_id", appProductId)
+      .eq("external_system_id", appProductId)
       .order("certification_date", { ascending: false });
 
     if (error) throw error;
@@ -25,7 +25,7 @@ export class PartnerCertificationService {
       .select(`
         *,
         partner:companies!partner_company_id(id, name, org_number),
-        app_product:app_products(*)
+        external_system:external_systems(*)
       `)
       .eq("partner_company_id", partnerCompanyId)
       .order("certification_date", { ascending: false });
@@ -40,9 +40,9 @@ export class PartnerCertificationService {
       .select(`
         *,
         partner:companies!partner_company_id(id, name, org_number),
-        app_product:app_products(*)
+        external_system:external_systems(*)
       `)
-      .eq("app_product_id", appProductId)
+      .eq("external_system_id", appProductId)
       .order("certification_date", { ascending: false });
 
     if (error) throw error;
@@ -55,7 +55,7 @@ export class PartnerCertificationService {
       .from("partner_certifications")
       .select("id")
       .eq("partner_company_id", input.partner_company_id)
-      .eq("app_product_id", input.app_product_id)
+      .eq("external_system_id", input.external_system_id)
       .single();
 
     if (existing) {
@@ -68,7 +68,7 @@ export class PartnerCertificationService {
       .select(`
         *,
         partner:companies!partner_company_id(id, name, org_number),
-        app_product:app_products(*)
+        external_system:external_systems(*)
       `)
       .single();
 

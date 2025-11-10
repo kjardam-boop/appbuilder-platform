@@ -160,7 +160,7 @@ export default function AdminSeed() {
                 Seed Applications
               </CardTitle>
               <CardDescription>
-                Populate app_vendors, app_products, and SKUs with standard ERP/CRM/EmailSuite systems
+                Populate external_system_vendors, external_systems, and SKUs with standard ERP/CRM/EmailSuite systems
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
