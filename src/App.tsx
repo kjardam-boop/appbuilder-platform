@@ -47,6 +47,7 @@ import CompanyDetails from "./pages/CompanyDetails";
 import SavedCompanies from "./pages/SavedCompanies";
 import CustomersPage from "./pages/CustomersPage";
 import ImplementationPartnersPage from "./pages/ImplementationPartnersPage";
+import SuppliersPage from "./pages/SuppliersPage";
 import ProjectsHub from "./pages/ProjectsHub";
 import ProjectDetails from "./pages/ProjectDetails";
 import OpportunitiesPage from "./pages/OpportunitiesPage";
@@ -240,6 +241,7 @@ const App = () => (
             <Route path="/saved-companies" element={<PlatformProtectedRoute><SavedCompanies /></PlatformProtectedRoute>} />
             <Route path="/customers" element={<PlatformProtectedRoute><CustomersPage /></PlatformProtectedRoute>} />
             <Route path="/implementation-partners" element={<PlatformProtectedRoute><ImplementationPartnersPage /></PlatformProtectedRoute>} />
+            <Route path="/suppliers" element={<PlatformProtectedRoute><SuppliersPage /></PlatformProtectedRoute>} />
             
             {/* Projects */}
             <Route path="/projects" element={<PlatformProtectedRoute><ProjectsHub /></PlatformProtectedRoute>} />

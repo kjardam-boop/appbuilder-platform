@@ -31,6 +31,9 @@ export const adminNavigationMapping: Record<string, AdminNavigationRequirement> 
   // Business Management (existing routes outside /admin)
   '/projects': { resource: 'project', requiredAction: 'list' },
   '/opportunities': { resource: 'opportunity', requiredAction: 'list' },
+  '/customers': { resource: 'company', requiredAction: 'list' },
+  '/implementation-partners': { resource: 'company', requiredAction: 'list' },
+  '/suppliers': { resource: 'company', requiredAction: 'list' },
   
   // Content Management
   '/admin/industries': { resource: 'industry', requiredAction: 'admin' },
