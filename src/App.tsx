@@ -84,15 +84,54 @@ import LandingPage from "./pages/LandingPage";
 import PlatformInvitationsPage from "./pages/admin/PlatformInvitationsPage";
 import { PlatformProtectedRoute } from "./components/auth/PlatformProtectedRoute";
 import { useAuth } from "@/modules/core/user/hooks/useAuth";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import { Shield } from "lucide-react";
 
 const queryClient = new QueryClient();
 
-function AdminLayout({ children }: { children: React.ReactNode }) {
-  const { isPlatformAdmin } = usePlatformAdmin();
+// Global layout that shows admin sidebar for platform admins on all pages
+function GlobalLayout({ children }: { children: React.ReactNode }) {
+  const { isPlatformAdmin, isLoading } = usePlatformAdmin();
+  const { user } = useAuth();
+  
+  if (isLoading) {
+    return <div className="flex items-center justify-center min-h-screen">
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+    </div>;
+  }
+
+  if (!isPlatformAdmin) {
+    // Regular users see content without admin sidebar
+    return <>{children}</>;
+  }
+
   return (
     <div className="flex w-full min-h-screen">
-      {isPlatformAdmin && <AppAdminSidebar />}
-      <div className="flex-1">{children}</div>
+      <AppAdminSidebar />
+      <div className="flex-1 flex flex-col">
+        {/* Sticky header with sidebar toggle */}
+        <div className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+          <div className="flex h-14 items-center px-4">
+            <SidebarTrigger className="-ml-1" />
+            <div className="flex-1 flex items-center justify-end gap-3 px-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Shield className="h-4 w-4" />
+                <span>Platform Admin</span>
+              </div>
+              {user && (
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="font-medium">{user.user_metadata?.full_name || user.email?.split('@')[0]}</span>
+                  <span className="text-muted-foreground">•</span>
+                  <span className="text-muted-foreground">{user.email}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="flex-1">
+          {children}
+        </div>
+      </div>
     </div>
   );
 }
@@ -117,7 +156,8 @@ const App = () => (
         <Sonner />
         <SidebarProvider defaultOpen>
           <BrowserRouter>
-            <Routes>
+            <GlobalLayout>
+              <Routes>
             <Route path="/" element={<RootRoute />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<PlatformProtectedRoute><Dashboard /></PlatformProtectedRoute>} />
@@ -128,8 +168,8 @@ const App = () => (
             <Route path="/onboarding/project" element={<PlatformProtectedRoute><ProjectCreation /></PlatformProtectedRoute>} />
             <Route path="/modules" element={<PlatformProtectedRoute><Modules /></PlatformProtectedRoute>} />
             
-            {/* Admin Panel with sidebar */}
-            <Route path="/admin" element={<PlatformProtectedRoute><AdminLayout><Admin /></AdminLayout></PlatformProtectedRoute>}>
+            {/* Admin Panel routes */}
+            <Route path="/admin" element={<PlatformProtectedRoute><Admin /></PlatformProtectedRoute>}>
               <Route index element={<AdminDashboard />} />
               <Route path="invitations" element={<PlatformInvitationsPage />} />
               <Route path="tenants" element={<Tenants />} />
@@ -171,10 +211,10 @@ const App = () => (
               <Route path="integration-graph" element={<IntegrationGraph />} />
             </Route>
             
-            {/* Legacy admin routes - redirect to new structure */}
-            <Route path="/admin/bootstrap" element={<PlatformProtectedRoute><AdminLayout><AdminBootstrap /></AdminLayout></PlatformProtectedRoute>} />
-            <Route path="/admin/questions" element={<PlatformProtectedRoute><AdminLayout><AdminQuestions /></AdminLayout></PlatformProtectedRoute>} />
-            <Route path="/admin/app-vendors" element={<PlatformProtectedRoute><AdminLayout><AppVendorAdmin /></AdminLayout></PlatformProtectedRoute>} />
+            {/* Legacy admin routes */}
+            <Route path="/admin/bootstrap" element={<PlatformProtectedRoute><AdminBootstrap /></PlatformProtectedRoute>} />
+            <Route path="/admin/questions" element={<PlatformProtectedRoute><AdminQuestions /></PlatformProtectedRoute>} />
+            <Route path="/admin/app-vendors" element={<PlatformProtectedRoute><AppVendorAdmin /></PlatformProtectedRoute>} />
             <Route path="/tenants" element={<PlatformProtectedRoute><Tenants /></PlatformProtectedRoute>} />
             
             {/* Applications */}
@@ -216,15 +256,16 @@ const App = () => (
             <Route path="/akselera/demo" element={<AkseleraDemoPage />} />
             
             {/* Tenant branding admin */}
-            <Route path="/admin/tenants/:slug/branding" element={<AdminLayout><TenantBranding /></AdminLayout>} />
+            <Route path="/admin/tenants/:slug/branding" element={<TenantBranding />} />
             
             {/* Dynamic Pages */}
             <Route path="/page/:pageKey" element={<DynamicPage />} />
-            <Route path="/admin/page-builder" element={<AdminLayout><PageBuilder /></AdminLayout>} />
+            <Route path="/admin/page-builder" element={<PageBuilder />} />
             
             {/* Catch-all 404 route - MUST BE LAST */}
             <Route path="*" element={<NotFound />} />
             </Routes>
+            </GlobalLayout>
           </BrowserRouter>
         </SidebarProvider>
       </TooltipProvider>

@@ -1,6 +1,5 @@
 import { Outlet } from "react-router-dom";
 import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
-import Header from "@/components/Dashboard/Header";
 import { useAuth } from "@/modules/core/user/hooks/useAuth";
 import { Shield } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -39,10 +38,6 @@ export default function Admin() {
 
   return (
     <div className="min-h-screen">
-      <Header 
-        userName={user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'}
-        userEmail={user?.email}
-      />
       <div className="container mx-auto p-6 space-y-6">
         <Outlet />
       </div>
