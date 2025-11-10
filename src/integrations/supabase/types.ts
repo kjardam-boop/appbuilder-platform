@@ -323,393 +323,6 @@ export type Database = {
         }
         Relationships: []
       }
-      app_integration_patterns: {
-        Row: {
-          category_id: string | null
-          created_at: string
-          description: string | null
-          difficulty_level: string | null
-          documentation_url: string | null
-          estimated_setup_minutes: number | null
-          id: string
-          is_featured: boolean | null
-          key: string
-          name: string
-          pattern_type: string
-          required_capabilities: string[] | null
-          source_product_id: string | null
-          target_product_id: string | null
-          trigger_event: string | null
-          updated_at: string
-          usage_count: number | null
-          workflow_template: Json | null
-        }
-        Insert: {
-          category_id?: string | null
-          created_at?: string
-          description?: string | null
-          difficulty_level?: string | null
-          documentation_url?: string | null
-          estimated_setup_minutes?: number | null
-          id?: string
-          is_featured?: boolean | null
-          key: string
-          name: string
-          pattern_type: string
-          required_capabilities?: string[] | null
-          source_product_id?: string | null
-          target_product_id?: string | null
-          trigger_event?: string | null
-          updated_at?: string
-          usage_count?: number | null
-          workflow_template?: Json | null
-        }
-        Update: {
-          category_id?: string | null
-          created_at?: string
-          description?: string | null
-          difficulty_level?: string | null
-          documentation_url?: string | null
-          estimated_setup_minutes?: number | null
-          id?: string
-          is_featured?: boolean | null
-          key?: string
-          name?: string
-          pattern_type?: string
-          required_capabilities?: string[] | null
-          source_product_id?: string | null
-          target_product_id?: string | null
-          trigger_event?: string | null
-          updated_at?: string
-          usage_count?: number | null
-          workflow_template?: Json | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "app_integration_patterns_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "app_categories"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "app_integration_patterns_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "app_categories_tree"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "app_integration_patterns_source_product_id_fkey"
-            columns: ["source_product_id"]
-            isOneToOne: false
-            referencedRelation: "app_products"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "app_integration_patterns_target_product_id_fkey"
-            columns: ["target_product_id"]
-            isOneToOne: false
-            referencedRelation: "app_products"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      app_integrations: {
-        Row: {
-          app_product_id: string
-          created_at: string
-          id: string
-          name: string
-          notes: string | null
-          spec_url: string | null
-          type: string
-          updated_at: string
-        }
-        Insert: {
-          app_product_id: string
-          created_at?: string
-          id?: string
-          name: string
-          notes?: string | null
-          spec_url?: string | null
-          type: string
-          updated_at?: string
-        }
-        Update: {
-          app_product_id?: string
-          created_at?: string
-          id?: string
-          name?: string
-          notes?: string | null
-          spec_url?: string | null
-          type?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "app_integrations_app_product_id_fkey"
-            columns: ["app_product_id"]
-            isOneToOne: false
-            referencedRelation: "app_products"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      app_product_mcp_actions: {
-        Row: {
-          app_product_id: string
-          created_at: string
-          documentation_url: string | null
-          example_payload: Json | null
-          id: string
-          is_active: boolean | null
-          mcp_action_key: string
-          operation: string
-          required_scopes: string[] | null
-          requires_auth: boolean | null
-          resource_type: string
-          updated_at: string
-        }
-        Insert: {
-          app_product_id: string
-          created_at?: string
-          documentation_url?: string | null
-          example_payload?: Json | null
-          id?: string
-          is_active?: boolean | null
-          mcp_action_key: string
-          operation: string
-          required_scopes?: string[] | null
-          requires_auth?: boolean | null
-          resource_type: string
-          updated_at?: string
-        }
-        Update: {
-          app_product_id?: string
-          created_at?: string
-          documentation_url?: string | null
-          example_payload?: Json | null
-          id?: string
-          is_active?: boolean | null
-          mcp_action_key?: string
-          operation?: string
-          required_scopes?: string[] | null
-          requires_auth?: boolean | null
-          resource_type?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "app_product_mcp_actions_app_product_id_fkey"
-            columns: ["app_product_id"]
-            isOneToOne: false
-            referencedRelation: "app_products"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      app_products: {
-        Row: {
-          ai_plugins: boolean | null
-          api_docs_url: string | null
-          api_keys: boolean | null
-          app_types: string[] | null
-          category_id: string | null
-          compliances: string[] | null
-          created_at: string
-          deployment_models: string[]
-          description: string | null
-          dual_region: boolean | null
-          email_parse: boolean | null
-          eu_data_residency: boolean | null
-          event_subscriptions: boolean | null
-          file_export: boolean | null
-          gdpr_statement_url: string | null
-          graphql: boolean | null
-          id: string
-          ip_allowlist: boolean | null
-          localizations: string[] | null
-          market_segments: string[] | null
-          mcp_connector: boolean | null
-          modules_supported: string[] | null
-          n8n_node: boolean | null
-          name: string
-          oauth2: boolean | null
-          pipedream_support: boolean | null
-          pricing_model: string | null
-          privacy_risk_level: string | null
-          rate_limits: Json | null
-          rest_api: boolean | null
-          scim: boolean | null
-          short_name: string | null
-          slug: string
-          sso: boolean | null
-          status: string
-          target_industries: string[] | null
-          updated_at: string
-          vendor_id: string
-          webhooks: boolean | null
-          website: string | null
-          zapier_app: boolean | null
-        }
-        Insert: {
-          ai_plugins?: boolean | null
-          api_docs_url?: string | null
-          api_keys?: boolean | null
-          app_types?: string[] | null
-          category_id?: string | null
-          compliances?: string[] | null
-          created_at?: string
-          deployment_models?: string[]
-          description?: string | null
-          dual_region?: boolean | null
-          email_parse?: boolean | null
-          eu_data_residency?: boolean | null
-          event_subscriptions?: boolean | null
-          file_export?: boolean | null
-          gdpr_statement_url?: string | null
-          graphql?: boolean | null
-          id?: string
-          ip_allowlist?: boolean | null
-          localizations?: string[] | null
-          market_segments?: string[] | null
-          mcp_connector?: boolean | null
-          modules_supported?: string[] | null
-          n8n_node?: boolean | null
-          name: string
-          oauth2?: boolean | null
-          pipedream_support?: boolean | null
-          pricing_model?: string | null
-          privacy_risk_level?: string | null
-          rate_limits?: Json | null
-          rest_api?: boolean | null
-          scim?: boolean | null
-          short_name?: string | null
-          slug: string
-          sso?: boolean | null
-          status?: string
-          target_industries?: string[] | null
-          updated_at?: string
-          vendor_id: string
-          webhooks?: boolean | null
-          website?: string | null
-          zapier_app?: boolean | null
-        }
-        Update: {
-          ai_plugins?: boolean | null
-          api_docs_url?: string | null
-          api_keys?: boolean | null
-          app_types?: string[] | null
-          category_id?: string | null
-          compliances?: string[] | null
-          created_at?: string
-          deployment_models?: string[]
-          description?: string | null
-          dual_region?: boolean | null
-          email_parse?: boolean | null
-          eu_data_residency?: boolean | null
-          event_subscriptions?: boolean | null
-          file_export?: boolean | null
-          gdpr_statement_url?: string | null
-          graphql?: boolean | null
-          id?: string
-          ip_allowlist?: boolean | null
-          localizations?: string[] | null
-          market_segments?: string[] | null
-          mcp_connector?: boolean | null
-          modules_supported?: string[] | null
-          n8n_node?: boolean | null
-          name?: string
-          oauth2?: boolean | null
-          pipedream_support?: boolean | null
-          pricing_model?: string | null
-          privacy_risk_level?: string | null
-          rate_limits?: Json | null
-          rest_api?: boolean | null
-          scim?: boolean | null
-          short_name?: string | null
-          slug?: string
-          sso?: boolean | null
-          status?: string
-          target_industries?: string[] | null
-          updated_at?: string
-          vendor_id?: string
-          webhooks?: boolean | null
-          website?: string | null
-          zapier_app?: boolean | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "app_products_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "app_categories"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "app_products_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "app_categories_tree"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "app_products_vendor_id_fkey"
-            columns: ["vendor_id"]
-            isOneToOne: false
-            referencedRelation: "app_vendors"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      app_vendors: {
-        Row: {
-          company_id: string
-          contact_url: string | null
-          country: string | null
-          created_at: string
-          description: string | null
-          id: string
-          name: string
-          org_number: string | null
-          updated_at: string
-          website: string | null
-        }
-        Insert: {
-          company_id: string
-          contact_url?: string | null
-          country?: string | null
-          created_at?: string
-          description?: string | null
-          id?: string
-          name: string
-          org_number?: string | null
-          updated_at?: string
-          website?: string | null
-        }
-        Update: {
-          company_id?: string
-          contact_url?: string | null
-          country?: string | null
-          created_at?: string
-          description?: string | null
-          id?: string
-          name?: string
-          org_number?: string | null
-          updated_at?: string
-          website?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "app_vendors_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: true
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       app_versions: {
         Row: {
           app_definition_id: string
@@ -1106,12 +719,12 @@ export type Database = {
         }
         Relationships: []
       }
-      company_apps: {
+      company_external_systems: {
         Row: {
-          app_product_id: string
           company_id: string
           created_at: string
           environment: string | null
+          external_system_id: string
           id: string
           notes: string | null
           sku_id: string | null
@@ -1119,10 +732,10 @@ export type Database = {
           version: string | null
         }
         Insert: {
-          app_product_id: string
           company_id: string
           created_at?: string
           environment?: string | null
+          external_system_id: string
           id?: string
           notes?: string | null
           sku_id?: string | null
@@ -1130,10 +743,10 @@ export type Database = {
           version?: string | null
         }
         Update: {
-          app_product_id?: string
           company_id?: string
           created_at?: string
           environment?: string | null
+          external_system_id?: string
           id?: string
           notes?: string | null
           sku_id?: string | null
@@ -1143,9 +756,9 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "company_apps_app_product_id_fkey"
-            columns: ["app_product_id"]
+            columns: ["external_system_id"]
             isOneToOne: false
-            referencedRelation: "app_products"
+            referencedRelation: "external_systems"
             referencedColumns: ["id"]
           },
           {
@@ -1427,9 +1040,9 @@ export type Database = {
       }
       erp_extensions: {
         Row: {
-          app_product_id: string
           certification_level: string | null
           created_at: string
+          external_system_id: string
           id: string
           implementation_time_weeks: number | null
           industries_served: string[]
@@ -1440,9 +1053,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          app_product_id: string
           certification_level?: string | null
           created_at?: string
+          external_system_id: string
           id?: string
           implementation_time_weeks?: number | null
           industries_served?: string[]
@@ -1453,9 +1066,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          app_product_id?: string
           certification_level?: string | null
           created_at?: string
+          external_system_id?: string
           id?: string
           implementation_time_weeks?: number | null
           industries_served?: string[]
@@ -1468,9 +1081,9 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "erp_extensions_app_product_id_fkey"
-            columns: ["app_product_id"]
+            columns: ["external_system_id"]
             isOneToOne: true
-            referencedRelation: "app_products"
+            referencedRelation: "external_systems"
             referencedColumns: ["id"]
           },
         ]
@@ -1519,6 +1132,393 @@ export type Database = {
             columns: ["question_id"]
             isOneToOne: false
             referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      external_system_integration_patterns: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          description: string | null
+          difficulty_level: string | null
+          documentation_url: string | null
+          estimated_setup_minutes: number | null
+          id: string
+          is_featured: boolean | null
+          key: string
+          name: string
+          pattern_type: string
+          required_capabilities: string[] | null
+          source_system_id: string | null
+          target_system_id: string | null
+          trigger_event: string | null
+          updated_at: string
+          usage_count: number | null
+          workflow_template: Json | null
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          difficulty_level?: string | null
+          documentation_url?: string | null
+          estimated_setup_minutes?: number | null
+          id?: string
+          is_featured?: boolean | null
+          key: string
+          name: string
+          pattern_type: string
+          required_capabilities?: string[] | null
+          source_system_id?: string | null
+          target_system_id?: string | null
+          trigger_event?: string | null
+          updated_at?: string
+          usage_count?: number | null
+          workflow_template?: Json | null
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          difficulty_level?: string | null
+          documentation_url?: string | null
+          estimated_setup_minutes?: number | null
+          id?: string
+          is_featured?: boolean | null
+          key?: string
+          name?: string
+          pattern_type?: string
+          required_capabilities?: string[] | null
+          source_system_id?: string | null
+          target_system_id?: string | null
+          trigger_event?: string | null
+          updated_at?: string
+          usage_count?: number | null
+          workflow_template?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_integration_patterns_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "app_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "app_integration_patterns_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "app_categories_tree"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "app_integration_patterns_source_product_id_fkey"
+            columns: ["source_system_id"]
+            isOneToOne: false
+            referencedRelation: "external_systems"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "app_integration_patterns_target_product_id_fkey"
+            columns: ["target_system_id"]
+            isOneToOne: false
+            referencedRelation: "external_systems"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      external_system_integrations: {
+        Row: {
+          created_at: string
+          external_system_id: string
+          id: string
+          name: string
+          notes: string | null
+          spec_url: string | null
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          external_system_id: string
+          id?: string
+          name: string
+          notes?: string | null
+          spec_url?: string | null
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          external_system_id?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          spec_url?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_integrations_app_product_id_fkey"
+            columns: ["external_system_id"]
+            isOneToOne: false
+            referencedRelation: "external_systems"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      external_system_mcp_actions: {
+        Row: {
+          created_at: string
+          documentation_url: string | null
+          example_payload: Json | null
+          external_system_id: string
+          id: string
+          is_active: boolean | null
+          mcp_action_key: string
+          operation: string
+          required_scopes: string[] | null
+          requires_auth: boolean | null
+          resource_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          documentation_url?: string | null
+          example_payload?: Json | null
+          external_system_id: string
+          id?: string
+          is_active?: boolean | null
+          mcp_action_key: string
+          operation: string
+          required_scopes?: string[] | null
+          requires_auth?: boolean | null
+          resource_type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          documentation_url?: string | null
+          example_payload?: Json | null
+          external_system_id?: string
+          id?: string
+          is_active?: boolean | null
+          mcp_action_key?: string
+          operation?: string
+          required_scopes?: string[] | null
+          requires_auth?: boolean | null
+          resource_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_product_mcp_actions_app_product_id_fkey"
+            columns: ["external_system_id"]
+            isOneToOne: false
+            referencedRelation: "external_systems"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      external_system_vendors: {
+        Row: {
+          company_id: string
+          contact_url: string | null
+          country: string | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          org_number: string | null
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          company_id: string
+          contact_url?: string | null
+          country?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          org_number?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          company_id?: string
+          contact_url?: string | null
+          country?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          org_number?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_vendors_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      external_systems: {
+        Row: {
+          ai_plugins: boolean | null
+          api_docs_url: string | null
+          api_keys: boolean | null
+          app_types: string[] | null
+          category_id: string | null
+          compliances: string[] | null
+          created_at: string
+          deployment_models: string[]
+          description: string | null
+          dual_region: boolean | null
+          email_parse: boolean | null
+          eu_data_residency: boolean | null
+          event_subscriptions: boolean | null
+          file_export: boolean | null
+          gdpr_statement_url: string | null
+          graphql: boolean | null
+          id: string
+          ip_allowlist: boolean | null
+          localizations: string[] | null
+          market_segments: string[] | null
+          mcp_connector: boolean | null
+          modules_supported: string[] | null
+          n8n_node: boolean | null
+          name: string
+          oauth2: boolean | null
+          pipedream_support: boolean | null
+          pricing_model: string | null
+          privacy_risk_level: string | null
+          rate_limits: Json | null
+          rest_api: boolean | null
+          scim: boolean | null
+          short_name: string | null
+          slug: string
+          sso: boolean | null
+          status: string
+          target_industries: string[] | null
+          updated_at: string
+          vendor_id: string
+          webhooks: boolean | null
+          website: string | null
+          zapier_app: boolean | null
+        }
+        Insert: {
+          ai_plugins?: boolean | null
+          api_docs_url?: string | null
+          api_keys?: boolean | null
+          app_types?: string[] | null
+          category_id?: string | null
+          compliances?: string[] | null
+          created_at?: string
+          deployment_models?: string[]
+          description?: string | null
+          dual_region?: boolean | null
+          email_parse?: boolean | null
+          eu_data_residency?: boolean | null
+          event_subscriptions?: boolean | null
+          file_export?: boolean | null
+          gdpr_statement_url?: string | null
+          graphql?: boolean | null
+          id?: string
+          ip_allowlist?: boolean | null
+          localizations?: string[] | null
+          market_segments?: string[] | null
+          mcp_connector?: boolean | null
+          modules_supported?: string[] | null
+          n8n_node?: boolean | null
+          name: string
+          oauth2?: boolean | null
+          pipedream_support?: boolean | null
+          pricing_model?: string | null
+          privacy_risk_level?: string | null
+          rate_limits?: Json | null
+          rest_api?: boolean | null
+          scim?: boolean | null
+          short_name?: string | null
+          slug: string
+          sso?: boolean | null
+          status?: string
+          target_industries?: string[] | null
+          updated_at?: string
+          vendor_id: string
+          webhooks?: boolean | null
+          website?: string | null
+          zapier_app?: boolean | null
+        }
+        Update: {
+          ai_plugins?: boolean | null
+          api_docs_url?: string | null
+          api_keys?: boolean | null
+          app_types?: string[] | null
+          category_id?: string | null
+          compliances?: string[] | null
+          created_at?: string
+          deployment_models?: string[]
+          description?: string | null
+          dual_region?: boolean | null
+          email_parse?: boolean | null
+          eu_data_residency?: boolean | null
+          event_subscriptions?: boolean | null
+          file_export?: boolean | null
+          gdpr_statement_url?: string | null
+          graphql?: boolean | null
+          id?: string
+          ip_allowlist?: boolean | null
+          localizations?: string[] | null
+          market_segments?: string[] | null
+          mcp_connector?: boolean | null
+          modules_supported?: string[] | null
+          n8n_node?: boolean | null
+          name?: string
+          oauth2?: boolean | null
+          pipedream_support?: boolean | null
+          pricing_model?: string | null
+          privacy_risk_level?: string | null
+          rate_limits?: Json | null
+          rest_api?: boolean | null
+          scim?: boolean | null
+          short_name?: string | null
+          slug?: string
+          sso?: boolean | null
+          status?: string
+          target_industries?: string[] | null
+          updated_at?: string
+          vendor_id?: string
+          webhooks?: boolean | null
+          website?: string | null
+          zapier_app?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "app_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "app_products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "app_categories_tree"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "app_products_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "external_system_vendors"
             referencedColumns: ["id"]
           },
         ]
@@ -2755,7 +2755,7 @@ export type Database = {
             foreignKeyName: "partner_certifications_app_product_id_fkey"
             columns: ["app_product_id"]
             isOneToOne: false
-            referencedRelation: "app_products"
+            referencedRelation: "external_systems"
             referencedColumns: ["id"]
           },
           {
@@ -2952,7 +2952,7 @@ export type Database = {
             foreignKeyName: "project_app_products_app_product_id_fkey"
             columns: ["app_product_id"]
             isOneToOne: false
-            referencedRelation: "app_products"
+            referencedRelation: "external_systems"
             referencedColumns: ["id"]
           },
           {
@@ -3204,7 +3204,7 @@ export type Database = {
             foreignKeyName: "skus_app_product_id_fkey"
             columns: ["app_product_id"]
             isOneToOne: false
-            referencedRelation: "app_products"
+            referencedRelation: "external_systems"
             referencedColumns: ["id"]
           },
         ]
@@ -3839,14 +3839,14 @@ export type Database = {
             foreignKeyName: "vendor_partnerships_partner_vendor_id_fkey"
             columns: ["partner_vendor_id"]
             isOneToOne: false
-            referencedRelation: "app_vendors"
+            referencedRelation: "external_system_vendors"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "vendor_partnerships_vendor_id_fkey"
             columns: ["vendor_id"]
             isOneToOne: false
-            referencedRelation: "app_vendors"
+            referencedRelation: "external_system_vendors"
             referencedColumns: ["id"]
           },
         ]
