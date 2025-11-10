@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/modules/core/user/hooks/useAuth";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
@@ -188,8 +188,8 @@ const App = () => (
               <Route path="archived" element={<PermissionProtectedRoute resource="document" action="list"><ArchivedResources /></PermissionProtectedRoute>} />
               <Route path="settings" element={<PermissionProtectedRoute resource="tenant" action="admin"><AdminSettings /></PermissionProtectedRoute>} />
               <Route path="industries" element={<PermissionProtectedRoute resource="industry" action="admin"><IndustryAdmin /></PermissionProtectedRoute>} />
-              <Route path="applications" element={<PermissionProtectedRoute resource="application" action="admin"><ApplicationsPage /></PermissionProtectedRoute>} />
-              <Route path="applications/new" element={<PermissionProtectedRoute resource="application" action="admin"><ApplicationCreate /></PermissionProtectedRoute>} />
+              <Route path="external-systems" element={<PermissionProtectedRoute resource="application" action="admin"><ApplicationsPage /></PermissionProtectedRoute>} />
+              <Route path="external-systems/new" element={<PermissionProtectedRoute resource="application" action="admin"><ApplicationCreate /></PermissionProtectedRoute>} />
               <Route path="capabilities" element={<PermissionProtectedRoute resource="capability" action="admin"><CapabilityCatalog /></PermissionProtectedRoute>} />
               <Route path="capabilities/:capabilityId" element={<PermissionProtectedRoute resource="capability" action="admin"><CapabilityDetailsPage /></PermissionProtectedRoute>} />
               <Route path="database" element={<PermissionProtectedRoute resource="tenant" action="admin"><AdminSeed /></PermissionProtectedRoute>} />
@@ -221,11 +221,17 @@ const App = () => (
             <Route path="/admin/app-vendors" element={<PlatformProtectedRoute><ExternalSystemVendorAdmin /></PlatformProtectedRoute>} />
             <Route path="/tenants" element={<PlatformProtectedRoute><Tenants /></PlatformProtectedRoute>} />
             
-            {/* Applications */}
+            {/* Applications - with redirects from old /applications routes */}
             <Route path="/external-systems" element={<PlatformProtectedRoute><ApplicationsPage /></PlatformProtectedRoute>} />
             <Route path="/external-systems/:id" element={<PlatformProtectedRoute><ExternalSystemDetails /></PlatformProtectedRoute>} />
             <Route path="/system-vendors" element={<PlatformProtectedRoute><SystemVendorsPage /></PlatformProtectedRoute>} />
             <Route path="/capabilities" element={<PlatformProtectedRoute><CapabilityCatalog /></PlatformProtectedRoute>} />
+            
+            {/* Redirects from old /applications routes to new /external-systems */}
+            <Route path="/applications" element={<Navigate to="/external-systems" replace />} />
+            <Route path="/applications/:id" element={<Navigate to="/external-systems/:id" replace />} />
+            <Route path="/admin/applications" element={<Navigate to="/admin/external-systems" replace />} />
+            <Route path="/admin/applications/new" element={<Navigate to="/admin/external-systems/new" replace />} />
             
             {/* Companies */}
             <Route path="/companies" element={<PlatformProtectedRoute><CompaniesHub /></PlatformProtectedRoute>} />
