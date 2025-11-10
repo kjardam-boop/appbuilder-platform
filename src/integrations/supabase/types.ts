@@ -1603,6 +1603,152 @@ export type Database = {
         }
         Relationships: []
       }
+      integration_definitions: {
+        Row: {
+          capabilities: Json | null
+          category_id: string | null
+          created_at: string | null
+          credential_fields: Json | null
+          default_config: Json | null
+          default_delivery_method: string | null
+          description: string | null
+          documentation_url: string | null
+          external_system_id: string | null
+          icon_name: string | null
+          id: string
+          is_active: boolean | null
+          key: string
+          name: string
+          requires_credentials: boolean | null
+          setup_guide_url: string | null
+          supported_delivery_methods: string[]
+          tags: string[] | null
+          updated_at: string | null
+          vendor_id: string | null
+        }
+        Insert: {
+          capabilities?: Json | null
+          category_id?: string | null
+          created_at?: string | null
+          credential_fields?: Json | null
+          default_config?: Json | null
+          default_delivery_method?: string | null
+          description?: string | null
+          documentation_url?: string | null
+          external_system_id?: string | null
+          icon_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          key: string
+          name: string
+          requires_credentials?: boolean | null
+          setup_guide_url?: string | null
+          supported_delivery_methods?: string[]
+          tags?: string[] | null
+          updated_at?: string | null
+          vendor_id?: string | null
+        }
+        Update: {
+          capabilities?: Json | null
+          category_id?: string | null
+          created_at?: string | null
+          credential_fields?: Json | null
+          default_config?: Json | null
+          default_delivery_method?: string | null
+          description?: string | null
+          documentation_url?: string | null
+          external_system_id?: string | null
+          icon_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          key?: string
+          name?: string
+          requires_credentials?: boolean | null
+          setup_guide_url?: string | null
+          supported_delivery_methods?: string[]
+          tags?: string[] | null
+          updated_at?: string | null
+          vendor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_definitions_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "app_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integration_definitions_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "app_categories_tree"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integration_definitions_external_system_id_fkey"
+            columns: ["external_system_id"]
+            isOneToOne: false
+            referencedRelation: "external_systems"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integration_definitions_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "external_system_vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integration_delivery_methods: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          documentation_url: string | null
+          icon_name: string | null
+          id: string
+          is_active: boolean | null
+          key: string
+          name: string
+          requires_credentials: boolean | null
+          requires_server: boolean | null
+          sort_order: number | null
+          typical_use_cases: string[] | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          documentation_url?: string | null
+          icon_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          key: string
+          name: string
+          requires_credentials?: boolean | null
+          requires_server?: boolean | null
+          sort_order?: number | null
+          typical_use_cases?: string[] | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          documentation_url?: string | null
+          icon_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          key?: string
+          name?: string
+          requires_credentials?: boolean | null
+          requires_server?: boolean | null
+          sort_order?: number | null
+          typical_use_cases?: string[] | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       integration_recommendation: {
         Row: {
           app_key: string
