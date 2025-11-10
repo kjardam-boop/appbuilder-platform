@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { useAdminRole } from '@/modules/core/user';
+import { usePlatformAdmin } from '@/hooks/usePlatformAdmin';
 import { Navigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenantContext } from '@/hooks/useTenantContext';
@@ -41,7 +41,7 @@ import {
 } from '@/components/ui/collapsible';
 
 export default function McpWorkflows() {
-  const { isAdmin, isLoading: isLoadingRole } = useAdminRole();
+  const { isPlatformAdmin, isLoading: isLoadingRole } = usePlatformAdmin();
   const tenantContext = useTenantContext();
   const queryClient = useQueryClient();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -381,7 +381,7 @@ export default function McpWorkflows() {
     return <div className="p-8">Loading...</div>;
   }
 
-  if (!isAdmin) {
+  if (!isPlatformAdmin) {
     return <Navigate to="/dashboard" replace />;
   }
 
