@@ -2452,6 +2452,7 @@ export type Database = {
           provider: string
           tenant_id: string
           updated_at: string
+          updated_by: string | null
           webhook_path: string
           workflow_key: string
         }
@@ -2464,6 +2465,7 @@ export type Database = {
           provider?: string
           tenant_id: string
           updated_at?: string
+          updated_by?: string | null
           webhook_path: string
           workflow_key: string
         }
@@ -2476,6 +2478,7 @@ export type Database = {
           provider?: string
           tenant_id?: string
           updated_at?: string
+          updated_by?: string | null
           webhook_path?: string
           workflow_key?: string
         }
@@ -3912,6 +3915,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      can_manage_workflows: { Args: { _tenant_id: string }; Returns: boolean }
       check_ai_rate_limit: {
         Args: { p_current_time?: string; p_tenant_id: string }
         Returns: Json

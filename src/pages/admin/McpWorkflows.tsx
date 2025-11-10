@@ -65,6 +65,23 @@ export default function McpWorkflows() {
 
   const tenantId = tenantContext?.tenant_id;
 
+  // Check if user can manage workflows (admin privileges)
+  const { data: canManage, isLoading: isCheckingPermissions } = useQuery({
+    queryKey: ['can-manage-workflows', tenantId],
+    queryFn: async () => {
+      if (!tenantId) return false;
+      const { data, error } = await supabase.rpc('can_manage_workflows', {
+        _tenant_id: tenantId
+      });
+      if (error) {
+        console.error('Error checking workflow permissions:', error);
+        return false;
+      }
+      return data as boolean;
+    },
+    enabled: !!tenantId,
+  });
+
   const { data: workflows, isLoading } = useQuery({
     queryKey: ['mcp-workflows', tenantId],
     queryFn: () => {
@@ -407,26 +424,38 @@ export default function McpWorkflows() {
         </p>
       </div>
 
+      {/* Access Level Info */}
+      {!canManage && !isCheckingPermissions && (
+        <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950/20">
+          <Info className="h-4 w-4 text-amber-600" />
+          <AlertDescription>
+            <strong>Read-only Access:</strong> You can view workflow mappings but cannot modify them. 
+            Only tenant admins and platform admins can create, edit, or delete workflows.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Integration Runs Log */}
       <Card>
         <McpIntegrationRunsView tenantId={tenantId} />
       </Card>
 
       {/* n8n Secrets Configuration */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <KeyRound className="h-5 w-5" />
-                n8n Configuration
-              </CardTitle>
-              <CardDescription>
-                Configure n8n base URL, API key, and HMAC signing secret
-              </CardDescription>
+      {canManage && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <KeyRound className="h-5 w-5" />
+                  n8n Configuration
+                </CardTitle>
+                <CardDescription>
+                  Configure n8n base URL, API key, and HMAC signing secret
+                </CardDescription>
+              </div>
             </div>
-          </div>
-        </CardHeader>
+          </CardHeader>
         <CardContent>
           <Collapsible open={secretsOpen} onOpenChange={setSecretsOpen}>
             <CollapsibleTrigger asChild>
@@ -501,7 +530,7 @@ export default function McpWorkflows() {
                   <div className="flex justify-end gap-2 pt-2">
                     <Button
                       onClick={() => saveSecretsMutation.mutate()}
-                      disabled={saveSecretsMutation.isPending || !secrets.N8N_MCP_BASE_URL}
+                      disabled={saveSecretsMutation.isPending || !secrets.N8N_MCP_BASE_URL || !canManage}
                     >
                       Save Secrets
                     </Button>
@@ -523,6 +552,7 @@ export default function McpWorkflows() {
           </Collapsible>
         </CardContent>
       </Card>
+      )}
 
 
       {/* Workflow Mappings List */}
@@ -530,12 +560,16 @@ export default function McpWorkflows() {
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle>Workflow Mappings</CardTitle>
-            <CardDescription>Active and inactive workflow configurations</CardDescription>
+            <CardDescription>
+              Active and inactive workflow configurations
+              {canManage === false && ' (Read-only)'}
+            </CardDescription>
           </div>
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>Add Mapping</Button>
-            </DialogTrigger>
+          {canManage && (
+            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>Add Mapping</Button>
+              </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Add/Edit Workflow Mapping</DialogTitle>
@@ -630,6 +664,7 @@ export default function McpWorkflows() {
               </div>
             </DialogContent>
           </Dialog>
+          )}
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -656,6 +691,7 @@ export default function McpWorkflows() {
                         <Switch
                           checked={workflow.is_active}
                           onCheckedChange={() => handleToggleActive(workflow)}
+                          disabled={!canManage}
                         />
                       </div>
                     </div>
@@ -672,55 +708,61 @@ export default function McpWorkflows() {
                     </p>
                     
                     {/* Test Payload JSON */}
-                    <div className="pt-2 space-y-1">
-                      <Label htmlFor={`payload-${workflow.workflow_key}`} className="text-xs">
-                        Test Payload (JSON)
-                      </Label>
-                      <Textarea
-                        id={`payload-${workflow.workflow_key}`}
-                        placeholder='{"email": "test@example.com", "phone": "+4712345678", "message": "Test"}'
-                        value={testPayloads[workflow.workflow_key] || ''}
-                        onChange={(e) =>
-                          setTestPayloads({ ...testPayloads, [workflow.workflow_key]: e.target.value })
-                        }
-                        className="font-mono text-xs h-20"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Optional: Custom JSON payload for test trigger
-                      </p>
-                    </div>
+                    {canManage && (
+                      <div className="pt-2 space-y-1">
+                        <Label htmlFor={`payload-${workflow.workflow_key}`} className="text-xs">
+                          Test Payload (JSON)
+                        </Label>
+                        <Textarea
+                          id={`payload-${workflow.workflow_key}`}
+                          placeholder='{"email": "test@example.com", "phone": "+4712345678", "message": "Test"}'
+                          value={testPayloads[workflow.workflow_key] || ''}
+                          onChange={(e) =>
+                            setTestPayloads({ ...testPayloads, [workflow.workflow_key]: e.target.value })
+                          }
+                          className="font-mono text-xs h-20"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Optional: Custom JSON payload for test trigger
+                        </p>
+                      </div>
+                    )}
                   </div>
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleTestTriggerForMapping(workflow.workflow_key)}
-                      disabled={isTestingTrigger}
-                      title="Test trigger (n8n må være klar)"
+                      disabled={isTestingTrigger || !canManage}
+                      title={canManage ? "Test trigger (n8n må være klar)" : "Test trigger (admin only)"}
                     >
                       <PlayCircle className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEdit(workflow)}
-                      title="Edit mapping"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        if (confirm('Are you sure you want to delete this workflow mapping?')) {
-                          deleteMutation.mutate(workflow.id);
-                        }
-                      }}
-                      disabled={deleteMutation.isPending}
-                      title="Delete mapping"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {canManage && (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(workflow)}
+                          title="Edit mapping"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            if (confirm('Are you sure you want to delete this workflow mapping?')) {
+                              deleteMutation.mutate(workflow.id);
+                            }
+                          }}
+                          disabled={deleteMutation.isPending}
+                          title="Delete mapping"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
               ))}
