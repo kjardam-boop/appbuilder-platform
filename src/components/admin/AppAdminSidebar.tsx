@@ -49,7 +49,6 @@ const adminNavItems = [
       { title: "Users & Roles", url: "/admin/users", icon: Users },
       { title: "Role Overview", url: "/admin/roles", icon: Shield },
       { title: "Role Configuration", url: "/admin/roles/config", icon: Settings },
-      { title: "Companies", url: "/admin/companies", icon: Building2 },
       { title: "System Settings", url: "/admin/settings", icon: Settings },
     ],
   },
