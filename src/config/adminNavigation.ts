@@ -54,6 +54,7 @@ export const adminNavigationMapping: Record<string, AdminNavigationRequirement> 
   '/admin/compatibility': { resource: 'capability', requiredAction: 'admin' },
   '/admin/categories': { resource: 'capability', requiredAction: 'admin' },
   '/admin/tenant-systems': { resource: 'application', requiredAction: 'list' },
+  '/admin/performance-test': { resource: 'application', requiredAction: 'admin' },
   '/admin/integration-recommendations': { resource: 'integration', requiredAction: 'list' },
   '/admin/integration-graph': { resource: 'integration', requiredAction: 'list' },
   

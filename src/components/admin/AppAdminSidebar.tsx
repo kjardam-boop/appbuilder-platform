@@ -79,6 +79,7 @@ const adminNavItems = [
       { title: "Compatibility", url: "/admin/compatibility", icon: Package },
       { title: "Categories", url: "/admin/categories", icon: Package },
       { title: "Tenant Systems", url: "/admin/tenant-systems", icon: Building2 },
+      { title: "Performance Test", url: "/admin/performance-test", icon: CheckSquare },
       { title: "Recommendations", url: "/admin/integration-recommendations", icon: Sparkles },
       { title: "Integration Graph", url: "/admin/integration-graph", icon: Network },
     ],

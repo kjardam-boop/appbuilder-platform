@@ -74,6 +74,7 @@ import AIMcpDemo from "./pages/admin/AIMcpDemo";
 import Compatibility from "./pages/admin/Compatibility";
 import Categories from "./pages/admin/Categories";
 import TenantSystems from "./pages/admin/TenantSystems";
+import PerformanceTest from "./pages/admin/PerformanceTest";
 import IntegrationRecommendations from "./pages/admin/IntegrationRecommendations";
 import IntegrationGraph from "./pages/admin/IntegrationGraph";
 import { PageBuilder } from "./platform/admin/PageBuilder";
@@ -209,6 +210,7 @@ const App = () => (
               <Route path="compatibility" element={<PermissionProtectedRoute resource="capability" action="admin"><Compatibility /></PermissionProtectedRoute>} />
               <Route path="categories" element={<PermissionProtectedRoute resource="capability" action="admin"><Categories /></PermissionProtectedRoute>} />
               <Route path="tenant-systems" element={<PermissionProtectedRoute resource="application" action="list"><TenantSystems /></PermissionProtectedRoute>} />
+              <Route path="performance-test" element={<PermissionProtectedRoute resource="application" action="admin"><PerformanceTest /></PermissionProtectedRoute>} />
               <Route path="integration-recommendations" element={<PermissionProtectedRoute resource="integration" action="list"><IntegrationRecommendations /></PermissionProtectedRoute>} />
               <Route path="integration-graph" element={<PermissionProtectedRoute resource="integration" action="list"><IntegrationGraph /></PermissionProtectedRoute>} />
             </Route>
