@@ -96,6 +96,43 @@ applications/
 
 **Tabell:** `project_external_systems`
 
+## 🗄️ Database Struktur
+
+### Tabeller
+
+| Tabell | Formål | TypeScript Type |
+|--------|--------|-----------------|
+| `app_products` | Globalt produktkatalog | `ExternalSystem` |
+| `app_vendors` | Leverandører av produkter | `ExternalSystemVendor` |
+| `app_skus` | Produktvarianter/editions | `ExternalSystemSKU` |
+| `tenant_external_systems` | Tenant-installerte systemer | `TenantSystem` |
+| `company_apps` | Selskapers systemer | `CompanyExternalSystem` |
+| `project_apps` | Prosjekters systemer | `ProjectExternalSystem` |
+
+**Viktig:** Database bruker `app_*` prefiks, mens TypeScript bruker `ExternalSystem*` for klarhet.
+
+### Database Views
+
+Modulen tilbyr flere views med konsistente aliaser som matcher TypeScript-navngivningen:
+
+| View | Formål |
+|------|--------|
+| `external_systems_with_vendor` | External systems med vendor-info, konsistente aliaser |
+| `external_systems_full` | Komplett view med SKUs, integrations og ERP-data |
+| `tenant_systems_with_details` | Tenant installations med full system-info |
+
+**Se [DATABASE_VIEWS.md](./DATABASE_VIEWS.md) for detaljert dokumentasjon.**
+
+### Stored Functions
+
+| Function | Formål |
+|----------|--------|
+| `get_external_systems_by_capability(text)` | Finn systemer som støtter en capability |
+| `get_external_systems_by_industry(text)` | Finn systemer for en spesifikk bransje |
+| `get_tenant_system_summary(uuid)` | Sammendrag av tenant sine systemer |
+
+**Se [DATABASE_VIEWS.md](./DATABASE_VIEWS.md) for brukseksempler.**
+
 ## 🎯 Navnekonvensjoner
 
 ### TypeScript/JavaScript
