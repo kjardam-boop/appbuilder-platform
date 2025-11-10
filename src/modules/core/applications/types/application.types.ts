@@ -28,7 +28,7 @@ export interface ExternalSystem extends BaseEntity {
   short_name: string | null;
   slug: string;
   vendor_id: string;
-  system_types: string[];
+  app_types: string[];
   deployment_models: DeploymentModel[];
   target_industries: string[] | null;
   market_segments: MarketSegment[] | null;
@@ -50,8 +50,9 @@ export interface ExternalSystem extends BaseEntity {
   vendor?: ExternalSystemVendor;
   skus?: ExternalSystemSKU[];
   erp_extension?: ExternalSystemERPData;
-  // Backward compat: DB still uses old column name
-  app_types?: string[]; // Maps to system_types
+  category_id?: string | null;
+  // Backward compat aliases
+  system_types?: string[]; // Deprecated: use app_types
 }
 
 export interface ExternalSystemSKU extends BaseEntity {
@@ -126,7 +127,7 @@ export const externalSystemSchema = z.object({
   slug: z.string().min(1, "Slug er påkrevd").regex(/^[a-z0-9-]+$/, "Slug må være kebab-case"),
   vendor_id: z.string().uuid("Ugyldig leverandør-ID"),
   category_id: z.string().uuid().optional().or(z.literal("")),
-  system_types: z.array(z.enum(["ERP", "CRM", "EmailSuite", "HRPayroll", "BI", "iPaaS", "CMS", "eCommerce", "WMS", "TMS", "PLM", "MES", "ITSM", "IAM", "RPA", "ProjectMgmt", "ServiceMgmt"])).min(1, "Minst én systemtype er påkrevd"),
+  app_types: z.array(z.enum(["ERP", "CRM", "EmailSuite", "HRPayroll", "BI", "iPaaS", "CMS", "eCommerce", "WMS", "TMS", "PLM", "MES", "ITSM", "IAM", "RPA", "ProjectMgmt", "ServiceMgmt", "WorkflowAutomation", "Integrasjonsplattform"])).min(1, "Minst én systemtype er påkrevd"),
   deployment_models: z.array(z.enum(["SaaS", "Hosted", "On-premises", "Hybrid"])).min(1, "Minst én deployment-modell er påkrevd"),
   target_industries: z.array(z.string()).optional(),
   market_segments: z.array(z.enum(["SMB", "Midmarket", "Enterprise"])).optional(),

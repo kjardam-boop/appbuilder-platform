@@ -104,7 +104,7 @@ export default function ExternalSystemDetails() {
         input: {
           name: data.product_name,
           short_name: data.short_name,
-          system_types: data.system_types || data.app_types || [],
+          app_types: data.app_types || data.system_types || [],
           deployment_models: data.deployment_models || [],
           market_segments: data.market_segments || [],
           description: data.description,
@@ -183,7 +183,7 @@ export default function ExternalSystemDetails() {
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2 mt-4">
-                    {product.system_types?.map((type) => (
+                    {product.app_types?.map((type) => (
                       <Badge key={type}>{APP_TYPES[type as any] || type}</Badge>
                     ))}
                     <Badge variant={product.status === "Active" ? "default" : "secondary"}>

@@ -3,7 +3,7 @@ import { z } from "zod";
 
 /**
  * ERP Extension for ExternalSystem
- * Additional ERP-specific fields when ExternalSystem.system_types includes "ERP"
+ * Additional ERP-specific fields when ExternalSystem.app_types includes "ERP"
  */
 export interface ExternalSystemERPData extends BaseEntity {
   external_system_id: string;

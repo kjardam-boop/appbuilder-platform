@@ -23,7 +23,7 @@ export default function ApplicationCreate() {
         name: data.name,
         short_name: data.short_name || data.name,
         slug: data.slug,
-        system_types: data.system_types || data.app_types,
+        app_types: data.app_types || data.system_types,
         deployment_models: data.deployment_models,
         market_segments: data.market_segments,
         target_industries: data.target_industries,
