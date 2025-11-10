@@ -27,7 +27,7 @@ const applicationFormSchema = z.object({
   name: z.string().min(2, "Navn må være minst 2 tegn").max(255),
   short_name: z.string().max(50, "Kort navn kan ikke være lengre enn 50 tegn").optional(),
   slug: z.string().min(2).max(255),
-  app_types: z.array(z.string()).min(1, "Velg minst én applikasjonstype"),
+  system_types: z.array(z.string()).min(1, "Velg minst én applikasjonstype"),
   deployment_models: z.array(z.string()).min(1, "Velg minst én deployment modell"),
   market_segments: z.array(z.string()).optional(),
   target_industries: z.array(z.string()).optional(),
@@ -65,7 +65,7 @@ export function ApplicationForm({ initialData, onSubmit, isLoading }: Applicatio
     resolver: zodResolver(applicationFormSchema),
     defaultValues: {
       status: "Active",
-      app_types: [],
+      system_types: [],
       deployment_models: [],
       market_segments: [],
       target_industries: [],
@@ -109,11 +109,11 @@ export function ApplicationForm({ initialData, onSubmit, isLoading }: Applicatio
     if (generated.product_name) setValue("name", generated.product_name);
     if (generated.short_name) setValue("short_name", generated.short_name);
     
-    // Handle app_types as array
+    // Handle system_types as array
     if (generated.app_type) {
-      setValue("app_types", [generated.app_type]);
+      setValue("system_types", [generated.app_type]);
     } else if (generated.app_types?.length) {
-      setValue("app_types", generated.app_types);
+      setValue("system_types", generated.app_types);
     }
     
     if (generated.deployment_models?.length) setValue("deployment_models", generated.deployment_models);
@@ -178,7 +178,7 @@ export function ApplicationForm({ initialData, onSubmit, isLoading }: Applicatio
     if (unknownTypeDialog && selectedTypes.length > 0) {
       const generated = unknownTypeDialog.generatedData;
       // Set all selected types
-      generated.app_types = selectedTypes;
+      generated.app_types = selectedTypes; // AI returns app_types, we map to system_types in populateFormFields
       populateFormFields(generated);
       setUnknownTypeDialog(null);
       
@@ -205,7 +205,7 @@ export function ApplicationForm({ initialData, onSubmit, isLoading }: Applicatio
 
   const handleAddCustomType = () => {
     if (customTypeInput.trim()) {
-      addArrayItem("app_types", customTypeInput.trim());
+      addArrayItem("system_types", customTypeInput.trim());
       setCustomTypeInput("");
       toast.success(`Applikasjonstype "${customTypeInput.trim()}" lagt til`);
     }
@@ -342,14 +342,14 @@ export function ApplicationForm({ initialData, onSubmit, isLoading }: Applicatio
               {Object.entries(APP_TYPES).map(([key, label]) => (
                 <Badge
                   key={key}
-                  variant={(watch("app_types") || []).includes(key) ? "default" : "outline"}
+                  variant={(watch("system_types") || []).includes(key) ? "default" : "outline"}
                   className="cursor-pointer"
                   onClick={() => {
-                    const current = watch("app_types") || [];
+                    const current = watch("system_types") || [];
                     if (current.includes(key)) {
-                      removeArrayItem("app_types", key);
+                      removeArrayItem("system_types", key);
                     } else {
-                      addArrayItem("app_types", key);
+                      addArrayItem("system_types", key);
                     }
                   }}
                 >
@@ -359,16 +359,16 @@ export function ApplicationForm({ initialData, onSubmit, isLoading }: Applicatio
             </div>
             
             {/* Selected custom types */}
-            {(watch("app_types") || []).filter(type => !APP_TYPES[type as AppType]).length > 0 && (
+            {(watch("system_types") || []).filter(type => !APP_TYPES[type as AppType]).length > 0 && (
               <div className="flex flex-wrap gap-2 mt-2">
-                {(watch("app_types") || [])
+                {(watch("system_types") || [])
                   .filter(type => !APP_TYPES[type as AppType])
                   .map((type) => (
                     <Badge
                       key={type}
                       variant="default"
                       className="cursor-pointer"
-                      onClick={() => removeArrayItem("app_types", type)}
+                      onClick={() => removeArrayItem("system_types", type)}
                     >
                       {type} ✕
                     </Badge>
@@ -394,8 +394,8 @@ export function ApplicationForm({ initialData, onSubmit, isLoading }: Applicatio
               </Button>
             </div>
 
-            {errors.app_types && (
-              <p className="text-sm text-destructive mt-1">{errors.app_types.message}</p>
+            {errors.system_types && (
+              <p className="text-sm text-destructive mt-1">{errors.system_types.message}</p>
             )}
           </div>
 

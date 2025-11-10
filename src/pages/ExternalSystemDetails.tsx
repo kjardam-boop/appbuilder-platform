@@ -79,7 +79,7 @@ export default function ExternalSystemDetails() {
 
     const updatedData = {
       ...unknownTypeDialog.generatedData,
-      app_types: updatedAppTypes,
+      app_types: updatedAppTypes, // AI returns app_types, we map to system_types in applyAIUpdate
     };
 
     // Check if more unknown types to process
@@ -104,7 +104,7 @@ export default function ExternalSystemDetails() {
         input: {
           name: data.product_name,
           short_name: data.short_name,
-          app_types: data.app_types || data.system_types || [],
+          system_types: data.app_types || data.system_types || [],
           deployment_models: data.deployment_models || [],
           market_segments: data.market_segments || [],
           description: data.description,
@@ -183,7 +183,7 @@ export default function ExternalSystemDetails() {
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2 mt-4">
-                    {product.app_types?.map((type) => (
+                    {product.system_types?.map((type) => (
                       <Badge key={type}>{APP_TYPES[type as any] || type}</Badge>
                     ))}
                     <Badge variant={product.status === "Active" ? "default" : "secondary"}>
