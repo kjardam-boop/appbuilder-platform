@@ -14,11 +14,12 @@ import { VendorService } from "../services/vendorService";
 import { useApplicationGeneration } from "../hooks/useApplicationGeneration";
 import { fetchFromBrreg, simplifyBrregData } from "../services/brregService";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { normalizeUrl } from "@/lib/utils";
 
 const enhancedVendorSchema = z.object({
   // Company fields
   name: z.string().min(2, "Navn må være minst 2 tegn"),
-  website: z.string().url("Ugyldig URL").optional().or(z.literal("")),
+  website: z.string().transform(val => val ? normalizeUrl(val) : val).pipe(z.string().url("Ugyldig URL").optional().or(z.literal(""))),
   org_number: z.string().optional(),
   description: z.string().optional(),
   industry_code: z.string().optional(),
@@ -27,7 +28,7 @@ const enhancedVendorSchema = z.object({
   
   // Vendor-specific fields
   country: z.string().optional(),
-  contact_url: z.string().url("Ugyldig URL").optional().or(z.literal("")),
+  contact_url: z.string().transform(val => val ? normalizeUrl(val) : val).pipe(z.string().url("Ugyldig URL").optional().or(z.literal(""))),
 });
 
 type EnhancedVendorData = z.infer<typeof enhancedVendorSchema>;
@@ -77,7 +78,9 @@ export const EnhancedVendorDialog = ({
       return;
     }
 
-    const result = await generate(websiteUrl);
+    const normalized = normalizeUrl(websiteUrl);
+    setWebsiteUrl(normalized);
+    const result = await generate(normalized);
     if (!result) return;
 
     const data = (result as any).data || result;
@@ -85,7 +88,7 @@ export const EnhancedVendorDialog = ({
     // Populate company fields
     if (data.vendor_name) setValue("name", data.vendor_name);
     if (data.description) setValue("description", data.description);
-    setValue("website", websiteUrl);
+    setValue("website", normalizeUrl(websiteUrl));
 
     // Check if we got any Norwegian org number from the AI
     const possibleOrgNr = data.org_number || data.organisasjonsnummer;

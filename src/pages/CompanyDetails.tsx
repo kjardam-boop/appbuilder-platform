@@ -23,7 +23,7 @@ import { RoleBasedContent } from "@/components/Company/RoleBasedContent";
 import CompanyLogo from "@/modules/core/company/components/CompanyLogo";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { MarkdownTextarea } from "@/components/ui/markdown-textarea";
-import { cn } from "@/lib/utils";
+import { cn, normalizeUrl } from "@/lib/utils";
 import type { Company, CompanyMetadata, ContactPerson } from "@/modules/core/company/types/company.types";
 import type { BrregCompanySearchResult } from "@/modules/core/company/types/company.types";
 interface FinancialData {
@@ -120,12 +120,15 @@ const CompanyDetails = () => {
   const { status: websiteStatus, trigger: triggerWebsiteSave } = useAutoSave({
     onSave: async () => {
       if (!company || !websiteInputRef.current.trim()) return;
+      const normalizedUrl = normalizeUrl(websiteInputRef.current.trim());
       const { error } = await supabase
         .from('companies')
-        .update({ website: websiteInputRef.current.trim() })
+        .update({ website: normalizedUrl })
         .eq('id', company.id);
       if (error) throw error;
-      setCompany({ ...company, website: websiteInputRef.current.trim() });
+      setCompany({ ...company, website: normalizedUrl });
+      setWebsiteInput(normalizedUrl);
+      websiteInputRef.current = normalizedUrl;
     },
     delay: 1500,
     enabled: !!company

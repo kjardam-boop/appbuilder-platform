@@ -2,14 +2,15 @@
  * Utility to fetch company logo from website URL
  */
 
+import { normalizeUrl } from "@/lib/utils";
+
 /**
  * Extracts domain from a URL
  */
 export const extractDomain = (url: string): string | null => {
   try {
-    // Add protocol if missing
-    const urlWithProtocol = url.match(/^https?:\/\//) ? url : `https://${url}`;
-    const urlObj = new URL(urlWithProtocol);
+    const normalized = normalizeUrl(url);
+    const urlObj = new URL(normalized);
     return urlObj.hostname.replace('www.', '');
   } catch {
     return null;

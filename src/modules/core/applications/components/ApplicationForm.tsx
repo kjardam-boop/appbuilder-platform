@@ -20,9 +20,10 @@ import type { AppType } from "../types/application.types";
 import { toast } from "sonner";
 import { useExternalSystemVendors } from "../hooks/useApplications";
 import { supabase } from "@/integrations/supabase/client";
+import { normalizeUrl } from "@/lib/utils";
 
 const applicationFormSchema = z.object({
-  website: z.string().url("Ugyldig URL").optional().or(z.literal("")),
+  website: z.string().transform(val => val ? normalizeUrl(val) : val).pipe(z.string().url("Ugyldig URL").optional().or(z.literal(""))),
   vendor_id: z.string().uuid("Velg en leverandør"),
   name: z.string().min(2, "Navn må være minst 2 tegn").max(255),
   short_name: z.string().max(50, "Kort navn kan ikke være lengre enn 50 tegn").optional(),
@@ -82,7 +83,9 @@ export function ApplicationForm({ initialData, onSubmit, isLoading }: Applicatio
       return;
     }
 
-    const result = await generate(websiteUrl);
+    const normalized = normalizeUrl(websiteUrl);
+    setWebsiteUrl(normalized);
+    const result = await generate(normalized);
     if (!result) return;
 
     // Check for generated response structure
@@ -122,6 +125,9 @@ export function ApplicationForm({ initialData, onSubmit, isLoading }: Applicatio
     if (generated.modules_supported?.length) setValue("modules_supported", generated.modules_supported);
     if (generated.localizations?.length) setValue("localizations", generated.localizations);
     if (generated.target_industries?.length) setValue("target_industries", generated.target_industries);
+    
+    // Set normalized website URL
+    setValue("website", normalizeUrl(websiteUrl));
     
     // Auto-generate slug from name
     if (generated.product_name) {
