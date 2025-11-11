@@ -31,6 +31,7 @@ import {
   CheckSquare,
   Bookmark,
   Wrench,
+  Key,
 } from "lucide-react";
 import { useUserPermissions } from "@/modules/core/permissions/hooks/useUserPermissions";
 import { adminNavigationMapping } from "@/config/adminNavigation";
@@ -93,6 +94,7 @@ const adminNavItems = [
   {
     title: "Operations",
     items: [
+      { title: "Credentials", url: "/admin/credentials", icon: Key },
       { title: "Security", url: "/admin/security", icon: Shield },
       { title: "Seed Database", url: "/admin/database", icon: Database },
       { title: "Archived Resources", url: "/admin/archived", icon: Archive },

@@ -63,6 +63,7 @@ export const adminNavigationMapping: Record<string, AdminNavigationRequirement> 
   
   // Operations
   '/admin/integrations': { resource: 'integration', requiredAction: 'admin' },
+  '/admin/credentials': { resource: 'vault_credential', requiredAction: 'admin' },
   '/admin/security': { resource: 'audit_log', requiredAction: 'admin' },
   '/admin/database': { resource: 'tenant', requiredAction: 'admin' },
   '/admin/archived': { resource: 'document', requiredAction: 'list' },
