@@ -10,7 +10,7 @@
  */
 
 import { useState, useEffect, useMemo } from "react";
-import { Calendar as CalendarIcon, Users, Star, CheckSquare, Plus, Edit2, Trash2, Mail, LogOut, LogIn, UserCog, Baby, Church, Heart } from "lucide-react";
+import { Calendar as CalendarIcon, Users, Star, CheckSquare, Plus, Edit2, Trash2, Mail, LogOut, LogIn, UserCog, Baby, Church, Heart, ChevronDown, ChevronRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -935,7 +935,94 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
               </div>
             </CardHeader>
             <CardContent className="space-y-4 sm:space-y-6">
-            {/* Single scroll container for entire calendar */}
+            
+            {/* Mobile Calendar - Compact List View */}
+            <div className="block sm:hidden space-y-3">
+              {families.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Users className="w-12 h-12 mx-auto mb-2 opacity-20" />
+                  <p>Ingen familier lagt til ennå</p>
+                  {!user && <p className="text-sm mt-2">Logg inn for å melde deg på!</p>}
+                </div>
+              ) : (
+                families.map((family) => {
+                  const effectiveDates = getEffectiveFamilyDates(family);
+                  const arrivalFormatted = new Date(effectiveDates.arrival_date).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' });
+                  const departureFormatted = new Date(effectiveDates.departure_date).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' });
+                  const familyMembers = allMembers.filter(m => m.family_id === family.id);
+                  const isExpanded = expandedFamilies.has(family.id);
+                  const isUserFamilyAdmin = isAdmin || (userMembership && userMembership.family_id === family.id && userMembership.is_admin);
+                  
+                  return (
+                    <Card key={family.id} className="border-l-4 border-l-green-600">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <button
+                            onClick={() => toggleFamilyExpanded(family.id)}
+                            className="flex-1 text-left min-h-[44px] flex items-center"
+                          >
+                            <div className="flex items-center gap-2">
+                              {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                              <span className="font-semibold">{family.name}</span>
+                              <Badge variant="secondary" className="text-xs">
+                                {familyMembers.length} {familyMembers.length === 1 ? 'person' : 'personer'}
+                              </Badge>
+                            </div>
+                          </button>
+                        </div>
+                        <div className="text-sm text-muted-foreground mt-2">
+                          📅 {arrivalFormatted} - {departureFormatted}
+                        </div>
+                      </CardHeader>
+                      {isExpanded && (
+                        <CardContent className="pt-0 space-y-2">
+                          {familyMembers.map((member) => {
+                            const memberPeriods = allMemberPeriods.filter(mp => mp.member_id === member.id);
+                            const customPeriods = allCustomPeriods.filter(cp => cp.member_id === member.id);
+                            
+                            return (
+                              <div key={member.id} className="border-l-2 border-l-muted pl-3 py-2 space-y-1">
+                                <div className="font-medium text-sm">{member.name}</div>
+                                {memberPeriods.length > 0 && (
+                                  <div className="flex flex-wrap gap-1">
+                                    {memberPeriods.map((mp) => {
+                                      const period = allPeriods.find(fp => fp.id === mp.period_id);
+                                      if (!period) return null;
+                                      const start = new Date(period.arrival_date).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' });
+                                      const end = new Date(period.departure_date).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' });
+                                      return (
+                                        <Badge key={mp.id} variant="outline" className="text-xs">
+                                          {period.location}: {start} - {end}
+                                        </Badge>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                                {customPeriods.length > 0 && (
+                                  <div className="flex flex-wrap gap-1">
+                                    {customPeriods.map((cp) => {
+                                      const start = new Date(cp.start_date).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' });
+                                      const end = new Date(cp.end_date).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' });
+                                      return (
+                                        <Badge key={cp.id} variant="secondary" className="text-xs">
+                                          {cp.location}: {start} - {end}
+                                        </Badge>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </CardContent>
+                      )}
+                    </Card>
+                  );
+                })
+              )}
+            </div>
+            
+            {/* Desktop Calendar - Gantt Chart */}
             <div className="hidden sm:block overflow-x-auto pb-2">
               <div className="flex flex-col" style={{ minWidth: `${160 + eventDates.length * 40}px` }}>
                 
@@ -1234,50 +1321,52 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
                     const creator = allMembers.find(m => m.user_id === task.created_by);
                     
                     return (
-                      <div key={task.id} className="grid grid-cols-[auto,1fr,120px,150px,auto] items-center gap-2 p-2 rounded-lg hover:bg-accent">
-                        <input
-                          type="checkbox"
-                          checked={task.done}
-                          onChange={() => {
-                            updateTask.mutate({
-                              id: task.id,
-                              done: !task.done,
-                            });
-                          }}
-                          className="w-4 h-4 flex-shrink-0"
-                        />
-                        <div className="min-w-0">
-                          <span className={cn("text-sm", task.done && "line-through text-muted-foreground")}>
-                            {task.text}
-                          </span>
-                          {creator && (
-                            <div className="text-xs text-muted-foreground">
-                              Opprettet av: {creator.name}
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex justify-end">
-                          {task.deadline ? (
-                            <Badge variant="outline" className="text-xs whitespace-nowrap">
-                              📅 {new Date(task.deadline).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' })}
-                            </Badge>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">-</span>
-                          )}
-                        </div>
-                        <div className="flex justify-end">
-                          {assignedMembers.length > 0 ? (
-                            <div className="flex flex-wrap gap-1 justify-end">
-                              {assignedMembers.map(member => (
-                                <Badge key={member?.id} variant="secondary" className="text-xs whitespace-nowrap">
-                                  {member?.name}
-                                </Badge>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">-</span>
-                          )}
-                        </div>
+                      <>
+                        {/* Desktop View */}
+                        <div key={`${task.id}-desktop`} className="hidden sm:grid grid-cols-[auto,1fr,120px,150px,auto] items-center gap-2 p-2 rounded-lg hover:bg-accent">
+                          <input
+                            type="checkbox"
+                            checked={task.done}
+                            onChange={() => {
+                              updateTask.mutate({
+                                id: task.id,
+                                done: !task.done,
+                              });
+                            }}
+                            className="w-4 h-4 flex-shrink-0"
+                          />
+                          <div className="min-w-0">
+                            <span className={cn("text-sm", task.done && "line-through text-muted-foreground")}>
+                              {task.text}
+                            </span>
+                            {creator && (
+                              <div className="text-xs text-muted-foreground">
+                                Opprettet av: {creator.name}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex justify-end">
+                            {task.deadline ? (
+                              <Badge variant="outline" className="text-xs whitespace-nowrap">
+                                📅 {new Date(task.deadline).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' })}
+                              </Badge>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">-</span>
+                            )}
+                          </div>
+                          <div className="flex justify-end">
+                            {assignedMembers.length > 0 ? (
+                              <div className="flex flex-wrap gap-1 justify-end">
+                                {assignedMembers.map(member => (
+                                  <Badge key={member?.id} variant="secondary" className="text-xs whitespace-nowrap">
+                                    {member?.name}
+                                  </Badge>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">-</span>
+                            )}
+                          </div>
                         {user && (
                           <div className="flex gap-1 flex-shrink-0">
                             <Button 
@@ -1311,7 +1400,87 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
                             )}
                           </div>
                         )}
-                      </div>
+                        </div>
+                        
+                        {/* Mobile View */}
+                        <div key={`${task.id}-mobile`} className="sm:hidden border rounded-lg p-3 space-y-2">
+                          <div className="flex items-start gap-3">
+                            <input
+                              type="checkbox"
+                              checked={task.done}
+                              onChange={() => {
+                                updateTask.mutate({
+                                  id: task.id,
+                                  done: !task.done,
+                                });
+                              }}
+                              className="w-5 h-5 mt-0.5 flex-shrink-0"
+                            />
+                            <div className="flex-1 min-w-0 space-y-2">
+                              <div>
+                                <span className={cn("text-sm font-medium", task.done && "line-through text-muted-foreground")}>
+                                  {task.text}
+                                </span>
+                                {creator && (
+                                  <div className="text-xs text-muted-foreground mt-1">
+                                    Opprettet av: {creator.name}
+                                  </div>
+                                )}
+                              </div>
+                              
+                              {task.deadline && (
+                                <Badge variant="outline" className="text-xs">
+                                  📅 {new Date(task.deadline).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' })}
+                                </Badge>
+                              )}
+                              
+                              {assignedMembers.length > 0 && (
+                                <div className="flex flex-wrap gap-1">
+                                  {assignedMembers.map(member => (
+                                    <Badge key={member?.id} variant="secondary" className="text-xs">
+                                      {member?.name}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            
+                            {user && (
+                              <div className="flex gap-1 flex-shrink-0">
+                                <Button 
+                                  size="sm" 
+                                  variant="ghost" 
+                                  className="h-10 w-10 p-0" 
+                                  onClick={() => {
+                                    setEditingTask(task);
+                                    setTaskText(task.text);
+                                    setTaskDeadline(task.deadline ? new Date(task.deadline) : undefined);
+                                    const taskAssignments = allAssignments.filter(a => a.task_id === task.id);
+                                    setTaskAssignedMembers(taskAssignments.map(a => a.family_member_id));
+                                    setShowTaskDialog(true);
+                                  }}
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </Button>
+                                {(isAdmin || task.created_by === user?.id) && (
+                                  <Button 
+                                    size="sm" 
+                                    variant="ghost" 
+                                    className="h-10 w-10 p-0 text-destructive hover:text-destructive"
+                                    onClick={async () => {
+                                      if (confirm("Er du sikker på at du vil slette denne oppgaven?")) {
+                                        await deleteTask.mutateAsync(task.id);
+                                      }
+                                    }}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </>
                     );
                   })}
                    {getSortedTasks().length === 0 && (
@@ -1336,7 +1505,7 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 sm:gap-3">
                 {christmasWords.map((item) => {
                   const isOpened = item.generated;
                   const canOpen = isPlatformAdmin || item.date <= currentDay;
@@ -1348,7 +1517,7 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
                       onClick={() => canOpen && generateWordForDay(item.date)}
                       disabled={isFuture}
                       className={cn(
-                        "relative aspect-square rounded-lg border-2 p-2 transition-all",
+                        "relative aspect-square rounded-lg border-2 p-2 sm:p-3 transition-all min-h-[60px] sm:min-h-[80px]",
                         isOpened 
                           ? "bg-purple-100 dark:bg-purple-950/30 border-purple-300 dark:border-purple-900 hover:scale-105" 
                           : isFuture
