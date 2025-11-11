@@ -6,6 +6,17 @@ import { buildClientContext, buildClientContextSync } from "@/shared/lib/buildCo
 import type { ExternalSystemInput, ProjectExternalSystemInput, PartnerSystemCertificationInput } from "../types/application.types";
 import { toast } from "sonner";
 
+/**
+ * Get all distinct system types
+ */
+export function useSystemTypes() {
+  return useQuery({
+    queryKey: ["system-types"],
+    queryFn: () => ApplicationService.getSystemTypes(),
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+  });
+}
+
 export function useExternalSystems(filters?: {
   query?: string;
   vendor?: string;

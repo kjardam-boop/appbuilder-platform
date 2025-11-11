@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useExternalSystems, APP_TYPES } from "@/modules/core/applications";
+import { useExternalSystems, useSystemTypes } from "@/modules/core/applications";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,8 @@ export default function ApplicationsPage() {
     appType: appType === "all" ? undefined : appType,
     status 
   });
+  
+  const { data: systemTypes = [] } = useSystemTypes();
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -66,8 +68,8 @@ export default function ApplicationsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Alle typer</SelectItem>
-                {Object.entries(APP_TYPES).map(([key, label]) => (
-                  <SelectItem key={key} value={key}>{label}</SelectItem>
+                {systemTypes.map((type) => (
+                  <SelectItem key={type} value={type}>{type}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -116,7 +118,7 @@ export default function ApplicationsPage() {
                     <div className="flex flex-wrap gap-1">
                       {product.system_types.map((type) => (
                         <Badge key={type} variant="outline" className="text-xs">
-                          {APP_TYPES[type as any] || type}
+                          {type}
                         </Badge>
                       ))}
                     </div>

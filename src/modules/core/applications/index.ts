@@ -148,6 +148,7 @@ export {
   useExternalSystemsByCapability,
   useExternalSystemsByUseCase,
   useMcpReference,
+  useSystemTypes,
 } from "./hooks/useApplications";
 
 export { useSKUs, useCreateSKU, useDeleteSKU } from "./hooks/useSKUs";

@@ -15,6 +15,28 @@ import type {
 } from "../types/application.types";
 
 export class ApplicationService {
+  /**
+   * Get all distinct system types from external systems
+   */
+  static async getSystemTypes(): Promise<string[]> {
+    const { data, error } = await supabase
+      .from("external_systems")
+      .select("system_types");
+
+    if (error) throw error;
+
+    // Flatten and deduplicate system types
+    const allTypes = new Set<string>();
+    data?.forEach((row: any) => {
+      row.system_types?.forEach((type: string) => {
+        allTypes.add(type);
+      });
+    });
+
+    // Convert to array and sort alphabetically
+    return Array.from(allTypes).sort((a, b) => a.localeCompare(b, 'no'));
+  }
+
   static async listProducts(
     ctx: RequestContext,
     filters?: {
