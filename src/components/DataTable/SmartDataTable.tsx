@@ -105,6 +105,7 @@ export function SmartDataTable<T extends Record<string, any>>({
       pageSize={pageSize}
       currentPage={currentPage}
       totalPages={totalPages}
+      totalItems={processedData.length}
       onPageChange={handlePageChange}
       onPageSizeChange={handlePageSizeChange}
       onRowClick={onRowClick}

@@ -58,6 +58,7 @@ interface DataTableProps<T> {
   pageSize: number;
   currentPage: number;
   totalPages: number;
+  totalItems: number;
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
   onRowClick?: (row: T) => void;
@@ -271,6 +272,7 @@ export function DataTable<T extends Record<string, any>>({
   pageSize,
   currentPage,
   totalPages,
+  totalItems,
   onPageChange,
   onPageSizeChange,
   onRowClick,
@@ -294,10 +296,6 @@ export function DataTable<T extends Record<string, any>>({
     }
   };
 
-  const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
-  const paginatedData = data.slice(startIndex, endIndex);
-
   return (
     <div className="space-y-4">
       <div className="rounded-md border bg-card">
@@ -320,14 +318,14 @@ export function DataTable<T extends Record<string, any>>({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedData.length === 0 ? (
+              {data.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={visibleColumns.length} className="h-24 text-center">
                     Ingen resultater funnet.
                   </TableCell>
                 </TableRow>
               ) : (
-                paginatedData.map((row, rowIndex) => (
+                data.map((row, rowIndex) => (
                   <TableRow
                     key={rowIndex}
                     onClick={() => onRowClick?.(row)}
@@ -371,7 +369,7 @@ export function DataTable<T extends Record<string, any>>({
             </SelectContent>
           </Select>
           <span className="text-sm text-muted-foreground">
-            Viser {startIndex + 1}-{Math.min(endIndex, data.length)} av {data.length}
+            Viser {(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, totalItems)} av {totalItems}
           </span>
         </div>
         <div className="flex items-center gap-2">
