@@ -722,6 +722,7 @@ export type Database = {
       company_external_systems: {
         Row: {
           company_id: string
+          config: Json | null
           created_at: string
           credentials: Json | null
           environment: string | null
@@ -734,6 +735,7 @@ export type Database = {
         }
         Insert: {
           company_id: string
+          config?: Json | null
           created_at?: string
           credentials?: Json | null
           environment?: string | null
@@ -746,6 +748,7 @@ export type Database = {
         }
         Update: {
           company_id?: string
+          config?: Json | null
           created_at?: string
           credentials?: Json | null
           environment?: string | null

@@ -14,6 +14,7 @@ import { useCompanyExternalSystems, useCreateCompanyApp, useDeleteCompanyApp } f
 import type { IntegrationDefinitionWithRelations } from "@/modules/core/integrations/types/integrationDefinition.types";
 import { InstallIntegrationDialog } from "@/components/integrations/InstallIntegrationDialog";
 import { CredentialsDialog } from "@/components/integrations/CredentialsDialog";
+import { ConfigurationDialog } from "@/components/integrations/ConfigurationDialog";
 
 interface Company {
   id: string;
@@ -28,10 +29,14 @@ export default function CompanyIntegrations() {
   const [activeTab, setActiveTab] = useState<"installed" | "available">("installed");
   const [selectedDefinition, setSelectedDefinition] = useState<IntegrationDefinitionWithRelations | null>(null);
   const [credentialsDialogOpen, setCredentialsDialogOpen] = useState(false);
+  const [configDialogOpen, setConfigDialogOpen] = useState(false);
   const [selectedApp, setSelectedApp] = useState<{
     id: string;
     externalSystemId: string;
+    name: string;
     credentials?: Record<string, string>;
+    config?: Record<string, any>;
+    definition?: IntegrationDefinitionWithRelations;
   } | null>(null);
 
   // Fetch company details
@@ -83,7 +88,7 @@ export default function CompanyIntegrations() {
       });
       
       toast.success(`${definition.name} installert`);
-      queryClient.invalidateQueries({ queryKey: ["company-external-systems", companyId] });
+      queryClient.invalidateQueries({ queryKey: ["company-apps", companyId] });
       setSelectedDefinition(null);
     } catch (error) {
       console.error("Install error:", error);
@@ -95,7 +100,7 @@ export default function CompanyIntegrations() {
     try {
       await deleteMutation.mutateAsync(appId);
       toast.success(`${appName} avinstallert`);
-      queryClient.invalidateQueries({ queryKey: ["company-external-systems", companyId] });
+      queryClient.invalidateQueries({ queryKey: ["company-apps", companyId] });
     } catch (error) {
       console.error("Uninstall error:", error);
       toast.error("Kunne ikke avinstallere integrasjon");
@@ -106,13 +111,37 @@ export default function CompanyIntegrations() {
     setSelectedApp({
       id: app.id,
       externalSystemId: app.external_system_id,
+      name: app.external_system?.name || "System",
       credentials: app.credentials || {},
     });
     setCredentialsDialogOpen(true);
   };
 
+  const handleConfigure = async (app: any) => {
+    // Fetch the integration definition to get config schema
+    try {
+      const definition = availableIntegrations.find(d => d.external_system_id === app.external_system_id);
+      
+      setSelectedApp({
+        id: app.id,
+        externalSystemId: app.external_system_id,
+        name: app.external_system?.name || "System",
+        config: app.config || {},
+        definition,
+      });
+      setConfigDialogOpen(true);
+    } catch (error) {
+      console.error("Error loading definition:", error);
+      toast.error("Kunne ikke laste konfigurasjon");
+    }
+  };
+
   const handleCredentialsSaved = () => {
-    queryClient.invalidateQueries({ queryKey: ["company-external-systems", companyId] });
+    queryClient.invalidateQueries({ queryKey: ["company-apps", companyId] });
+  };
+
+  const handleConfigSaved = () => {
+    queryClient.invalidateQueries({ queryKey: ["company-apps", companyId] });
   };
 
   // Get IDs of installed external systems
@@ -262,7 +291,11 @@ export default function CompanyIntegrations() {
                                 <Key className="h-3 w-3 mr-1" />
                                 API-nøkler
                               </Button>
-                              <Button variant="outline" size="sm">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleConfigure(app)}
+                              >
                                 <Settings className="h-3 w-3 mr-1" />
                                 Konfigurer
                               </Button>
@@ -369,7 +402,7 @@ export default function CompanyIntegrations() {
       )}
 
       {/* Credentials Dialog */}
-      {selectedApp && (
+      {selectedApp && credentialsDialogOpen && (
         <CredentialsDialog
           open={credentialsDialogOpen}
           onOpenChange={setCredentialsDialogOpen}
@@ -377,6 +410,20 @@ export default function CompanyIntegrations() {
           externalSystemId={selectedApp.externalSystemId}
           currentCredentials={selectedApp.credentials}
           onSaved={handleCredentialsSaved}
+        />
+      )}
+
+      {/* Configuration Dialog */}
+      {selectedApp && configDialogOpen && (
+        <ConfigurationDialog
+          open={configDialogOpen}
+          onOpenChange={setConfigDialogOpen}
+          companyId={companyId!}
+          externalSystemId={selectedApp.externalSystemId}
+          integrationName={selectedApp.name}
+          configSchema={selectedApp.definition?.default_config || {}}
+          currentConfig={selectedApp.config}
+          onSaved={handleConfigSaved}
         />
       )}
     </div>
