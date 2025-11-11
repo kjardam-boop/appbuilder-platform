@@ -27,6 +27,14 @@ export default {
           foreground: "hsl(var(--primary-foreground))",
           glow: "hsl(var(--primary-glow))",
         },
+        jul25: {
+          red: "hsl(var(--jul25-red))",
+          "red-dark": "hsl(var(--jul25-red-dark))",
+          green: "hsl(var(--jul25-green))",
+          "green-light": "hsl(var(--jul25-green-light))",
+          gold: "hsl(var(--jul25-gold))",
+          brown: "hsl(var(--jul25-brown))",
+        },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
           foreground: "hsl(var(--secondary-foreground))",
@@ -65,10 +73,13 @@ export default {
       backgroundImage: {
         'gradient-primary': 'var(--gradient-primary)',
         'gradient-hero': 'var(--gradient-hero)',
+        'gradient-christmas': 'var(--gradient-christmas)',
+        'gradient-tree': 'var(--gradient-tree)',
       },
       boxShadow: {
         'card': 'var(--shadow-card)',
         'elevated': 'var(--shadow-elevated)',
+        'festive': 'var(--shadow-festive)',
       },
       transitionProperty: {
         'smooth': 'var(--transition-smooth)',
