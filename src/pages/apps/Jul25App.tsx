@@ -839,7 +839,7 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
         <Baby className="absolute bottom-10 right-10 w-6 h-6 text-amber-400 animate-pulse" />
       </div>
 
-      <div className="container mx-auto py-8 space-y-8 relative z-10">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 relative z-10 max-w-full overflow-x-hidden">
         {/* Header */}
         <div className="text-center space-y-4">
             <div className="flex items-center justify-center gap-3 flex-wrap">
@@ -1279,12 +1279,13 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
                     </div>
                   </div>
                   {/* Family filter and Sort */}
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Label className="text-xs">Filtrer:</Label>
-                    <Select value={taskFamilyFilter} onValueChange={setTaskFamilyFilter}>
-                      <SelectTrigger className="h-8 text-xs w-[150px]">
-                        <SelectValue />
-                      </SelectTrigger>
+                  <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-2 w-full">
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                      <Label className="text-xs whitespace-nowrap">Filtrer:</Label>
+                      <Select value={taskFamilyFilter} onValueChange={setTaskFamilyFilter}>
+                        <SelectTrigger className="h-8 text-xs flex-1 sm:w-[150px]">
+                          <SelectValue />
+                        </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Alle oppgaver</SelectItem>
                         {userFamily && (
@@ -1297,17 +1298,20 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
                         ))}
                       </SelectContent>
                     </Select>
+                    </div>
                     
-                    <Label className="text-xs ml-2">Sorter:</Label>
-                    <Select value={taskSortBy} onValueChange={(v) => setTaskSortBy(v as "name" | "deadline")}>
-                      <SelectTrigger className="h-8 text-xs w-[130px]">
-                        <SelectValue />
-                      </SelectTrigger>
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                      <Label className="text-xs whitespace-nowrap">Sorter:</Label>
+                      <Select value={taskSortBy} onValueChange={(v) => setTaskSortBy(v as "name" | "deadline")}>
+                        <SelectTrigger className="h-8 text-xs flex-1 sm:w-[130px]">
+                          <SelectValue />
+                        </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="name">Navn</SelectItem>
                         <SelectItem value="deadline">Deadline</SelectItem>
                       </SelectContent>
                     </Select>
+                    </div>
                   </div>
                 </div>
               </CardHeader>
@@ -1548,7 +1552,7 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
 
         {/* Christmas Word Dialog */}
         <Dialog open={selectedWord !== null} onOpenChange={() => setSelectedWord(null)}>
-          <DialogContent className="sm:max-w-2xl max-h-[80vh]">
+          <DialogContent className="w-[95vw] max-w-2xl max-h-[80vh] sm:w-full">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Star className="w-6 h-6 text-yellow-500" />
@@ -1573,7 +1577,7 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
 
         {/* Login/Signup Dialog */}
         <Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="w-[95vw] max-w-md sm:w-full">
             <DialogHeader>
               <DialogTitle>
                 {inviteToken ? "Velkommen til Familiejul 2025" : "Logg inn eller opprett konto"}
@@ -1667,7 +1671,7 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
 
         {/* Family Onboarding Dialog */}
         <Dialog open={showFamilyOnboarding} onOpenChange={setShowFamilyOnboarding}>
-          <DialogContent className="sm:max-w-lg">
+          <DialogContent className="w-[95vw] max-w-lg sm:w-full">
             <DialogHeader>
               <DialogTitle>Registrer familie</DialogTitle>
               <DialogDescription>
@@ -1783,7 +1787,7 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
 
         {/* Task Dialog */}
         <Dialog open={showTaskDialog} onOpenChange={setShowTaskDialog}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="w-[95vw] max-w-md sm:w-full">
             <DialogHeader>
               <DialogTitle>{editingTask ? "Rediger oppgave" : "Ny oppgave"}</DialogTitle>
               <DialogDescription>
