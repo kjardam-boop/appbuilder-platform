@@ -1007,7 +1007,20 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
                             
                             return (
                               <div key={member.id} className="border-l-2 border-l-muted pl-3 py-2 space-y-1">
-                                <div className="font-medium text-sm">{member.name}</div>
+                                <div className="flex items-center justify-between">
+                                  <div className="font-medium text-sm">{member.name}</div>
+                                  {isUserFamilyAdmin && (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-7 w-7 p-0"
+                                      onClick={() => navigate(`/apps/jul25/member/${member.id}`)}
+                                      title="Rediger medlem"
+                                    >
+                                      <Edit2 className="h-3 w-3" />
+                                    </Button>
+                                  )}
+                                </div>
                                 {sortedPeriods.length > 0 && (
                                   <div className="flex flex-wrap gap-1">
                                     {sortedPeriods.map((item) => {
