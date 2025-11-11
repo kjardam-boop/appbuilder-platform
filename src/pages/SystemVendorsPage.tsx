@@ -28,7 +28,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { CompanyService } from "@/modules/core/company/services/companyService";
-import { CreateVendorDialog } from "@/modules/core/applications/components/CreateVendorDialog";
+import { EnhancedVendorDialog } from "@/modules/core/applications/components/EnhancedVendorDialog";
 import { Plus } from "lucide-react";
 
 interface SystemVendor {
@@ -430,12 +430,13 @@ const SystemVendorsPage = () => {
         </div>
       </main>
 
-      <CreateVendorDialog
+      <EnhancedVendorDialog
         open={isCreateDialogOpen}
-        onCreated={(vendor) => {
+        suggestedName=""
+        onCreated={(vendorId, vendorName) => {
           setIsCreateDialogOpen(false);
           fetchVendors();
-          toast.success("Systemleverandør opprettet");
+          toast.success(`Systemleverandør "${vendorName}" opprettet`);
         }}
         onCancel={() => setIsCreateDialogOpen(false)}
       />
