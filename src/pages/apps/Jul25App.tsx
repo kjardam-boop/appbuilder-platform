@@ -143,7 +143,7 @@ export default function Jul25App() {
   const [editingTask, setEditingTask] = useState<any>(null);
   const [hideCompletedTasks, setHideCompletedTasks] = useState(false);
   const [expandedFamilies, setExpandedFamilies] = useState<Set<string>>(new Set());
-  const [taskFamilyFilter, setTaskFamilyFilter] = useState<string>("all");
+  const [taskMemberFilter, setTaskMemberFilter] = useState<string>("all");
   const [taskSortBy, setTaskSortBy] = useState<"name" | "deadline">("name");
   
   // Login form
@@ -815,13 +815,17 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
       sorted = sorted.filter(task => !task.done);
     }
     
-    // Filtrer på familie hvis valgt
-    if (taskFamilyFilter !== "all") {
-      if (taskFamilyFilter === "mine" && userFamily) {
-        sorted = sorted.filter(task => task.assigned_family_id === userFamily.id);
-      } else if (taskFamilyFilter !== "mine") {
-        sorted = sorted.filter(task => task.assigned_family_id === taskFamilyFilter);
-      }
+    // Filtrer på ansvarlig medlem hvis valgt
+    if (taskMemberFilter !== "all") {
+      sorted = sorted.filter(task => {
+        const taskAssignments = allAssignments.filter(a => a.task_id === task.id);
+        
+        if (taskMemberFilter === "unassigned") {
+          return taskAssignments.length === 0;
+        }
+        
+        return taskAssignments.some(a => a.family_member_id === taskMemberFilter);
+      });
     }
     
     return sorted;
@@ -1326,24 +1330,25 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
                       )}
                     </div>
                   </div>
-                  {/* Family filter and Sort */}
+                  {/* Member filter and Sort */}
                   <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-2 w-full">
                     <div className="flex items-center gap-2 w-full sm:w-auto">
                       <Label className="text-xs whitespace-nowrap">Filtrer:</Label>
-                      <Select value={taskFamilyFilter} onValueChange={setTaskFamilyFilter}>
-                        <SelectTrigger className="h-8 text-xs flex-1 sm:w-[150px]">
+                      <Select value={taskMemberFilter} onValueChange={setTaskMemberFilter}>
+                        <SelectTrigger className="h-8 text-xs flex-1 sm:w-[180px]">
                           <SelectValue />
                         </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Alle oppgaver</SelectItem>
-                        {userFamily && (
-                          <SelectItem value="mine">Min familie</SelectItem>
-                        )}
-                        {families.map(family => (
-                          <SelectItem key={family.id} value={family.id}>
-                            {family.name}
-                          </SelectItem>
-                        ))}
+                        <SelectItem value="unassigned">Ingen ansvarlig</SelectItem>
+                        {allMembers.map(member => {
+                          const family = families.find(f => f.id === member.family_id);
+                          return (
+                            <SelectItem key={member.id} value={member.id}>
+                              {member.name} ({family?.name})
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                     </div>
@@ -1537,7 +1542,7 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
                   })}
                    {getSortedTasks().length === 0 && (
                     <p className="text-sm text-muted-foreground text-center py-4">
-                      Ingen oppgaver {taskFamilyFilter === "all" ? "" : "for valgt filter"}
+                      Ingen oppgaver {taskMemberFilter === "all" ? "" : "for valgt filter"}
                     </p>
                   )}
                 </div>
