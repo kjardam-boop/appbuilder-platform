@@ -82,29 +82,39 @@ export default function Jul25App() {
   const deleteTask = useDeleteTask();
   const setTaskAssignments = useSetTaskAssignments();
   
-  // Realtime updates for member periods and custom periods to avoid stale UI
+  // Realtime updates with debouncing to prevent race conditions
   const queryClient = useQueryClient();
   useEffect(() => {
+    let invalidateTimeout: NodeJS.Timeout;
+    
+    const debouncedInvalidate = (queryKey: string[]) => {
+      clearTimeout(invalidateTimeout);
+      invalidateTimeout = setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey });
+      }, 100);
+    };
+
     const channel = supabase
       .channel('jul25-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'jul25_member_periods' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['jul25-member-periods'] });
+        debouncedInvalidate(['jul25-member-periods']);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'jul25_member_custom_periods' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['jul25-member-custom-periods'] });
+        debouncedInvalidate(['jul25-member-custom-periods']);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'jul25_family_periods' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['jul25-family-periods'] });
+        debouncedInvalidate(['jul25-family-periods']);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'jul25_tasks' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['jul25-tasks'] });
+        debouncedInvalidate(['jul25-tasks']);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'jul25_task_assignments' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['jul25-task-assignments'] });
+        debouncedInvalidate(['jul25-task-assignments']);
       })
       .subscribe();
 
     return () => {
+      clearTimeout(invalidateTimeout);
       supabase.removeChannel(channel);
     };
   }, [queryClient]);

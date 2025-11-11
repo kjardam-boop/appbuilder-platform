@@ -53,7 +53,7 @@ export const useUpsertDoorContent = () => {
         .from('jul25_door_content')
         .upsert({ door_number, content }, { onConflict: 'door_number' })
         .select()
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
       return data;
