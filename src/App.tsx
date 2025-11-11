@@ -223,7 +223,7 @@ const App = () => (
               <Route path="integrations/definitions/:id" element={<PermissionProtectedRoute resource="integration" action="admin"><IntegrationDefinitionDetail /></PermissionProtectedRoute>} />
               <Route path="integrations-old" element={<PermissionProtectedRoute resource="integration" action="admin"><PlatformIntegrations /></PermissionProtectedRoute>} />
               <Route path="ai-providers" element={<PermissionProtectedRoute resource="tenant" action="admin"><AIProviderSettings /></PermissionProtectedRoute>} />
-              <Route path="credentials" element={<PermissionProtectedRoute resource="vault_credential" action="admin"><CredentialsPage /></PermissionProtectedRoute>} />
+              <Route path="credentials" element={<PermissionProtectedRoute resource="integration" action="admin"><CredentialsPage /></PermissionProtectedRoute>} />
               <Route path="security" element={<PermissionProtectedRoute resource="audit_log" action="admin"><AdminSettings /></PermissionProtectedRoute>} />
               <Route path="apps" element={<PermissionProtectedRoute resource="app_definition" action="admin"><AppCatalog /></PermissionProtectedRoute>} />
               <Route path="apps/new" element={<PermissionProtectedRoute resource="app_definition" action="admin"><AppDefinitionCreate /></PermissionProtectedRoute>} />
