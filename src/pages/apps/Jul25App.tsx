@@ -96,6 +96,12 @@ export default function Jul25App() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'jul25_family_periods' }, () => {
         queryClient.invalidateQueries({ queryKey: ['jul25-family-periods'] });
       })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'jul25_tasks' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['jul25-tasks'] });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'jul25_task_assignments' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['jul25-task-assignments'] });
+      })
       .subscribe();
 
     return () => {
