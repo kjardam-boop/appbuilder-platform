@@ -44,10 +44,10 @@ export const useCreateTask = () => {
         .from("jul25_tasks")
         .insert(task)
         .select()
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
-      return data as Jul25Task;
+      return data as Jul25Task | null;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["jul25-tasks"] });
@@ -69,10 +69,10 @@ export const useUpdateTask = () => {
         .update(updates)
         .eq("id", id)
         .select()
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
-      return data as Jul25Task;
+      return data as Jul25Task | null;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["jul25-tasks"] });
