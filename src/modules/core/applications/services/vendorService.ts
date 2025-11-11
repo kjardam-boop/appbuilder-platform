@@ -52,9 +52,15 @@ export class VendorService {
 
     if (error) {
       console.error('[VendorService] Vendor insert error:', error);
-      const msg = (error as any)?.message || 'Insert failed';
+      const errorMsg = (error as any)?.message || '';
+      
+      // Check for RLS/permission errors
+      if (errorMsg.includes('row-level security') || errorMsg.includes('policy')) {
+        throw new Error('Du mangler tilgang til å opprette leverandør. Kontakt administrator.');
+      }
+      
       const details = (error as any)?.details || '';
-      throw new Error(`${msg}${details ? ` - ${details}` : ''}`);
+      throw new Error(`${errorMsg}${details ? ` - ${details}` : ''}`);
     }
     return data as ExternalSystemVendor;
   }
@@ -207,7 +213,17 @@ export class VendorService {
         .select()
         .single();
 
-      if (companyError) throw companyError;
+      if (companyError) {
+        console.error('[VendorService] Company insert error:', companyError);
+        const errorMsg = (companyError as any)?.message || '';
+        
+        // Check for RLS/permission errors
+        if (errorMsg.includes('row-level security') || errorMsg.includes('policy')) {
+          throw new Error('Du mangler tilgang til å opprette selskap. Kontakt administrator.');
+        }
+        
+        throw companyError;
+      }
       company = inserted;
     }
 
