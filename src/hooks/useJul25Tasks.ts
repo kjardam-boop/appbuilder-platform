@@ -43,11 +43,11 @@ export const useCreateTask = () => {
       const { data, error } = await supabase
         .from("jul25_tasks")
         .insert(task)
-        .select()
-        .maybeSingle();
+        .select();
       
       if (error) throw error;
-      return data as Jul25Task | null;
+      const row = (data as Jul25Task[] | null)?.[0] || null;
+      return row;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["jul25-tasks"] });
@@ -68,11 +68,11 @@ export const useUpdateTask = () => {
         .from("jul25_tasks")
         .update(updates)
         .eq("id", id)
-        .select()
-        .maybeSingle();
+        .select();
       
       if (error) throw error;
-      return data as Jul25Task | null;
+      const row = (data as Jul25Task[] | null)?.[0] || null;
+      return row;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["jul25-tasks"] });
