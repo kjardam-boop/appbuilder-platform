@@ -182,7 +182,6 @@ export class VendorService {
       // Optionally update missing fields if provided
       const patch: any = {};
       if (!company.website && targetWebsite) patch.website = targetWebsite;
-      if (!company.description && companyInput.description) patch.description = companyInput.description;
       if (Object.keys(patch).length) {
         const { data: patched, error: patchErr } = await supabase
           .from('companies')
@@ -199,7 +198,7 @@ export class VendorService {
         name: companyInput.name,
         org_number: targetOrg,
         website: targetWebsite,
-        description: toNull(companyInput.description),
+        
         industry_code: toNull(companyInput.industry_code),
         industry_description: toNull(companyInput.industry_description),
         employees: companyInput.employees ?? null,
