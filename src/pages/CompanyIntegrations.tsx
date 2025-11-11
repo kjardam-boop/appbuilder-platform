@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Plus, Plug, CheckCircle2, XCircle, Settings, Trash2, Key } from "lucide-react";
+import { ArrowLeft, Plus, Plug, CheckCircle2, XCircle, Settings, Trash2, Key, Zap } from "lucide-react";
 import { toast } from "sonner";
 import Header from "@/components/Dashboard/Header";
 import { IntegrationDefinitionService } from "@/modules/core/integrations/services/integrationDefinitionService";
@@ -15,6 +15,7 @@ import type { IntegrationDefinitionWithRelations } from "@/modules/core/integrat
 import { InstallIntegrationDialog } from "@/components/integrations/InstallIntegrationDialog";
 import { CredentialsDialog } from "@/components/integrations/CredentialsDialog";
 import { ConfigurationDialog } from "@/components/integrations/ConfigurationDialog";
+import { ConnectionTestDialog } from "@/components/integrations/ConnectionTestDialog";
 
 interface Company {
   id: string;
@@ -30,6 +31,7 @@ export default function CompanyIntegrations() {
   const [selectedDefinition, setSelectedDefinition] = useState<IntegrationDefinitionWithRelations | null>(null);
   const [credentialsDialogOpen, setCredentialsDialogOpen] = useState(false);
   const [configDialogOpen, setConfigDialogOpen] = useState(false);
+  const [testDialogOpen, setTestDialogOpen] = useState(false);
   const [selectedApp, setSelectedApp] = useState<{
     id: string;
     externalSystemId: string;
@@ -142,6 +144,17 @@ export default function CompanyIntegrations() {
 
   const handleConfigSaved = () => {
     queryClient.invalidateQueries({ queryKey: ["company-apps", companyId] });
+  };
+
+  const handleTestConnection = (app: any) => {
+    setSelectedApp({
+      id: app.id,
+      externalSystemId: app.external_system_id,
+      name: app.external_system?.name || "System",
+      credentials: app.credentials || {},
+      config: app.config || {},
+    });
+    setTestDialogOpen(true);
   };
 
   // Get IDs of installed external systems
@@ -282,7 +295,15 @@ export default function CompanyIntegrations() {
                             {app.notes && (
                               <p className="text-sm text-muted-foreground">{app.notes}</p>
                             )}
-                            <div className="flex gap-2 pt-2">
+                            <div className="flex flex-wrap gap-2 pt-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleTestConnection(app)}
+                              >
+                                <Zap className="h-3 w-3 mr-1" />
+                                Test
+                              </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -424,6 +445,19 @@ export default function CompanyIntegrations() {
           configSchema={selectedApp.definition?.default_config || {}}
           currentConfig={selectedApp.config}
           onSaved={handleConfigSaved}
+        />
+      )}
+
+      {/* Connection Test Dialog */}
+      {selectedApp && testDialogOpen && (
+        <ConnectionTestDialog
+          open={testDialogOpen}
+          onOpenChange={setTestDialogOpen}
+          companyId={companyId!}
+          externalSystemId={selectedApp.externalSystemId}
+          integrationName={selectedApp.name}
+          credentials={selectedApp.credentials}
+          config={selectedApp.config}
         />
       )}
     </div>
