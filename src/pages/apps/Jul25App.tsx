@@ -220,7 +220,7 @@ export default function Jul25App() {
       words.push({ 
         date: i, 
         word: dbContent?.content || preSeeded?.word || "", 
-        generated: !!dbContent 
+        generated: !!(dbContent || preSeeded) // Door is opened if it has any content
       });
     }
     setChristmasWords(words);
