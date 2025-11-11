@@ -980,20 +980,49 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
                             const memberPeriods = allMemberPeriods.filter(mp => mp.member_id === member.id);
                             const customPeriods = allCustomPeriods.filter(cp => cp.member_id === member.id);
                             
+                            // Kombiner og sorter alle perioder kronologisk
+                            const allMemberPeriodsWithData = memberPeriods
+                              .map(mp => {
+                                const period = allPeriods.find(fp => fp.id === mp.period_id);
+                                return period ? { type: 'regular' as const, period, id: mp.id } : null;
+                              })
+                              .filter((p): p is { type: 'regular'; period: any; id: string } => p !== null);
+                            
+                            const allCustomPeriodsWithData = customPeriods.map(cp => ({ 
+                              type: 'custom' as const, 
+                              period: cp, 
+                              id: cp.id 
+                            }));
+                            
+                            const sortedPeriods = [...allMemberPeriodsWithData, ...allCustomPeriodsWithData]
+                              .sort((a, b) => {
+                                const dateA = a.type === 'regular' 
+                                  ? new Date(a.period.arrival_date)
+                                  : new Date(a.period.start_date);
+                                const dateB = b.type === 'regular' 
+                                  ? new Date(b.period.arrival_date)
+                                  : new Date(b.period.start_date);
+                                return dateA.getTime() - dateB.getTime();
+                              });
+                            
                             return (
                               <div key={member.id} className="border-l-2 border-l-muted pl-3 py-2 space-y-1">
                                 <div className="font-medium text-sm">{member.name}</div>
-                                {memberPeriods.length > 0 && (
+                                {sortedPeriods.length > 0 && (
                                   <div className="flex flex-wrap gap-1">
-                                    {memberPeriods.map((mp) => {
-                                      const period = allPeriods.find(fp => fp.id === mp.period_id);
-                                      if (!period) return null;
-                                      const start = new Date(period.arrival_date).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' });
-                                      const end = new Date(period.departure_date).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' });
+                                    {sortedPeriods.map((item) => {
+                                      const isRegular = item.type === 'regular';
+                                      const period = item.period;
+                                      const start = isRegular 
+                                        ? new Date(period.arrival_date).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' })
+                                        : new Date(period.start_date).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' });
+                                      const end = isRegular 
+                                        ? new Date(period.departure_date).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' })
+                                        : new Date(period.end_date).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' });
                                       const isJajabo = period.location === 'Jajabo';
                                       return (
                                         <Badge 
-                                          key={mp.id} 
+                                          key={item.id} 
                                           variant="outline" 
                                           className={cn(
                                             "text-xs font-medium border-2",
@@ -1003,29 +1032,6 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
                                           )}
                                         >
                                           {period.location}: {start} - {end}
-                                        </Badge>
-                                      );
-                                    })}
-                                  </div>
-                                )}
-                                {customPeriods.length > 0 && (
-                                  <div className="flex flex-wrap gap-1">
-                                    {customPeriods.map((cp) => {
-                                      const start = new Date(cp.start_date).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' });
-                                      const end = new Date(cp.end_date).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' });
-                                      const isJajabo = cp.location === 'Jajabo';
-                                      return (
-                                        <Badge 
-                                          key={cp.id} 
-                                          variant="outline" 
-                                          className={cn(
-                                            "text-xs font-medium border-2",
-                                            isJajabo 
-                                              ? "bg-green-100 dark:bg-green-950/30 border-green-600 dark:border-green-700 text-green-900 dark:text-green-300"
-                                              : "bg-red-100 dark:bg-red-950/30 border-red-600 dark:border-red-700 text-red-900 dark:text-red-300"
-                                          )}
-                                        >
-                                          {cp.location}: {start} - {end}
                                         </Badge>
                                       );
                                     })}
