@@ -50,7 +50,12 @@ export class VendorService {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('[VendorService] Vendor insert error:', error);
+      const msg = (error as any)?.message || 'Insert failed';
+      const details = (error as any)?.details || '';
+      throw new Error(`${msg}${details ? ` - ${details}` : ''}`);
+    }
     return data as ExternalSystemVendor;
   }
 
