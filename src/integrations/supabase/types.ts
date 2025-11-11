@@ -724,39 +724,51 @@ export type Database = {
           company_id: string
           config: Json | null
           created_at: string
+          credential_expires_at: string | null
           credentials: Json | null
           environment: string | null
           external_system_id: string
           id: string
+          last_tested_at: string | null
           notes: string | null
           sku_id: string | null
+          test_status: string | null
           updated_at: string
+          vault_credential_id: string | null
           version: string | null
         }
         Insert: {
           company_id: string
           config?: Json | null
           created_at?: string
+          credential_expires_at?: string | null
           credentials?: Json | null
           environment?: string | null
           external_system_id: string
           id?: string
+          last_tested_at?: string | null
           notes?: string | null
           sku_id?: string | null
+          test_status?: string | null
           updated_at?: string
+          vault_credential_id?: string | null
           version?: string | null
         }
         Update: {
           company_id?: string
           config?: Json | null
           created_at?: string
+          credential_expires_at?: string | null
           credentials?: Json | null
           environment?: string | null
           external_system_id?: string
           id?: string
+          last_tested_at?: string | null
           notes?: string | null
           sku_id?: string | null
+          test_status?: string | null
           updated_at?: string
+          vault_credential_id?: string | null
           version?: string | null
         }
         Relationships: [
@@ -779,6 +791,13 @@ export type Database = {
             columns: ["sku_id"]
             isOneToOne: false
             referencedRelation: "external_system_skus"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_external_systems_vault_credential_id_fkey"
+            columns: ["vault_credential_id"]
+            isOneToOne: false
+            referencedRelation: "vault_credentials"
             referencedColumns: ["id"]
           },
         ]
@@ -882,6 +901,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      credential_audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          error_message: string | null
+          id: string
+          ip_address: unknown
+          resource_id: string
+          resource_type: string
+          status: string | null
+          tenant_id: string
+          user_agent: string | null
+          user_id: string | null
+          vault_secret_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          ip_address?: unknown
+          resource_id: string
+          resource_type: string
+          status?: string | null
+          tenant_id: string
+          user_agent?: string | null
+          user_id?: string | null
+          vault_secret_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          ip_address?: unknown
+          resource_id?: string
+          resource_type?: string
+          status?: string | null
+          tenant_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+          vault_secret_id?: string | null
+        }
+        Relationships: []
       }
       customer_app_projects: {
         Row: {
@@ -3737,42 +3801,59 @@ export type Database = {
           adapter_id: string
           config: Json
           created_at: string
+          credential_expires_at: string | null
           credentials: Json | null
           id: string
           is_active: boolean
+          last_tested_at: string | null
           last_used_at: string | null
           rate_limit: Json | null
           tenant_id: string
+          test_status: string | null
           updated_at: string
-          vault_secret_id: string | null
+          vault_credential_id: string | null
         }
         Insert: {
           adapter_id: string
           config?: Json
           created_at?: string
+          credential_expires_at?: string | null
           credentials?: Json | null
           id?: string
           is_active?: boolean
+          last_tested_at?: string | null
           last_used_at?: string | null
           rate_limit?: Json | null
           tenant_id: string
+          test_status?: string | null
           updated_at?: string
-          vault_secret_id?: string | null
+          vault_credential_id?: string | null
         }
         Update: {
           adapter_id?: string
           config?: Json
           created_at?: string
+          credential_expires_at?: string | null
           credentials?: Json | null
           id?: string
           is_active?: boolean
+          last_tested_at?: string | null
           last_used_at?: string | null
           rate_limit?: Json | null
           tenant_id?: string
+          test_status?: string | null
           updated_at?: string
-          vault_secret_id?: string | null
+          vault_credential_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tenant_integrations_vault_credential_id_fkey"
+            columns: ["vault_credential_id"]
+            isOneToOne: false
+            referencedRelation: "vault_credentials"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tenant_pages: {
         Row: {
@@ -3945,6 +4026,71 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      vault_credentials: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          encrypted_value: string
+          id: string
+          key_id: string | null
+          last_rotated_at: string | null
+          last_tested_at: string | null
+          metadata: Json | null
+          name: string
+          resource_id: string
+          resource_type: string
+          tenant_id: string
+          test_error_message: string | null
+          test_status: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          encrypted_value: string
+          id?: string
+          key_id?: string | null
+          last_rotated_at?: string | null
+          last_tested_at?: string | null
+          metadata?: Json | null
+          name: string
+          resource_id: string
+          resource_type: string
+          tenant_id: string
+          test_error_message?: string | null
+          test_status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          encrypted_value?: string
+          id?: string
+          key_id?: string | null
+          last_rotated_at?: string | null
+          last_tested_at?: string | null
+          metadata?: Json | null
+          name?: string
+          resource_id?: string
+          resource_type?: string
+          tenant_id?: string
+          test_error_message?: string | null
+          test_status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vault_credentials_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vendor_partnerships: {
         Row: {
@@ -4154,6 +4300,18 @@ export type Database = {
       }
       is_platform_admin: { Args: { _user_id: string }; Returns: boolean }
       is_tenant_admin: { Args: { _user_id: string }; Returns: boolean }
+      log_credential_operation: {
+        Args: {
+          p_action: string
+          p_error_message?: string
+          p_resource_id: string
+          p_resource_type: string
+          p_status?: string
+          p_tenant_id: string
+          p_vault_secret_id?: string
+        }
+        Returns: undefined
+      }
       user_has_admin_access: { Args: { p_user_id: string }; Returns: boolean }
       user_has_any_role: {
         Args: {

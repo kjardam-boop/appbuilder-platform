@@ -1,0 +1,166 @@
+/**
+ * Credentials Admin Page
+ * Platform admin UI for managing encrypted credentials
+ */
+
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, Shield, Building2, Workflow } from "lucide-react";
+import { useTenantContext } from "@/hooks/useTenantContext";
+import { CredentialsList } from "@/components/admin/credentials/CredentialsList";
+import { CredentialManagementDialog } from "@/components/admin/credentials/CredentialManagementDialog";
+import { CredentialAuditLog } from "@/components/admin/credentials/CredentialAuditLog";
+import { supabase } from "@/integrations/supabase/client";
+
+export default function CredentialsPage() {
+  const context = useTenantContext();
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [selectedTab, setSelectedTab] = useState<"tenant" | "company">("tenant");
+
+  const { data: tenantCredentials, refetch: refetchTenantCredentials } = useQuery({
+    queryKey: ["tenant-credentials", context?.tenant_id],
+    queryFn: async () => {
+      if (!context?.tenant_id) return [];
+      
+      const { data, error } = await supabase
+        .from("vault_credentials")
+        .select("*")
+        .eq("tenant_id", context.tenant_id)
+        .eq("resource_type", "tenant_integration")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return (data || []).map(d => ({
+        ...d,
+        test_status: d.test_status as 'success' | 'failed' | undefined,
+      }));
+    },
+    enabled: !!context?.tenant_id,
+  });
+
+  const { data: companyCredentials, refetch: refetchCompanyCredentials } = useQuery({
+    queryKey: ["company-credentials", context?.tenant_id],
+    queryFn: async () => {
+      if (!context?.tenant_id) return [];
+      
+      const { data, error } = await supabase
+        .from("vault_credentials")
+        .select("*")
+        .eq("tenant_id", context.tenant_id)
+        .eq("resource_type", "company_system")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return (data || []).map(d => ({
+        ...d,
+        test_status: d.test_status as 'success' | 'failed' | undefined,
+      }));
+    },
+    enabled: !!context?.tenant_id,
+  });
+
+  if (!context) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card className="p-8 text-center">
+          <Shield className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+          <p className="text-muted-foreground">Loading tenant context...</p>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+            <Shield className="h-8 w-8 text-primary" />
+            Encrypted Credentials
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            Manage API keys and secrets stored securely in Vault
+          </p>
+        </div>
+
+        <Button onClick={() => setAddDialogOpen(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Credential
+        </Button>
+      </div>
+
+      <Tabs value={selectedTab} onValueChange={(v) => setSelectedTab(v as "tenant" | "company")}>
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="tenant" className="flex items-center gap-2">
+            <Workflow className="h-4 w-4" />
+            Tenant Integrations
+          </TabsTrigger>
+          <TabsTrigger value="company" className="flex items-center gap-2">
+            <Building2 className="h-4 w-4" />
+            Company Systems
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="tenant" className="space-y-6 mt-6">
+          <Card className="p-6">
+            <h2 className="text-xl font-semibold mb-4">Tenant Integration Credentials</h2>
+            <p className="text-sm text-muted-foreground mb-6">
+              Credentials for tenant-wide integrations (available to all users in this tenant)
+            </p>
+
+            <CredentialsList
+              credentials={tenantCredentials || []}
+              metadata={{
+                tenant_id: context.tenant_id,
+                resource_type: "tenant_integration",
+                resource_id: context.tenant_id,
+              }}
+              onCredentialChanged={() => refetchTenantCredentials()}
+            />
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="company" className="space-y-6 mt-6">
+          <Card className="p-6">
+            <h2 className="text-xl font-semibold mb-4">Company System Credentials</h2>
+            <p className="text-sm text-muted-foreground mb-6">
+              Credentials for company-specific external systems
+            </p>
+
+            <CredentialsList
+              credentials={companyCredentials || []}
+              metadata={{
+                tenant_id: context.tenant_id,
+                resource_type: "company_system",
+                resource_id: context.tenant_id,
+              }}
+              onCredentialChanged={() => refetchCompanyCredentials()}
+            />
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      <CredentialAuditLog tenantId={context.tenant_id} />
+
+      <CredentialManagementDialog
+        open={addDialogOpen}
+        onOpenChange={setAddDialogOpen}
+        metadata={{
+          tenant_id: context.tenant_id,
+          resource_type: selectedTab === "tenant" ? "tenant_integration" : "company_system",
+          resource_id: context.tenant_id,
+        }}
+        onSaved={() => {
+          if (selectedTab === "tenant") {
+            refetchTenantCredentials();
+          } else {
+            refetchCompanyCredentials();
+          }
+        }}
+      />
+    </div>
+  );
+}
