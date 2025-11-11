@@ -127,42 +127,95 @@ export class VendorService {
     },
     vendorInput: Omit<ExternalSystemVendorInput, 'company_id'>
   ): Promise<{ company: any; vendor: ExternalSystemVendor }> {
-    // First create the company
-    const companyPayload = {
-      name: companyInput.name,
-      org_number: companyInput.org_number || null,
-      website: companyInput.website && companyInput.website.trim() !== "" ? companyInput.website : null,
-      description: companyInput.description && companyInput.description.trim() !== "" ? companyInput.description : null,
-      industry_code: companyInput.industry_code || null,
-      industry_description: companyInput.industry_description || null,
-      employees: companyInput.employees ?? null,
-      company_roles: (companyInput.company_roles && companyInput.company_roles.length > 0)
-        ? companyInput.company_roles
-        : ["external_system_vendor"],
-    };
+    // Normalize payloads (empty -> null)
+    const toNull = (v: any) => (v === undefined || v === null || (typeof v === 'string' && v.trim() === '') ? null : v);
 
-    console.log('[VendorService] Inserting company with payload:', companyPayload);
-    const { data: company, error: companyError } = await supabase
-      .from('companies')
-      .insert(companyPayload)
-      .select()
-      .single();
+    const desiredRole = 'external_system_vendor';
+    const targetOrg = toNull(companyInput.org_number) as string | null;
+    const targetWebsite = toNull(companyInput.website) as string | null;
 
-    if (companyError) {
-      console.error('[VendorService] Company insert error:', companyError);
-      throw companyError;
+    // Try to find existing company by org_number first, then by website
+    let company: any = null;
+    if (targetOrg) {
+      const { data, error } = await supabase
+        .from('companies')
+        .select('*')
+        .eq('org_number', targetOrg)
+        .maybeSingle();
+      if (error) throw error;
+      company = data;
     }
 
-    // Then create the vendor linked to the company
-    const vendorPayload = {
+    if (!company && targetWebsite) {
+      const { data, error } = await supabase
+        .from('companies')
+        .select('*')
+        .eq('website', targetWebsite)
+        .maybeSingle();
+      if (error) throw error;
+      company = data;
+    }
+
+    if (company) {
+      // Ensure role is present
+      const roles: string[] = Array.isArray(company.company_roles) ? company.company_roles : [];
+      if (!roles.includes(desiredRole)) {
+        const updatedRoles = [...roles, desiredRole];
+        const { error: updateErr } = await supabase
+          .from('companies')
+          .update({ company_roles: updatedRoles })
+          .eq('id', company.id);
+        if (updateErr) throw updateErr;
+        company.company_roles = updatedRoles;
+      }
+      // Optionally update missing fields if provided
+      const patch: any = {};
+      if (!company.website && targetWebsite) patch.website = targetWebsite;
+      if (!company.description && companyInput.description) patch.description = companyInput.description;
+      if (Object.keys(patch).length) {
+        const { data: patched, error: patchErr } = await supabase
+          .from('companies')
+          .update(patch)
+          .eq('id', company.id)
+          .select()
+          .single();
+        if (patchErr) throw patchErr;
+        company = patched;
+      }
+    } else {
+      // Insert new company
+      const companyPayload = {
+        name: companyInput.name,
+        org_number: targetOrg,
+        website: targetWebsite,
+        description: toNull(companyInput.description),
+        industry_code: toNull(companyInput.industry_code),
+        industry_description: toNull(companyInput.industry_description),
+        employees: companyInput.employees ?? null,
+        company_roles: companyInput.company_roles?.length ? companyInput.company_roles : [desiredRole],
+        source: 'manual',
+      };
+
+      const { data: inserted, error: companyError } = await supabase
+        .from('companies')
+        .insert(companyPayload)
+        .select()
+        .single();
+
+      if (companyError) throw companyError;
+      company = inserted;
+    }
+
+    // Create vendor linked to company
+    const vendorPayload: any = {
       ...vendorInput,
       company_id: company.id,
-      website: vendorInput.website && vendorInput.website.trim() !== "" ? vendorInput.website : null,
-      contact_url: vendorInput.contact_url && vendorInput.contact_url.trim() !== "" ? vendorInput.contact_url : null,
-      description: vendorInput.description && vendorInput.description.trim() !== "" ? vendorInput.description : null,
-    } as any;
+      website: toNull(vendorInput.website),
+      contact_url: toNull(vendorInput.contact_url),
+      description: toNull(vendorInput.description),
+      org_number: targetOrg,
+    };
 
-    console.log('[VendorService] Inserting vendor with payload:', vendorPayload);
     const vendor = await this.createVendor(ctx, vendorPayload);
 
     return { company, vendor };
