@@ -150,6 +150,8 @@ export const EnhancedVendorDialog = ({
   };
 
   const onSubmit = async (data: EnhancedVendorData) => {
+    console.log('[EnhancedVendorDialog] Form submitted with data:', data);
+    
     if (!context) {
       toast.error("Ingen tenant-kontekst");
       return;
@@ -157,6 +159,25 @@ export const EnhancedVendorDialog = ({
 
     setIsCreating(true);
     try {
+      console.log('[EnhancedVendorDialog] Creating vendor with context:', context);
+      console.log('[EnhancedVendorDialog] Company data:', {
+        name: data.name,
+        org_number: data.org_number,
+        website: data.website,
+        description: data.description,
+        industry_code: data.industry_code,
+        industry_description: data.industry_description,
+        employees: data.employees,
+        company_roles: ['vendor'],
+      });
+      console.log('[EnhancedVendorDialog] Vendor data:', {
+        name: data.name,
+        website: data.website,
+        description: data.description,
+        country: data.country,
+        contact_url: data.contact_url,
+      });
+      
       const result = await VendorService.createVendorWithCompany(
         context,
         {
@@ -178,11 +199,21 @@ export const EnhancedVendorDialog = ({
         }
       );
 
+      console.log('[EnhancedVendorDialog] Vendor created successfully:', result);
       toast.success(`Leverandør "${result.vendor.name}" opprettet`);
       onCreated(result.vendor.id, result.vendor.name);
     } catch (error) {
-      console.error("Vendor creation error:", error);
-      toast.error(error instanceof Error ? error.message : "Kunne ikke opprette leverandør");
+      console.error("[EnhancedVendorDialog] Vendor creation error:", error);
+      console.error("[EnhancedVendorDialog] Error details:", JSON.stringify(error, null, 2));
+      
+      let errorMessage = "Kunne ikke opprette leverandør";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        console.error("[EnhancedVendorDialog] Error message:", error.message);
+        console.error("[EnhancedVendorDialog] Error stack:", error.stack);
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setIsCreating(false);
     }
