@@ -38,6 +38,7 @@ import ApplicationsPage from "./pages/ApplicationsPage";
 import ExternalSystemDetails from "./pages/ExternalSystemDetails";
 import ExternalSystemVendorAdmin from "./pages/ExternalSystemVendorAdmin";
 import SystemVendorsPage from "./pages/SystemVendorsPage";
+import VendorDetailsPage from "./pages/VendorDetailsPage";
 import RoleManagement from "./pages/RoleManagement";
 import RoleConfiguration from "./pages/admin/RoleConfiguration";
 import PermissionHealth from "./pages/admin/PermissionHealth";
@@ -253,6 +254,7 @@ const App = () => (
             {/* Applications - with redirects from old /applications routes */}
             <Route path="/external-systems" element={<PlatformProtectedRoute><ApplicationsPage /></PlatformProtectedRoute>} />
             <Route path="/external-systems/:id" element={<PlatformProtectedRoute><ExternalSystemDetails /></PlatformProtectedRoute>} />
+            <Route path="/external-systems/vendors/:id" element={<PlatformProtectedRoute><VendorDetailsPage /></PlatformProtectedRoute>} />
             <Route path="/system-vendors" element={<PlatformProtectedRoute><SystemVendorsPage /></PlatformProtectedRoute>} />
             <Route path="/capabilities" element={<PlatformProtectedRoute><CapabilityCatalog /></PlatformProtectedRoute>} />
             

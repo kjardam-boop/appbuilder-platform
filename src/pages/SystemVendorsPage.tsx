@@ -333,6 +333,7 @@ const SystemVendorsPage = () => {
                     </Button>
                   </TableHead>
                   <TableHead className="min-w-[100px]">Roller</TableHead>
+                  <TableHead className="min-w-[150px]">Handlinger</TableHead>
                 </TableRow>
                 <TableRow>
                   <TableHead>
@@ -371,15 +372,15 @@ const SystemVendorsPage = () => {
                       </SelectContent>
                     </Select>
                   </TableHead>
-                  <TableHead colSpan={3}></TableHead>
+                  <TableHead colSpan={2}></TableHead>
+                  <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paginatedVendors.map((vendor) => (
                   <TableRow
                     key={vendor.id}
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => navigate(`/company/${vendor.id}`)}
+                    className="hover:bg-muted/50"
                   >
                     <TableCell className="font-medium">{vendor.name}</TableCell>
                     <TableCell>{vendor.org_number}</TableCell>
@@ -395,6 +396,30 @@ const SystemVendorsPage = () => {
                         {vendor.company_roles.includes('partner') && (
                           <Badge variant="outline">Partner</Badge>
                         )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/external-systems/vendors/${vendor.id}`);
+                          }}
+                        >
+                          Detaljer
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/external-systems?vendor=${vendor.id}`);
+                          }}
+                        >
+                          Produkter
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>

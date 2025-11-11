@@ -1,6 +1,8 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useExternalSystem, useUpdateExternalSystem } from "@/modules/core/applications";
 import { useApplicationGeneration } from "@/modules/core/applications/hooks/useApplicationGeneration";
+import { ApplicationService } from "@/modules/core/applications/services/applicationService";
+import { buildClientContext } from "@/shared/lib/buildContext";
 import { Header } from "@/components/layout/Header";
 import { AppBreadcrumbs } from "@/components/ui/app-breadcrumbs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +12,17 @@ import { Separator } from "@/components/ui/separator";
 import { ExternalSystemSKUManager } from "@/modules/core/applications/components/ExternalSystemSKUManager";
 import { IntegrationCatalogSection } from "@/modules/core/applications/components/IntegrationCatalogSection";
 import { UnknownTypeDialog } from "@/modules/core/applications/components/UnknownTypeDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { 
   ArrowLeft, 
   Building2, 
@@ -19,15 +32,18 @@ import {
   Shield,
   MapPin,
   Layers,
-  Sparkles
+  Sparkles,
+  Trash2
 } from "lucide-react";
 import { APP_TYPES } from "@/modules/core/applications/types/application.types";
 import { toast } from "sonner";
 import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 export default function ExternalSystemDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { data: product, isLoading } = useExternalSystem(id!);
   const updateProduct = useUpdateExternalSystem();
   const [unknownTypeDialog, setUnknownTypeDialog] = useState<{
@@ -36,6 +52,21 @@ export default function ExternalSystemDetails() {
     generatedData: any;
     pendingUnknownTypes: string[];
   } | null>(null);
+
+  const deleteProductMutation = useMutation({
+    mutationFn: async () => {
+      const ctx = await buildClientContext();
+      return ApplicationService.deleteProduct(ctx, id!);
+    },
+    onSuccess: () => {
+      toast.success("System slettet");
+      queryClient.invalidateQueries({ queryKey: ["external-systems"] });
+      navigate("/external-systems");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Kunne ikke slette system");
+    },
+  });
 
   const { generate, isGenerating } = useApplicationGeneration({
     onSuccess: (data) => {
@@ -211,6 +242,67 @@ export default function ExternalSystemDetails() {
                       </Button>
                     </>
                   )}
+                  
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        variant={product.status === "Active" ? "outline" : "default"}
+                        size="sm"
+                      >
+                        {product.status === "Active" ? "Deaktiver" : "Aktiver"}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>
+                          {product.status === "Active" ? "Deaktiver system" : "Aktiver system"}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                          {product.status === "Active" 
+                            ? `Dette vil deaktivere systemet "${product.name}". Det vil ikke lenger vises i aktive lister.`
+                            : `Dette vil aktivere systemet "${product.name}" igjen.`
+                          }
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Avbryt</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => updateProduct.mutate({
+                            id: product.id,
+                            input: { status: product.status === "Active" ? "Legacy" : "Active" }
+                          })}
+                        >
+                          {product.status === "Active" ? "Deaktiver" : "Aktiver"}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" size="sm">
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Slett
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Er du sikker?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Dette vil permanent slette systemet "{product.name}". Denne handlingen kan ikke angres.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Avbryt</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => deleteProductMutation.mutate()}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Slett system
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </div>
             </CardHeader>
