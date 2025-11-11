@@ -6,13 +6,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Plus, Plug, CheckCircle2, XCircle, Settings, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, Plug, CheckCircle2, XCircle, Settings, Trash2, Key } from "lucide-react";
 import { toast } from "sonner";
 import Header from "@/components/Dashboard/Header";
 import { IntegrationDefinitionService } from "@/modules/core/integrations/services/integrationDefinitionService";
 import { useCompanyExternalSystems, useCreateCompanyApp, useDeleteCompanyApp } from "@/modules/core/applications";
 import type { IntegrationDefinitionWithRelations } from "@/modules/core/integrations/types/integrationDefinition.types";
 import { InstallIntegrationDialog } from "@/components/integrations/InstallIntegrationDialog";
+import { CredentialsDialog } from "@/components/integrations/CredentialsDialog";
 
 interface Company {
   id: string;
@@ -26,6 +27,12 @@ export default function CompanyIntegrations() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<"installed" | "available">("installed");
   const [selectedDefinition, setSelectedDefinition] = useState<IntegrationDefinitionWithRelations | null>(null);
+  const [credentialsDialogOpen, setCredentialsDialogOpen] = useState(false);
+  const [selectedApp, setSelectedApp] = useState<{
+    id: string;
+    externalSystemId: string;
+    credentials?: Record<string, string>;
+  } | null>(null);
 
   // Fetch company details
   const { data: company, isLoading: companyLoading } = useQuery({
@@ -93,6 +100,19 @@ export default function CompanyIntegrations() {
       console.error("Uninstall error:", error);
       toast.error("Kunne ikke avinstallere integrasjon");
     }
+  };
+
+  const handleManageCredentials = (app: any) => {
+    setSelectedApp({
+      id: app.id,
+      externalSystemId: app.external_system_id,
+      credentials: app.credentials || {},
+    });
+    setCredentialsDialogOpen(true);
+  };
+
+  const handleCredentialsSaved = () => {
+    queryClient.invalidateQueries({ queryKey: ["company-external-systems", companyId] });
   };
 
   // Get IDs of installed external systems
@@ -234,7 +254,15 @@ export default function CompanyIntegrations() {
                               <p className="text-sm text-muted-foreground">{app.notes}</p>
                             )}
                             <div className="flex gap-2 pt-2">
-                              <Button variant="outline" size="sm" className="flex-1">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleManageCredentials(app)}
+                              >
+                                <Key className="h-3 w-3 mr-1" />
+                                API-nøkler
+                              </Button>
+                              <Button variant="outline" size="sm">
                                 <Settings className="h-3 w-3 mr-1" />
                                 Konfigurer
                               </Button>
@@ -337,6 +365,18 @@ export default function CompanyIntegrations() {
           definition={selectedDefinition}
           onInstall={() => handleInstall(selectedDefinition.id)}
           isLoading={createMutation.isPending}
+        />
+      )}
+
+      {/* Credentials Dialog */}
+      {selectedApp && (
+        <CredentialsDialog
+          open={credentialsDialogOpen}
+          onOpenChange={setCredentialsDialogOpen}
+          companyId={companyId!}
+          externalSystemId={selectedApp.externalSystemId}
+          currentCredentials={selectedApp.credentials}
+          onSaved={handleCredentialsSaved}
         />
       )}
     </div>

@@ -723,6 +723,7 @@ export type Database = {
         Row: {
           company_id: string
           created_at: string
+          credentials: Json | null
           environment: string | null
           external_system_id: string
           id: string
@@ -734,6 +735,7 @@ export type Database = {
         Insert: {
           company_id: string
           created_at?: string
+          credentials?: Json | null
           environment?: string | null
           external_system_id: string
           id?: string
@@ -745,6 +747,7 @@ export type Database = {
         Update: {
           company_id?: string
           created_at?: string
+          credentials?: Json | null
           environment?: string | null
           external_system_id?: string
           id?: string
@@ -1412,7 +1415,6 @@ export type Database = {
           ai_plugins: boolean | null
           api_docs_url: string | null
           api_keys: boolean | null
-          app_types: string[] | null
           category_id: string | null
           compliances: string[] | null
           created_at: string
@@ -1444,6 +1446,7 @@ export type Database = {
           slug: string
           sso: boolean | null
           status: string
+          system_types: string[] | null
           target_industries: string[] | null
           updated_at: string
           vendor_id: string
@@ -1455,7 +1458,6 @@ export type Database = {
           ai_plugins?: boolean | null
           api_docs_url?: string | null
           api_keys?: boolean | null
-          app_types?: string[] | null
           category_id?: string | null
           compliances?: string[] | null
           created_at?: string
@@ -1487,6 +1489,7 @@ export type Database = {
           slug: string
           sso?: boolean | null
           status?: string
+          system_types?: string[] | null
           target_industries?: string[] | null
           updated_at?: string
           vendor_id: string
@@ -1498,7 +1501,6 @@ export type Database = {
           ai_plugins?: boolean | null
           api_docs_url?: string | null
           api_keys?: boolean | null
-          app_types?: string[] | null
           category_id?: string | null
           compliances?: string[] | null
           created_at?: string
@@ -1530,6 +1532,7 @@ export type Database = {
           slug?: string
           sso?: boolean | null
           status?: string
+          system_types?: string[] | null
           target_industries?: string[] | null
           updated_at?: string
           vendor_id?: string
