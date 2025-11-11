@@ -177,23 +177,24 @@ export default function Jul25FamilyAdmin() {
   }
   
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-50 to-white p-4 md:p-8">
-      <div className="max-w-6xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gradient-to-b from-green-50 to-white p-3 sm:p-4 md:p-8">
+      <div className="max-w-6xl mx-auto space-y-4 md:space-y-6">
         {/* Header */}
-        <Button variant="ghost" onClick={() => navigate("/apps/jul25")} className="mb-4">
+        <Button variant="ghost" onClick={() => navigate("/apps/jul25")} className="mb-2 sm:mb-4 -ml-2">
           <ArrowLeft className="mr-2 h-4 w-4" />
           Tilbake til Jul25
         </Button>
         
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold text-green-800">Familieadministrasjon</h1>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4 md:mb-6">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-green-800">Familieadministrasjon</h1>
           <Button
             variant="destructive"
             onClick={handleDeleteFamily}
-            className="gap-2"
+            className="gap-2 w-full sm:w-auto"
+            size="sm"
           >
             <Trash2 className="h-4 w-4" />
-            Slett familie
+            <span className="sm:inline">Slett familie</span>
           </Button>
         </div>
         
@@ -214,17 +215,17 @@ export default function Jul25FamilyAdmin() {
               )}
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-6 space-y-4">
+          <CardContent className="p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4">
             {/* Mismatch Warning - Now only shown during sync */}
             {memberCountMismatch && !syncMembers.isPending && (
-              <div className="bg-amber-50 border-2 border-amber-300 rounded-lg p-4">
-                <div className="flex items-start gap-3">
-                  <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div className="bg-amber-50 border-2 border-amber-300 rounded-lg p-3">
+                <div className="flex items-start gap-2 sm:gap-3">
+                  <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-amber-600 flex-shrink-0 mt-0.5" />
                   <div className="flex-1">
-                    <div className="font-semibold text-amber-900">
+                    <div className="font-semibold text-amber-900 text-sm sm:text-base">
                       Medlemslisten synkroniseres automatisk
                     </div>
-                    <div className="text-sm text-amber-700 mt-1">
+                    <div className="text-xs sm:text-sm text-amber-700 mt-1">
                       Medlemmer legges til eller fjernes automatisk når du endrer antall personer.
                     </div>
                   </div>
@@ -232,10 +233,10 @@ export default function Jul25FamilyAdmin() {
               </div>
             )}
             {syncMembers.isPending && (
-              <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4">
-                <div className="flex items-center gap-3">
-                  <RefreshCw className="h-5 w-5 text-blue-600 animate-spin" />
-                  <div className="font-semibold text-blue-900">
+              <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-3">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <RefreshCw className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 animate-spin" />
+                  <div className="font-semibold text-blue-900 text-sm sm:text-base">
                     Synkroniserer medlemmer...
                   </div>
                 </div>
@@ -243,19 +244,19 @@ export default function Jul25FamilyAdmin() {
             )}
             {/* Family Name */}
             <div>
-              <Label>Familienavn</Label>
+              <Label className="text-sm">Familienavn</Label>
               {editingName ? (
                 <Input
                   value={familyName}
                   onChange={(e) => setFamilyName(e.target.value)}
                   onBlur={() => setEditingName(false)}
                   autoFocus
-                  className="mt-1"
+                  className="mt-1 text-sm sm:text-base"
                 />
               ) : (
                 <div 
                   onClick={() => setEditingName(true)}
-                  className="mt-1 p-2 border rounded cursor-pointer hover:bg-green-50"
+                  className="mt-1 p-2 border rounded cursor-pointer hover:bg-green-50 text-sm sm:text-base"
                 >
                   {familyName || family.name}
                 </div>
@@ -264,33 +265,33 @@ export default function Jul25FamilyAdmin() {
             
             {/* Number of People */}
             <div>
-              <Label>Antall personer</Label>
-              <div className="flex items-center gap-3 mt-1">
+              <Label className="text-sm">Antall personer</Label>
+              <div className="flex items-center gap-2 sm:gap-3 mt-1">
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={() => handlePeopleCountChange(-1)}
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  className="bg-green-600 hover:bg-green-700 text-white h-8 w-8 p-0"
                 >
-                  <Minus className="h-4 w-4" />
+                  <Minus className="h-3 w-3 sm:h-4 sm:w-4" />
                 </Button>
-                <span className="text-2xl font-bold text-green-800 min-w-[3rem] text-center">
+                <span className="text-xl sm:text-2xl font-bold text-green-800 min-w-[2.5rem] sm:min-w-[3rem] text-center">
                   {peopleCount}
                 </span>
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={() => handlePeopleCountChange(1)}
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  className="bg-green-600 hover:bg-green-700 text-white h-8 w-8 p-0"
                 >
-                  <Plus className="h-4 w-4" />
+                  <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
                 </Button>
               </div>
             </div>
             
             {/* Periods */}
             <div>
-              <Label>Perioder / Steder</Label>
+              <Label className="text-sm">Perioder / Steder</Label>
               <div className="mt-2 space-y-2">
                 {periods.map(period => (
                   <Card 
@@ -300,35 +301,37 @@ export default function Jul25FamilyAdmin() {
                       period.location === 'Jajabo' ? "bg-green-100 border-green-300" : "bg-amber-100 border-amber-300"
                     )}
                   >
-                    <CardContent className="p-3 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
+                    <CardContent className="p-2 sm:p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                      <div className="flex items-start sm:items-center gap-2 sm:gap-3 flex-1 min-w-0">
                         <MapPin className={cn(
-                          "h-5 w-5",
+                          "h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 mt-0.5 sm:mt-0",
                           period.location === 'Jajabo' ? "text-green-700" : "text-amber-700"
                         )} />
-                        <div>
-                          <div className="font-semibold">
+                        <div className="min-w-0 flex-1">
+                          <div className="font-semibold text-sm sm:text-base">
                             {period.location} {period.location === 'Jajabo' ? '(Nøtterøy)' : '(Nissedal)'}
                           </div>
-                          <div className="text-sm text-muted-foreground">
+                          <div className="text-xs sm:text-sm text-muted-foreground">
                             {format(new Date(period.arrival_date), "dd. MMM")} - {format(new Date(period.departure_date), "dd. MMM yyyy")}
                           </div>
                         </div>
                       </div>
-                      <div className="flex gap-1">
+                      <div className="flex gap-1 self-end sm:self-auto">
                         <Button 
                           size="sm" 
                           variant="ghost"
                           onClick={() => handleEditPeriod(period)}
+                          className="h-8 w-8 p-0"
                         >
-                          <Edit2 className="h-4 w-4" />
+                          <Edit2 className="h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
                         <Button 
                           size="sm" 
                           variant="ghost"
                           onClick={() => handleDeletePeriod(period.id)}
+                          className="h-8 w-8 p-0"
                         >
-                          <Trash2 className="h-4 w-4 text-destructive" />
+                          <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-destructive" />
                         </Button>
                       </div>
                     </CardContent>
@@ -339,9 +342,10 @@ export default function Jul25FamilyAdmin() {
                   variant="outline"
                   onClick={handleAddPeriod}
                   className="w-full bg-green-600 text-white hover:bg-green-700"
+                  size="sm"
                 >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Legg til periode
+                  <Plus className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="text-sm">Legg til periode</span>
                 </Button>
               </div>
             </div>
@@ -356,27 +360,27 @@ export default function Jul25FamilyAdmin() {
               Familiemedlemmer
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-6">
-            <ScrollArea className="h-[400px]">
-              <div className="space-y-2">
+          <CardContent className="p-3 sm:p-4 md:p-6">
+            <ScrollArea className="h-[300px] sm:h-[350px] md:h-[400px]">
+              <div className="space-y-2 pr-3">
                 {members.map(member => {
                   // Filter member periods for this specific member
                   const memberPeriods = allMemberPeriods.filter(mp => mp.member_id === member.id);
                   
                   return (
                     <Card key={member.id} className="border">
-                      <CardContent className="p-4 flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="font-semibold">
-                            {member.name}
+                      <CardContent className="p-3 sm:p-4 flex items-start sm:items-center justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-sm sm:text-base flex flex-wrap items-center gap-1 sm:gap-2">
+                            <span className="break-words">{member.name}</span>
                             {member.user_id && (
-                              <Badge variant="secondary" className="ml-2">Bruker</Badge>
+                              <Badge variant="secondary" className="text-xs">Bruker</Badge>
                             )}
                             {member.is_admin && (
-                              <Badge variant="default" className="ml-2 bg-green-600">Admin</Badge>
+                              <Badge variant="default" className="bg-green-600 text-xs">Admin</Badge>
                             )}
                           </div>
-                          <div className="flex gap-1 mt-1 flex-wrap">
+                          <div className="flex gap-1 mt-1 sm:mt-2 flex-wrap">
                             {periods.map(period => {
                               const isInPeriod = memberPeriods.some(mp => mp.period_id === period.id);
                               if (!isInPeriod) return null;
@@ -386,6 +390,7 @@ export default function Jul25FamilyAdmin() {
                                   key={period.id}
                                   variant="outline"
                                   className={cn(
+                                    "text-xs",
                                     period.location === 'Jajabo' 
                                       ? "bg-green-200 text-green-800 border-green-300" 
                                       : "bg-amber-200 text-amber-800 border-amber-300"
@@ -401,8 +406,9 @@ export default function Jul25FamilyAdmin() {
                           size="sm" 
                           variant="ghost"
                           onClick={() => navigate(`/apps/jul25/member/${member.id}`)}
+                          className="h-8 w-8 p-0 flex-shrink-0"
                         >
-                          <Edit2 className="h-4 w-4" />
+                          <Edit2 className="h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
                       </CardContent>
                     </Card>
