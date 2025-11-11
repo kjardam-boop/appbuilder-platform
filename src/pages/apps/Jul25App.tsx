@@ -990,8 +990,18 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
                                       if (!period) return null;
                                       const start = new Date(period.arrival_date).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' });
                                       const end = new Date(period.departure_date).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' });
+                                      const isJajabo = period.location === 'Jajabo';
                                       return (
-                                        <Badge key={mp.id} variant="outline" className="text-xs">
+                                        <Badge 
+                                          key={mp.id} 
+                                          variant="outline" 
+                                          className={cn(
+                                            "text-xs font-medium border-2",
+                                            isJajabo 
+                                              ? "bg-green-100 dark:bg-green-950/30 border-green-600 dark:border-green-700 text-green-900 dark:text-green-300"
+                                              : "bg-red-100 dark:bg-red-950/30 border-red-600 dark:border-red-700 text-red-900 dark:text-red-300"
+                                          )}
+                                        >
                                           {period.location}: {start} - {end}
                                         </Badge>
                                       );
@@ -1003,8 +1013,18 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
                                     {customPeriods.map((cp) => {
                                       const start = new Date(cp.start_date).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' });
                                       const end = new Date(cp.end_date).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' });
+                                      const isJajabo = cp.location === 'Jajabo';
                                       return (
-                                        <Badge key={cp.id} variant="secondary" className="text-xs">
+                                        <Badge 
+                                          key={cp.id} 
+                                          variant="outline" 
+                                          className={cn(
+                                            "text-xs font-medium border-2",
+                                            isJajabo 
+                                              ? "bg-green-100 dark:bg-green-950/30 border-green-600 dark:border-green-700 text-green-900 dark:text-green-300"
+                                              : "bg-red-100 dark:bg-red-950/30 border-red-600 dark:border-red-700 text-red-900 dark:text-red-300"
+                                          )}
+                                        >
                                           {cp.location}: {start} - {end}
                                         </Badge>
                                       );
