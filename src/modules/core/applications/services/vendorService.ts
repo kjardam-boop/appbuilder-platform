@@ -5,10 +5,17 @@ import type { ExternalSystemVendor, ExternalSystemVendorInput } from "../types/a
 
 export class VendorService {
   static async listVendors(ctx: RequestContext, includeArchived: boolean = false): Promise<ExternalSystemVendor[]> {
-    const { data, error } = await (supabase as any)
+    let query = (supabase as any)
       .from("external_system_vendors")
       .select("*")
       .order("name");
+
+    // Exclude archived by default
+    if (!includeArchived) {
+      query = query.is("archived_at", null);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
     return (data || []) as ExternalSystemVendor[];
@@ -74,31 +81,32 @@ export class VendorService {
   }
 
   static async archiveVendor(ctx: RequestContext, id: string): Promise<void> {
-    const { data: isPlatformAdmin } = await supabase.rpc('is_platform_admin', { 
-      _user_id: ctx.user_id 
-    });
-    
-    if (!isPlatformAdmin) {
-      throw new Error('Only platform owner can archive vendors');
-    }
+    const { error } = await supabase
+      .from("external_system_vendors")
+      .update({ archived_at: new Date().toISOString() })
+      .eq("id", id);
 
-    // Note: archived_at column doesn't exist in schema
-    // This is a placeholder for future implementation
-    throw new Error("Archive functionality not yet implemented");
+    if (error) throw error;
   }
 
   static async restoreVendor(ctx: RequestContext, id: string): Promise<void> {
-    const { data: isPlatformAdmin } = await supabase.rpc('is_platform_admin', { 
-      _user_id: ctx.user_id 
-    });
-    
-    if (!isPlatformAdmin) {
-      throw new Error('Only platform owner can restore vendors');
-    }
+    const { error } = await supabase
+      .from("external_system_vendors")
+      .update({ archived_at: null })
+      .eq("id", id);
 
-    // Note: archived_at column doesn't exist in schema
-    // This is a placeholder for future implementation
-    throw new Error("Restore functionality not yet implemented");
+    if (error) throw error;
+  }
+
+  static async getArchivedVendors(): Promise<ExternalSystemVendor[]> {
+    const { data, error } = await supabase
+      .from("external_system_vendors")
+      .select("*")
+      .not("archived_at", "is", null)
+      .order("archived_at", { ascending: false });
+
+    if (error) throw error;
+    return (data || []) as ExternalSystemVendor[];
   }
 
   /**

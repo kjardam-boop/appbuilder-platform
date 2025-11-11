@@ -53,18 +53,18 @@ export default function ExternalSystemDetails() {
     pendingUnknownTypes: string[];
   } | null>(null);
 
-  const deleteProductMutation = useMutation({
+  const archiveProductMutation = useMutation({
     mutationFn: async () => {
       const ctx = await buildClientContext();
-      return ApplicationService.deleteProduct(ctx, id!);
+      return ApplicationService.archiveProduct(ctx, id!);
     },
     onSuccess: () => {
-      toast.success("System slettet");
+      toast.success("System arkivert");
       queryClient.invalidateQueries({ queryKey: ["external-systems"] });
       navigate("/external-systems");
     },
     onError: (error: Error) => {
-      toast.error(error.message || "Kunne ikke slette system");
+      toast.error(error.message || "Kunne ikke arkivere system");
     },
   });
 
@@ -282,23 +282,23 @@ export default function ExternalSystemDetails() {
                     <AlertDialogTrigger asChild>
                       <Button variant="destructive" size="sm">
                         <Trash2 className="h-4 w-4 mr-2" />
-                        Slett
+                        Arkiver
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>Er du sikker?</AlertDialogTitle>
+                        <AlertDialogTitle>Arkiver system</AlertDialogTitle>
                         <AlertDialogDescription>
-                          Dette vil permanent slette systemet "{product.name}". Denne handlingen kan ikke angres.
+                          Dette vil arkivere systemet "{product.name}". Det vil ikke lenger vises i aktive lister, men kan gjenopprettes senere.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel>Avbryt</AlertDialogCancel>
                         <AlertDialogAction
-                          onClick={() => deleteProductMutation.mutate()}
+                          onClick={() => archiveProductMutation.mutate()}
                           className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                         >
-                          Slett system
+                          Arkiver system
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>

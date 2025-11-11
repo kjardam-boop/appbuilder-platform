@@ -1464,6 +1464,7 @@ export type Database = {
       }
       external_system_vendors: {
         Row: {
+          archived_at: string | null
           company_id: string
           contact_url: string | null
           country: string | null
@@ -1476,6 +1477,7 @@ export type Database = {
           website: string | null
         }
         Insert: {
+          archived_at?: string | null
           company_id: string
           contact_url?: string | null
           country?: string | null
@@ -1488,6 +1490,7 @@ export type Database = {
           website?: string | null
         }
         Update: {
+          archived_at?: string | null
           company_id?: string
           contact_url?: string | null
           country?: string | null
@@ -1514,6 +1517,7 @@ export type Database = {
           ai_plugins: boolean | null
           api_docs_url: string | null
           api_keys: boolean | null
+          archived_at: string | null
           category_id: string | null
           compliances: string[] | null
           created_at: string
@@ -1557,6 +1561,7 @@ export type Database = {
           ai_plugins?: boolean | null
           api_docs_url?: string | null
           api_keys?: boolean | null
+          archived_at?: string | null
           category_id?: string | null
           compliances?: string[] | null
           created_at?: string
@@ -1600,6 +1605,7 @@ export type Database = {
           ai_plugins?: boolean | null
           api_docs_url?: string | null
           api_keys?: boolean | null
+          archived_at?: string | null
           category_id?: string | null
           compliances?: string[] | null
           created_at?: string

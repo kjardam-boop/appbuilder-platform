@@ -4,6 +4,9 @@ import { useAuth } from '@/modules/core/user/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { CompanyService } from '@/modules/core/company/services/companyService';
+import { ApplicationService } from '@/modules/core/applications/services/applicationService';
+import { VendorService } from '@/modules/core/applications/services/vendorService';
+import { buildClientContext } from '@/shared/lib/buildContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -20,6 +23,7 @@ export default function ArchivedResourcesPage() {
   const [isPlatformOwner, setIsPlatformOwner] = useState(false);
   const [archivedCompanies, setArchivedCompanies] = useState([]);
   const [archivedProducts, setArchivedProducts] = useState([]);
+  const [archivedVendors, setArchivedVendors] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -48,19 +52,19 @@ export default function ArchivedResourcesPage() {
   const loadArchivedResources = async () => {
     try {
       setLoading(true);
+      const ctx = await buildClientContext();
       
       // Load archived companies
       const companies = await CompanyService.getArchivedCompanies();
       setArchivedCompanies(companies);
 
       // Load archived app products
-      const { data: products } = await (supabase as any)
-        .from('external_systems')
-        .select('*, external_system_vendors(name)')
-        .not('archived_at', 'is', null)
-        .order('archived_at', { ascending: false });
-      
-      setArchivedProducts(products || []);
+      const products = await ApplicationService.getArchivedProducts();
+      setArchivedProducts(products);
+
+      // Load archived vendors
+      const vendors = await VendorService.getArchivedVendors();
+      setArchivedVendors(vendors);
     } catch (error) {
       console.error('Error loading archived resources:', error);
       toast({
@@ -97,23 +101,41 @@ export default function ArchivedResourcesPage() {
     if (!user) return;
 
     try {
-      const { error } = await (supabase as any)
-        .from('external_systems')
-        .update({ archived_at: null })
-        .eq('id', productId);
-
-      if (error) throw error;
+      const ctx = await buildClientContext();
+      await ApplicationService.restoreProduct(ctx, productId);
 
       toast({
-        title: 'Produkt gjenopprettet',
-        description: 'Produktet er nå tilgjengelig igjen',
+        title: 'System gjenopprettet',
+        description: 'Systemet er nå tilgjengelig igjen',
       });
       loadArchivedResources();
     } catch (error) {
       console.error('Error restoring product:', error);
       toast({
         title: 'Feil',
-        description: 'Kunne ikke gjenopprette produkt',
+        description: 'Kunne ikke gjenopprette system',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleRestoreVendor = async (vendorId: string) => {
+    if (!user) return;
+
+    try {
+      const ctx = await buildClientContext();
+      await VendorService.restoreVendor(ctx, vendorId);
+
+      toast({
+        title: 'Leverandør gjenopprettet',
+        description: 'Leverandøren er nå tilgjengelig igjen',
+      });
+      loadArchivedResources();
+    } catch (error) {
+      console.error('Error restoring vendor:', error);
+      toast({
+        title: 'Feil',
+        description: 'Kunne ikke gjenopprette leverandør',
         variant: 'destructive',
       });
     }
@@ -145,7 +167,10 @@ export default function ArchivedResourcesPage() {
             Selskaper ({archivedCompanies.length})
           </TabsTrigger>
           <TabsTrigger value="products">
-            Applikasjoner ({archivedProducts.length})
+            Systemer ({archivedProducts.length})
+          </TabsTrigger>
+          <TabsTrigger value="vendors">
+            Leverandører ({archivedVendors.length})
           </TabsTrigger>
         </TabsList>
 
@@ -192,7 +217,7 @@ export default function ArchivedResourcesPage() {
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <Archive className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-lg font-medium">Ingen arkiverte applikasjoner</p>
+                <p className="text-lg font-medium">Ingen arkiverte systemer</p>
               </CardContent>
             </Card>
           ) : (
@@ -204,7 +229,7 @@ export default function ArchivedResourcesPage() {
                       <div>
                         <CardTitle>{product.name}</CardTitle>
                         <CardDescription>
-                          {product.external_system_vendors?.name} • Arkivert {formatDistanceToNow(
+                          {product.vendor?.name} • Arkivert {formatDistanceToNow(
                             new Date(product.archived_at), 
                             { addSuffix: true, locale: nb }
                           )}
@@ -212,6 +237,44 @@ export default function ArchivedResourcesPage() {
                       </div>
                       <Button 
                         onClick={() => handleRestoreProduct(product.id)}
+                        variant="outline"
+                      >
+                        <RotateCcw className="h-4 w-4 mr-2" />
+                        Gjenopprett
+                      </Button>
+                    </div>
+                  </CardHeader>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="vendors" className="space-y-4">
+          {archivedVendors.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <Archive className="h-12 w-12 text-muted-foreground mb-4" />
+                <p className="text-lg font-medium">Ingen arkiverte leverandører</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {archivedVendors.map((vendor) => (
+                <Card key={vendor.id}>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle>{vendor.name}</CardTitle>
+                        <CardDescription>
+                          Arkivert {formatDistanceToNow(
+                            new Date(vendor.archived_at), 
+                            { addSuffix: true, locale: nb }
+                          )}
+                        </CardDescription>
+                      </div>
+                      <Button 
+                        onClick={() => handleRestoreVendor(vendor.id)}
                         variant="outline"
                       >
                         <RotateCcw className="h-4 w-4 mr-2" />

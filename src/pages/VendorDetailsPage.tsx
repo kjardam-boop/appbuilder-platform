@@ -32,18 +32,18 @@ export default function VendorDetailsPage() {
     enabled: !!id,
   });
 
-  const deleteMutation = useMutation({
+  const archiveMutation = useMutation({
     mutationFn: async () => {
       const ctx = await buildClientContext();
-      return VendorService.deleteVendor(ctx, id!);
+      return VendorService.archiveVendor(ctx, id!);
     },
     onSuccess: () => {
-      toast.success("Leverandør slettet");
+      toast.success("Leverandør arkivert");
       queryClient.invalidateQueries({ queryKey: ["external-system-vendors"] });
       navigate("/system-vendors");
     },
     onError: (error: Error) => {
-      toast.error(error.message || "Kunne ikke slette leverandør");
+      toast.error(error.message || "Kunne ikke arkivere leverandør");
     },
   });
 
@@ -89,24 +89,24 @@ export default function VendorDetailsPage() {
           <AlertDialogTrigger asChild>
             <Button variant="destructive" size="sm">
               <Trash2 className="h-4 w-4 mr-2" />
-              Slett leverandør
+              Arkiver leverandør
             </Button>
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Er du sikker?</AlertDialogTitle>
+              <AlertDialogTitle>Arkiver leverandør</AlertDialogTitle>
               <AlertDialogDescription>
-                Dette vil permanent slette leverandøren "{vendor.name}". Denne handlingen kan ikke angres.
-                Merk at produkter som er koblet til denne leverandøren vil miste denne koblingen.
+                Dette vil arkivere leverandøren "{vendor.name}". Den vil ikke lenger vises i aktive lister, men kan gjenopprettes senere.
+                Produkter som er koblet til denne leverandøren vil fortsatt være tilgjengelige.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Avbryt</AlertDialogCancel>
               <AlertDialogAction
-                onClick={() => deleteMutation.mutate()}
+                onClick={() => archiveMutation.mutate()}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
-                Slett leverandør
+                Arkiver leverandør
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

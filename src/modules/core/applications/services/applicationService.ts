@@ -56,6 +56,11 @@ export class ApplicationService {
         vendor:external_system_vendors!vendor_id(*)
       `, { count: "exact" });
 
+    // Exclude archived by default
+    if (!filters?.includeArchived) {
+      query = query.is("archived_at", null);
+    }
+
     if (filters?.query) {
       query = query.or(
         `name.ilike.%${filters.query}%,short_name.ilike.%${filters.query}%,description.ilike.%${filters.query}%`
@@ -153,15 +158,35 @@ export class ApplicationService {
   }
 
   static async archiveProduct(ctx: RequestContext, id: string): Promise<void> {
-    // Note: archived_at column doesn't exist in schema
-    // This is a placeholder for future implementation
-    throw new Error("Archive functionality not yet implemented");
+    const { error } = await (supabase as any)
+      .from("external_systems")
+      .update({ archived_at: new Date().toISOString() })
+      .eq("id", id);
+
+    if (error) throw error;
   }
 
   static async restoreProduct(ctx: RequestContext, id: string): Promise<void> {
-    // Note: archived_at column doesn't exist in schema
-    // This is a placeholder for future implementation
-    throw new Error("Restore functionality not yet implemented");
+    const { error } = await (supabase as any)
+      .from("external_systems")
+      .update({ archived_at: null })
+      .eq("id", id);
+
+    if (error) throw error;
+  }
+
+  static async getArchivedProducts(): Promise<ExternalSystem[]> {
+    const { data, error } = await (supabase as any)
+      .from("external_systems")
+      .select(`
+        *,
+        vendor:external_system_vendors!vendor_id(*)
+      `)
+      .not("archived_at", "is", null)
+      .order("archived_at", { ascending: false });
+
+    if (error) throw error;
+    return (data || []) as ExternalSystem[];
   }
 
   // SKU methods
