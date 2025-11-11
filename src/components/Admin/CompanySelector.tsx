@@ -5,10 +5,11 @@ interface CompanySelectorProps {
   value?: string;
   onValueChange: (value: string) => void;
   placeholder?: string;
+  tenantId?: string;
 }
 
-export const CompanySelector = ({ value, onValueChange, placeholder = "Velg selskap..." }: CompanySelectorProps) => {
-  const { data: companies, isLoading } = useCompaniesForAdmin();
+export const CompanySelector = ({ value, onValueChange, placeholder = "Velg selskap...", tenantId }: CompanySelectorProps) => {
+  const { data: companies, isLoading } = useCompaniesForAdmin(tenantId);
 
   if (isLoading) {
     return <div className="text-sm text-muted-foreground">Laster selskaper...</div>;

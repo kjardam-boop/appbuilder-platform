@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Shield, Building2, Workflow, Puzzle } from "lucide-react";
 import { useTenantContext } from "@/hooks/useTenantContext";
+import { useIsPlatformTenant } from "@/hooks/useIsPlatformTenant";
 import { CredentialsList } from "@/components/admin/credentials/CredentialsList";
 import { CredentialManagementDialog } from "@/components/admin/credentials/CredentialManagementDialog";
 import { CredentialAuditLog } from "@/components/admin/credentials/CredentialAuditLog";
@@ -17,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export default function CredentialsPage() {
   const context = useTenantContext();
+  const { isPlatformTenant, isLoading: isPlatformLoading } = useIsPlatformTenant();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [selectedTab, setSelectedTab] = useState<"tenant" | "company" | "app">("tenant");
 
@@ -83,7 +85,7 @@ export default function CredentialsPage() {
     enabled: !!context?.tenant_id,
   });
 
-  if (!context) {
+  if (!context || isPlatformLoading) {
     return (
       <div className="container mx-auto p-6">
         <Card className="p-8 text-center">
@@ -189,10 +191,11 @@ export default function CredentialsPage() {
 
       <CredentialAuditLog tenantId={context.tenant_id} />
 
-      <CredentialManagementDialog
-        open={addDialogOpen}
-        onOpenChange={setAddDialogOpen}
-        onSaved={() => {
+        <CredentialManagementDialog
+          open={addDialogOpen}
+          onOpenChange={setAddDialogOpen}
+          isPlatformAdmin={isPlatformTenant}
+          onSaved={() => {
           if (selectedTab === "tenant") {
             refetchTenantCredentials();
           } else if (selectedTab === "company") {

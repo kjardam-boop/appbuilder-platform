@@ -193,6 +193,7 @@ export function CredentialManagementDialog({
                   <CompanySelector
                     value={companyId}
                     onValueChange={setCompanyId}
+                    tenantId={tenantId}
                     placeholder="Velg selskap..."
                   />
                 </div>
