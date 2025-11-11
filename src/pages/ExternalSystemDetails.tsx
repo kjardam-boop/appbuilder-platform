@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ExternalSystemSKUManager } from "@/modules/core/applications/components/ExternalSystemSKUManager";
+import { IntegrationCatalogSection } from "@/modules/core/applications/components/IntegrationCatalogSection";
 import { UnknownTypeDialog } from "@/modules/core/applications/components/UnknownTypeDialog";
 import { 
   ArrowLeft, 
@@ -370,6 +371,12 @@ export default function ExternalSystemDetails() {
 
           {/* SKU Manager */}
           <ExternalSystemSKUManager externalSystemId={product.id} />
+
+          {/* Integration Catalog */}
+          <IntegrationCatalogSection 
+            externalSystemId={product.id} 
+            websiteUrl={product.website || undefined}
+          />
         </div>
       </main>
 
