@@ -11,6 +11,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { Calendar as CalendarIcon, Users, Star, CheckSquare, Plus, Edit2, Trash2, Mail, LogOut, LogIn, UserCog, Baby, Church, Heart, ChevronDown, ChevronRight } from "lucide-react";
+import { SwipeableListItem } from "@/components/SwipeableListItem";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -1006,51 +1007,59 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
                               });
                             
                             return (
-                              <div key={member.id} className="border-l-2 border-l-muted pl-3 py-2 space-y-1">
-                                <div className="flex items-center justify-between">
-                                  <div className="font-medium text-sm">{member.name}</div>
-                                  {isUserFamilyAdmin && (
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      className="h-7 w-7 p-0"
-                                      onClick={() => navigate(`/apps/jul25/member/${member.id}`)}
-                                      title="Rediger medlem"
-                                    >
-                                      <Edit2 className="h-3 w-3" />
-                                    </Button>
+                              <SwipeableListItem
+                                key={member.id}
+                                onSwipeAction={() => navigate(`/apps/jul25/member/${member.id}`)}
+                                actionLabel="Rediger"
+                                actionIcon={<Edit2 className="h-4 w-4" />}
+                                disabled={!isUserFamilyAdmin}
+                              >
+                                <div className="border-l-2 border-l-muted pl-3 py-2 space-y-1">
+                                  <div className="flex items-center justify-between">
+                                    <div className="font-medium text-sm">{member.name}</div>
+                                    {isUserFamilyAdmin && (
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-7 w-7 p-0"
+                                        onClick={() => navigate(`/apps/jul25/member/${member.id}`)}
+                                        title="Rediger medlem"
+                                      >
+                                        <Edit2 className="h-3 w-3" />
+                                      </Button>
+                                    )}
+                                  </div>
+                                  {sortedPeriods.length > 0 && (
+                                    <div className="flex flex-wrap gap-1">
+                                      {sortedPeriods.map((item) => {
+                                        const isRegular = item.type === 'regular';
+                                        const period = item.period;
+                                        const start = isRegular 
+                                          ? new Date(period.arrival_date).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' })
+                                          : new Date(period.start_date).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' });
+                                        const end = isRegular 
+                                          ? new Date(period.departure_date).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' })
+                                          : new Date(period.end_date).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' });
+                                        const isJajabo = period.location === 'Jajabo';
+                                        return (
+                                          <Badge 
+                                            key={item.id} 
+                                            variant="outline" 
+                                            className={cn(
+                                              "text-xs font-medium border-2",
+                                              isJajabo 
+                                                ? "bg-green-100 dark:bg-green-950/30 border-green-600 dark:border-green-700 text-green-900 dark:text-green-300"
+                                                : "bg-red-100 dark:bg-red-950/30 border-red-600 dark:border-red-700 text-red-900 dark:text-red-300"
+                                            )}
+                                          >
+                                            {period.location}: {start} - {end}
+                                          </Badge>
+                                        );
+                                      })}
+                                    </div>
                                   )}
                                 </div>
-                                {sortedPeriods.length > 0 && (
-                                  <div className="flex flex-wrap gap-1">
-                                    {sortedPeriods.map((item) => {
-                                      const isRegular = item.type === 'regular';
-                                      const period = item.period;
-                                      const start = isRegular 
-                                        ? new Date(period.arrival_date).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' })
-                                        : new Date(period.start_date).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' });
-                                      const end = isRegular 
-                                        ? new Date(period.departure_date).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' })
-                                        : new Date(period.end_date).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' });
-                                      const isJajabo = period.location === 'Jajabo';
-                                      return (
-                                        <Badge 
-                                          key={item.id} 
-                                          variant="outline" 
-                                          className={cn(
-                                            "text-xs font-medium border-2",
-                                            isJajabo 
-                                              ? "bg-green-100 dark:bg-green-950/30 border-green-600 dark:border-green-700 text-green-900 dark:text-green-300"
-                                              : "bg-red-100 dark:bg-red-950/30 border-red-600 dark:border-red-700 text-red-900 dark:text-red-300"
-                                          )}
-                                        >
-                                          {period.location}: {start} - {end}
-                                        </Badge>
-                                      );
-                                    })}
-                                  </div>
-                                )}
-                              </div>
+                              </SwipeableListItem>
                             );
                           })}
                         </CardContent>
