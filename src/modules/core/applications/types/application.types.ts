@@ -116,10 +116,20 @@ export const externalSystemVendorSchema = z.object({
   company_id: z.string().uuid("Ugyldig selskap-ID"),
   name: z.string().min(1, "Navn er påkrevd").max(200),
   org_number: z.string().optional().or(z.literal("")),
-  website: z.string().transform(val => val ? normalizeUrl(val) : val).pipe(z.string().url("Ugyldig URL").optional().or(z.literal(""))),
+  website: z.string().optional().or(z.literal("")).transform(val => {
+    if (!val || val.trim() === "") return "";
+    return normalizeUrl(val);
+  }).refine(val => !val || z.string().url().safeParse(val).success, {
+    message: "Ugyldig URL"
+  }),
   description: z.string().max(2000).optional().or(z.literal("")),
   country: z.string().max(100).optional().or(z.literal("")),
-  contact_url: z.string().transform(val => val ? normalizeUrl(val) : val).pipe(z.string().url("Ugyldig URL").optional().or(z.literal(""))),
+  contact_url: z.string().optional().or(z.literal("")).transform(val => {
+    if (!val || val.trim() === "") return "";
+    return normalizeUrl(val);
+  }).refine(val => !val || z.string().url().safeParse(val).success, {
+    message: "Ugyldig URL"
+  }),
 });
 
 export const externalSystemSchema = z.object({
@@ -137,7 +147,12 @@ export const externalSystemSchema = z.object({
   compliances: z.array(z.string()).optional(),
   pricing_model: z.string().optional().or(z.literal("")),
   status: z.enum(["Active", "Legacy"]).default("Active"),
-  website: z.string().transform(val => val ? normalizeUrl(val) : val).pipe(z.string().url("Ugyldig URL").optional().or(z.literal(""))),
+  website: z.string().optional().or(z.literal("")).transform(val => {
+    if (!val || val.trim() === "") return "";
+    return normalizeUrl(val);
+  }).refine(val => !val || z.string().url().safeParse(val).success, {
+    message: "Ugyldig URL"
+  }),
   description: z.string().max(2000).optional().or(z.literal("")),
   capabilities: z.array(z.string()).optional(),
   use_cases: z.array(z.object({
@@ -172,10 +187,20 @@ export const externalSystemSchema = z.object({
   // Compliance
   eu_data_residency: z.boolean().optional(),
   dual_region: z.boolean().optional(),
-  gdpr_statement_url: z.string().transform(val => val ? normalizeUrl(val) : val).pipe(z.string().url("Ugyldig URL").optional().or(z.literal(""))),
+  gdpr_statement_url: z.string().optional().or(z.literal("")).transform(val => {
+    if (!val || val.trim() === "") return "";
+    return normalizeUrl(val);
+  }).refine(val => !val || z.string().url().safeParse(val).success, {
+    message: "Ugyldig URL"
+  }),
   privacy_risk_level: z.enum(["low", "medium", "high"]).optional(),
   // Documentation
-  api_docs_url: z.string().transform(val => val ? normalizeUrl(val) : val).pipe(z.string().url("Ugyldig URL").optional().or(z.literal(""))),
+  api_docs_url: z.string().optional().or(z.literal("")).transform(val => {
+    if (!val || val.trim() === "") return "";
+    return normalizeUrl(val);
+  }).refine(val => !val || z.string().url().safeParse(val).success, {
+    message: "Ugyldig URL"
+  }),
 });
 
 export const externalSystemSKUSchema = z.object({
@@ -187,7 +212,12 @@ export const externalSystemSKUSchema = z.object({
 export const externalSystemIntegrationSchema = z.object({
   type: z.enum(["API", "iPaaS", "Connector"]),
   name: z.string().min(1, "Navn er påkrevd").max(200),
-  spec_url: z.string().transform(val => val ? normalizeUrl(val) : val).pipe(z.string().url("Ugyldig URL").optional().or(z.literal(""))),
+  spec_url: z.string().optional().or(z.literal("")).transform(val => {
+    if (!val || val.trim() === "") return "";
+    return normalizeUrl(val);
+  }).refine(val => !val || z.string().url().safeParse(val).success, {
+    message: "Ugyldig URL"
+  }),
   notes: z.string().max(500).optional().or(z.literal("")),
 });
 

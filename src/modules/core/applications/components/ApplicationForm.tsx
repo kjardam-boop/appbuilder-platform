@@ -23,7 +23,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { normalizeUrl } from "@/lib/utils";
 
 const applicationFormSchema = z.object({
-  website: z.string().transform(val => val ? normalizeUrl(val) : val).pipe(z.string().url("Ugyldig URL").optional().or(z.literal(""))),
+  website: z.string().optional().or(z.literal("")).transform(val => {
+    if (!val || val.trim() === "") return "";
+    return normalizeUrl(val);
+  }).refine(val => !val || z.string().url().safeParse(val).success, {
+    message: "Ugyldig URL"
+  }),
   vendor_id: z.string().uuid("Velg en leverandør"),
   name: z.string().min(2, "Navn må være minst 2 tegn").max(255),
   short_name: z.string().max(50, "Kort navn kan ikke være lengre enn 50 tegn").optional(),

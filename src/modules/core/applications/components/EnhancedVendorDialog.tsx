@@ -19,7 +19,12 @@ import { normalizeUrl } from "@/lib/utils";
 const enhancedVendorSchema = z.object({
   // Company fields
   name: z.string().min(2, "Navn må være minst 2 tegn"),
-  website: z.string().transform(val => val ? normalizeUrl(val) : val).pipe(z.string().url("Ugyldig URL").optional().or(z.literal(""))),
+  website: z.string().optional().or(z.literal("")).transform(val => {
+    if (!val || val.trim() === "") return "";
+    return normalizeUrl(val);
+  }).refine(val => !val || z.string().url().safeParse(val).success, {
+    message: "Ugyldig URL"
+  }),
   org_number: z.string().optional(),
   description: z.string().optional(),
   industry_code: z.string().optional(),
@@ -28,7 +33,12 @@ const enhancedVendorSchema = z.object({
   
   // Vendor-specific fields
   country: z.string().optional(),
-  contact_url: z.string().transform(val => val ? normalizeUrl(val) : val).pipe(z.string().url("Ugyldig URL").optional().or(z.literal(""))),
+  contact_url: z.string().optional().or(z.literal("")).transform(val => {
+    if (!val || val.trim() === "") return "";
+    return normalizeUrl(val);
+  }).refine(val => !val || z.string().url().safeParse(val).success, {
+    message: "Ugyldig URL"
+  }),
 });
 
 type EnhancedVendorData = z.infer<typeof enhancedVendorSchema>;

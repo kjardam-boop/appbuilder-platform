@@ -86,7 +86,12 @@ export const erpSystemSchema = z.object({
   compliances: z.array(z.string()).optional(),
   pricing_model: z.string().optional().or(z.literal("")),
   status: z.enum(["Active", "Legacy"]).default("Active"),
-  website: z.string().transform(val => val ? normalizeUrl(val) : val).pipe(z.string().url("Ugyldig URL").optional().or(z.literal(""))),
+  website: z.string().optional().or(z.literal("")).transform(val => {
+    if (!val || val.trim() === "") return "";
+    return normalizeUrl(val);
+  }).refine(val => !val || z.string().url().safeParse(val).success, {
+    message: "Ugyldig URL"
+  }),
   description: z.string().max(2000).optional().or(z.literal("")),
 });
 
@@ -98,7 +103,12 @@ export const erpSkuSchema = z.object({
 export const erpIntegrationSchema = z.object({
   type: z.enum(["API", "iPaaS", "Connector"]),
   name: z.string().min(1, "Navn er påkrevd").max(200),
-  spec_url: z.string().transform(val => val ? normalizeUrl(val) : val).pipe(z.string().url("Ugyldig URL").optional().or(z.literal(""))),
+  spec_url: z.string().optional().or(z.literal("")).transform(val => {
+    if (!val || val.trim() === "") return "";
+    return normalizeUrl(val);
+  }).refine(val => !val || z.string().url().safeParse(val).success, {
+    message: "Ugyldig URL"
+  }),
   notes: z.string().max(500).optional().or(z.literal("")),
 });
 
