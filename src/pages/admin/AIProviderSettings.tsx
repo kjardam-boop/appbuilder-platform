@@ -7,7 +7,8 @@ import {
   Settings, 
   CheckCircle, 
   AlertCircle,
-  Sparkles 
+  Sparkles,
+  ExternalLink 
 } from 'lucide-react';
 import { AIProviderConfigModal } from '@/components/admin/AIProviderConfigModal';
 import { useQuery } from '@tanstack/react-query';
@@ -16,74 +17,67 @@ import type { AIProviderType } from '@/modules/core/ai';
 import { PROVIDER_DISPLAY_NAMES } from '@/modules/core/ai';
 import { useTenantIsolation } from '@/hooks/useTenantIsolation';
 
-interface ProviderInfo {
-  type: AIProviderType;
+interface IntegrationDefinition {
+  id: string;
+  key: string;
   name: string;
-  description: string;
-  icon: typeof Brain;
-  models: string[];
-  pricing: string;
+  description?: string;
+  external_system_id?: string;
+  requires_credentials: boolean;
+  is_active: boolean;
+  external_system?: {
+    id: string;
+    name: string;
+    short_name?: string;
+    website?: string;
+    vendor?: {
+      name: string;
+    };
+  };
 }
-
-const PROVIDERS: ProviderInfo[] = [
-  {
-    type: 'openai',
-    name: PROVIDER_DISPLAY_NAMES.openai,
-    description: 'GPT-5 og GPT-4 modeller med avansert reasoning og multimodal support',
-    icon: Sparkles,
-    models: ['gpt-5-2025-08-07', 'gpt-5-mini-2025-08-07', 'gpt-4.1-2025-04-14'],
-    pricing: 'Fra $0.15 per 1M tokens'
-  },
-  {
-    type: 'anthropic',
-    name: PROVIDER_DISPLAY_NAMES.anthropic,
-    description: 'Claude-modeller med overlegen reasoning og lang kontekst-vindu',
-    icon: Brain,
-    models: ['claude-sonnet-4-5', 'claude-opus-4-1-20250805'],
-    pricing: 'Fra $3 per 1M tokens'
-  },
-  {
-    type: 'google',
-    name: PROVIDER_DISPLAY_NAMES.google,
-    description: 'Gemini 2.5 modeller med sterk multimodal og rask respons',
-    icon: Sparkles,
-    models: ['google/gemini-2.5-pro', 'google/gemini-2.5-flash', 'google/gemini-2.5-flash-lite'],
-    pricing: 'Fra $0.075 per 1M tokens'
-  },
-  {
-    type: 'azure-openai',
-    name: PROVIDER_DISPLAY_NAMES['azure-openai'],
-    description: 'OpenAI modeller via Azure med enterprise security og compliance',
-    icon: Sparkles,
-    models: ['gpt-5-2025-08-07', 'gpt-4.1-2025-04-14'],
-    pricing: 'Enterprise pricing (kontakt Azure)'
-  },
-  {
-    type: 'lovable',
-    name: PROVIDER_DISPLAY_NAMES.lovable,
-    description: 'Platform-level AI gateway (standard fallback - krever ingen konfigurasjon)',
-    icon: Brain,
-    models: ['google/gemini-2.5-flash', 'google/gemini-2.5-pro'],
-    pricing: 'Inkludert i plattformen'
-  }
-];
 
 export default function AIProviderSettings() {
   const { tenantId } = useTenantIsolation();
   const [selectedProvider, setSelectedProvider] = useState<AIProviderType | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
-  // Fetch active AI integrations for tenant
-  const { data: integrations, isLoading, refetch } = useQuery({
-    queryKey: ['ai-integrations', tenantId],
+  // Fetch AI integration definitions from structured hierarchy
+  const { data: aiProviders, isLoading: isLoadingProviders } = useQuery({
+    queryKey: ['ai-integration-definitions'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('integration_definitions')
+        .select(`
+          *,
+          external_system:external_system_id(
+            id,
+            name,
+            short_name,
+            website,
+            vendor:vendor_id(
+              name
+            )
+          )
+        `)
+        .like('key', 'ai-%')
+        .eq('is_active', true)
+        .order('name');
+      
+      if (error) throw error;
+      return data as any[];
+    }
+  });
+
+  // Fetch active tenant integrations
+  const { data: tenantIntegrations, isLoading: isLoadingIntegrations, refetch } = useQuery({
+    queryKey: ['ai-tenant-integrations', tenantId],
     queryFn: async () => {
       if (!tenantId) throw new Error('No tenant context');
       
       const { data, error } = await supabase
         .from('tenant_integrations')
         .select('adapter_id, is_active, config')
-        .eq('tenant_id', tenantId)
-        .like('adapter_id', 'ai-%');
+        .eq('tenant_id', tenantId);
       
       if (error) throw error;
       return data;
@@ -91,16 +85,33 @@ export default function AIProviderSettings() {
     enabled: !!tenantId
   });
 
-  const getProviderStatus = (providerType: AIProviderType) => {
-    if (providerType === 'lovable') {
+  const getProviderStatus = (integrationKey: string) => {
+    // Lovable AI is always active
+    if (integrationKey === 'ai-lovable') {
       return { isActive: true, config: {} };
     }
     
-    const integration = integrations?.find(i => i.adapter_id === `ai-${providerType}`);
+    // Check tenant_integrations for this provider by adapter_id
+    const integration = tenantIntegrations?.find(
+      i => i.adapter_id === integrationKey
+    );
+    
     return {
       isActive: integration?.is_active || false,
       config: integration?.config || {}
     };
+  };
+
+  const getProviderTypeFromKey = (key: string): AIProviderType => {
+    // Map integration key to provider type
+    const mapping: Record<string, AIProviderType> = {
+      'ai-openai': 'openai',
+      'ai-anthropic': 'anthropic',
+      'ai-google': 'google',
+      'ai-azure-openai': 'azure-openai',
+      'ai-lovable': 'lovable',
+    };
+    return mapping[key] || 'openai';
   };
 
   const handleConfigureProvider = (providerType: AIProviderType) => {
@@ -114,7 +125,7 @@ export default function AIProviderSettings() {
     refetch();
   };
 
-  if (isLoading) {
+  if (isLoadingProviders || isLoadingIntegrations) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-lg">Laster AI-providers...</div>
@@ -127,18 +138,18 @@ export default function AIProviderSettings() {
       <div>
         <h1 className="text-3xl font-bold">AI Provider Configuration</h1>
         <p className="text-muted-foreground mt-2">
-          Konfigurer AI-leverandører og modeller for din tenant. Hver provider kan brukes på tvers av systemet.
+          Konfigurer AI-leverandører og modeller for din tenant. AI-providers er nå integrert i det strukturerte hierarkiet.
         </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {PROVIDERS.map((provider) => {
-          const status = getProviderStatus(provider.type);
-          const Icon = provider.icon;
-          const isLovable = provider.type === 'lovable';
+        {aiProviders?.map((provider) => {
+          const status = getProviderStatus(provider.key);
+          const isLovable = provider.key === 'ai-lovable';
+          const providerType = getProviderTypeFromKey(provider.key);
 
           return (
-            <Card key={provider.type} className="relative">
+            <Card key={provider.id} className="relative">
               {status.isActive && !isLovable && (
                 <div className="absolute top-4 right-4">
                   <Badge variant="default" className="gap-1">
@@ -158,12 +169,24 @@ export default function AIProviderSettings() {
               <CardHeader>
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-primary/10 rounded-lg">
-                    <Icon className="w-6 h-6 text-primary" />
+                    <Brain className="w-6 h-6 text-primary" />
                   </div>
-                  <div>
-                    <CardTitle>{provider.name}</CardTitle>
+                  <div className="flex-1">
+                    <CardTitle className="flex items-center gap-2">
+                      {provider.external_system?.vendor?.name || provider.name}
+                      {provider.external_system?.website && (
+                        <a 
+                          href={provider.external_system.website} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-muted-foreground hover:text-primary"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
+                      )}
+                    </CardTitle>
                     <CardDescription className="text-xs mt-1">
-                      {provider.pricing}
+                      {provider.external_system?.short_name || provider.key}
                     </CardDescription>
                   </div>
                 </div>
@@ -171,25 +194,14 @@ export default function AIProviderSettings() {
               
               <CardContent className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  {provider.description}
+                  {provider.description || 'AI Language Model Provider'}
                 </p>
-                
-                <div>
-                  <p className="text-xs font-medium mb-2">Tilgjengelige modeller:</p>
-                  <div className="flex flex-wrap gap-1">
-                    {provider.models.map((model) => (
-                      <Badge key={model} variant="outline" className="text-xs">
-                        {model}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
 
                 {!isLovable && (
                   <Button 
                     variant={status.isActive ? "outline" : "default"} 
                     className="w-full gap-2"
-                    onClick={() => handleConfigureProvider(provider.type)}
+                    onClick={() => handleConfigureProvider(providerType)}
                   >
                     <Settings className="w-4 h-4" />
                     {status.isActive ? 'Rediger konfigurasjon' : 'Konfigurer provider'}
