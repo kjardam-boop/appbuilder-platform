@@ -851,34 +851,29 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
   const guestsPerDayMap = useMemo(() => getGuestsPerDay(), [families, allMembers, allPeriods, allCustomPeriods]);
   
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-50 via-amber-50 to-white dark:from-green-950/20 dark:via-amber-950/20 dark:to-background">
+    <div className="min-h-screen bg-gradient-to-b from-jul25-red-dark via-jul25-red to-jul25-red-dark/80">
       {/* Christmas decorations */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <Star className="absolute top-10 left-10 w-8 h-8 text-yellow-400 animate-pulse" />
-        <Star className="absolute top-20 right-20 w-6 h-6 text-amber-300 animate-pulse" />
-        <Heart className="absolute bottom-20 left-20 w-7 h-7 text-green-400 animate-pulse" />
-        <Baby className="absolute bottom-10 right-10 w-6 h-6 text-amber-400 animate-pulse" />
+        <Star className="absolute top-10 left-10 w-8 h-8 text-jul25-gold animate-pulse drop-shadow-lg" />
+        <Star className="absolute top-20 right-20 w-6 h-6 text-white/70 animate-pulse drop-shadow-lg" />
+        <Heart className="absolute bottom-20 left-20 w-7 h-7 text-jul25-green-light animate-pulse drop-shadow-lg" />
+        <Baby className="absolute bottom-10 right-10 w-6 h-6 text-white/60 animate-pulse drop-shadow-lg" />
       </div>
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 relative z-10 max-w-full overflow-x-hidden">
         {/* Header */}
         <div className="text-center space-y-4">
             <div className="flex items-center justify-center gap-3 flex-wrap">
-            <Star className="w-12 h-12 text-yellow-500 animate-pulse" />
-            <h1 className="text-4xl sm:text-5xl font-bold" style={{
-              background: 'linear-gradient(to right, hsl(var(--jul25-red)), hsl(120, 70%, 35%), hsl(45, 100%, 60%), hsl(var(--jul25-red-dark)))',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text'
-            }}>
+            <Star className="w-12 h-12 text-jul25-gold animate-pulse drop-shadow-lg" />
+            <h1 className="text-4xl sm:text-5xl font-bold text-white drop-shadow-lg">
               JaJabo jul 2025
             </h1>
-            <Star className="w-12 h-12 text-yellow-500 animate-pulse" />
+            <Star className="w-12 h-12 text-jul25-gold animate-pulse drop-shadow-lg" />
           </div>
-          <p className="text-xl text-muted-foreground">
+          <p className="text-xl text-white/90">
             AG Jacobsen Consulting - Familiejul 2025
           </p>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-white/80">
             🎄 Meld deg på og fortell oss når du kommer! 🎅
           </p>
           
