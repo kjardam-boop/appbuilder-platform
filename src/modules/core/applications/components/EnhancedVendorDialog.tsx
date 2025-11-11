@@ -167,8 +167,8 @@ export const EnhancedVendorDialog = ({
         description: data.description,
         industry_code: data.industry_code,
         industry_description: data.industry_description,
-        employees: data.employees,
-        company_roles: ['vendor'],
+          employees: data.employees,
+          company_roles: ['external_system_vendor'],
       });
       console.log('[EnhancedVendorDialog] Vendor data:', {
         name: data.name,
@@ -188,7 +188,7 @@ export const EnhancedVendorDialog = ({
           industry_code: data.industry_code,
           industry_description: data.industry_description,
           employees: data.employees,
-          company_roles: ['vendor'],
+          company_roles: ['external_system_vendor'],
         },
         {
           name: data.name,

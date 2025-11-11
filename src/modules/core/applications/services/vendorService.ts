@@ -128,28 +128,42 @@ export class VendorService {
     vendorInput: Omit<ExternalSystemVendorInput, 'company_id'>
   ): Promise<{ company: any; vendor: ExternalSystemVendor }> {
     // First create the company
+    const companyPayload = {
+      name: companyInput.name,
+      org_number: companyInput.org_number || null,
+      website: companyInput.website && companyInput.website.trim() !== "" ? companyInput.website : null,
+      description: companyInput.description && companyInput.description.trim() !== "" ? companyInput.description : null,
+      industry_code: companyInput.industry_code || null,
+      industry_description: companyInput.industry_description || null,
+      employees: companyInput.employees ?? null,
+      company_roles: (companyInput.company_roles && companyInput.company_roles.length > 0)
+        ? companyInput.company_roles
+        : ["external_system_vendor"],
+    };
+
+    console.log('[VendorService] Inserting company with payload:', companyPayload);
     const { data: company, error: companyError } = await supabase
       .from('companies')
-      .insert({
-        name: companyInput.name,
-        org_number: companyInput.org_number,
-        website: companyInput.website,
-        description: companyInput.description,
-        industry_code: companyInput.industry_code,
-        industry_description: companyInput.industry_description,
-        employees: companyInput.employees,
-        company_roles: companyInput.company_roles || ['vendor'],
-      })
+      .insert(companyPayload)
       .select()
       .single();
 
-    if (companyError) throw companyError;
+    if (companyError) {
+      console.error('[VendorService] Company insert error:', companyError);
+      throw companyError;
+    }
 
     // Then create the vendor linked to the company
-    const vendor = await this.createVendor(ctx, {
+    const vendorPayload = {
       ...vendorInput,
       company_id: company.id,
-    });
+      website: vendorInput.website && vendorInput.website.trim() !== "" ? vendorInput.website : null,
+      contact_url: vendorInput.contact_url && vendorInput.contact_url.trim() !== "" ? vendorInput.contact_url : null,
+      description: vendorInput.description && vendorInput.description.trim() !== "" ? vendorInput.description : null,
+    } as any;
+
+    console.log('[VendorService] Inserting vendor with payload:', vendorPayload);
+    const vendor = await this.createVendor(ctx, vendorPayload);
 
     return { company, vendor };
   }
