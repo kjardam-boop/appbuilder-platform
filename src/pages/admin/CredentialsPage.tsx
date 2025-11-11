@@ -8,7 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Shield, Building2, Workflow } from "lucide-react";
+import { Plus, Shield, Building2, Workflow, Puzzle } from "lucide-react";
 import { useTenantContext } from "@/hooks/useTenantContext";
 import { CredentialsList } from "@/components/admin/credentials/CredentialsList";
 import { CredentialManagementDialog } from "@/components/admin/credentials/CredentialManagementDialog";
@@ -18,7 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 export default function CredentialsPage() {
   const context = useTenantContext();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [selectedTab, setSelectedTab] = useState<"tenant" | "company">("tenant");
+  const [selectedTab, setSelectedTab] = useState<"tenant" | "company" | "app">("tenant");
 
   const { data: tenantCredentials, refetch: refetchTenantCredentials } = useQuery({
     queryKey: ["tenant-credentials", context?.tenant_id],
@@ -62,6 +62,27 @@ export default function CredentialsPage() {
     enabled: !!context?.tenant_id,
   });
 
+  const { data: appCredentials, refetch: refetchAppCredentials } = useQuery({
+    queryKey: ["app-credentials", context?.tenant_id],
+    queryFn: async () => {
+      if (!context?.tenant_id) return [];
+      
+      const { data, error } = await supabase
+        .from("vault_credentials")
+        .select("*")
+        .eq("tenant_id", context.tenant_id)
+        .eq("resource_type", "app_integration")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return (data || []).map(d => ({
+        ...d,
+        test_status: d.test_status as 'success' | 'failed' | undefined,
+      }));
+    },
+    enabled: !!context?.tenant_id,
+  });
+
   if (!context) {
     return (
       <div className="container mx-auto p-6">
@@ -92,8 +113,8 @@ export default function CredentialsPage() {
         </Button>
       </div>
 
-      <Tabs value={selectedTab} onValueChange={(v) => setSelectedTab(v as "tenant" | "company")}>
-        <TabsList className="grid w-full max-w-md grid-cols-2">
+      <Tabs value={selectedTab} onValueChange={(v) => setSelectedTab(v as "tenant" | "company" | "app")}>
+        <TabsList className="grid w-full max-w-2xl grid-cols-3">
           <TabsTrigger value="tenant" className="flex items-center gap-2">
             <Workflow className="h-4 w-4" />
             Tenant Integrations
@@ -101,6 +122,10 @@ export default function CredentialsPage() {
           <TabsTrigger value="company" className="flex items-center gap-2">
             <Building2 className="h-4 w-4" />
             Company Systems
+          </TabsTrigger>
+          <TabsTrigger value="app" className="flex items-center gap-2">
+            <Puzzle className="h-4 w-4" />
+            App Integrations
           </TabsTrigger>
         </TabsList>
 
@@ -141,6 +166,25 @@ export default function CredentialsPage() {
             />
           </Card>
         </TabsContent>
+
+        <TabsContent value="app" className="space-y-6 mt-6">
+          <Card className="p-6">
+            <h2 className="text-xl font-semibold mb-4">App Integration Credentials</h2>
+            <p className="text-sm text-muted-foreground mb-6">
+              Credentials for application-specific integrations
+            </p>
+
+            <CredentialsList
+              credentials={appCredentials || []}
+              metadata={{
+                tenant_id: context.tenant_id,
+                resource_type: "app_integration",
+                resource_id: context.tenant_id,
+              }}
+              onCredentialChanged={() => refetchAppCredentials()}
+            />
+          </Card>
+        </TabsContent>
       </Tabs>
 
       <CredentialAuditLog tenantId={context.tenant_id} />
@@ -148,16 +192,13 @@ export default function CredentialsPage() {
       <CredentialManagementDialog
         open={addDialogOpen}
         onOpenChange={setAddDialogOpen}
-        metadata={{
-          tenant_id: context.tenant_id,
-          resource_type: selectedTab === "tenant" ? "tenant_integration" : "company_system",
-          resource_id: context.tenant_id,
-        }}
         onSaved={() => {
           if (selectedTab === "tenant") {
             refetchTenantCredentials();
-          } else {
+          } else if (selectedTab === "company") {
             refetchCompanyCredentials();
+          } else {
+            refetchAppCredentials();
           }
         }}
       />

@@ -392,6 +392,7 @@ export type Database = {
           subdomain: string | null
           tenant_id: string
           updated_at: string
+          vault_credential_id: string | null
         }
         Insert: {
           app_definition_id?: string | null
@@ -414,6 +415,7 @@ export type Database = {
           subdomain?: string | null
           tenant_id: string
           updated_at?: string
+          vault_credential_id?: string | null
         }
         Update: {
           app_definition_id?: string | null
@@ -436,6 +438,7 @@ export type Database = {
           subdomain?: string | null
           tenant_id?: string
           updated_at?: string
+          vault_credential_id?: string | null
         }
         Relationships: [
           {
@@ -450,6 +453,13 @@ export type Database = {
             columns: ["source_project_id"]
             isOneToOne: false
             referencedRelation: "customer_app_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "applications_vault_credential_id_fkey"
+            columns: ["vault_credential_id"]
+            isOneToOne: false
+            referencedRelation: "vault_credentials"
             referencedColumns: ["id"]
           },
         ]

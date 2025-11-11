@@ -11,7 +11,7 @@ export interface VaultCredential {
   name: string;
   description?: string;
   encrypted_value: string;
-  resource_type: 'tenant_integration' | 'company_system';
+  resource_type: 'tenant_integration' | 'company_system' | 'app_integration';
   resource_id: string;
   last_tested_at?: string;
   test_status?: 'success' | 'failed' | 'pending';
@@ -22,7 +22,7 @@ export interface VaultCredential {
 
 export interface CredentialMetadata {
   tenant_id: string;
-  resource_type: 'tenant_integration' | 'company_system';
+  resource_type: 'tenant_integration' | 'company_system' | 'app_integration';
   resource_id: string;
   system_name?: string;
 }
@@ -275,6 +275,21 @@ export async function linkCredentialToCompanySystem(
     .from('company_external_systems')
     .update({ vault_credential_id: credentialId })
     .eq('id', companySystemId);
+
+  if (error) throw error;
+}
+
+/**
+ * Link credential to application
+ */
+export async function linkCredentialToApplication(
+  applicationId: string,
+  credentialId: string
+): Promise<void> {
+  const { error } = await supabase
+    .from('applications')
+    .update({ vault_credential_id: credentialId })
+    .eq('id', applicationId);
 
   if (error) throw error;
 }
