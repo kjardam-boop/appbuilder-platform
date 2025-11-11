@@ -1310,41 +1310,63 @@ export type Database = {
       }
       external_system_integrations: {
         Row: {
-          created_at: string
+          auth_methods: Json | null
+          created_at: string | null
+          description: string | null
+          documentation_url: string | null
           external_system_id: string
+          features: Json | null
           id: string
+          implementation_status: string | null
+          integration_definition_id: string | null
+          integration_type: string
+          is_official: boolean | null
           name: string
-          notes: string | null
-          spec_url: string | null
-          type: string
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
-          created_at?: string
+          auth_methods?: Json | null
+          created_at?: string | null
+          description?: string | null
+          documentation_url?: string | null
           external_system_id: string
+          features?: Json | null
           id?: string
+          implementation_status?: string | null
+          integration_definition_id?: string | null
+          integration_type: string
+          is_official?: boolean | null
           name: string
-          notes?: string | null
-          spec_url?: string | null
-          type: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
-          created_at?: string
+          auth_methods?: Json | null
+          created_at?: string | null
+          description?: string | null
+          documentation_url?: string | null
           external_system_id?: string
+          features?: Json | null
           id?: string
+          implementation_status?: string | null
+          integration_definition_id?: string | null
+          integration_type?: string
+          is_official?: boolean | null
           name?: string
-          notes?: string | null
-          spec_url?: string | null
-          type?: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "app_integrations_app_product_id_fkey"
+            foreignKeyName: "external_system_integrations_external_system_id_fkey"
             columns: ["external_system_id"]
             isOneToOne: false
             referencedRelation: "external_systems"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "external_system_integrations_integration_definition_id_fkey"
+            columns: ["integration_definition_id"]
+            isOneToOne: false
+            referencedRelation: "integration_definitions"
             referencedColumns: ["id"]
           },
         ]
@@ -1751,6 +1773,13 @@ export type Database = {
           vendor_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_integration_external_system"
+            columns: ["external_system_id"]
+            isOneToOne: false
+            referencedRelation: "external_systems"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "integration_definitions_category_id_fkey"
             columns: ["category_id"]

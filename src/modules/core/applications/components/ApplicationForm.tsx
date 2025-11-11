@@ -15,7 +15,7 @@ import { useAutoSave } from "@/hooks/useAutoSave";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
 import { UnknownTypeDialog } from "./UnknownTypeDialog";
-import { CreateVendorDialog } from "./CreateVendorDialog";
+import { EnhancedVendorDialog } from "./EnhancedVendorDialog";
 import type { AppType } from "../types/application.types";
 import { toast } from "sonner";
 import { useExternalSystemVendors } from "../hooks/useApplications";
@@ -231,7 +231,7 @@ export function ApplicationForm({ initialData, onSubmit, isLoading }: Applicatio
       )}
 
       {createVendorDialog && (
-        <CreateVendorDialog
+        <EnhancedVendorDialog
           open={createVendorDialog.isOpen}
           suggestedName={createVendorDialog.suggestedName}
           onCreated={handleVendorCreated}

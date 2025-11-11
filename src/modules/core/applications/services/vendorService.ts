@@ -100,4 +100,49 @@ export class VendorService {
     // This is a placeholder for future implementation
     throw new Error("Restore functionality not yet implemented");
   }
+
+  /**
+   * Create both a Company and Vendor in one transaction
+   * This is used by the EnhancedVendorDialog
+   */
+  static async createVendorWithCompany(
+    ctx: RequestContext,
+    companyInput: {
+      name: string;
+      org_number?: string;
+      website?: string;
+      description?: string;
+      industry_code?: string;
+      industry_description?: string;
+      employees?: number;
+      company_roles?: string[];
+    },
+    vendorInput: Omit<ExternalSystemVendorInput, 'company_id'>
+  ): Promise<{ company: any; vendor: ExternalSystemVendor }> {
+    // First create the company
+    const { data: company, error: companyError } = await supabase
+      .from('companies')
+      .insert({
+        name: companyInput.name,
+        org_number: companyInput.org_number,
+        website: companyInput.website,
+        description: companyInput.description,
+        industry_code: companyInput.industry_code,
+        industry_description: companyInput.industry_description,
+        employees: companyInput.employees,
+        company_roles: companyInput.company_roles || ['vendor'],
+      })
+      .select()
+      .single();
+
+    if (companyError) throw companyError;
+
+    // Then create the vendor linked to the company
+    const vendor = await this.createVendor(ctx, {
+      ...vendorInput,
+      company_id: company.id,
+    });
+
+    return { company, vendor };
+  }
 }
