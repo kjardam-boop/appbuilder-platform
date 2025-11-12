@@ -331,6 +331,18 @@ async function createProject(ctx: RequestContext, data: ProjectInput) {
 }
 ```
 
+## Database Naming Conventions
+
+All database tables must follow strict naming conventions to ensure clarity and prevent conflicts. See [Database Naming Conventions](./database-naming-conventions.md) for the complete guide.
+
+**Quick Rules:**
+- **Platform tables**: No prefix (e.g., `tenants`, `applications`)
+- **Core shared tables**: No prefix (e.g., `companies`, `projects`)
+- **App domain tables**: `{app_key}_` prefix (e.g., `jul25_families`, `jul25_tasks`)
+- **All app tables**: MUST have `tenant_id` column and RLS policies
+
+Use `SELECT * FROM validate_table_naming()` to check compliance.
+
 ## Best Practices
 
 ### 1. Alltid valider tenant context

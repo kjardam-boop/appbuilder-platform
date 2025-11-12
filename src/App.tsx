@@ -30,6 +30,7 @@ import UserManagement from "./pages/UserManagement";
 import AdminSettings from "./pages/AdminSettings";
 import AdminQuestions from "./pages/AdminQuestions";
 import AdminSeed from "./pages/AdminSeed";
+import DatabaseNamingValidation from "./pages/admin/DatabaseNamingValidation";
 import AdminCompanies from "./pages/admin/AdminCompanies";
 import CapabilityCatalog from "./pages/CapabilityCatalog";
 import CapabilityDetailsPage from "./pages/admin/CapabilityDetailsPage";
@@ -219,6 +220,7 @@ const App = () => (
               <Route path="capabilities" element={<PermissionProtectedRoute resource="capability" action="admin"><CapabilityCatalog /></PermissionProtectedRoute>} />
               <Route path="capabilities/:capabilityId" element={<PermissionProtectedRoute resource="capability" action="admin"><CapabilityDetailsPage /></PermissionProtectedRoute>} />
               <Route path="database" element={<PermissionProtectedRoute resource="tenant" action="admin"><AdminSeed /></PermissionProtectedRoute>} />
+              <Route path="database/naming" element={<PermissionProtectedRoute resource="tenant" action="admin"><DatabaseNamingValidation /></PermissionProtectedRoute>} />
               <Route path="integrations" element={<PermissionProtectedRoute resource="integration" action="admin"><IntegrationsHub /></PermissionProtectedRoute>} />
               <Route path="integrations/delivery-methods/:id" element={<PermissionProtectedRoute resource="integration" action="admin"><DeliveryMethodDetail /></PermissionProtectedRoute>} />
               <Route path="integrations/definitions/:id" element={<PermissionProtectedRoute resource="integration" action="admin"><IntegrationDefinitionDetail /></PermissionProtectedRoute>} />

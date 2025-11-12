@@ -4249,6 +4249,15 @@ export type Database = {
           },
         ]
       }
+      table_naming_validation: {
+        Row: {
+          issue: string | null
+          severity: string | null
+          suggestion: string | null
+          table_name: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       accept_invitation: {
@@ -4407,6 +4416,15 @@ export type Database = {
       validate_jul25_invitation_token: {
         Args: { _identifier: string; _token: string }
         Returns: Json
+      }
+      validate_table_naming: {
+        Args: never
+        Returns: {
+          issue: string
+          severity: string
+          suggestion: string
+          table_name: string
+        }[]
       }
     }
     Enums: {
