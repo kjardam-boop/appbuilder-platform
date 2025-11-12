@@ -34,8 +34,18 @@ export default function PlatformDocumentation() {
         { value: 'Platform', label: 'Platform' },
         { value: 'Architecture', label: 'Architecture' },
         { value: 'Development', label: 'Development' },
-        { value: 'Implementation', label: 'Implementation' }
+        { value: 'Implementation', label: 'Implementation' },
+        { value: 'Modules', label: 'Modules' },
+        { value: 'Capabilities', label: 'Capabilities' },
+        { value: 'Templates', label: 'Templates' }
       ],
+    },
+    {
+      key: 'subcategory',
+      label: 'Subkategori',
+      type: 'text',
+      sortable: true,
+      filterable: true,
     },
     {
       key: 'tags',

@@ -3,8 +3,17 @@
 /**
  * Generate Documentation Catalog
  * 
- * Automatically discovers all .md files in public/docs/ and generates
+ * Automatically discovers all .md files across the repository and generates
  * documentationCatalog.ts with parsed metadata (title, description, category).
+ * 
+ * Scans:
+ * - public/docs/
+ * - docs/
+ * - docs/capabilities/
+ * - docs/dev/
+ * - docs/templates/
+ * - src/modules/core/*/README.md
+ * - src/modules/core/*/*.md
  */
 
 import fs from 'fs';
@@ -14,11 +23,36 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const DOCS_DIR = path.join(__dirname, '../public/docs');
+// Directories to scan for documentation
+const SCAN_PATHS = [
+  path.join(__dirname, '../public/docs'),
+  path.join(__dirname, '../docs'),
+  path.join(__dirname, '../src/modules/core'),
+];
+
 const OUTPUT_FILE = path.join(__dirname, '../src/config/documentationCatalog.ts');
 
-// Category mapping based on filename patterns or folder structure
-const CATEGORY_MAP = {
+// Path-based category mapping (most specific first)
+const PATH_CATEGORY_MAP = {
+  'docs/capabilities': { category: 'Capabilities', subcategory: null },
+  'docs/dev': { category: 'Development', subcategory: 'Guides' },
+  'docs/templates': { category: 'Templates', subcategory: null },
+  'src/modules/core/ai': { category: 'Modules', subcategory: 'AI' },
+  'src/modules/core/applications': { category: 'Modules', subcategory: 'Applications' },
+  'src/modules/core/compliance': { category: 'Modules', subcategory: 'Compliance' },
+  'src/modules/core/company': { category: 'Modules', subcategory: 'Company' },
+  'src/modules/core/document': { category: 'Modules', subcategory: 'Document' },
+  'src/modules/core/industry': { category: 'Modules', subcategory: 'Industry' },
+  'src/modules/core/integrations': { category: 'Modules', subcategory: 'Integrations' },
+  'src/modules/core/project': { category: 'Modules', subcategory: 'Project' },
+  'src/modules/core/supplier': { category: 'Modules', subcategory: 'Supplier' },
+  'src/modules/core/tasks': { category: 'Modules', subcategory: 'Tasks' },
+  'src/modules/core/tenant': { category: 'Modules', subcategory: 'Tenant' },
+  'src/modules/core/user': { category: 'Modules', subcategory: 'User' },
+};
+
+// Fallback keyword-based category mapping
+const KEYWORD_CATEGORY_MAP = {
   'database': 'Architecture',
   'tenant': 'Architecture',
   'architecture': 'Architecture',
@@ -35,18 +69,54 @@ const CATEGORY_MAP = {
   'sprint': 'Implementation',
   'summary': 'Implementation',
   'readme': 'Platform',
+  'capability': 'Capabilities',
+  'template': 'Templates',
+  'module': 'Modules',
 };
+
+/**
+ * Parse YAML frontmatter from markdown
+ */
+function parseFrontmatter(content) {
+  const frontmatterRegex = /^---\n([\s\S]*?)\n---/;
+  const match = content.match(frontmatterRegex);
+  
+  if (!match) return null;
+  
+  const frontmatter = {};
+  const lines = match[1].split('\n');
+  
+  for (const line of lines) {
+    const colonIndex = line.indexOf(':');
+    if (colonIndex === -1) continue;
+    
+    const key = line.substring(0, colonIndex).trim();
+    const value = line.substring(colonIndex + 1).trim().replace(/^["']|["']$/g, '');
+    
+    // Handle arrays
+    if (value.startsWith('[') && value.endsWith(']')) {
+      frontmatter[key] = value.slice(1, -1).split(',').map(v => v.trim().replace(/^["']|["']$/g, ''));
+    } else {
+      frontmatter[key] = value;
+    }
+  }
+  
+  return frontmatter;
+}
 
 /**
  * Parse markdown content to extract metadata
  */
 function parseMarkdown(content, filename) {
+  // Check for YAML frontmatter first
+  const frontmatter = parseFrontmatter(content);
+  
   const lines = content.split('\n');
   let title = filename.replace(/\.md$/, '').replace(/-/g, ' ');
   let description = '';
   let foundTitle = false;
   
-  // Extract first # heading as title
+  // Extract first # heading as title (if no frontmatter title)
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     
@@ -69,28 +139,55 @@ function parseMarkdown(content, filename) {
     }
   }
   
-  return { title, description };
+  return { 
+    title: frontmatter?.title || title, 
+    description: frontmatter?.description || description,
+    frontmatter 
+  };
 }
 
 /**
- * Determine category based on filename
+ * Determine category and subcategory based on file path
  */
-function determineCategory(filename) {
-  const lowerName = filename.toLowerCase();
+function determineCategoryAndSubcategory(relativePath, filename, frontmatter) {
+  // Check frontmatter first
+  if (frontmatter?.category) {
+    return {
+      category: frontmatter.category,
+      subcategory: frontmatter.subcategory || null
+    };
+  }
   
-  for (const [keyword, category] of Object.entries(CATEGORY_MAP)) {
-    if (lowerName.includes(keyword)) {
-      return category;
+  // Check path-based mapping
+  const normalizedPath = relativePath.replace(/\\/g, '/');
+  
+  for (const [pathPattern, categoryInfo] of Object.entries(PATH_CATEGORY_MAP)) {
+    if (normalizedPath.includes(pathPattern)) {
+      return categoryInfo;
     }
   }
   
-  return 'Platform'; // Default category
+  // Fallback to keyword-based mapping
+  const lowerName = filename.toLowerCase();
+  
+  for (const [keyword, category] of Object.entries(KEYWORD_CATEGORY_MAP)) {
+    if (lowerName.includes(keyword)) {
+      return { category, subcategory: null };
+    }
+  }
+  
+  return { category: 'Platform', subcategory: null };
 }
 
 /**
- * Generate tags from filename
+ * Generate tags from filename and frontmatter
  */
-function generateTags(filename) {
+function generateTags(filename, frontmatter) {
+  // Use frontmatter tags if available
+  if (frontmatter?.tags && Array.isArray(frontmatter.tags)) {
+    return frontmatter.tags;
+  }
+  
   const tags = filename
     .replace(/\.md$/, '')
     .split(/[-_]/)
@@ -101,9 +198,21 @@ function generateTags(filename) {
 }
 
 /**
+ * Get last modified date of file
+ */
+function getLastModified(filePath) {
+  try {
+    const stats = fs.statSync(filePath);
+    return stats.mtime.toISOString();
+  } catch (error) {
+    return new Date().toISOString();
+  }
+}
+
+/**
  * Scan directory recursively for .md files
  */
-function scanDirectory(dir, baseDir = dir) {
+function scanDirectory(dir, baseDir = null, sourcePrefix = '') {
   const files = [];
   
   if (!fs.existsSync(dir)) {
@@ -112,18 +221,27 @@ function scanDirectory(dir, baseDir = dir) {
   }
   
   const entries = fs.readdirSync(dir, { withFileTypes: true });
+  const effectiveBaseDir = baseDir || dir;
   
   for (const entry of entries) {
     const fullPath = path.join(dir, entry.name);
     
+    // Skip node_modules and hidden directories
+    if (entry.isDirectory() && (entry.name === 'node_modules' || entry.name.startsWith('.'))) {
+      continue;
+    }
+    
     if (entry.isDirectory()) {
-      files.push(...scanDirectory(fullPath, baseDir));
+      files.push(...scanDirectory(fullPath, effectiveBaseDir, sourcePrefix));
     } else if (entry.isFile() && entry.name.endsWith('.md')) {
-      const relativePath = path.relative(baseDir, fullPath);
+      const relativePath = path.relative(effectiveBaseDir, fullPath);
+      const sourcePath = path.relative(path.join(__dirname, '..'), fullPath);
+      
       files.push({
         filename: entry.name,
         fullPath,
-        relativePath: `docs/${relativePath.replace(/\\/g, '/')}`,
+        relativePath: relativePath.replace(/\\/g, '/'),
+        sourcePath: sourcePath.replace(/\\/g, '/'),
       });
     }
   }
@@ -132,15 +250,29 @@ function scanDirectory(dir, baseDir = dir) {
 }
 
 /**
+ * Scan all configured paths
+ */
+function scanAllPaths() {
+  const allFiles = [];
+  
+  for (const scanPath of SCAN_PATHS) {
+    const files = scanDirectory(scanPath);
+    allFiles.push(...files);
+  }
+  
+  return allFiles;
+}
+
+/**
  * Main function
  */
 function generateCatalog() {
   console.log('🔍 Scanning for documentation files...');
   
-  const files = scanDirectory(DOCS_DIR);
+  const files = scanAllPaths();
   
   if (files.length === 0) {
-    console.warn('⚠️  No markdown files found in public/docs/');
+    console.warn('⚠️  No markdown files found');
     return;
   }
   
@@ -148,12 +280,17 @@ function generateCatalog() {
   
   const catalog = files.map((file, index) => {
     const content = fs.readFileSync(file.fullPath, 'utf-8');
-    const { title, description } = parseMarkdown(content, file.filename);
-    const category = determineCategory(file.filename);
-    const tags = generateTags(file.filename);
+    const { title, description, frontmatter } = parseMarkdown(content, file.filename);
+    const { category, subcategory } = determineCategoryAndSubcategory(
+      file.sourcePath, 
+      file.filename, 
+      frontmatter
+    );
+    const tags = generateTags(file.filename, frontmatter);
+    const lastModified = getLastModified(file.fullPath);
     
-    // Generate ID from filename
-    const id = file.filename
+    // Generate ID from source path for uniqueness
+    const id = file.sourcePath
       .replace(/\.md$/, '')
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-');
@@ -163,15 +300,23 @@ function generateCatalog() {
       title,
       description: description || `Documentation for ${title}`,
       category,
-      path: file.relativePath,
+      subcategory,
+      path: file.sourcePath,
+      source: file.sourcePath,
       tags,
+      lastUpdated: lastModified,
     };
   });
   
-  // Sort by category, then by title
+  // Sort by category, subcategory, then by title
   catalog.sort((a, b) => {
     if (a.category !== b.category) {
       return a.category.localeCompare(b.category);
+    }
+    if (a.subcategory !== b.subcategory) {
+      if (!a.subcategory) return 1;
+      if (!b.subcategory) return -1;
+      return a.subcategory.localeCompare(b.subcategory);
     }
     return a.title.localeCompare(b.title);
   });
@@ -183,6 +328,11 @@ function generateCatalog() {
  * Auto-generated by scripts/generate-docs-catalog.js
  * DO NOT EDIT MANUALLY - Run 'npm run generate:docs' to regenerate
  * 
+ * Scans:
+ * - public/docs/
+ * - docs/
+ * - src/modules/core/
+ * 
  * Last generated: ${new Date().toISOString()}
  */
 
@@ -190,9 +340,12 @@ export interface DocumentMetadata {
   id: string;
   title: string;
   description: string;
-  category: 'Platform' | 'Architecture' | 'Development' | 'Implementation';
+  category: 'Platform' | 'Architecture' | 'Development' | 'Implementation' | 'Modules' | 'Capabilities' | 'Templates';
+  subcategory?: string;
   path: string;
+  source?: string;
   tags?: string[];
+  lastUpdated?: string;
 }
 
 export const documentationCatalog: DocumentMetadata[] = ${JSON.stringify(catalog, null, 2)};
@@ -206,14 +359,17 @@ export const documentationCatalog: DocumentMetadata[] = ${JSON.stringify(catalog
   
   // Print summary by category
   const categoryCount = catalog.reduce((acc, doc) => {
-    acc[doc.category] = (acc[doc.category] || 0) + 1;
+    const key = doc.subcategory ? `${doc.category} > ${doc.subcategory}` : doc.category;
+    acc[key] = (acc[key] || 0) + 1;
     return acc;
   }, {});
   
   console.log('\n📋 Summary by category:');
-  Object.entries(categoryCount).forEach(([category, count]) => {
-    console.log(`   ${category}: ${count}`);
-  });
+  Object.entries(categoryCount)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .forEach(([category, count]) => {
+      console.log(`   ${category}: ${count}`);
+    });
 }
 
 // Run
