@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertCircle, CheckCircle2, AlertTriangle, Info } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Link } from "react-router-dom";
 
 interface ValidationResult {
   table_name: string;
@@ -183,14 +184,12 @@ export default function DatabaseNamingValidation() {
         <AlertTitle>Learn More</AlertTitle>
         <AlertDescription>
           See{' '}
-          <a 
-            href="/docs/database-naming-conventions.md" 
-            className="underline font-medium"
-            target="_blank"
-            rel="noopener noreferrer"
+          <Link 
+            to="/admin/documentation/database-naming" 
+            className="underline font-medium hover:text-primary"
           >
             Database Naming Conventions
-          </a>
+          </Link>
           {' '}for detailed guidelines and examples.
         </AlertDescription>
       </Alert>

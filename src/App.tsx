@@ -31,6 +31,8 @@ import AdminSettings from "./pages/AdminSettings";
 import AdminQuestions from "./pages/AdminQuestions";
 import AdminSeed from "./pages/AdminSeed";
 import DatabaseNamingValidation from "./pages/admin/DatabaseNamingValidation";
+import PlatformDocumentation from "./pages/admin/PlatformDocumentation";
+import DocumentationDetail from "./pages/admin/DocumentationDetail";
 import AdminCompanies from "./pages/admin/AdminCompanies";
 import CapabilityCatalog from "./pages/CapabilityCatalog";
 import CapabilityDetailsPage from "./pages/admin/CapabilityDetailsPage";
@@ -219,6 +221,8 @@ const App = () => (
               <Route path="external-systems/new" element={<PermissionProtectedRoute resource="application" action="admin"><ApplicationCreate /></PermissionProtectedRoute>} />
               <Route path="capabilities" element={<PermissionProtectedRoute resource="capability" action="admin"><CapabilityCatalog /></PermissionProtectedRoute>} />
               <Route path="capabilities/:capabilityId" element={<PermissionProtectedRoute resource="capability" action="admin"><CapabilityDetailsPage /></PermissionProtectedRoute>} />
+              <Route path="documentation" element={<PermissionProtectedRoute resource="tenant" action="admin"><PlatformDocumentation /></PermissionProtectedRoute>} />
+              <Route path="documentation/:docId" element={<PermissionProtectedRoute resource="tenant" action="admin"><DocumentationDetail /></PermissionProtectedRoute>} />
               <Route path="database" element={<PermissionProtectedRoute resource="tenant" action="admin"><AdminSeed /></PermissionProtectedRoute>} />
               <Route path="database/naming" element={<PermissionProtectedRoute resource="tenant" action="admin"><DatabaseNamingValidation /></PermissionProtectedRoute>} />
               <Route path="integrations" element={<PermissionProtectedRoute resource="integration" action="admin"><IntegrationsHub /></PermissionProtectedRoute>} />
