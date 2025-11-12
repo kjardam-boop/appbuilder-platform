@@ -13,7 +13,7 @@ export const documentationCatalog: DocumentMetadata[] = [
     title: 'Database Naming Conventions',
     description: 'Navnestandarder for tabeller, migrasjoner og app-separasjon',
     category: 'Architecture',
-    path: '/docs/database-naming-conventions.md',
+    path: 'docs/database-naming-conventions.md',
     tags: ['database', 'conventions', 'architecture']
   },
   {
@@ -21,7 +21,7 @@ export const documentationCatalog: DocumentMetadata[] = [
     title: 'Tenant Architecture',
     description: 'Multitenancy arkitektur med RLS, tenant resolver og isolasjon',
     category: 'Architecture',
-    path: '/docs/tenants.md',
+    path: 'docs/tenants.md',
     tags: ['multitenancy', 'rls', 'security']
   },
   {
@@ -29,7 +29,7 @@ export const documentationCatalog: DocumentMetadata[] = [
     title: 'Platform Apps vs External Systems',
     description: 'Forskjell mellom platform apps og eksterne systemer, inkludert app manifest og lifecycle',
     category: 'Platform',
-    path: '/docs/apps.md',
+    path: 'docs/apps.md',
     tags: ['apps', 'integrations', 'external-systems']
   },
   {
@@ -37,7 +37,7 @@ export const documentationCatalog: DocumentMetadata[] = [
     title: 'Admin Permissions Mapping',
     description: 'Mapping mellom permission resources, admin navigation og required actions',
     category: 'Platform',
-    path: '/docs/admin-permissions-mapping.md',
+    path: 'docs/admin-permissions-mapping.md',
     tags: ['permissions', 'admin', 'rbac']
   },
   {
@@ -45,7 +45,7 @@ export const documentationCatalog: DocumentMetadata[] = [
     title: 'Operations Guide',
     description: 'Guide til drift, backup, migreringer, domener og skalering',
     category: 'Platform',
-    path: '/docs/operations.md',
+    path: 'docs/operations.md',
     tags: ['operations', 'deployment', 'backup']
   },
   {
@@ -53,7 +53,7 @@ export const documentationCatalog: DocumentMetadata[] = [
     title: 'Testing Guide',
     description: 'Guide til testing: unit, integration, component tests med Vitest',
     category: 'Development',
-    path: '/README.test.md',
+    path: 'docs/README.test.md',
     tags: ['testing', 'vitest', 'quality']
   },
   {
@@ -61,7 +61,7 @@ export const documentationCatalog: DocumentMetadata[] = [
     title: 'App Roles Implementation',
     description: 'Implementasjonsdetaljer for app-rollersystemet',
     category: 'Implementation',
-    path: '/IMPLEMENTATION_SUMMARY.md',
+    path: 'docs/IMPLEMENTATION_SUMMARY.md',
     tags: ['roles', 'implementation', 'app-system']
   },
   {
@@ -69,7 +69,7 @@ export const documentationCatalog: DocumentMetadata[] = [
     title: 'App Registry Sprint Status',
     description: 'Status på App Registry implementering med sprint-oversikt',
     category: 'Implementation',
-    path: '/SPRINT_STATUS.md',
+    path: 'docs/SPRINT_STATUS.md',
     tags: ['sprint', 'app-registry', 'status']
   },
   {
@@ -77,7 +77,7 @@ export const documentationCatalog: DocumentMetadata[] = [
     title: 'Project Overview',
     description: 'Prosjekt-info, teknologier og hvordan komme i gang',
     category: 'Platform',
-    path: '/README.md',
+    path: 'docs/README.md',
     tags: ['overview', 'getting-started']
   }
 ];

@@ -44,8 +44,8 @@ export function MarkdownViewer({
 
       try {
         // Fetch markdown file from public directory or docs
-        const response = await fetch(`/${markdownPath}`);
-        
+        const normalizedPath = markdownPath.startsWith('/') ? markdownPath : `/${markdownPath}`;
+        const response = await fetch(normalizedPath);
         if (!response.ok) {
           throw new Error(`Failed to load documentation: ${response.statusText}`);
         }
