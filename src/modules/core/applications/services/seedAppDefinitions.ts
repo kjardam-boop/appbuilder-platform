@@ -22,7 +22,9 @@ const PLATFORM_APPS: Omit<AppDefinition, 'id' | 'created_at' | 'updated_at'>[] =
       'jul25_member_custom_periods',
       'jul25_tasks',
       'jul25_task_assignments',
-      'jul25_christmas_words'
+      'jul25_christmas_words',
+      'jul25_door_content',
+      'jul25_invitations'
     ],
     shared_tables: [],
     routes: [

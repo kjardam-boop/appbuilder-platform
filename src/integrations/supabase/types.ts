@@ -2060,21 +2060,32 @@ export type Database = {
           day: number
           generated_at: string
           id: string
+          tenant_id: string
           word: string
         }
         Insert: {
           day: number
           generated_at?: string
           id?: string
+          tenant_id: string
           word: string
         }
         Update: {
           day?: number
           generated_at?: string
           id?: string
+          tenant_id?: string
           word?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "jul25_christmas_words_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       jul25_door_content: {
         Row: {
@@ -2082,6 +2093,7 @@ export type Database = {
           created_at: string | null
           door_number: number
           id: string
+          tenant_id: string
           updated_at: string | null
         }
         Insert: {
@@ -2089,6 +2101,7 @@ export type Database = {
           created_at?: string | null
           door_number: number
           id?: string
+          tenant_id: string
           updated_at?: string | null
         }
         Update: {
@@ -2096,9 +2109,18 @@ export type Database = {
           created_at?: string | null
           door_number?: number
           id?: string
+          tenant_id?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "jul25_door_content_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       jul25_families: {
         Row: {
@@ -4355,6 +4377,10 @@ export type Database = {
           p_tenant_id: string
           p_vault_secret_id?: string
         }
+        Returns: undefined
+      }
+      seed_jul25_data_for_tenant: {
+        Args: { p_tenant_id: string }
         Returns: undefined
       }
       user_has_admin_access: { Args: { p_user_id: string }; Returns: boolean }
