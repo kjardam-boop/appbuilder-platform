@@ -6,6 +6,37 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Fallback tokens helper
+function returnFallbackTokens(tenantId: string | null, websiteUrl: string, reason: string) {
+  const fallbackTokens = {
+    primary: '222.2 47.4% 11.2%',
+    accent: '210 40% 96.1%',
+    secondary: '210 40% 96.1%',
+    surface: '0 0% 100%',
+    textOnSurface: '222.2 84% 4.9%',
+    destructive: '0 84.2% 60.2%',
+    success: '142 76% 36%',
+    warning: '38 92% 50%',
+    muted: '210 40% 96.1%',
+    fontStack: 'Inter, ui-sans-serif, system-ui, sans-serif',
+    logoUrl: '',
+  };
+  
+  console.log(`[extract-brand] Returning fallback tokens: ${reason}`);
+  
+  return new Response(
+    JSON.stringify({ 
+      tokens: fallbackTokens,
+      warning: reason,
+      usedFallback: true 
+    }), 
+    {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    }
+  );
+}
+
 // Utilities
 function toSix(hex: string) {
   const h = (hex || '').replace('#', '').toUpperCase();
@@ -81,12 +112,23 @@ serve(async (req) => {
     }
 
     console.log(`[extract-brand] Fetching website: ${websiteUrl}`);
-    const websiteResponse = await fetch(websiteUrl, {
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; BrandExtractor/1.2)" },
-    });
-    if (!websiteResponse.ok) throw new Error(`Failed to fetch website: ${websiteResponse.status}`);
-    const html = await websiteResponse.text();
-    console.log(`[extract-brand] Fetched ${html.length} bytes of HTML`);
+    
+    // Try to fetch the website with error handling for DNS/network issues
+    let html: string;
+    try {
+      const websiteResponse = await fetch(websiteUrl, {
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; BrandExtractor/1.2)" },
+      });
+      if (!websiteResponse.ok) {
+        console.warn(`[extract-brand] Website returned ${websiteResponse.status}, using fallback`);
+        return returnFallbackTokens(tenantId, websiteUrl, `Website returned ${websiteResponse.status}`);
+      }
+      html = await websiteResponse.text();
+      console.log(`[extract-brand] Fetched ${html.length} bytes of HTML`);
+    } catch (fetchError: any) {
+      console.warn(`[extract-brand] Failed to fetch website (${fetchError.message}), using fallback`);
+      return returnFallbackTokens(tenantId, websiteUrl, `Cannot reach website: ${fetchError.message}`);
+    }
 
     // Gather CSS links
     const hrefs: string[] = [];
