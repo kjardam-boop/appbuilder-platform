@@ -14,6 +14,71 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_app_content_library: {
+        Row: {
+          category: string
+          content_markdown: string
+          created_at: string
+          extracted_text: string | null
+          file_size_bytes: number | null
+          file_storage_path: string | null
+          file_type: string | null
+          id: string
+          is_active: boolean | null
+          keywords: string[] | null
+          last_processed_at: string | null
+          metadata: Json | null
+          original_filename: string | null
+          tenant_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          content_markdown: string
+          created_at?: string
+          extracted_text?: string | null
+          file_size_bytes?: number | null
+          file_storage_path?: string | null
+          file_type?: string | null
+          id?: string
+          is_active?: boolean | null
+          keywords?: string[] | null
+          last_processed_at?: string | null
+          metadata?: Json | null
+          original_filename?: string | null
+          tenant_id?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          content_markdown?: string
+          created_at?: string
+          extracted_text?: string | null
+          file_size_bytes?: number | null
+          file_storage_path?: string | null
+          file_type?: string | null
+          id?: string
+          is_active?: boolean | null
+          keywords?: string[] | null
+          last_processed_at?: string | null
+          metadata?: Json | null
+          original_filename?: string | null
+          tenant_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_app_content_library_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_policies: {
         Row: {
           alert_threshold_percent: number | null
