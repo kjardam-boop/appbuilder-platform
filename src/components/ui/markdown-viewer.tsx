@@ -22,24 +22,56 @@ interface MarkdownViewerProps {
   showLoading?: boolean;
 }
 
-// Initialize mermaid
-mermaid.initialize({
-  startOnLoad: true,
-  theme: 'default',
-  securityLevel: 'loose',
-  themeVariables: {
-    primaryColor: 'hsl(var(--primary))',
-    primaryTextColor: 'hsl(var(--primary-foreground))',
-    primaryBorderColor: 'hsl(var(--border))',
-    lineColor: 'hsl(var(--border))',
-    secondaryColor: 'hsl(var(--secondary))',
-    tertiaryColor: 'hsl(var(--muted))',
-    background: 'hsl(var(--background))',
-    mainBkg: 'hsl(var(--card))',
-    textColor: 'hsl(var(--foreground))',
-    fontSize: '14px',
-  },
-});
+/**
+ * Get computed CSS variable value
+ */
+function getCSSVariable(varName: string): string {
+  if (typeof window === 'undefined') return '';
+  const root = document.documentElement;
+  const value = getComputedStyle(root).getPropertyValue(varName).trim();
+  return value;
+}
+
+/**
+ * Convert CSS variable to HSL color
+ */
+function getHSLColor(varName: string): string {
+  const value = getCSSVariable(varName);
+  if (!value) return '#000000';
+  // If value is already in h s% l% format, convert to hsl()
+  if (value.includes(' ')) {
+    return `hsl(${value})`;
+  }
+  return value;
+}
+
+/**
+ * Initialize mermaid with theme colors
+ */
+function initializeMermaid() {
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'base',
+    securityLevel: 'loose',
+    themeVariables: {
+      primaryColor: getHSLColor('--primary'),
+      primaryTextColor: getHSLColor('--primary-foreground'),
+      primaryBorderColor: getHSLColor('--border'),
+      lineColor: getHSLColor('--border'),
+      secondaryColor: getHSLColor('--secondary'),
+      tertiaryColor: getHSLColor('--muted'),
+      background: getHSLColor('--background'),
+      mainBkg: getHSLColor('--card'),
+      textColor: getHSLColor('--foreground'),
+      fontSize: '14px',
+    },
+  });
+}
+
+// Initialize on module load
+if (typeof window !== 'undefined') {
+  initializeMermaid();
+}
 
 /**
  * Mermaid Diagram Component
