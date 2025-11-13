@@ -42,7 +42,7 @@ export const TenantBranding = () => {
       // Get tenant
       const { data: tenantData } = await supabase
         .from('tenants')
-        .select('id, name')
+        .select('id, name, domain')
         .eq('slug', slug)
         .single();
 
@@ -84,6 +84,7 @@ export const TenantBranding = () => {
             theme_key: 'default',
             tokens: defaultTokens,
             is_active: true,
+            extracted_from_url: (tenantData as any).domain ? `https://${(tenantData as any).domain}` : null,
           })
           .select()
           .single();
