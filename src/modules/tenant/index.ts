@@ -7,10 +7,17 @@ import ModuleRegistry from "@/core/moduleRegistry";
 
 // Export types
 export * from "./types/tenant.types";
+export * from "./types/tenantTheme.types";
 
 // Export services
 export * from "./services/tenantService";
 export * from "./services/tenantResolver";
+
+// Export hooks
+export * from "./hooks/useTenantTheme";
+
+// Export providers
+export * from "./providers/TenantThemeProvider";
 
 // Module configuration
 export const TENANT_MODULE = {

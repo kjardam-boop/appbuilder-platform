@@ -47,23 +47,40 @@ function getHSLColor(varName: string): string {
 }
 
 /**
+ * Get Mermaid theme based on current theme
+ */
+function getMermaidTheme(): 'default' | 'dark' {
+  if (typeof window === 'undefined') return 'default';
+  const isDark = document.documentElement.classList.contains('dark');
+  return isDark ? 'dark' : 'default';
+}
+
+/**
  * Initialize mermaid with theme colors
  */
 function initializeMermaid() {
+  const currentTheme = getMermaidTheme();
+  const foregroundColor = getHSLColor('--foreground');
+  
   mermaid.initialize({
     startOnLoad: true,
-    theme: 'base',
+    theme: currentTheme,
     securityLevel: 'loose',
     themeVariables: {
       primaryColor: getHSLColor('--primary'),
-      primaryTextColor: getHSLColor('--primary-foreground'),
+      primaryTextColor: foregroundColor,
       primaryBorderColor: getHSLColor('--border'),
       lineColor: getHSLColor('--border'),
       secondaryColor: getHSLColor('--secondary'),
       tertiaryColor: getHSLColor('--muted'),
       background: getHSLColor('--background'),
       mainBkg: getHSLColor('--card'),
-      textColor: getHSLColor('--foreground'),
+      textColor: foregroundColor,
+      noteBkgColor: getHSLColor('--muted'),
+      noteTextColor: foregroundColor,
+      actorTextColor: foregroundColor,
+      labelTextColor: foregroundColor,
+      loopTextColor: foregroundColor,
       fontSize: '14px',
     },
   });
