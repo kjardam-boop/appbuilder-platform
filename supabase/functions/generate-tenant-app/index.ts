@@ -169,9 +169,29 @@ Return ONLY valid JSON, no markdown or explanations.`;
     // Check if project already exists for this tenant
     const { data: existingProject } = await supabase
       .from("customer_app_projects")
-      .select("id")
+      .select("id, subdomain")
       .eq("tenant_id", tenantId)
       .maybeSingle();
+
+    // Ensure unique subdomain
+    let finalSubdomain = appConfig.subdomain || tenant.slug;
+    
+    // If we're creating a new project (not updating), check subdomain availability
+    if (!existingProject) {
+      const { data: subdomainConflict } = await supabase
+        .from("customer_app_projects")
+        .select("id")
+        .eq("subdomain", finalSubdomain)
+        .maybeSingle();
+      
+      // If subdomain is taken, append tenant ID to make it unique
+      if (subdomainConflict) {
+        finalSubdomain = `${finalSubdomain}-${tenantId.substring(0, 8)}`;
+      }
+    } else {
+      // Keep existing subdomain when updating
+      finalSubdomain = existingProject.subdomain;
+    }
 
     let project;
     
@@ -182,7 +202,6 @@ Return ONLY valid JSON, no markdown or explanations.`;
         .update({
           name: appConfig.name || `${tenant.name} App`,
           description: appConfig.description || `Generated application for ${tenant.name}`,
-          subdomain: appConfig.subdomain || tenant.slug,
           status: "draft",
           selected_capabilities: appConfig.suggested_capabilities || [],
           updated_at: new Date().toISOString(),
@@ -209,7 +228,7 @@ Return ONLY valid JSON, no markdown or explanations.`;
           tenant_id: tenantId,
           name: appConfig.name || `${tenant.name} App`,
           description: appConfig.description || `Generated application for ${tenant.name}`,
-          subdomain: appConfig.subdomain || tenant.slug,
+          subdomain: finalSubdomain,
           status: "draft",
           selected_capabilities: appConfig.suggested_capabilities || [],
         })
