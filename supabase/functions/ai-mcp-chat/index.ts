@@ -187,6 +187,22 @@ const MCP_TOOLS = [
         required: ["url"]
       }
     }
+  },
+  {
+    type: "function",
+    function: {
+      name: "generate_experience",
+      description: "Generate a dynamic web experience (ExperienceJSON) from user query. Searches content library for relevant markdown, converts to visual blocks, applies company branding. Returns experience-json code block that will render as interactive webpage.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "User's question or topic" },
+          company_url: { type: "string", description: "Optional: Company website URL for brand extraction" },
+          category: { type: "string", description: "Optional: Content category filter (onboarding, faq, help, integration, product)" }
+        },
+        required: ["query"]
+      }
+    }
   }
 ];
 
@@ -411,6 +427,83 @@ async function executeMcpTool(
             success: false,
             error: error instanceof Error ? error.message : 'Failed to scrape website',
             url: args.url
+          };
+        }
+      }
+
+      case "generate_experience": {
+        try {
+          console.log(`[Generate Experience] Query: ${args.query}`);
+          
+          // Search content library for relevant markdown
+          let contentQuery = supabaseClient
+            .from('ai_app_content_library')
+            .select('*')
+            .eq('is_active', true);
+          
+          // Filter by category if provided
+          if (args.category) {
+            contentQuery = contentQuery.eq('category', args.category);
+          }
+          
+          // Filter by tenant or platform-wide
+          contentQuery = contentQuery.or(`tenant_id.eq.${tenantId},tenant_id.is.null`);
+          
+          // Search by keywords (simple approach)
+          const queryWords = args.query.toLowerCase().split(' ').filter((w: string) => w.length > 3);
+          if (queryWords.length > 0) {
+            contentQuery = contentQuery.or(queryWords.map((word: string) => `keywords.cs.{${word}}`).join(','));
+          }
+          
+          contentQuery = contentQuery.limit(5);
+          
+          const { data: contentItems, error: contentError } = await contentQuery;
+          
+          if (contentError) {
+            console.error('[Content Library Error]', contentError);
+          }
+          
+          // Get tenant theme if available
+          let theme = null;
+          const { data: tenantTheme } = await supabaseClient
+            .from('tenant_themes')
+            .select('tokens')
+            .eq('tenant_id', tenantId)
+            .eq('is_active', true)
+            .maybeSingle();
+          
+          if (tenantTheme) {
+            theme = tenantTheme.tokens;
+          }
+          
+          // If company_url provided, extract brand
+          if (args.company_url && !theme) {
+            try {
+              const brandResponse = await supabaseClient.functions.invoke('extract-brand', {
+                body: { websiteUrl: args.company_url, tenantId }
+              });
+              
+              if (brandResponse.data?.tokens) {
+                theme = brandResponse.data.tokens;
+              }
+            } catch (brandError) {
+              console.error('[Brand Extraction Error]', brandError);
+            }
+          }
+          
+          return {
+            success: true,
+            content_found: contentItems?.length || 0,
+            content_items: contentItems || [],
+            theme: theme || null,
+            instructions: "Use the content_items markdown to generate ExperienceJSON. Convert markdown sections to appropriate block types: # headings to hero blocks, ## sections to content blocks, numbered lists to steps blocks, key CTAs to cta blocks. Apply the provided theme colors. Return the experience in a ```experience-json code block so it renders automatically."
+          };
+        } catch (error) {
+          console.error(`[Generate Experience Error]`, error);
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to generate experience',
+            query: args.query
           };
         }
       }

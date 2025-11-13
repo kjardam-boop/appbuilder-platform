@@ -65,11 +65,52 @@ const FlowBlockSchema = z.object({
   steps: z.array(FlowStepSchema),
 });
 
+const HeroBlockSchema = z.object({
+  type: z.literal('hero'),
+  headline: z.string(),
+  subheadline: z.string().optional(),
+  image_url: z.string().optional(),
+  actions: z.array(z.object({
+    label: z.string(),
+    action_id: z.string(),
+  })).optional(),
+});
+
+const ContentBlockSchema = z.object({
+  type: z.literal('content'),
+  markdown: z.string(),
+});
+
+const CTABlockSchema = z.object({
+  type: z.literal('cta'),
+  headline: z.string(),
+  description: z.string().optional(),
+  actions: z.array(z.object({
+    label: z.string(),
+    action_id: z.string(),
+    variant: z.enum(['default', 'outline', 'ghost']).optional(),
+  })),
+});
+
+const StepsBlockSchema = z.object({
+  type: z.literal('steps'),
+  title: z.string().optional(),
+  steps: z.array(z.object({
+    title: z.string(),
+    description: z.string(),
+    icon: z.string().optional(),
+  })),
+});
+
 const BlockSchema = z.discriminatedUnion('type', [
   CardBlockSchema,
   CardsListBlockSchema,
   TableBlockSchema,
   FlowBlockSchema,
+  HeroBlockSchema,
+  ContentBlockSchema,
+  CTABlockSchema,
+  StepsBlockSchema,
 ]);
 
 export const ExperienceJSONSchema = z.object({
@@ -88,3 +129,7 @@ export type CardBlock = z.infer<typeof CardBlockSchema>;
 export type CardsListBlock = z.infer<typeof CardsListBlockSchema>;
 export type TableBlock = z.infer<typeof TableBlockSchema>;
 export type FlowBlock = z.infer<typeof FlowBlockSchema>;
+export type HeroBlock = z.infer<typeof HeroBlockSchema>;
+export type ContentBlock = z.infer<typeof ContentBlockSchema>;
+export type CTABlock = z.infer<typeof CTABlockSchema>;
+export type StepsBlock = z.infer<typeof StepsBlockSchema>;
