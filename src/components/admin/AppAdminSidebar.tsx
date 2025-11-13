@@ -98,6 +98,7 @@ const adminNavItems = [
     items: [
       { title: "Platform Documentation", url: "/admin/documentation", icon: BookOpen },
       { title: "AI Content Library", url: "/admin/content-library", icon: FileText },
+      { title: "Run Migrations", url: "/admin/run-migrations", icon: Database },
       { title: "Credentials", url: "/admin/credentials", icon: Key },
       { title: "Security", url: "/admin/security", icon: Shield },
       { title: "Database Naming", url: "/admin/database/naming", icon: Database },

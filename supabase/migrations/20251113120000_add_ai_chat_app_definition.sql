@@ -1,6 +1,9 @@
 -- Add AI Chat app definition
 -- This registers AI Chat as an available application in the platform
 
+-- First check if it already exists and delete if so (for re-running)
+DELETE FROM app_definitions WHERE key = 'ai-chat';
+
 INSERT INTO app_definitions (
   key,
   name,
@@ -17,11 +20,8 @@ INSERT INTO app_definitions (
   'utility',
   'Bot',
   'Intelligent AI-assistent med tilgang til plattformens data via MCP-verktøy. Kan hjelpe med selskaper, prosjekter, oppgaver og mer.',
-  ARRAY['ai_usage_logs', 'ai_policies', 'ai_app_content_library']::text[],
-  ARRAY['companies', 'projects', 'tasks', 'external_systems']::text[],
+  ARRAY['ai_usage_logs', 'ai_policies', 'ai_app_content_library'],
+  ARRAY['companies', 'projects', 'tasks', 'external_systems'],
   true,
   '1.0.0'
 );
-
--- Add comment explaining the app
-COMMENT ON TABLE app_definitions IS 'AI Chat app provides intelligent assistance with MCP tool access to platform data';
