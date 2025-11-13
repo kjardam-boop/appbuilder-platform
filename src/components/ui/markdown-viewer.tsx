@@ -1,11 +1,14 @@
 /**
  * MarkdownViewer Component
  * 
- * Renders markdown content with syntax highlighting and proper formatting.
+ * Renders markdown content with syntax highlighting, Mermaid diagrams, and proper formatting.
  * Used for displaying capability documentation and other markdown files.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import ReactMarkdown from 'react-markdown';
+import mermaid from 'mermaid';
+import { useTheme } from "next-themes";
 import { Card } from "./card";
 import { Alert, AlertDescription } from "./alert";
 import { AlertCircle, FileText } from "lucide-react";
@@ -21,7 +24,111 @@ interface MarkdownViewerProps {
 }
 
 /**
- * MarkdownViewer - Fetches and displays markdown documentation
+ * Get computed CSS variable value
+ */
+function getCSSVariable(varName: string): string {
+  if (typeof window === 'undefined') return '';
+  const root = document.documentElement;
+  const value = getComputedStyle(root).getPropertyValue(varName).trim();
+  return value;
+}
+
+/**
+ * Convert CSS variable to HSL color
+ */
+function getHSLColor(varName: string): string {
+  const value = getCSSVariable(varName);
+  if (!value) return '#000000';
+  // If value is already in h s% l% format, convert to hsl()
+  if (value.includes(' ')) {
+    return `hsl(${value})`;
+  }
+  return value;
+}
+
+/**
+ * Get Mermaid theme based on current theme
+ */
+function getMermaidTheme(): 'default' | 'dark' {
+  if (typeof window === 'undefined') return 'default';
+  const isDark = document.documentElement.classList.contains('dark');
+  return isDark ? 'dark' : 'default';
+}
+
+/**
+ * Initialize mermaid with theme colors
+ */
+function initializeMermaid() {
+  const currentTheme = getMermaidTheme();
+  const foregroundColor = getHSLColor('--foreground');
+  
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: currentTheme,
+    securityLevel: 'loose',
+    themeVariables: {
+      primaryColor: getHSLColor('--primary'),
+      primaryTextColor: foregroundColor,
+      primaryBorderColor: getHSLColor('--border'),
+      lineColor: getHSLColor('--border'),
+      secondaryColor: getHSLColor('--secondary'),
+      tertiaryColor: getHSLColor('--muted'),
+      background: getHSLColor('--background'),
+      mainBkg: getHSLColor('--card'),
+      textColor: foregroundColor,
+      noteBkgColor: getHSLColor('--muted'),
+      noteTextColor: foregroundColor,
+      actorTextColor: foregroundColor,
+      labelTextColor: foregroundColor,
+      loopTextColor: foregroundColor,
+      fontSize: '14px',
+    },
+  });
+}
+
+// Initialize on module load
+if (typeof window !== 'undefined') {
+  initializeMermaid();
+}
+
+/**
+ * Mermaid Diagram Component
+ */
+function MermaidDiagram({ code, themeKey }: { code: string; themeKey: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [svg, setSvg] = useState<string>('');
+
+  useEffect(() => {
+    if (!code) return;
+
+    const renderDiagram = async () => {
+      try {
+        // Re-initialize mermaid with current theme colors
+        initializeMermaid();
+        
+        const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
+        const { svg } = await mermaid.render(id, code);
+        setSvg(svg);
+      } catch (error) {
+        console.error('Mermaid render error:', error);
+        setSvg(`<pre class="text-destructive">Error rendering diagram</pre>`);
+      }
+    };
+
+    renderDiagram();
+  }, [code, themeKey]);
+
+  return (
+    <div 
+      ref={ref}
+      className="my-6 flex justify-center overflow-x-auto bg-muted/30 p-4 rounded-lg"
+      dangerouslySetInnerHTML={{ __html: svg }}
+    />
+  );
+}
+
+/**
+ * MarkdownViewer - Fetches and displays markdown documentation with Mermaid support
  * 
  * @example
  * ```tsx
@@ -36,6 +143,13 @@ export function MarkdownViewer({
   const [content, setContent] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { theme, resolvedTheme } = useTheme();
+  const [themeKey, setThemeKey] = useState<string>('');
+
+  // Update theme key when theme changes to trigger Mermaid re-render
+  useEffect(() => {
+    setThemeKey(`${resolvedTheme || theme}-${Date.now()}`);
+  }, [theme, resolvedTheme]);
 
   useEffect(() => {
     async function fetchMarkdown() {
@@ -43,7 +157,6 @@ export function MarkdownViewer({
       setError(null);
 
       try {
-        // Fetch markdown file from public directory or docs
         const normalizedPath = markdownPath.startsWith('/') ? markdownPath : `/${markdownPath}`;
         const response = await fetch(normalizedPath);
         if (!response.ok) {
@@ -106,59 +219,77 @@ export function MarkdownViewer({
     );
   }
 
-  // Simple markdown rendering (we'll enhance this with a proper markdown library if needed)
-  const renderMarkdown = (md: string) => {
-    // Basic markdown parsing
-    let html = md;
-
-    // Horizontal rules
-    html = html.replace(/^---$/gim, '<hr class="my-8 border-border" />');
-
-    // Headers with consistent spacing
-    html = html.replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold mt-8 mb-4">$1</h3>');
-    html = html.replace(/^## (.*$)/gim, '<h2 class="text-xl font-semibold mt-10 mb-5 pb-2 border-b border-border">$1</h2>');
-    html = html.replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold mb-8">$1</h1>');
-
-    // Code blocks
-    html = html.replace(/```(\w+)?\n([\s\S]*?)```/gim, (_, lang, code) => {
-      return `<pre class="bg-muted p-4 rounded-lg overflow-x-auto my-4"><code class="text-sm">${code.trim()}</code></pre>`;
-    });
-
-    // Inline code
-    html = html.replace(/`([^`]+)`/g, '<code class="bg-muted px-1.5 py-0.5 rounded text-sm">$1</code>');
-
-    // Bold
-    html = html.replace(/\*\*([^*]+)\*\*/g, '<strong class="font-semibold">$1</strong>');
-
-    // Links
-    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-primary hover:underline">$1</a>');
-
-    // Lists - group consecutive "- " lines into a single <ul>
-    html = html.replace(/(?:^|\n)(- .+(?:\n- .+)*)/g, (match) => {
-      const items = match
-        .trim()
-        .split('\n')
-        .filter((l) => l.trim().startsWith('- '))
-        .map((l) => l.replace(/^- (.*)/, '<li class="ml-6 list-disc">$1</li>'))
-        .join('');
-      return `\n<ul class="my-6 space-y-1">${items}</ul>\n`;
-    });
-
-    // Paragraphs (preserve blank lines between blocks)
-    html = html.split('\n\n').map(para => {
-      if (para.startsWith('<')) return para; // Skip HTML elements
-      return `<p class="my-3 leading-relaxed">${para}</p>`;
-    }).join('\n\n');
-
-    return html;
-  };
-
   return (
     <Card className={`p-6 ${className}`}>
-      <div
-        className="prose prose-sm max-w-none dark:prose-invert"
-        dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}
-      />
+      <div className="prose prose-sm max-w-none dark:prose-invert">
+        <ReactMarkdown
+          components={{
+            code({ className, children, ...props }: any) {
+              const inline = !className;
+            const match = /language-(\w+)/.exec(className || '');
+            const language = match ? match[1] : '';
+            const code = String(children).replace(/\n$/, '');
+
+            // Render Mermaid diagrams
+            if (!inline && language === 'mermaid') {
+              return <MermaidDiagram code={code} themeKey={themeKey} />;
+            }
+
+            // Regular code blocks
+            if (!inline) {
+              return (
+                <pre className="bg-muted p-4 rounded-lg overflow-x-auto my-4">
+                  <code className="text-sm" {...props}>
+                    {children}
+                  </code>
+                </pre>
+              );
+            }
+
+            // Inline code
+            return (
+              <code className="bg-muted px-1.5 py-0.5 rounded text-sm" {...props}>
+                {children}
+              </code>
+            );
+          },
+          h1: ({ children }) => (
+            <h1 className="text-2xl font-bold mb-8 mt-0">{children}</h1>
+          ),
+          h2: ({ children }) => (
+            <h2 className="text-xl font-semibold mt-10 mb-5 pb-2 border-b border-border">{children}</h2>
+          ),
+          h3: ({ children }) => (
+            <h3 className="text-lg font-semibold mt-8 mb-4">{children}</h3>
+          ),
+          p: ({ children }) => (
+            <p className="my-3 leading-relaxed">{children}</p>
+          ),
+          ul: ({ children }) => (
+            <ul className="my-6 space-y-1 ml-6 list-disc">{children}</ul>
+          ),
+          ol: ({ children }) => (
+            <ol className="my-6 space-y-1 ml-6 list-decimal">{children}</ol>
+          ),
+          li: ({ children }) => (
+            <li className="leading-relaxed">{children}</li>
+          ),
+          a: ({ href, children }) => (
+            <a href={href} className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">
+              {children}
+            </a>
+          ),
+          strong: ({ children }) => (
+            <strong className="font-semibold">{children}</strong>
+          ),
+          hr: () => (
+            <hr className="my-8 border-border" />
+          ),
+          }}
+        >
+          {content}
+        </ReactMarkdown>
+      </div>
     </Card>
   );
 }

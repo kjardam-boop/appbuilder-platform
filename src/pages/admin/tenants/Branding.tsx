@@ -42,7 +42,7 @@ export const TenantBranding = () => {
       // Get tenant
       const { data: tenantData } = await supabase
         .from('tenants')
-        .select('id, name')
+        .select('id, name, domain')
         .eq('slug', slug)
         .single();
 
@@ -54,12 +54,50 @@ export const TenantBranding = () => {
       setTenant(tenantData);
 
       // Get active theme
-      const { data: themeData } = await supabase
+      let { data: themeData } = await supabase
         .from('tenant_themes')
         .select('*')
         .eq('tenant_id', tenantData.id)
         .eq('is_active', true)
         .maybeSingle();
+
+      // Create default theme if none exists
+      if (!themeData) {
+        const defaultTokens = {
+          primary: '222.2 47.4% 11.2%',
+          accent: '210 40% 96.1%',
+          secondary: '210 40% 96.1%',
+          surface: '0 0% 100%',
+          textOnSurface: '222.2 84% 4.9%',
+          destructive: '0 84.2% 60.2%',
+          success: '142 76% 36%',
+          warning: '38 92% 50%',
+          muted: '210 40% 96.1%',
+          fontStack: 'Inter, ui-sans-serif, system-ui, sans-serif',
+          logoUrl: '',
+        };
+
+        const { data: newTheme, error: createError } = await supabase
+          .from('tenant_themes')
+          .insert({
+            tenant_id: tenantData.id,
+            theme_key: 'default',
+            tokens: defaultTokens,
+            is_active: true,
+            extracted_from_url: (tenantData as any).domain ? `https://${(tenantData as any).domain}` : null,
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('Failed to create default theme:', createError);
+          toast.error('Kunne ikke opprette default tema');
+          return;
+        }
+
+        themeData = newTheme;
+        toast.success('Default tema opprettet');
+      }
 
       setTheme(themeData);
       

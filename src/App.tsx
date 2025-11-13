@@ -20,8 +20,8 @@ import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useHasAdminPermissions } from "@/modules/core/permissions/hooks/useHasAdminPermissions";
-import AppAdminSidebar from "@/components/Admin/AppAdminSidebar";
-import { PermissionProtectedRoute } from "@/components/Admin/PermissionProtectedRoute";
+import AppAdminSidebar from "@/components/admin/AppAdminSidebar";
+import { PermissionProtectedRoute } from "@/components/admin/PermissionProtectedRoute";
 import { getRoutePermission } from "@/config/adminNavigation";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminBootstrap from "./pages/admin/AdminBootstrap";
@@ -105,6 +105,7 @@ import { Shield, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { TenantThemeProvider } from "@/modules/tenant/providers/TenantThemeProvider";
 
 const queryClient = new QueryClient();
 
@@ -187,13 +188,14 @@ function RootRoute() {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <SidebarProvider defaultOpen>
-          <BrowserRouter>
-            <GlobalLayout>
-              <Routes>
+      <TenantThemeProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <SidebarProvider defaultOpen>
+            <BrowserRouter>
+              <GlobalLayout>
+                <Routes>
             <Route path="/" element={<RootRoute />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<PlatformProtectedRoute><Dashboard /></PlatformProtectedRoute>} />
@@ -324,6 +326,7 @@ const App = () => (
           </BrowserRouter>
         </SidebarProvider>
       </TooltipProvider>
+      </TenantThemeProvider>
     </AuthProvider>
   </QueryClientProvider>
 );
