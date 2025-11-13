@@ -71,6 +71,7 @@ import Jul25App from "./pages/apps/Jul25App";
 import Jul25FamilyAdmin from "./pages/apps/Jul25FamilyAdmin";
 import Jul25MemberEdit from "./pages/apps/Jul25MemberEdit";
 import InviteMembersPage from "./pages/apps/jul25/InviteMembersPage";
+import AIChatApp from "./pages/apps/AIChatApp";
 import McpPolicy from "./pages/admin/McpPolicy";
 import McpWorkflows from "./pages/admin/McpWorkflows";
 import McpSecrets from "./pages/admin/McpSecrets";
@@ -301,6 +302,7 @@ const App = () => (
             <Route path="/apps/jul25/admin" element={<Jul25FamilyAdmin />} />
             <Route path="/apps/jul25/member/:memberId" element={<Jul25MemberEdit />} />
             <Route path="/apps/jul25/invite" element={<InviteMembersPage />} />
+            <Route path="/apps/ai-chat" element={<AIChatApp />} />
             
             {/* Tenant-specific demo pages */}
             <Route path="/demo" element={<Demo />} />

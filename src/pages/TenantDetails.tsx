@@ -100,6 +100,7 @@ export default function TenantDetails() {
   const [isSavingDomain, setIsSavingDomain] = useState(false);
   const [copiedRecord, setCopiedRecord] = useState<string | null>(null);
   const [isPublishingPreview, setIsPublishingPreview] = useState(false);
+  const [isGeneratingAIChat, setIsGeneratingAIChat] = useState(false);
 
   useEffect(() => {
     loadTenantDetails();
@@ -301,6 +302,66 @@ export default function TenantDetails() {
     setCopiedRecord(recordType);
     setTimeout(() => setCopiedRecord(null), 2000);
     toast.success('Kopiert til utklippstavle');
+  };
+
+  const handleGenerateAIChat = async () => {
+    if (!tenantId) return;
+
+    setIsGeneratingAIChat(true);
+    try {
+      // Check if AI Chat app definition exists
+      const { data: appDef, error: appDefError } = await supabase
+        .from('app_definitions')
+        .select('id')
+        .eq('key', 'ai-chat')
+        .single();
+
+      if (appDefError) {
+        throw new Error('AI Chat app ikke funnet. Kjør migrasjon først.');
+      }
+
+      // Check if already activated
+      const { data: existing } = await supabase
+        .from('applications')
+        .select('id')
+        .eq('tenant_id', tenantId)
+        .eq('app_definition_id', appDef.id)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (existing) {
+        toast.info('AI Chat er allerede aktivert for denne tenanten');
+        return;
+      }
+
+      // Create application record
+      const { error: createError } = await supabase
+        .from('applications')
+        .insert({
+          tenant_id: tenantId,
+          app_definition_id: appDef.id,
+          app_type: 'utility',
+          installed_version: '1.0.0',
+          is_active: true,
+          status: 'active',
+          channel: 'stable',
+        });
+
+      if (createError) throw createError;
+
+      toast.success('AI Chat aktivert!', {
+        description: 'Applikasjonen er nå tilgjengelig for brukere'
+      });
+
+      await loadTenantDetails();
+    } catch (error) {
+      console.error('Failed to generate AI Chat:', error);
+      toast.error('Kunne ikke aktivere AI Chat', {
+        description: error instanceof Error ? error.message : 'Ukjent feil'
+      });
+    } finally {
+      setIsGeneratingAIChat(false);
+    }
   };
 
   const handlePublishToPreview = async (project: AppProject) => {
@@ -577,6 +638,18 @@ export default function TenantDetails() {
                 <h2 className="text-2xl font-bold">Aktive Applikasjoner</h2>
                 <p className="text-muted-foreground">Applikasjoner som er aktivert og tilgjengelige</p>
               </div>
+              <Button 
+                onClick={handleGenerateAIChat} 
+                disabled={isGeneratingAIChat}
+                variant="default"
+              >
+                {isGeneratingAIChat ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Plus className="mr-2 h-4 w-4" />
+                )}
+                Generer AI Chat
+              </Button>
             </div>
 
             {tenantApplications.length === 0 ? (
