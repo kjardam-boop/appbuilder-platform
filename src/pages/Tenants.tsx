@@ -28,6 +28,8 @@ interface Tenant {
   status: string;
   plan: string;
   created_at: string;
+  user_count?: number;
+  company_name?: string;
 }
 
 export default function Tenants() {
@@ -51,12 +53,12 @@ export default function Tenants() {
   const loadTenants = async () => {
     try {
       const { data, error } = await supabase
-        .from('tenants')
+        .from('tenants_list_view' as any)
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setTenants(data || []);
+      setTenants((data as any[]) || []);
     } catch (error: any) {
       console.error('Error loading tenants:', error);
       toast({
