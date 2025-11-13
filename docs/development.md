@@ -1,5 +1,42 @@
 # Utviklerguide
 
+## Oversikt: Utviklingsprosess
+
+```mermaid
+graph LR
+    subgraph "1. Setup"
+        CREATE[Opprett Modulstruktur]
+        TYPES[Definer TypeScript Types]
+    end
+    
+    subgraph "2. Backend"
+        DB[Database Migrering]
+        RLS[RLS Policies]
+        SERVICE[Service Layer]
+    end
+    
+    subgraph "3. Frontend"
+        HOOKS[React Hooks]
+        COMP[UI Komponenter]
+    end
+    
+    subgraph "4. Integration"
+        EXPORT[Export fra index.ts]
+        REG[Registrer i moduleRegistry]
+        TEST[Tester]
+    end
+    
+    CREATE --> TYPES
+    TYPES --> DB
+    DB --> RLS
+    RLS --> SERVICE
+    SERVICE --> HOOKS
+    HOOKS --> COMP
+    COMP --> EXPORT
+    EXPORT --> REG
+    REG --> TEST
+```
+
 ## Legge til ny modul
 
 ### 1. Opprett modulstruktur
@@ -52,6 +89,21 @@ export { MyService } from "./services/myService";
 
 ## Legge til ny AppType
 
+```mermaid
+sequenceDiagram
+    participant Dev as Developer
+    participant Types as Type Definition
+    participant Map as APP_TYPES Map
+    participant Seed as Seed Data
+    participant DB as Database
+    
+    Dev->>Types: Legg til ny AppType
+    Dev->>Map: Oppdater APP_TYPES
+    Dev->>Seed: Legg til seed-produkter
+    Dev->>DB: Kjør seed-funksjon
+    DB-->>Dev: Produkter opprettet
+```
+
 ### 1. Utvid type definition
 
 ```typescript
@@ -90,6 +142,35 @@ const SEED_PRODUCTS: SeedData[] = [
 ```
 
 ## Legge til ny integrasjon
+
+```mermaid
+graph TB
+    subgraph "Adapter Layer"
+        ADAPTER[MySystemAdapter]
+        BASE[StandardBaseAdapter]
+    end
+    
+    subgraph "Registry"
+        REG[AdapterRegistry]
+    end
+    
+    subgraph "Configuration"
+        FIELDS[Required Fields]
+        ACTIONS[Available Actions]
+    end
+    
+    subgraph "Runtime"
+        INVOKE[invoke method]
+        API[External API]
+    end
+    
+    ADAPTER -->|extends| BASE
+    ADAPTER -->|defines| FIELDS
+    ADAPTER -->|defines| ACTIONS
+    ADAPTER -->|registers to| REG
+    REG -->|calls| INVOKE
+    INVOKE -->|communicates| API
+```
 
 ### 1. Lag adapter
 
