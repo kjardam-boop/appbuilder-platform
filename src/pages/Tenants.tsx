@@ -257,7 +257,12 @@ export default function Tenants() {
               <CardContent className="pt-6">
                 <div className="space-y-3">
                   <div className="flex items-start justify-between">
-                    <h3 className="font-semibold text-lg">{tenant.name}</h3>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-lg">{tenant.name}</h3>
+                      {tenant.company_name && (
+                        <p className="text-sm text-muted-foreground">{tenant.company_name}</p>
+                      )}
+                    </div>
                     <Badge
                       variant={tenant.status === "active" ? "default" : "secondary"}
                       className="text-xs capitalize"
@@ -267,6 +272,10 @@ export default function Tenants() {
                   </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <span>{tenant.domain || tenant.slug}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Users className="h-4 w-4" />
+                    <span>{tenant.user_count || 0} {tenant.user_count === 1 ? 'bruker' : 'brukere'}</span>
                   </div>
                   <div className="mt-4 flex items-center justify-between">
                     <div className="text-xs text-muted-foreground">
