@@ -68,6 +68,7 @@ export const adminNavigationMapping: Record<string, AdminNavigationRequirement> 
   '/admin/credentials': { resource: 'integration', requiredAction: 'admin' },
   '/admin/content-library': { resource: 'tenant', requiredAction: 'admin' },
   '/admin/run-migrations': { resource: 'tenant', requiredAction: 'admin' },
+  '/admin/fix-ai-chat': { resource: 'tenant', requiredAction: 'admin' },
   '/admin/security': { resource: 'audit_log', requiredAction: 'admin' },
   '/admin/database': { resource: 'tenant', requiredAction: 'admin' },
   '/admin/database/naming': { resource: 'tenant', requiredAction: 'admin' },
