@@ -1,11 +1,13 @@
 /**
  * MarkdownViewer Component
  * 
- * Renders markdown content with syntax highlighting and proper formatting.
+ * Renders markdown content with syntax highlighting, Mermaid diagrams, and proper formatting.
  * Used for displaying capability documentation and other markdown files.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import ReactMarkdown from 'react-markdown';
+import mermaid from 'mermaid';
 import { Card } from "./card";
 import { Alert, AlertDescription } from "./alert";
 import { AlertCircle, FileText } from "lucide-react";
@@ -20,8 +22,60 @@ interface MarkdownViewerProps {
   showLoading?: boolean;
 }
 
+// Initialize mermaid
+mermaid.initialize({
+  startOnLoad: true,
+  theme: 'default',
+  securityLevel: 'loose',
+  themeVariables: {
+    primaryColor: 'hsl(var(--primary))',
+    primaryTextColor: 'hsl(var(--primary-foreground))',
+    primaryBorderColor: 'hsl(var(--border))',
+    lineColor: 'hsl(var(--border))',
+    secondaryColor: 'hsl(var(--secondary))',
+    tertiaryColor: 'hsl(var(--muted))',
+    background: 'hsl(var(--background))',
+    mainBkg: 'hsl(var(--card))',
+    textColor: 'hsl(var(--foreground))',
+    fontSize: '14px',
+  },
+});
+
 /**
- * MarkdownViewer - Fetches and displays markdown documentation
+ * Mermaid Diagram Component
+ */
+function MermaidDiagram({ code }: { code: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [svg, setSvg] = useState<string>('');
+
+  useEffect(() => {
+    if (!code) return;
+
+    const renderDiagram = async () => {
+      try {
+        const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
+        const { svg } = await mermaid.render(id, code);
+        setSvg(svg);
+      } catch (error) {
+        console.error('Mermaid render error:', error);
+        setSvg(`<pre class="text-destructive">Error rendering diagram</pre>`);
+      }
+    };
+
+    renderDiagram();
+  }, [code]);
+
+  return (
+    <div 
+      ref={ref}
+      className="my-6 flex justify-center overflow-x-auto bg-muted/30 p-4 rounded-lg"
+      dangerouslySetInnerHTML={{ __html: svg }}
+    />
+  );
+}
+
+/**
+ * MarkdownViewer - Fetches and displays markdown documentation with Mermaid support
  * 
  * @example
  * ```tsx
@@ -43,7 +97,6 @@ export function MarkdownViewer({
       setError(null);
 
       try {
-        // Fetch markdown file from public directory or docs
         const normalizedPath = markdownPath.startsWith('/') ? markdownPath : `/${markdownPath}`;
         const response = await fetch(normalizedPath);
         if (!response.ok) {
@@ -106,59 +159,77 @@ export function MarkdownViewer({
     );
   }
 
-  // Simple markdown rendering (we'll enhance this with a proper markdown library if needed)
-  const renderMarkdown = (md: string) => {
-    // Basic markdown parsing
-    let html = md;
-
-    // Horizontal rules
-    html = html.replace(/^---$/gim, '<hr class="my-8 border-border" />');
-
-    // Headers with consistent spacing
-    html = html.replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold mt-8 mb-4">$1</h3>');
-    html = html.replace(/^## (.*$)/gim, '<h2 class="text-xl font-semibold mt-10 mb-5 pb-2 border-b border-border">$1</h2>');
-    html = html.replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold mb-8">$1</h1>');
-
-    // Code blocks
-    html = html.replace(/```(\w+)?\n([\s\S]*?)```/gim, (_, lang, code) => {
-      return `<pre class="bg-muted p-4 rounded-lg overflow-x-auto my-4"><code class="text-sm">${code.trim()}</code></pre>`;
-    });
-
-    // Inline code
-    html = html.replace(/`([^`]+)`/g, '<code class="bg-muted px-1.5 py-0.5 rounded text-sm">$1</code>');
-
-    // Bold
-    html = html.replace(/\*\*([^*]+)\*\*/g, '<strong class="font-semibold">$1</strong>');
-
-    // Links
-    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-primary hover:underline">$1</a>');
-
-    // Lists - group consecutive "- " lines into a single <ul>
-    html = html.replace(/(?:^|\n)(- .+(?:\n- .+)*)/g, (match) => {
-      const items = match
-        .trim()
-        .split('\n')
-        .filter((l) => l.trim().startsWith('- '))
-        .map((l) => l.replace(/^- (.*)/, '<li class="ml-6 list-disc">$1</li>'))
-        .join('');
-      return `\n<ul class="my-6 space-y-1">${items}</ul>\n`;
-    });
-
-    // Paragraphs (preserve blank lines between blocks)
-    html = html.split('\n\n').map(para => {
-      if (para.startsWith('<')) return para; // Skip HTML elements
-      return `<p class="my-3 leading-relaxed">${para}</p>`;
-    }).join('\n\n');
-
-    return html;
-  };
-
   return (
     <Card className={`p-6 ${className}`}>
-      <div
-        className="prose prose-sm max-w-none dark:prose-invert"
-        dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}
-      />
+      <div className="prose prose-sm max-w-none dark:prose-invert">
+        <ReactMarkdown
+          components={{
+            code({ className, children, ...props }: any) {
+              const inline = !className;
+            const match = /language-(\w+)/.exec(className || '');
+            const language = match ? match[1] : '';
+            const code = String(children).replace(/\n$/, '');
+
+            // Render Mermaid diagrams
+            if (!inline && language === 'mermaid') {
+              return <MermaidDiagram code={code} />;
+            }
+
+            // Regular code blocks
+            if (!inline) {
+              return (
+                <pre className="bg-muted p-4 rounded-lg overflow-x-auto my-4">
+                  <code className="text-sm" {...props}>
+                    {children}
+                  </code>
+                </pre>
+              );
+            }
+
+            // Inline code
+            return (
+              <code className="bg-muted px-1.5 py-0.5 rounded text-sm" {...props}>
+                {children}
+              </code>
+            );
+          },
+          h1: ({ children }) => (
+            <h1 className="text-2xl font-bold mb-8 mt-0">{children}</h1>
+          ),
+          h2: ({ children }) => (
+            <h2 className="text-xl font-semibold mt-10 mb-5 pb-2 border-b border-border">{children}</h2>
+          ),
+          h3: ({ children }) => (
+            <h3 className="text-lg font-semibold mt-8 mb-4">{children}</h3>
+          ),
+          p: ({ children }) => (
+            <p className="my-3 leading-relaxed">{children}</p>
+          ),
+          ul: ({ children }) => (
+            <ul className="my-6 space-y-1 ml-6 list-disc">{children}</ul>
+          ),
+          ol: ({ children }) => (
+            <ol className="my-6 space-y-1 ml-6 list-decimal">{children}</ol>
+          ),
+          li: ({ children }) => (
+            <li className="leading-relaxed">{children}</li>
+          ),
+          a: ({ href, children }) => (
+            <a href={href} className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">
+              {children}
+            </a>
+          ),
+          strong: ({ children }) => (
+            <strong className="font-semibold">{children}</strong>
+          ),
+          hr: () => (
+            <hr className="my-8 border-border" />
+          ),
+          }}
+        >
+          {content}
+        </ReactMarkdown>
+      </div>
     </Card>
   );
 }
