@@ -56,7 +56,7 @@ export default function FixAIChatDefinition() {
         .insert({
           key: 'ai-chat',
           name: 'AI Chat Assistent',
-          app_type: 'utility',
+          app_type: 'platform',
           icon_name: 'Bot',
           description: 'Intelligent AI-assistent med tilgang til plattformens data via MCP-verktøy. Kan hjelpe med selskaper, prosjekter, oppgaver og mer.',
           domain_tables: ['ai_usage_logs', 'ai_policies', 'ai_app_content_library'],
