@@ -103,6 +103,28 @@ export const documentationCatalog: DocumentMetadata[] = [
     lastUpdated: "2025-01-23T12:00:00.000Z"
   },
   {
+    id: "docs-capabilities-overview",
+    title: "Capabilities System Overview",
+    description: "Oversikt over capabilities-systemet med arkitektur, datamodell og lifecycle-diagrammer.",
+    category: "Capabilities",
+    subcategory: null,
+    path: "docs/capabilities/capabilities-overview.md",
+    source: "docs/capabilities/capabilities-overview.md",
+    tags: ["capabilities", "overview", "architecture"],
+    lastUpdated: "2025-01-13T12:00:00.000Z"
+  },
+  {
+    id: "docs-supplier-evaluation",
+    title: "Supplier Evaluation Module",
+    description: "Komplett guide til leverandørevaluering med AI-scoring, risikovurdering og rapportgenerering.",
+    category: "Modules",
+    subcategory: "Supplier",
+    path: "docs/supplier-evaluation.md",
+    source: "docs/supplier-evaluation.md",
+    tags: ["supplier", "evaluation", "ai", "scoring"],
+    lastUpdated: "2025-01-13T12:00:00.000Z"
+  },
+  {
     id: "docs-dev-apps",
     title: "App Development Guide",
     description: "Guide for developing custom applications on the platform.",

@@ -37,6 +37,46 @@ function TaskCreator() {
 
 ## 📊 Data Model
 
+```mermaid
+erDiagram
+    PROJECTS ||--o{ TASKS : has
+    USERS ||--o{ TASKS : assigned
+    TASKS ||--o{ CHECKLIST_ITEMS : contains
+    TASK_CATEGORIES ||--o{ TASKS : categorizes
+    
+    TASKS {
+        uuid id PK
+        uuid tenant_id FK
+        string title
+        text description
+        task_status status
+        task_priority priority
+        entity_type context_type
+        uuid context_id
+        uuid assigned_to FK
+        uuid category_id FK
+        timestamp due_date
+        timestamp completed_at
+    }
+    
+    TASK_CATEGORIES {
+        uuid id PK
+        uuid tenant_id FK
+        string name
+        string icon_name
+        string color
+    }
+    
+    CHECKLIST_ITEMS {
+        uuid id PK
+        uuid task_id FK
+        string title
+        boolean is_completed
+        int order_index
+        timestamp completed_at
+    }
+```
+
 ### Database Tables
 
 **`tasks`**
@@ -115,6 +155,28 @@ Tasks can be linked to any entity:
 - `app_definition`
 
 ## 💡 Examples
+
+### Task Creation Flow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant UI as TaskDialog
+    participant Hook as useTasks
+    participant Service as TaskService
+    participant DB as Supabase
+    
+    User->>UI: Klikk "Ny oppgave"
+    UI->>User: Vis skjema
+    User->>UI: Fyll ut detaljer
+    UI->>Hook: createTask(data)
+    Hook->>Service: create(ctx, data)
+    Service->>DB: Insert task
+    DB-->>Service: Task opprettet
+    Service-->>Hook: Task data
+    Hook-->>UI: Oppdater liste
+    UI->>User: Vis suksessmelding
+```
 
 ### Example 1: Project Task List
 ```typescript

@@ -85,6 +85,41 @@ const suggestion = await getSuggestion(currentValue);
 
 ## 🔧 Configuration
 
+### AI Model Workflow
+
+```mermaid
+graph LR
+    subgraph "Input"
+        PROMPT[User Prompt]
+        CONTEXT[Context Data]
+    end
+    
+    subgraph "Edge Function"
+        VALIDATE[Validate Request]
+        SELECT[Select Model]
+        CALL[Call Lovable AI]
+    end
+    
+    subgraph "AI Gateway"
+        GEMINI[Gemini Models]
+        GPT[GPT Models]
+    end
+    
+    subgraph "Output"
+        RESULT[AI Response]
+        ERROR[Error Handling]
+    end
+    
+    PROMPT --> VALIDATE
+    CONTEXT --> VALIDATE
+    VALIDATE --> SELECT
+    SELECT -->|flash/lite/pro| GEMINI
+    SELECT -->|gpt-5/mini/nano| GPT
+    GEMINI --> RESULT
+    GPT --> RESULT
+    VALIDATE -->|invalid| ERROR
+```
+
 ### Supported Models
 - `google/gemini-2.5-pro` - Best for complex reasoning
 - `google/gemini-2.5-flash` - Balanced performance

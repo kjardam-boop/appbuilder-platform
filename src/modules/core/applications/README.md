@@ -34,6 +34,36 @@ applications/
 
 ## 🏗️ Arkitektur
 
+```mermaid
+graph TB
+    subgraph "Global Layer"
+        EXT_SYS[ExternalSystem<br/>Global Product Catalog]
+        VENDOR[ExternalSystemVendor<br/>Leverandører]
+        SKU[ExternalSystemSKU<br/>Produktvarianter]
+    end
+    
+    subgraph "Tenant Layer"
+        TENANT_SYS[TenantSystem<br/>Tenant Installasjoner]
+    end
+    
+    subgraph "Company Layer"
+        COMP_SYS[CompanyExternalSystem<br/>Selskapers Systemer]
+        CERT[PartnerCertification<br/>Sertifiseringer]
+    end
+    
+    subgraph "Project Layer"
+        PROJ_SYS[ProjectExternalSystem<br/>Prosjektvurderinger]
+    end
+    
+    VENDOR -->|owns| EXT_SYS
+    EXT_SYS -->|has variants| SKU
+    EXT_SYS -->|installed as| TENANT_SYS
+    TENANT_SYS -->|used by| COMP_SYS
+    EXT_SYS -->|evaluated in| PROJ_SYS
+    VENDOR -->|certifies| CERT
+    COMP_SYS -->|has| CERT
+```
+
 ### 1. ExternalSystem (Global produktkatalog)
 
 **Hva:** Globale produktdefinisjoner tilgjengelig på tvers av alle tenants.
@@ -97,6 +127,67 @@ applications/
 **Tabell:** `project_external_systems`
 
 ## 🗄️ Database Struktur
+
+```mermaid
+erDiagram
+    EXTERNAL_SYSTEM_VENDORS ||--o{ EXTERNAL_SYSTEMS : owns
+    EXTERNAL_SYSTEMS ||--o{ EXTERNAL_SYSTEM_SKUS : "has variants"
+    EXTERNAL_SYSTEMS ||--o{ TENANT_EXTERNAL_SYSTEMS : "installed as"
+    EXTERNAL_SYSTEMS ||--o{ COMPANY_EXTERNAL_SYSTEMS : "used by companies"
+    EXTERNAL_SYSTEMS ||--o{ PROJECT_EXTERNAL_SYSTEMS : "evaluated in"
+    TENANT_EXTERNAL_SYSTEMS ||--o{ COMPANY_EXTERNAL_SYSTEMS : "links to"
+    
+    EXTERNAL_SYSTEM_VENDORS {
+        uuid id PK
+        string name
+        string slug UK
+        string logo_url
+        string website
+    }
+    
+    EXTERNAL_SYSTEMS {
+        uuid id PK
+        uuid vendor_id FK
+        string name
+        string slug UK
+        app_type type
+        deployment_type deployment
+        jsonb capabilities
+    }
+    
+    EXTERNAL_SYSTEM_SKUS {
+        uuid id PK
+        uuid external_system_id FK
+        string name
+        string sku_code UK
+        decimal price_nok
+    }
+    
+    TENANT_EXTERNAL_SYSTEMS {
+        uuid id PK
+        uuid tenant_id FK
+        uuid external_system_id FK
+        string environment
+        jsonb config
+        boolean is_active
+    }
+    
+    COMPANY_EXTERNAL_SYSTEMS {
+        uuid id PK
+        uuid company_id FK
+        uuid external_system_id FK
+        string relationship_type
+        timestamp installed_date
+    }
+    
+    PROJECT_EXTERNAL_SYSTEMS {
+        uuid id PK
+        uuid project_id FK
+        uuid external_system_id FK
+        string status
+        decimal score
+    }
+```
 
 ### Tabeller
 
