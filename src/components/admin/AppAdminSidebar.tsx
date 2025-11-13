@@ -33,6 +33,7 @@ import {
   Wrench,
   Key,
   BookOpen,
+  FileText,
 } from "lucide-react";
 import { useUserPermissions } from "@/modules/core/permissions/hooks/useUserPermissions";
 import { adminNavigationMapping } from "@/config/adminNavigation";
@@ -96,6 +97,7 @@ const adminNavItems = [
     title: "Operations",
     items: [
       { title: "Platform Documentation", url: "/admin/documentation", icon: BookOpen },
+      { title: "AI Content Library", url: "/admin/content-library", icon: FileText },
       { title: "Credentials", url: "/admin/credentials", icon: Key },
       { title: "Security", url: "/admin/security", icon: Shield },
       { title: "Database Naming", url: "/admin/database/naming", icon: Database },

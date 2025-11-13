@@ -94,6 +94,7 @@ import Demo from "./pages/Demo";
 import LandingPage from "./pages/LandingPage";
 import PlatformInvitationsPage from "./pages/admin/PlatformInvitationsPage";
 import CredentialsPage from "./pages/admin/CredentialsPage";
+import ContentLibrary from "./pages/admin/ContentLibrary";
 import { PlatformProtectedRoute } from "./components/auth/PlatformProtectedRoute";
 import { useAuth } from "@/modules/core/user/hooks/useAuth";
 import { SidebarTrigger } from "@/components/ui/sidebar";
@@ -231,6 +232,7 @@ const App = () => (
               <Route path="integrations-old" element={<PermissionProtectedRoute resource="integration" action="admin"><PlatformIntegrations /></PermissionProtectedRoute>} />
               <Route path="ai-providers" element={<PermissionProtectedRoute resource="tenant" action="admin"><AIProviderSettings /></PermissionProtectedRoute>} />
               <Route path="credentials" element={<PermissionProtectedRoute resource="integration" action="admin"><CredentialsPage /></PermissionProtectedRoute>} />
+              <Route path="content-library" element={<PermissionProtectedRoute resource="tenant" action="admin"><ContentLibrary /></PermissionProtectedRoute>} />
               <Route path="security" element={<PermissionProtectedRoute resource="audit_log" action="admin"><AdminSettings /></PermissionProtectedRoute>} />
               <Route path="apps" element={<PermissionProtectedRoute resource="app_definition" action="admin"><AppCatalog /></PermissionProtectedRoute>} />
               <Route path="apps/new" element={<PermissionProtectedRoute resource="app_definition" action="admin"><AppDefinitionCreate /></PermissionProtectedRoute>} />

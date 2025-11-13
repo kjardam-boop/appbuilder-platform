@@ -66,6 +66,7 @@ export const adminNavigationMapping: Record<string, AdminNavigationRequirement> 
   '/admin/documentation/:docId': { resource: 'tenant', requiredAction: 'admin' },
   '/admin/integrations': { resource: 'integration', requiredAction: 'admin' },
   '/admin/credentials': { resource: 'integration', requiredAction: 'admin' },
+  '/admin/content-library': { resource: 'tenant', requiredAction: 'admin' },
   '/admin/security': { resource: 'audit_log', requiredAction: 'admin' },
   '/admin/database': { resource: 'tenant', requiredAction: 'admin' },
   '/admin/database/naming': { resource: 'tenant', requiredAction: 'admin' },
