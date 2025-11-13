@@ -8,6 +8,7 @@
 import { useEffect, useState, useRef } from "react";
 import ReactMarkdown from 'react-markdown';
 import mermaid from 'mermaid';
+import { useTheme } from "next-themes";
 import { Card } from "./card";
 import { Alert, AlertDescription } from "./alert";
 import { AlertCircle, FileText } from "lucide-react";
@@ -76,7 +77,7 @@ if (typeof window !== 'undefined') {
 /**
  * Mermaid Diagram Component
  */
-function MermaidDiagram({ code }: { code: string }) {
+function MermaidDiagram({ code, themeKey }: { code: string; themeKey: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const [svg, setSvg] = useState<string>('');
 
@@ -85,6 +86,9 @@ function MermaidDiagram({ code }: { code: string }) {
 
     const renderDiagram = async () => {
       try {
+        // Re-initialize mermaid with current theme colors
+        initializeMermaid();
+        
         const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
         const { svg } = await mermaid.render(id, code);
         setSvg(svg);
@@ -95,7 +99,7 @@ function MermaidDiagram({ code }: { code: string }) {
     };
 
     renderDiagram();
-  }, [code]);
+  }, [code, themeKey]);
 
   return (
     <div 
@@ -122,6 +126,13 @@ export function MarkdownViewer({
   const [content, setContent] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { theme, resolvedTheme } = useTheme();
+  const [themeKey, setThemeKey] = useState<string>('');
+
+  // Update theme key when theme changes to trigger Mermaid re-render
+  useEffect(() => {
+    setThemeKey(`${resolvedTheme || theme}-${Date.now()}`);
+  }, [theme, resolvedTheme]);
 
   useEffect(() => {
     async function fetchMarkdown() {
@@ -204,7 +215,7 @@ export function MarkdownViewer({
 
             // Render Mermaid diagrams
             if (!inline && language === 'mermaid') {
-              return <MermaidDiagram code={code} />;
+              return <MermaidDiagram code={code} themeKey={themeKey} />;
             }
 
             // Regular code blocks
