@@ -20,8 +20,8 @@ import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useHasAdminPermissions } from "@/modules/core/permissions/hooks/useHasAdminPermissions";
-import AppAdminSidebar from "@/components/admin/AppAdminSidebar";
-import { PermissionProtectedRoute } from "@/components/admin/PermissionProtectedRoute";
+import AppAdminSidebar from "@/components/Admin/AppAdminSidebar";
+import { PermissionProtectedRoute } from "@/components/Admin/PermissionProtectedRoute";
 import { getRoutePermission } from "@/config/adminNavigation";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminBootstrap from "./pages/admin/AdminBootstrap";
@@ -97,6 +97,7 @@ import PlatformInvitationsPage from "./pages/admin/PlatformInvitationsPage";
 import CredentialsPage from "./pages/admin/CredentialsPage";
 import ContentLibrary from "./pages/admin/ContentLibrary";
 import RunMigrations from "./pages/admin/RunMigrations";
+import FixAIChatDefinition from "./pages/admin/FixAIChatDefinition";
 import { PlatformProtectedRoute } from "./components/auth/PlatformProtectedRoute";
 import { useAuth } from "@/modules/core/user/hooks/useAuth";
 import { SidebarTrigger } from "@/components/ui/sidebar";
@@ -236,6 +237,7 @@ const App = () => (
               <Route path="credentials" element={<PermissionProtectedRoute resource="integration" action="admin"><CredentialsPage /></PermissionProtectedRoute>} />
               <Route path="content-library" element={<PermissionProtectedRoute resource="tenant" action="admin"><ContentLibrary /></PermissionProtectedRoute>} />
               <Route path="run-migrations" element={<PermissionProtectedRoute resource="tenant" action="admin"><RunMigrations /></PermissionProtectedRoute>} />
+              <Route path="fix-ai-chat" element={<PermissionProtectedRoute resource="tenant" action="admin"><FixAIChatDefinition /></PermissionProtectedRoute>} />
               <Route path="security" element={<PermissionProtectedRoute resource="audit_log" action="admin"><AdminSettings /></PermissionProtectedRoute>} />
               <Route path="apps" element={<PermissionProtectedRoute resource="app_definition" action="admin"><AppCatalog /></PermissionProtectedRoute>} />
               <Route path="apps/new" element={<PermissionProtectedRoute resource="app_definition" action="admin"><AppDefinitionCreate /></PermissionProtectedRoute>} />
