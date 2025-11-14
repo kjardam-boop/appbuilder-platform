@@ -32,8 +32,20 @@ export const useTenantContext = (): RequestContext | null => {
       // Capture and persist tenant override ASAP (even before auth)
       try {
         const urlParamsEarly = new URLSearchParams(window.location.search);
-        const qTenant = urlParamsEarly.get('tenant');
+        let qTenant = urlParamsEarly.get('tenant');
+        let captureSource = 'url-query';
+        
+        // Also check referrer if not in URL (for editor iframe scenarios)
+        if (!qTenant && document.referrer) {
+          try {
+            const refUrl = new URL(document.referrer);
+            qTenant = new URLSearchParams(refUrl.search).get('tenant');
+            if (qTenant) captureSource = 'referrer';
+          } catch {}
+        }
+        
         if (qTenant) {
+          console.info(`[TenantContext] Early capture override { source: '${captureSource}', slug: '${qTenant}' }`);
           localStorage.setItem('tenantOverride', qTenant);
           sessionStorage.setItem('tenantOverride', qTenant);
           setCookie('tenantOverride', qTenant);

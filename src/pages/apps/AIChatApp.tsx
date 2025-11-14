@@ -5,16 +5,19 @@
 
 import { useEffect, useState } from 'react';
 import { useTenantContext } from '@/hooks/useTenantContext';
+import { useAuth } from '@/modules/core/user/hooks/useAuth';
 import { AIMcpChatInterface } from '@/components/AI/AIMcpChatInterface';
-import { Card, CardContent } from '@/components/ui/card';
-import { Loader2, AlertCircle, Building2 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Loader2, AlertCircle, Building2, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function AIChatApp() {
   const context = useTenantContext();
+  const { session } = useAuth();
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -57,6 +60,30 @@ export default function AIChatApp() {
                     || sessionStorage.getItem('tenantOverride') 
                     || localStorage.getItem('tenantOverride')
                     || (document.cookie.includes('tenantOverride=') ? 'cookie' : '');
+
+  // Show login prompt if not authenticated
+  if (!session) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="max-w-md w-full">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <LogIn className="h-5 w-5" />
+              Innlogging påkrevd
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-muted-foreground">
+              Du må være innlogget for å bruke AI Chat-assistenten.
+            </p>
+            <Button onClick={() => navigate('/auth')} className="w-full">
+              Gå til innlogging
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
