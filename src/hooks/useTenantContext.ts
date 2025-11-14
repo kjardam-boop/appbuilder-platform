@@ -31,24 +31,49 @@ export const useTenantContext = (): RequestContext | null => {
     const loadContext = async () => {
       // Capture and persist tenant override ASAP (even before auth)
       try {
-        const urlParamsEarly = new URLSearchParams(window.location.search);
-        let qTenant = urlParamsEarly.get('tenant');
-        let captureSource = 'url-query';
+        // PRIORITY 1: Check if we're on an admin tenant page with path parameter
+        const pathMatch = window.location.pathname.match(/^\/admin\/tenants\/([^\/]+)/);
+        let tenantOverride: string | null = null;
+        let captureSource = '';
         
-        // Also check referrer if not in URL (for editor iframe scenarios)
-        if (!qTenant && document.referrer) {
-          try {
-            const refUrl = new URL(document.referrer);
-            qTenant = new URLSearchParams(refUrl.search).get('tenant');
-            if (qTenant) captureSource = 'referrer';
-          } catch {}
+        if (pathMatch) {
+          // Path parameter takes absolute priority on admin pages
+          tenantOverride = pathMatch[1];
+          captureSource = 'path-parameter';
+          
+          // Check if query parameter conflicts with path parameter
+          const urlParamsEarly = new URLSearchParams(window.location.search);
+          const qTenant = urlParamsEarly.get('tenant');
+          
+          if (qTenant && qTenant !== tenantOverride) {
+            // Remove conflicting query parameter
+            console.info(`[TenantContext] Removing conflicting query param { query: '${qTenant}', path: '${tenantOverride}' }`);
+            urlParamsEarly.delete('tenant');
+            const newSearch = urlParamsEarly.toString();
+            const newUrl = `${window.location.pathname}${newSearch ? '?' + newSearch : ''}${window.location.hash}`;
+            window.history.replaceState({}, '', newUrl);
+          }
+        } else {
+          // PRIORITY 2: Check query parameter
+          const urlParamsEarly = new URLSearchParams(window.location.search);
+          tenantOverride = urlParamsEarly.get('tenant');
+          if (tenantOverride) captureSource = 'url-query';
+          
+          // PRIORITY 3: Check referrer if not in URL (for editor iframe scenarios)
+          if (!tenantOverride && document.referrer) {
+            try {
+              const refUrl = new URL(document.referrer);
+              tenantOverride = new URLSearchParams(refUrl.search).get('tenant');
+              if (tenantOverride) captureSource = 'referrer';
+            } catch {}
+          }
         }
         
-        if (qTenant) {
-          console.info(`[TenantContext] Early capture override { source: '${captureSource}', slug: '${qTenant}' }`);
-          localStorage.setItem('tenantOverride', qTenant);
-          sessionStorage.setItem('tenantOverride', qTenant);
-          setCookie('tenantOverride', qTenant);
+        if (tenantOverride) {
+          console.info(`[TenantContext] Early capture override { source: '${captureSource}', slug: '${tenantOverride}' }`);
+          localStorage.setItem('tenantOverride', tenantOverride);
+          sessionStorage.setItem('tenantOverride', tenantOverride);
+          setCookie('tenantOverride', tenantOverride);
         }
       } catch {}
 
