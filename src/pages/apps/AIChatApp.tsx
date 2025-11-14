@@ -7,9 +7,11 @@ import { useEffect, useState } from 'react';
 import { useTenantContext } from '@/hooks/useTenantContext';
 import { AIMcpChatInterface } from '@/components/AI/AIMcpChatInterface';
 import { Card, CardContent } from '@/components/ui/card';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function AIChatApp() {
   const context = useTenantContext();
@@ -42,6 +44,10 @@ export default function AIChatApp() {
       }
     }
   }, [context]);
+
+  const isPrimaryDomain = window.location.hostname.includes('jardam.no') || 
+                          window.location.hostname.includes('lovableproject.com');
+  const hasOverride = new URLSearchParams(window.location.search).get('tenant');
 
   if (isLoading) {
     return (
@@ -112,6 +118,28 @@ Når du genererer opplevelser:
     <div className="min-h-screen bg-background">
       <div className="container mx-auto py-6 px-4">
         <div className="max-w-4xl mx-auto">
+          {/* Tenant Badge */}
+          <div className="mb-4 flex items-center gap-2 flex-wrap">
+            <Badge variant="outline" className="flex items-center gap-2">
+              <Building2 className="h-3 w-3" />
+              Aktiv tenant: {tenant.name} ({tenant.slug || 'ingen slug'})
+            </Badge>
+            {context.tenant_id && (
+              <Badge variant="secondary" className="text-xs">
+                ID: {context.tenant_id.slice(0, 8)}...
+              </Badge>
+            )}
+          </div>
+
+          {/* Hint for primary domain without override */}
+          {isPrimaryDomain && !hasOverride && (
+            <Alert className="mb-4">
+              <AlertDescription className="text-sm">
+                💡 <strong>Tips:</strong> Du er på plattformdomenet. For å teste andre tenants, legg til <code className="bg-muted px-1 py-0.5 rounded">?tenant=innowin-as</code> i URL-en eller besøk tenantens eget domene.
+              </AlertDescription>
+            </Alert>
+          )}
+          
           <div className="mb-6">
             <h1 className="text-3xl font-bold mb-2">AI Chat Assistent</h1>
             <p className="text-muted-foreground">

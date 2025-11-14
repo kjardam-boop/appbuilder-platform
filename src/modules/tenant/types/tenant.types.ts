@@ -7,6 +7,7 @@ import { BaseEntity } from "@/core/types/common.types";
 export interface TenantConfig extends BaseEntity {
   tenant_id: string;
   name: string;
+  slug?: string; // Tenant slug for URL override (e.g., "innowin-as", "ag-jacobsen-consulting")
   host: string;
   domain?: string; // Custom domain (e.g., customer.com)
   subdomain?: string; // Subdomain (e.g., customer.platform.com)
