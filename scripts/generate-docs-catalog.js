@@ -1,21 +1,5 @@
 #!/usr/bin/env node
 
-/**
- * Generate Documentation Catalog
- * 
- * Automatically discovers all .md files across the repository and generates
- * documentationCatalog.ts with parsed metadata (title, description, category).
- * 
- * Scans:
- * - public/docs/
- * - docs/
- * - docs/capabilities/
- * - docs/dev/
- * - docs/templates/
- * - src/modules/core/*/README.md
- * - src/modules/core/*/*.md
- */
-
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -74,9 +58,6 @@ const KEYWORD_CATEGORY_MAP = {
   'module': 'Modules',
 };
 
-/**
- * Parse YAML frontmatter from markdown
- */
 function parseFrontmatter(content) {
   const frontmatterRegex = /^---\n([\s\S]*?)\n---/;
   const match = content.match(frontmatterRegex);
@@ -93,7 +74,6 @@ function parseFrontmatter(content) {
     const key = line.substring(0, colonIndex).trim();
     const value = line.substring(colonIndex + 1).trim().replace(/^["']|["']$/g, '');
     
-    // Handle arrays
     if (value.startsWith('[') && value.endsWith(']')) {
       frontmatter[key] = value.slice(1, -1).split(',').map(v => v.trim().replace(/^["']|["']$/g, ''));
     } else {
@@ -104,31 +84,22 @@ function parseFrontmatter(content) {
   return frontmatter;
 }
 
-/**
- * Parse markdown content to extract metadata
- */
 function parseMarkdown(content, filename) {
-  // Check for YAML frontmatter first
   const frontmatter = parseFrontmatter(content);
   
   const lines = content.split('\n');
   let title = filename.replace(/\.md$/, '').replace(/-/g, ' ');
   let description = '';
-  let foundTitle = false;
   
-  // Extract first # heading as title (if no frontmatter title)
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     
     if (line.startsWith('# ')) {
       title = line.replace(/^#\s+/, '');
-      foundTitle = true;
       
-      // Look for description in next non-empty lines
       for (let j = i + 1; j < Math.min(i + 10, lines.length); j++) {
         const descLine = lines[j].trim();
         if (descLine && !descLine.startsWith('#') && !descLine.startsWith('```')) {
-          // Skip horizontal rules and empty lines
           if (descLine !== '---' && descLine.length > 10) {
             description = descLine.replace(/\*\*/g, '').replace(/\*/g, '').substring(0, 150);
             break;
@@ -146,11 +117,7 @@ function parseMarkdown(content, filename) {
   };
 }
 
-/**
- * Determine category and subcategory based on file path
- */
 function determineCategoryAndSubcategory(relativePath, filename, frontmatter) {
-  // Check frontmatter first
   if (frontmatter?.category) {
     return {
       category: frontmatter.category,
@@ -158,7 +125,6 @@ function determineCategoryAndSubcategory(relativePath, filename, frontmatter) {
     };
   }
   
-  // Check path-based mapping
   const normalizedPath = relativePath.replace(/\\/g, '/');
   
   for (const [pathPattern, categoryInfo] of Object.entries(PATH_CATEGORY_MAP)) {
@@ -167,7 +133,6 @@ function determineCategoryAndSubcategory(relativePath, filename, frontmatter) {
     }
   }
   
-  // Fallback to keyword-based mapping
   const lowerName = filename.toLowerCase();
   
   for (const [keyword, category] of Object.entries(KEYWORD_CATEGORY_MAP)) {
@@ -179,11 +144,7 @@ function determineCategoryAndSubcategory(relativePath, filename, frontmatter) {
   return { category: 'Platform', subcategory: null };
 }
 
-/**
- * Generate tags from filename and frontmatter
- */
 function generateTags(filename, frontmatter) {
-  // Use frontmatter tags if available
   if (frontmatter?.tags && Array.isArray(frontmatter.tags)) {
     return frontmatter.tags;
   }
@@ -194,12 +155,9 @@ function generateTags(filename, frontmatter) {
     .filter(tag => tag.length > 2)
     .map(tag => tag.toLowerCase());
   
-  return tags.slice(0, 4); // Max 4 tags
+  return tags.slice(0, 4);
 }
 
-/**
- * Get last modified date of file
- */
 function getLastModified(filePath) {
   try {
     const stats = fs.statSync(filePath);
@@ -209,10 +167,7 @@ function getLastModified(filePath) {
   }
 }
 
-/**
- * Scan directory recursively for .md files
- */
-function scanDirectory(dir, baseDir = null, sourcePrefix = '') {
+function scanDirectory(dir, baseDir = null) {
   const files = [];
   
   if (!fs.existsSync(dir)) {
@@ -226,13 +181,12 @@ function scanDirectory(dir, baseDir = null, sourcePrefix = '') {
   for (const entry of entries) {
     const fullPath = path.join(dir, entry.name);
     
-    // Skip node_modules and hidden directories
     if (entry.isDirectory() && (entry.name === 'node_modules' || entry.name.startsWith('.'))) {
       continue;
     }
     
     if (entry.isDirectory()) {
-      files.push(...scanDirectory(fullPath, effectiveBaseDir, sourcePrefix));
+      files.push(...scanDirectory(fullPath, effectiveBaseDir));
     } else if (entry.isFile() && entry.name.endsWith('.md')) {
       const relativePath = path.relative(effectiveBaseDir, fullPath);
       const sourcePath = path.relative(path.join(__dirname, '..'), fullPath);
@@ -249,9 +203,6 @@ function scanDirectory(dir, baseDir = null, sourcePrefix = '') {
   return files;
 }
 
-/**
- * Scan all configured paths
- */
 function scanAllPaths() {
   const allFiles = [];
   
@@ -263,9 +214,6 @@ function scanAllPaths() {
   return allFiles;
 }
 
-/**
- * Main function
- */
 function generateCatalog() {
   console.log('🔍 Scanning for documentation files...');
   
@@ -278,7 +226,7 @@ function generateCatalog() {
   
   console.log(`📄 Found ${files.length} documentation files`);
   
-  const catalog = files.map((file, index) => {
+  const catalog = files.map((file) => {
     const content = fs.readFileSync(file.fullPath, 'utf-8');
     const { title, description, frontmatter } = parseMarkdown(content, file.filename);
     const { category, subcategory } = determineCategoryAndSubcategory(
@@ -289,7 +237,6 @@ function generateCatalog() {
     const tags = generateTags(file.filename, frontmatter);
     const lastModified = getLastModified(file.fullPath);
     
-    // Generate ID from source path for uniqueness
     const id = file.sourcePath
       .replace(/\.md$/, '')
       .toLowerCase()
@@ -308,7 +255,6 @@ function generateCatalog() {
     };
   });
   
-  // Sort by category, subcategory, then by title
   catalog.sort((a, b) => {
     if (a.category !== b.category) {
       return a.category.localeCompare(b.category);
@@ -321,17 +267,11 @@ function generateCatalog() {
     return a.title.localeCompare(b.title);
   });
   
-  // Generate TypeScript file
   const tsContent = `/**
  * Documentation Catalog
  * 
  * Auto-generated by scripts/generate-docs-catalog.js
  * DO NOT EDIT MANUALLY - Run 'npm run generate:docs' to regenerate
- * 
- * Scans:
- * - public/docs/
- * - docs/
- * - src/modules/core/
  * 
  * Last generated: ${new Date().toISOString()}
  */
@@ -357,7 +297,6 @@ export const documentationCatalog: DocumentMetadata[] = ${JSON.stringify(catalog
   console.log(`📝 Output: ${OUTPUT_FILE}`);
   console.log(`📊 Total entries: ${catalog.length}`);
   
-  // Print summary by category
   const categoryCount = catalog.reduce((acc, doc) => {
     const key = doc.subcategory ? `${doc.category} > ${doc.subcategory}` : doc.category;
     acc[key] = (acc[key] || 0) + 1;
@@ -372,7 +311,6 @@ export const documentationCatalog: DocumentMetadata[] = ${JSON.stringify(catalog
     });
 }
 
-// Run
 try {
   generateCatalog();
 } catch (error) {
