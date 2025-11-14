@@ -4,16 +4,16 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { useAIMcpChat } from '@/modules/core/ai';
-import { Send, Bot, User, Loader2, Trash2 } from 'lucide-react';
+import { Send, Bot, User, Loader2, MessageSquare } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ExperienceRenderer } from '@/renderer/ExperienceRenderer';
 import type { ExperienceJSON } from '@/renderer/schemas/experience.schema';
+import { ChatSessionList } from './ChatSessionList';
 
 interface AIMcpChatInterfaceProps {
   tenantId: string;
@@ -21,13 +21,9 @@ interface AIMcpChatInterfaceProps {
   placeholder?: string;
   title?: string;
   description?: string;
-}
-
-interface BrandColors {
-  primary?: string;
-  accent?: string;
-  surface?: string;
-  textOnSurface?: string;
+  primaryColor?: string;
+  accentColor?: string;
+  fontFamily?: string;
 }
 
 export function AIMcpChatInterface({
@@ -35,27 +31,33 @@ export function AIMcpChatInterface({
   systemPrompt,
   placeholder = "Spør meg om noe...",
   title = "AI Assistent",
-  description = "Med tilgang til plattformens data"
+  description = "Med tilgang til plattformens data",
+  primaryColor,
+  accentColor,
+  fontFamily,
 }: AIMcpChatInterfaceProps) {
   const [input, setInput] = useState('');
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const [showSessions, setShowSessions] = useState(true);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   
-  const { messages, sendMessage, clearMessages, isLoading, error } = useAIMcpChat(
-    tenantId,
-    systemPrompt
-  );
-
-  // Inherit CSS custom properties from parent
-  const cardStyle = {
-    background: 'var(--color-surface, hsl(var(--card)))',
-    color: 'var(--color-text-on-surface, hsl(var(--card-foreground)))',
-  } as React.CSSProperties;
+  const { 
+    sessionId,
+    sessions,
+    messages, 
+    sendMessage, 
+    startNewChat,
+    loadSession,
+    deleteSession,
+    clearMessages, 
+    isLoading, 
+    error 
+  } = useAIMcpChat(tenantId, systemPrompt);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages]);
 

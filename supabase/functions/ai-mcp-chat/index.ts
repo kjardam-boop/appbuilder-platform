@@ -22,6 +22,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+
 /**
  * MCP Tools for AI Agent
  * Maps MCP actions/resources to OpenAI function calling format
@@ -433,26 +435,30 @@ async function executeMcpTool(
 
       case "generate_experience": {
         try {
-          console.log(`[Generate Experience] Query: ${args.query}`);
+          console.log(`[Generate Experience] Query: ${args.query}, Category: ${args.category}`);
           
-          // Search content library for relevant markdown
+          // Search content library with improved fuzzy search
           let contentQuery = supabaseClient
             .from('ai_app_content_library')
             .select('*')
             .eq('is_active', true);
+          
+          // Filter by tenant or platform-wide
+          contentQuery = contentQuery.or(`tenant_id.eq.${tenantId},tenant_id.is.null`);
           
           // Filter by category if provided
           if (args.category) {
             contentQuery = contentQuery.eq('category', args.category);
           }
           
-          // Filter by tenant or platform-wide
-          contentQuery = contentQuery.or(`tenant_id.eq.${tenantId},tenant_id.is.null`);
-          
-          // Search by keywords (simple approach)
+          // Improved search: ilike on title and content_markdown + keyword matching
           const queryWords = args.query.toLowerCase().split(' ').filter((w: string) => w.length > 3);
           if (queryWords.length > 0) {
-            contentQuery = contentQuery.or(queryWords.map((word: string) => `keywords.cs.{${word}}`).join(','));
+            // Build fuzzy search conditions
+            const searchConditions = queryWords.map((word: string) => 
+              `title.ilike.%${word}%,content_markdown.ilike.%${word}%,keywords.cs.{${word}}`
+            ).join(',');
+            contentQuery = contentQuery.or(searchConditions);
           }
           
           contentQuery = contentQuery.limit(5);
@@ -463,7 +469,33 @@ async function executeMcpTool(
             console.error('[Content Library Error]', contentError);
           }
           
-          // Get tenant theme if available
+          console.log(`[Content Search] Query words: ${queryWords.join(', ')}, Found: ${contentItems?.length || 0} documents`);
+          
+          // If no content found, return all active docs as fallback
+          let finalContentItems = contentItems || [];
+          if (finalContentItems.length === 0) {
+            console.log('[Content Search] No matches, fetching all active documents as fallback');
+            const { data: allDocs } = await supabaseClient
+              .from('ai_app_content_library')
+              .select('*')
+              .eq('is_active', true)
+              .or(`tenant_id.eq.${tenantId},tenant_id.is.null`)
+              .limit(10);
+            
+            if (allDocs && allDocs.length > 0) {
+              finalContentItems = allDocs;
+            }
+          }
+          
+          if (finalContentItems.length === 0) {
+            return {
+              success: false,
+              error: 'No content available in knowledge base',
+              query: args.query
+            };
+          }
+          
+          // Get tenant theme
           let theme = null;
           const { data: tenantTheme } = await supabaseClient
             .from('tenant_themes')
@@ -491,12 +523,124 @@ async function executeMcpTool(
             }
           }
           
+          // Now use AI to transform markdown → ExperienceJSON
+          console.log('[Generate Experience] Transforming markdown to ExperienceJSON with AI...');
+          
+          const combinedMarkdown = finalContentItems.map((item: any) => 
+            `# ${item.title}\n\n${item.content_markdown}`
+          ).join('\n\n---\n\n');
+          
+          const experiencePrompt = `Transform the following markdown content into an interactive web experience (ExperienceJSON format).
+
+USER QUERY: ${args.query}
+
+MARKDOWN CONTENT:
+${combinedMarkdown}
+
+${theme ? `BRAND THEME:
+Primary Color: ${theme.primary || '#000'}
+Accent Color: ${theme.accent || '#666'}
+Font: ${theme.fontStack || 'system-ui'}` : ''}
+
+INSTRUCTIONS:
+1. Create a cohesive, visually appealing page layout
+2. Use hero block for main heading/intro
+3. Convert sections to content blocks with appropriate styling
+4. Add CTAs where relevant
+5. Use step blocks for processes/numbered lists
+6. Apply the brand colors consistently
+7. Make it engaging and professional
+
+Return ONLY the ExperienceJSON structure.`;
+
+          const aiTransformResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'google/gemini-2.5-flash',
+              messages: [
+                { 
+                  role: 'system', 
+                  content: 'You are an expert at converting markdown content into structured ExperienceJSON format for web rendering. You MUST use the generate_experience_json tool to return your response.' 
+                },
+                { role: 'user', content: experiencePrompt }
+              ],
+              tools: [{
+                type: 'function',
+                function: {
+                  name: 'generate_experience_json',
+                  description: 'Generate structured ExperienceJSON from markdown content',
+                  parameters: {
+                    type: 'object',
+                    properties: {
+                      blocks: {
+                        type: 'array',
+                        description: 'Array of content blocks',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            type: { type: 'string', enum: ['hero', 'content', 'cta', 'steps', 'features', 'testimonial'] },
+                            data: { type: 'object' }
+                          },
+                          required: ['type', 'data']
+                        }
+                      },
+                      theme: {
+                        type: 'object',
+                        properties: {
+                          primary: { type: 'string' },
+                          accent: { type: 'string' },
+                          surface: { type: 'string' },
+                          textOnSurface: { type: 'string' },
+                          fontStack: { type: 'string' }
+                        }
+                      }
+                    },
+                    required: ['blocks']
+                  }
+                }
+              }],
+              tool_choice: { type: 'function', function: { name: 'generate_experience_json' } }
+            })
+          });
+          
+          if (!aiTransformResponse.ok) {
+            const errorText = await aiTransformResponse.text();
+            console.error('[AI Transform Error]', aiTransformResponse.status, errorText);
+            throw new Error(`AI transformation failed: ${errorText}`);
+          }
+          
+          const aiResult = await aiTransformResponse.json();
+          console.log('[AI Transform] Success, tool calls:', aiResult.choices?.[0]?.message?.tool_calls?.length || 0);
+          
+          // Extract ExperienceJSON from tool call
+          const toolCall = aiResult.choices?.[0]?.message?.tool_calls?.[0];
+          if (!toolCall || toolCall.function.name !== 'generate_experience_json') {
+            throw new Error('AI did not return experience JSON');
+          }
+          
+          const experienceJSON = JSON.parse(toolCall.function.arguments);
+          console.log('[Experience JSON] Generated with', experienceJSON.blocks?.length || 0, 'blocks');
+          
+          // Apply theme if not already set
+          if (!experienceJSON.theme && theme) {
+            experienceJSON.theme = {
+              primary: theme.primary || '#000',
+              accent: theme.accent || '#666',
+              surface: theme.surface || '#fff',
+              textOnSurface: theme.textOnSurface || '#000',
+              fontStack: theme.fontStack || 'system-ui, sans-serif'
+            };
+          }
+          
+          // Return the ExperienceJSON formatted as a code block
           return {
             success: true,
-            content_found: contentItems?.length || 0,
-            content_items: contentItems || [],
-            theme: theme || null,
-            instructions: "Use the content_items markdown to generate ExperienceJSON. Convert markdown sections to appropriate block types: # headings to hero blocks, ## sections to content blocks, numbered lists to steps blocks, key CTAs to cta blocks. Apply the provided theme colors. Return the experience in a ```experience-json code block so it renders automatically."
+            experience_json: experienceJSON,
+            message: 'Generated interactive experience from knowledge base'
           };
         } catch (error) {
           console.error(`[Generate Experience Error]`, error);
