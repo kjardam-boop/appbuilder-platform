@@ -38,13 +38,12 @@ export default function OpportunitiesPage() {
   );
 
   if (loading) {
-    return (
-      <div 
+  return (
+    <div className="container mx-auto p-6 space-y-6">
       <AppBreadcrumbs levels={[
-  { label: "Dashboard", href: "/dashboard" },
-  { label: "Opportunities" }
-]} />
-      className="container mx-auto p-6 space-y-6">
+        { label: "Dashboard", href: "/dashboard" },
+        { label: "Opportunities" }
+      ]} />
         <Skeleton className="h-12 w-64" />
         <div className="grid gap-6 md:grid-cols-3">
           {[1, 2, 3].map(i => <Skeleton key={i} className="h-32" />)}
