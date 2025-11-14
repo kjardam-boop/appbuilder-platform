@@ -27,12 +27,25 @@ export const useTenantContext = (): RequestContext | null => {
         
         // Check for tenant override (for multi-tenant on same domain)
         const urlParams = new URLSearchParams(window.location.search);
-        let tenantSlugOverride = urlParams.get('tenant') || sessionStorage.getItem('tenantOverride');
+        let tenantSlugOverride: string | null = urlParams.get('tenant');
+        let overrideSource: string | null = tenantSlugOverride ? 'query' : null;
         
         // Fallback: allow #tenant=slug in hash
         if (!tenantSlugOverride) {
           const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
-          tenantSlugOverride = hashParams.get('tenant') || tenantSlugOverride;
+          const hashTenant = hashParams.get('tenant');
+          if (hashTenant) {
+            tenantSlugOverride = hashTenant;
+            overrideSource = 'hash';
+          }
+        }
+        
+        // Fallback: storage (persist across tabs and redirects)
+        if (!tenantSlugOverride) {
+          const ls = localStorage.getItem('tenantOverride');
+          const ss = sessionStorage.getItem('tenantOverride');
+          tenantSlugOverride = ls || ss || null;
+          if (tenantSlugOverride) overrideSource = ls ? 'localStorage' : 'sessionStorage';
         }
         
         // Fallback for Lovable editor: read from parent page referrer query (?tenant=slug)
@@ -42,6 +55,7 @@ export const useTenantContext = (): RequestContext | null => {
             const refTenant = refUrl.searchParams.get('tenant');
             if (refTenant) {
               tenantSlugOverride = refTenant;
+              overrideSource = 'referrer';
               console.info('[TenantContext] Using tenant override from referrer', { refTenant });
             }
           } catch (e) {
@@ -49,9 +63,18 @@ export const useTenantContext = (): RequestContext | null => {
           }
         }
         
-        // If override exists, store in sessionStorage for navigation persistence
+        // If override exists, store for persistence and add to hash to survive some redirects
         if (tenantSlugOverride) {
-          sessionStorage.setItem('tenantOverride', tenantSlugOverride);
+          try {
+            localStorage.setItem('tenantOverride', tenantSlugOverride);
+            sessionStorage.setItem('tenantOverride', tenantSlugOverride);
+            const url = new URL(window.location.href);
+            const hashParams = new URLSearchParams(url.hash.replace(/^#/, ''));
+            if (!hashParams.get('tenant')) {
+              hashParams.set('tenant', tenantSlugOverride);
+              history.replaceState(null, '', `${url.pathname}${url.search}#${hashParams.toString()}`);
+            }
+          } catch {}
         }
         
         // Dev mode: fallback to static config if localhost
@@ -138,6 +161,7 @@ export const useTenantContext = (): RequestContext | null => {
           } else {
             console.warn('[TenantContext] Override slug not found:', tenantSlugOverride, error);
             sessionStorage.removeItem('tenantOverride');
+            localStorage.removeItem('tenantOverride');
           }
         }
         
