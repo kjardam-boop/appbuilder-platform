@@ -91,15 +91,32 @@ export const useTenantContext = (): RequestContext | null => {
             .single();
           
           if (tenantData && !error) {
-            tenant = tenantData as any;
+            // Map database columns to TenantConfig interface
+            tenant = {
+              id: tenantData.id,
+              tenant_id: tenantData.id,                    // Map id -> tenant_id
+              name: tenantData.name,
+              slug: tenantData.slug,
+              host: window.location.hostname,
+              domain: tenantData.domain || undefined,
+              subdomain: tenantData.slug || undefined,
+              enabled_modules: [],
+              custom_config: tenantData.settings || {},    // Map settings -> custom_config
+              is_platform_tenant: tenantData.is_platform_tenant || false,
+              created_at: tenantData.created_at,
+              updated_at: tenantData.updated_at,
+            } as TenantConfig;
+            
             resolveSource = 'override';
             console.info('[TenantContext] Using tenant override', { 
+              source: resolveSource,
               slug: tenantSlugOverride, 
               tenantId: tenant.tenant_id,
-              name: tenant.name 
+              name: tenant.name,
+              host: window.location.hostname
             });
           } else {
-            console.warn('[TenantContext] Override slug not found:', tenantSlugOverride);
+            console.warn('[TenantContext] Override slug not found:', tenantSlugOverride, error);
             sessionStorage.removeItem('tenantOverride');
           }
         }
