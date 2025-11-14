@@ -86,7 +86,7 @@ export function AvailableAppsGrid({ tenantId, installedApps, onAppInstalled }: A
         .insert({
           tenant_id: tenantId,
           app_definition_id: appDefId,
-          app_type: 'utility',
+          app_type: 'platform',
           installed_version: '1.0.0',
           is_active: true,
           status: 'active',
