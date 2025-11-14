@@ -43,7 +43,7 @@ export default function Jul25FamilyAdmin() {
   // Local state for inline editing
   const [editingName, setEditingName] = useState(false);
   const [familyName, setFamilyName] = useState(family?.name || "");
-  const [peopleCount, setPeopleCount] = useState(family?.number_of_people || 2);
+  const [peopleCount, setPeopleCount] = useState(family?.number_of_people || 1);
   
   // Period dialog state
   const [periodDialogOpen, setPeriodDialogOpen] = useState(false);

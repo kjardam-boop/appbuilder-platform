@@ -178,7 +178,7 @@ export default function Jul25App() {
   const [onboardingMode, setOnboardingMode] = useState<"join" | "create">("create");
   const [selectedFamilyId, setSelectedFamilyId] = useState("");
   const [newFamilyName, setNewFamilyName] = useState("");
-  const [newNumberOfPeople, setNewNumberOfPeople] = useState(2);
+  const [newNumberOfPeople, setNewNumberOfPeople] = useState(1);
   const [newArrivalDate, setNewArrivalDate] = useState(19);
   const [newDepartureDate, setNewDepartureDate] = useState(31);
   const [memberName, setMemberName] = useState("");
