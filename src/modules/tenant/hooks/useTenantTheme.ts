@@ -1,39 +1,28 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { TenantTheme, TenantThemeTokens } from '../types/tenantTheme.types';
-import { resolveTenantByHost } from '../services/tenantResolver';
 
 /**
  * Hook to load and apply tenant theme
  * Fetches active theme for current tenant and injects CSS variables
+ * @param tenantId - Optional tenant ID to load theme for. If not provided, no theme is loaded.
  */
-export function useTenantTheme() {
+export function useTenantTheme(tenantId?: string | null) {
   const [theme, setTheme] = useState<TenantTheme | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tenantId, setTenantId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Resolve current tenant from host
-    resolveTenantByHost(window.location.host).then((tenant) => {
-      if (tenant) {
-        setTenantId(tenant.tenant_id);
-      } else {
-        setLoading(false);
-      }
-    });
-  }, []);
-
-  useEffect(() => {
-    if (tenantId) {
-      loadTheme();
-    }
+    loadTheme();
   }, [tenantId]);
 
   const loadTheme = async () => {
     if (!tenantId) {
       setLoading(false);
+      console.info('[TenantTheme] No tenantId provided, skipping theme load');
       return;
     }
+
+    console.info('[TenantTheme] Loading theme for tenant', { tenantId });
 
     try {
       const { data, error } = await supabase
