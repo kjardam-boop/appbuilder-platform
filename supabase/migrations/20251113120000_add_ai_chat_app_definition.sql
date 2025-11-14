@@ -17,7 +17,7 @@ INSERT INTO app_definitions (
 ) VALUES (
   'ai-chat',
   'AI Chat Assistent',
-  'utility',
+  'platform',
   'Bot',
   'Intelligent AI-assistent med tilgang til plattformens data via MCP-verktøy. Kan hjelpe med selskaper, prosjekter, oppgaver og mer.',
   ARRAY['ai_usage_logs', 'ai_policies', 'ai_app_content_library'],
