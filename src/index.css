@@ -8,36 +8,40 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
+    /* Base colors - matching Default Platform theme */
     --background: 0 0% 100%;
-    --foreground: 145 65% 20%;
+    --foreground: 222 84% 5%;
 
     --card: 0 0% 100%;
-    --card-foreground: 145 65% 20%;
+    --card-foreground: 222 84% 5%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 145 65% 20%;
+    --popover-foreground: 222 84% 5%;
 
-    --primary: 145 60% 40%;
-    --primary-foreground: 0 0% 100%;
-    --primary-glow: 145 55% 55%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 210 40% 98%;
+    --primary-glow: 217 85% 70%;
 
-    --secondary: 0 75% 50%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
 
-    --muted: 145 20% 95%;
-    --muted-foreground: 145 20% 45%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
 
-    --accent: 45 100% 55%;
-    --accent-foreground: 145 65% 20%;
+    --accent: 160 84% 39%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 75% 50%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
 
-    --border: 145 20% 88%;
-    --input: 145 20% 90%;
-    --ring: 145 60% 40%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 217 91% 60%;
 
     --radius: 0.5rem;
+    
+    --success: 142 76% 36%;
+    --warning: 38 92% 50%;
 
     --jul25-red: 0 75% 50%;
     --jul25-red-dark: 0 70% 42%;
