@@ -24,6 +24,12 @@ export default function AIChatApp() {
     }
   }, [context]);
 
+  // Failsafe: avoid infinite spinner if context fails to resolve
+  useEffect(() => {
+    const t = setTimeout(() => setIsLoading(false), 4000);
+    return () => clearTimeout(t);
+  }, []);
+
   useEffect(() => {
     // Apply tenant branding if available
     const tenant = context?.tenant;
@@ -49,7 +55,8 @@ export default function AIChatApp() {
                           window.location.hostname.includes('lovableproject.com');
   const hasOverride = new URLSearchParams(window.location.search).get('tenant') 
                     || sessionStorage.getItem('tenantOverride') 
-                    || localStorage.getItem('tenantOverride');
+                    || localStorage.getItem('tenantOverride')
+                    || (document.cookie.includes('tenantOverride=') ? 'cookie' : '');
 
   if (isLoading) {
     return (
