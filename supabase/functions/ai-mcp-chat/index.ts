@@ -721,11 +721,27 @@ serve(async (req) => {
       );
     }
 
+    // Fetch tenant info for logging
+    const { data: tenantData } = await supabaseClient
+      .from('tenants')
+      .select('slug, name')
+      .eq('id', tenantId)
+      .single();
+
     // Get tenant-specific AI configuration
     const tenantAIConfig = await getTenantAIConfig(tenantId, supabaseClient);
     const aiClientConfig = getAIProviderClient(tenantAIConfig?.config || null, LOVABLE_API_KEY);
     
-    console.log(`[AI Provider] Using: ${aiClientConfig.provider} with model: ${aiClientConfig.model}`);
+    console.log('========================================');
+    console.log('🔍 AI-MCP-CHAT DEBUG');
+    console.log('========================================');
+    console.log(`📌 Tenant ID: ${tenantId}`);
+    console.log(`📌 Tenant Slug: ${tenantData?.slug || 'N/A'}`);
+    console.log(`📌 Tenant Name: ${tenantData?.name || 'N/A'}`);
+    console.log(`📌 AI Provider: ${aiClientConfig.provider}`);
+    console.log(`📌 AI Model: ${aiClientConfig.model}`);
+    console.log(`📌 Message Count: ${messages.length}`);
+    console.log('========================================');
 
     const startTime = Date.now(); // Track request duration
 

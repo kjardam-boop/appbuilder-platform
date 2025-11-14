@@ -118,6 +118,20 @@ Når du genererer opplevelser:
     <div className="min-h-screen bg-background">
       <div className="container mx-auto py-6 px-4">
         <div className="max-w-4xl mx-auto">
+          {/* Debug Banner */}
+          <div className="mb-4 p-4 bg-yellow-100 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-700 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-sm font-semibold text-yellow-800 dark:text-yellow-200">🔍 DEBUG MODE</span>
+            </div>
+            <div className="text-xs space-y-1 text-yellow-900 dark:text-yellow-100">
+              <div><strong>Tenant:</strong> {tenant.name} ({tenant.slug || 'ingen slug'})</div>
+              <div><strong>Tenant ID:</strong> {context.tenant_id}</div>
+              <div><strong>Host:</strong> {window.location.hostname}</div>
+              <div><strong>Override:</strong> {hasOverride ? '✅ Aktiv' : '❌ Nei'}</div>
+              {hasOverride && <div className="text-xs italic">Tenant override er aktivt via URL/sessionStorage</div>}
+            </div>
+          </div>
+
           {/* Tenant Badge */}
           <div className="mb-4 flex items-center gap-2 flex-wrap">
             <Badge variant="outline" className="flex items-center gap-2">
