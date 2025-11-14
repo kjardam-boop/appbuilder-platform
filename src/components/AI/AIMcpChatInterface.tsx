@@ -221,6 +221,14 @@ function MessageContent({ content, onAction }: { content: string; onAction?: (ac
     try {
       const experienceData: ExperienceJSON = JSON.parse(experienceMatch[1]);
       
+      // Apply default layout if missing
+      if (!experienceData.layout) {
+        experienceData.layout = {
+          type: 'stack',
+          gap: 'md'
+        };
+      }
+      
       // Apply theme from CSS variables if not already set
       if (!experienceData.theme) {
         experienceData.theme = {
