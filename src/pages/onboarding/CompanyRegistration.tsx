@@ -100,7 +100,7 @@ export default function CompanyRegistration() {
           website: formData.website || null,
           industry_description: formData.description || null,
           source: 'onboarding',
-        })
+        } as any)
         .select()
         .single();
 

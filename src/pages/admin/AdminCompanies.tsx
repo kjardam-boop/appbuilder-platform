@@ -346,7 +346,7 @@ export default function AdminCompanies() {
             website: company.website,
             last_fetched_at: new Date().toISOString(),
             source: 'brreg',
-          })
+          } as any)
           .select()
           .single();
 
