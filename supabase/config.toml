@@ -1,5 +1,8 @@
 project_id = "lunsgsyeaqnalpdbkhyg"
 
+[functions.create-ai-chat-definition]
+verify_jwt = true
+
 [functions.manage-ai-credentials]
 verify_jwt = true
 
