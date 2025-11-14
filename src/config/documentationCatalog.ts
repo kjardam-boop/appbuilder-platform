@@ -103,6 +103,17 @@ export const documentationCatalog: DocumentMetadata[] = [
     lastUpdated: "2025-01-23T12:00:00.000Z"
   },
   {
+    id: "docs-capabilities-integrations",
+    title: "Integrations Module",
+    description: "Komplett guide til integrasjonsmodulen med adapter-register, standardflyt, MCP-integrasjon og webhook-håndtering.",
+    category: "Capabilities",
+    subcategory: null,
+    path: "docs/capabilities/integrations.md",
+    source: "docs/capabilities/integrations.md",
+    tags: ["capabilities", "integrations", "adapters", "mcp", "webhooks"],
+    lastUpdated: "2025-01-23T12:00:00.000Z"
+  },
+  {
     id: "docs-capabilities-overview",
     title: "Capabilities System Overview",
     description: "Oversikt over capabilities-systemet med arkitektur, datamodell og lifecycle-diagrammer.",
