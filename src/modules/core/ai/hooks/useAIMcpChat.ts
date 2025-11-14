@@ -41,6 +41,12 @@ export function useAIMcpChat(tenantId: string, systemPrompt?: string) {
         systemPrompt,
       };
 
+      console.info('[AIMcpChat] Calling edge function', { 
+        tenantId,
+        messageCount: updatedMessages.length,
+        timestamp: new Date().toISOString()
+      });
+
       const { data, error: invokeError } = await supabase.functions.invoke<AIMcpChatResponse>(
         'ai-mcp-chat',
         { body: request }
@@ -75,8 +81,12 @@ export function useAIMcpChat(tenantId: string, systemPrompt?: string) {
 
       setMessages([...updatedMessages, assistantMessage]);
 
-      console.log('[AI MCP Chat] Tool calls made:', data.toolCallsMade || 0);
-      console.log('[AI MCP Chat] Tokens used:', data.tokensUsed || 0);
+      console.info('[AIMcpChat] Response received', {
+        tenantId,
+        toolCallsMade: data.toolCallsMade || 0,
+        tokensUsed: data.tokensUsed || 0,
+        timestamp: new Date().toISOString()
+      });
 
       return data;
 

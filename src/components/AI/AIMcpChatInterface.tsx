@@ -70,12 +70,19 @@ export function AIMcpChatInterface({
     if (!input.trim() || isLoading) return;
 
     const message = input.trim();
+    console.info('[AIMcpChat] Sending message', { 
+      tenantId, 
+      messageLength: message.length,
+      timestamp: new Date().toISOString()
+    });
+    
     setInput('');
 
     try {
       await sendMessage(message);
     } catch (err) {
       // Error already handled by hook
+      console.error('[AIMcpChat] Send error:', err);
     }
   };
 
