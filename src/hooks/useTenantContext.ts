@@ -27,11 +27,31 @@ export const useTenantContext = (): RequestContext | null => {
         
         // Check for tenant override (for multi-tenant on same domain)
         const urlParams = new URLSearchParams(window.location.search);
-        const tenantSlugOverride = urlParams.get('tenant') || sessionStorage.getItem('tenantOverride');
+        let tenantSlugOverride = urlParams.get('tenant') || sessionStorage.getItem('tenantOverride');
+        
+        // Fallback: allow #tenant=slug in hash
+        if (!tenantSlugOverride) {
+          const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+          tenantSlugOverride = hashParams.get('tenant') || tenantSlugOverride;
+        }
+        
+        // Fallback for Lovable editor: read from parent page referrer query (?tenant=slug)
+        if (!tenantSlugOverride && document.referrer) {
+          try {
+            const refUrl = new URL(document.referrer);
+            const refTenant = refUrl.searchParams.get('tenant');
+            if (refTenant) {
+              tenantSlugOverride = refTenant;
+              console.info('[TenantContext] Using tenant override from referrer', { refTenant });
+            }
+          } catch (e) {
+            // ignore parse errors
+          }
+        }
         
         // If override exists, store in sessionStorage for navigation persistence
-        if (urlParams.get('tenant')) {
-          sessionStorage.setItem('tenantOverride', urlParams.get('tenant')!);
+        if (tenantSlugOverride) {
+          sessionStorage.setItem('tenantOverride', tenantSlugOverride);
         }
         
         // Dev mode: fallback to static config if localhost
