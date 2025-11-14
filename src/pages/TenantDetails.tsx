@@ -309,15 +309,38 @@ export default function TenantDetails() {
 
     setIsGeneratingAIChat(true);
     try {
-      // Check if AI Chat app definition exists
-      const { data: appDef, error: appDefError } = await supabase
+      // Check if AI Chat app definition exists, create if missing
+      let { data: appDef, error: appDefError } = await supabase
         .from('app_definitions')
         .select('id')
         .eq('key', 'ai-chat')
-        .single();
+        .maybeSingle();
 
-      if (appDefError) {
-        throw new Error('AI Chat app ikke funnet. Kjør migrasjon først.');
+      // Auto-create app_definition if it doesn't exist
+      if (!appDef) {
+        console.log('AI Chat app definition not found, creating...');
+        
+        const { data: functionData, error: functionError } = await supabase.functions.invoke(
+          'create-ai-chat-definition'
+        );
+
+        if (functionError) {
+          throw new Error(`Kunne ikke opprette AI Chat definisjon: ${functionError.message}`);
+        }
+
+        // Fetch the newly created definition
+        const { data: newAppDef, error: fetchError } = await supabase
+          .from('app_definitions')
+          .select('id')
+          .eq('key', 'ai-chat')
+          .single();
+
+        if (fetchError || !newAppDef) {
+          throw new Error('Kunne ikke hente AI Chat definisjon etter opprettelse');
+        }
+
+        appDef = newAppDef;
+        toast.success('AI Chat definisjon opprettet');
       }
 
       // Check if already activated

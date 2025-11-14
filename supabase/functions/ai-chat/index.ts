@@ -1,3 +1,14 @@
+/**
+ * @deprecated This edge function is deprecated and should not be used for new implementations.
+ * Use 'ai-mcp-chat' instead which provides:
+ * - MCP tools for platform integration
+ * - Content library support (ai_app_content_library)
+ * - ExperienceJSON generation with rich UI components
+ * - generate_experience tool for dynamic page generation
+ * 
+ * This function remains for backward compatibility only.
+ */
+
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 
@@ -21,7 +32,7 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    console.log('[ai-chat] Calling Lovable AI for tenant:', tenantId);
+    console.log('[ai-chat] DEPRECATED: Use ai-mcp-chat instead. Calling Lovable AI for tenant:', tenantId);
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
