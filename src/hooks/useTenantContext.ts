@@ -14,12 +14,32 @@ const staticConfigs: Record<string, any> = {
   'ag-jacobsen': agJacobsen,
 };
 
+// Cookie helpers for persisting tenant override across redirects/new tabs
+const getCookie = (name: string): string | null => {
+  const match = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/([.$?*|{}()\[\]\\\/\+^])/g, '\\$1') + '=([^;]*)'));
+  return match ? decodeURIComponent(match[1]) : null;
+};
+const setCookie = (name: string, value: string, maxAgeSec = 60 * 60 * 24) => {
+  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAgeSec}; samesite=lax`;
+};
+
 export const useTenantContext = (): RequestContext | null => {
   const { user } = useAuth();
   const [context, setContext] = useState<RequestContext | null>(null);
 
   useEffect(() => {
     const loadContext = async () => {
+      // Capture and persist tenant override ASAP (even before auth)
+      try {
+        const urlParamsEarly = new URLSearchParams(window.location.search);
+        const qTenant = urlParamsEarly.get('tenant');
+        if (qTenant) {
+          localStorage.setItem('tenantOverride', qTenant);
+          sessionStorage.setItem('tenantOverride', qTenant);
+          setCookie('tenantOverride', qTenant);
+        }
+      } catch {}
+
       if (!user) return;
 
       try {
@@ -44,8 +64,9 @@ export const useTenantContext = (): RequestContext | null => {
         if (!tenantSlugOverride) {
           const ls = localStorage.getItem('tenantOverride');
           const ss = sessionStorage.getItem('tenantOverride');
-          tenantSlugOverride = ls || ss || null;
-          if (tenantSlugOverride) overrideSource = ls ? 'localStorage' : 'sessionStorage';
+          const ck = getCookie('tenantOverride');
+          tenantSlugOverride = ls || ss || ck || null;
+          if (tenantSlugOverride) overrideSource = ls ? 'localStorage' : ss ? 'sessionStorage' : 'cookie';
         }
         
         // Fallback for Lovable editor: read from parent page referrer query (?tenant=slug)
@@ -68,6 +89,7 @@ export const useTenantContext = (): RequestContext | null => {
           try {
             localStorage.setItem('tenantOverride', tenantSlugOverride);
             sessionStorage.setItem('tenantOverride', tenantSlugOverride);
+            setCookie('tenantOverride', tenantSlugOverride);
             const url = new URL(window.location.href);
             const hashParams = new URLSearchParams(url.hash.replace(/^#/, ''));
             if (!hashParams.get('tenant')) {
