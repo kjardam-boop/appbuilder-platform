@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
 import { RoleService } from "@/modules/core/user/services/roleService";
+import { AppBreadcrumbs } from "@/components/ui/app-breadcrumbs";
+import { COMMON_BREADCRUMBS } from "@/helpers/breadcrumbHelper";
 import { 
   UserRoleRecord, 
   RoleScope, 
@@ -328,6 +330,8 @@ const RoleManagement = () => {
 
   return (
     <div className="space-y-6 p-8">
+      <AppBreadcrumbs levels={COMMON_BREADCRUMBS.roles()} />
+      
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Rolleadministrasjon</h1>

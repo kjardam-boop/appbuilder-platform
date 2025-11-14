@@ -7,6 +7,8 @@ import AIPolicySettings from '@/pages/admin/AIPolicySettings';
 import AIProviderHealth from '@/pages/admin/AIProviderHealth';
 import { useAdminRole } from '@/modules/core/user';
 import { Navigate } from 'react-router-dom';
+import { AppBreadcrumbs } from '@/components/ui/app-breadcrumbs';
+import { generateAdminBreadcrumbs } from '@/helpers/breadcrumbHelper';
 
 export default function AdminSettings() {
   const { isAdmin, isLoading } = useAdminRole();
@@ -25,6 +27,11 @@ export default function AdminSettings() {
 
   return (
     <div className="w-full px-4 lg:px-6 xl:px-8 py-8">
+      <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+        category: "Platform",
+        currentPage: "Settings"
+      })} />
+      
       <div className="mb-8">
         <h1 className="text-3xl font-bold">Administrasjon</h1>
         <p className="text-muted-foreground">

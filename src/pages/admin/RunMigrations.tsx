@@ -3,6 +3,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
+import { AppBreadcrumbs } from '@/components/ui/app-breadcrumbs';
+import { COMMON_BREADCRUMBS } from '@/helpers/breadcrumbHelper';
 import { CheckCircle2, XCircle, Loader2, Database } from 'lucide-react';
 
 export default function RunMigrations() {
@@ -96,6 +98,8 @@ export default function RunMigrations() {
 
   return (
     <div className="container mx-auto p-6 max-w-4xl">
+      <AppBreadcrumbs levels={COMMON_BREADCRUMBS.migrations()} />
+      
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">

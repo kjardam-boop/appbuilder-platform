@@ -3,6 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { AppBreadcrumbs } from '@/components/ui/app-breadcrumbs';
+import { COMMON_BREADCRUMBS } from '@/helpers/breadcrumbHelper';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
@@ -134,6 +136,8 @@ export default function ContentLibrary() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
+      <AppBreadcrumbs levels={COMMON_BREADCRUMBS.contentLibrary()} />
+      
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
