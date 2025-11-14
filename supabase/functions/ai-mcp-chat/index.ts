@@ -223,7 +223,10 @@ async function executeMcpTool(
     switch (toolName) {
       case "list_companies":
       case "search_companies": {
-        let query = supabaseClient.from('companies').select('id, name, org_number, industry_code, created_at');
+        let query = supabaseClient
+          .from('companies')
+          .select('id, name, org_number, industry_code, created_at')
+          .eq('tenant_id', tenantId);
         
         const searchQuery = args.q || args.query;
         if (searchQuery) {
@@ -241,11 +244,11 @@ async function executeMcpTool(
       case "list_projects": {
         let query = supabaseClient
           .from('projects')
-          .select('id, title, description, status, created_at')
+          .select('id, name, description, status, created_at')
           .eq('tenant_id', tenantId);
         
         if (args.q) {
-          query = query.or(`title.ilike.%${args.q}%,description.ilike.%${args.q}%`);
+          query = query.or(`name.ilike.%${args.q}%,description.ilike.%${args.q}%`);
         }
         
         query = query.limit(args.limit || 25).order('created_at', { ascending: false });
@@ -296,9 +299,11 @@ async function executeMcpTool(
           .from('companies')
           .select('*')
           .eq('id', args.id)
+          .eq('tenant_id', tenantId)
           .maybeSingle();
         
         if (error) throw error;
+        if (!data) return { error: `Company ${args.id} not found for tenant` };
         return data;
       }
 
@@ -753,22 +758,31 @@ serve(async (req) => {
       .single();
 
     const defaultSystemPrompt = `Du er en intelligent AI-assistent med tilgang til en bedrifts-plattform. 
-Du kan hjelpe brukere med å:
-- Søke etter og finne informasjon om selskaper, prosjekter og oppgaver
+
+**KRITISKE REGLER:**
+1. Du MÅ kun vise data der tenant_id = ${tenantId}
+2. Når brukere spør om veiledning, dokumentasjon eller prosesser: BRUK generate_experience-verktøyet FØRST
+3. Hvis du genererer en visuell opplevelse, returner ALLTID ExperienceJSON inni en \`\`\`experience-json kodeblokk
+4. Ikke be om avklaringer når tenant-kontekst er åpenbar
+
+**Du kan hjelpe brukere med å:**
+- Søke etter og finne informasjon om selskaper, prosjekter og oppgaver (kun for denne tenant)
 - Hente detaljert selskapsinformasjon inkludert kontaktpersoner, metadata og finansiell data
 - Opprette nye prosjekter og oppgaver
+- Generere interaktive veiledninger og dokumentasjon
 - Analysere data og gi anbefalinger
 - Svare på spørsmål om plattformens innhold
 - Hente informasjon fra nettsider og eksterne kilder
 
-Viktige verktøy:
-- Bruk 'get_company_details' for å hente komplett informasjon om et selskap (inkluderer kontaktpersoner fra metadata)
-- Bruk 'list_companies' eller 'search_companies' for å finne selskaper
-- Bruk 'list_projects' for å se prosjekter
+**Viktige verktøy:**
+- Bruk 'generate_experience' for å lage veiledninger, onboarding, FAQ eller prosessdokumentasjon
+- Bruk 'get_company_details' for å hente komplett informasjon om et selskap
+- Bruk 'list_companies' eller 'search_companies' for å finne selskaper (kun denne tenant)
+- Bruk 'list_projects' for å se prosjekter (kun denne tenant)
 - Bruk 'list_applications' for å se tilgjengelige forretningssystemer
-- Bruk 'scrape_website' for å hente informasjon fra nettsider (f.eks. bedriftsnettsider, produktsider)
+- Bruk 'scrape_website' for å hente informasjon fra nettsider
 
-Når du bruker verktøy:
+**Når du bruker verktøy:**
 - Alltid forklar hva du gjør
 - Bruk norsk språk i svarene dine
 - Vær konsis og presis

@@ -59,7 +59,7 @@ export default function ProjectCreation() {
           owner_id: user.id,
           current_phase: 'as_is',
           status: 'active',
-        })
+        } as any)
         .select()
         .single();
 
