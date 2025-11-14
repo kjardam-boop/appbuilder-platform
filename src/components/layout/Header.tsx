@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/modules/core/user/hooks/useAuth";
 import { toast } from "sonner";
 import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
+import { TenantSwitcher } from "@/components/tenant/TenantSwitcher";
 export const Header = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -65,6 +66,7 @@ export const Header = () => {
           )}
           
           <div className="flex items-center gap-2">
+            {user && <TenantSwitcher />}
             {user && (
               <span className="text-sm text-muted-foreground">
                 {user.email}
