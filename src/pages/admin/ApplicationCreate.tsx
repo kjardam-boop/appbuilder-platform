@@ -7,6 +7,8 @@ import { ApplicationService } from "@/modules/core/applications/services/applica
 import { buildClientContext } from "@/shared/lib/buildContext";
 import { toast } from "sonner";
 import Header from "@/components/Dashboard/Header";
+import { AppBreadcrumbs } from '@/components/ui/app-breadcrumbs';
+import { generateAdminBreadcrumbs } from '@/helpers/breadcrumbHelper';
 
 export default function ApplicationCreate() {
   const navigate = useNavigate();
@@ -49,7 +51,12 @@ export default function ApplicationCreate() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div 
+    <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+  category: "Content",
+  currentPage: "Create Application"
+})} />
+    className="min-h-screen bg-background">
       <Header />
       <div className="container mx-auto py-8 px-4">
         <div className="max-w-4xl mx-auto space-y-6">

@@ -15,6 +15,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Archive, RotateCcw } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { nb } from 'date-fns/locale';
+import { AppBreadcrumbs } from '@/components/ui/app-breadcrumbs';
+import { generateAdminBreadcrumbs } from '@/helpers/breadcrumbHelper';
 
 export default function ArchivedResourcesPage() {
   const { user } = useAuth();
@@ -143,7 +145,12 @@ export default function ArchivedResourcesPage() {
 
   if (!isPlatformOwner || loading) {
     return (
-      <div className="container mx-auto p-6">
+      <div 
+      <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+  category: "Operations",
+  currentPage: "Archived Resources"
+})} />
+      className="container mx-auto p-6">
         <div className="text-center">Laster...</div>
       </div>
     );

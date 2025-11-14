@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { Database, Search, Server, Building2, Plus } from "lucide-react";
 import {
+import { AppBreadcrumbs } from '@/components/ui/app-breadcrumbs';
+import { generateAdminBreadcrumbs } from '@/helpers/breadcrumbHelper';
   Select,
   SelectContent,
   SelectItem,
@@ -28,7 +30,12 @@ export default function ApplicationsPage() {
   const { data: systemTypes = [] } = useSystemTypes();
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div 
+    <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+  category: "Content",
+  currentPage: "Applications"
+})} />
+    className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">

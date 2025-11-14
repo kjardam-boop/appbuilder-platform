@@ -12,6 +12,8 @@ import { OpportunityDialog } from "@/modules/core/opportunity";
 import { useToast } from "@/hooks/use-toast";
 import type { OpportunityWithDetails } from "@/modules/opportunity";
 import {
+import { AppBreadcrumbs } from '@/components/ui/app-breadcrumbs';
+import { generateAdminBreadcrumbs } from '@/helpers/breadcrumbHelper';
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -74,7 +76,13 @@ export default function OpportunityDetails() {
 
   if (loading) {
     return (
-      <div className="container mx-auto p-6 space-y-6">
+      <div 
+      <AppBreadcrumbs levels={[
+  { label: "Dashboard", href: "/dashboard" },
+  { label: "Opportunities", href: "/opportunities" },
+  { label: "Details" }
+]} />
+      className="container mx-auto p-6 space-y-6">
         <Skeleton className="h-12 w-64" />
         <Skeleton className="h-64" />
       </div>

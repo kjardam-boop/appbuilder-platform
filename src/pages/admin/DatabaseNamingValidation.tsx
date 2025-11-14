@@ -6,6 +6,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { AlertCircle, CheckCircle2, AlertTriangle, Info } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Link } from "react-router-dom";
+import { AppBreadcrumbs } from '@/components/ui/app-breadcrumbs';
+import { generateAdminBreadcrumbs } from '@/helpers/breadcrumbHelper';
 
 interface ValidationResult {
   table_name: string;
@@ -49,7 +51,12 @@ export default function DatabaseNamingValidation() {
     };
     
     return (
-      <Badge variant={variants[severity] || 'outline'}>
+      <Badge 
+      <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+  category: "Operations",
+  currentPage: "Database Naming"
+})} />
+      variant={variants[severity] || 'outline'}>
         {severity}
       </Badge>
     );

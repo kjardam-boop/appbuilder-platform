@@ -9,6 +9,8 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { Shield, DollarSign, Zap, AlertTriangle } from 'lucide-react';
+import { AppBreadcrumbs } from '@/components/ui/app-breadcrumbs';
+import { generateAdminBreadcrumbs } from '@/helpers/breadcrumbHelper';
 
 export default function AIPolicySettings() {
   const { user } = useAuth();
@@ -108,7 +110,12 @@ export default function AIPolicySettings() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div 
+      <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+  category: "AI",
+  currentPage: "Policy Settings"
+})} />
+      className="flex items-center justify-center min-h-[400px]">
         <div className="text-lg">Laster AI-policyer...</div>
       </div>
     );

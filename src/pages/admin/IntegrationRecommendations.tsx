@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Loader2, RefreshCw, TrendingUp, Zap, Shield, Target } from "lucide-react";
 import { toast } from "sonner";
 import {
+import { AppBreadcrumbs } from '@/components/ui/app-breadcrumbs';
+import { generateAdminBreadcrumbs } from '@/helpers/breadcrumbHelper';
   Sheet,
   SheetContent,
   SheetDescription,
@@ -124,7 +126,12 @@ export default function IntegrationRecommendations() {
     .filter((rec: Recommendation) => rec.score >= parseInt(minScore) || 0);
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div 
+    <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+  category: "Integrations",
+  currentPage: "Recommendations"
+})} />
+    className="container mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Integration Recommendations</h1>

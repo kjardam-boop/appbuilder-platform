@@ -16,6 +16,8 @@ import { useState } from "react";
 import type { Capability } from "@/modules/core/capabilities";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/modules/core/user";
+import { AppBreadcrumbs } from '@/components/ui/app-breadcrumbs';
+import { generateAdminBreadcrumbs } from '@/helpers/breadcrumbHelper';
 
 export default function AppDefinitionDetails() {
   const { appKey } = useParams<{ appKey: string }>();
@@ -88,7 +90,12 @@ export default function AppDefinitionDetails() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6 p-6">
+      <div 
+      <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+  category: "Content",
+  currentPage: "App Details"
+})} />
+      className="space-y-6 p-6">
         <Skeleton className="h-12 w-full" />
         <Skeleton className="h-64 w-full" />
       </div>

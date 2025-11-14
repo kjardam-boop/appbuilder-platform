@@ -15,6 +15,8 @@ import { toast } from "sonner";
 import { ArrowLeft, Plus, X, Package } from "lucide-react";
 import { ManifestLoader } from "@/modules/core/applications/services/manifestLoader";
 import type { AppManifest } from "@/modules/core/applications/types/manifest.types";
+import { AppBreadcrumbs } from '@/components/ui/app-breadcrumbs';
+import { generateAdminBreadcrumbs } from '@/helpers/breadcrumbHelper';
 
 export default function AppDefinitionCreate() {
   const navigate = useNavigate();
@@ -88,7 +90,12 @@ export default function AppDefinitionCreate() {
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div 
+    <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+  category: "Content",
+  currentPage: "Create App"
+})} />
+    className="space-y-6 p-6">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => navigate("/admin/apps")}>
           <ArrowLeft className="h-5 w-5" />

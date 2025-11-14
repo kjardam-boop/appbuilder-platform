@@ -7,6 +7,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Building2, Settings, ToggleLeft, ToggleRight } from "lucide-react";
+import { AppBreadcrumbs } from '@/components/ui/app-breadcrumbs';
+import { generateAdminBreadcrumbs } from '@/helpers/breadcrumbHelper';
 
 export default function TenantSystems() {
   const context = useTenantContext();
@@ -29,7 +31,12 @@ export default function TenantSystems() {
   };
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
+    <div 
+    <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+  category: "Tenants",
+  currentPage: "Systems"
+})} />
+    className="container mx-auto py-8 space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">External Systems</h1>

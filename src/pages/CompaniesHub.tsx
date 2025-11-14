@@ -8,6 +8,8 @@ import { useAuth } from "@/modules/core/user/hooks/useAuth";
 import { useTenantContext } from "@/hooks/useTenantContext";
 import { TenantCompanyAccessService } from "@/modules/core/company/services/tenantCompanyAccessService";
 import { useToast } from "@/hooks/use-toast";
+import { AppBreadcrumbs } from '@/components/ui/app-breadcrumbs';
+import { generateAdminBreadcrumbs } from '@/helpers/breadcrumbHelper';
 // Removed CompanySearch import - not needed
 
 export default function CompaniesHub() {
@@ -42,7 +44,12 @@ export default function CompaniesHub() {
   ];
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div 
+    <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+  category: "Business",
+  currentPage: "Companies"
+})} />
+    className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Selskaper</h1>

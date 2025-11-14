@@ -5,6 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Activity, CheckCircle, XCircle, AlertTriangle, Clock } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { nb } from 'date-fns/locale';
+import { AppBreadcrumbs } from '@/components/ui/app-breadcrumbs';
+import { generateAdminBreadcrumbs } from '@/helpers/breadcrumbHelper';
 
 const PROVIDERS = [
   { id: 'openai', name: 'OpenAI' },
@@ -58,7 +60,12 @@ export default function AIProviderHealth() {
     };
 
     return (
-      <Badge variant={variants[status || 'unknown']}>
+      <Badge 
+      <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+  category: "AI",
+  currentPage: "Provider Health"
+})} />
+      variant={variants[status || 'unknown']}>
         {status || 'Unknown'}
       </Badge>
     );

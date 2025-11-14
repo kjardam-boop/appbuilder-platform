@@ -16,6 +16,8 @@ import { InstallIntegrationDialog } from "@/components/integrations/InstallInteg
 import { CredentialsDialog } from "@/components/integrations/CredentialsDialog";
 import { ConfigurationDialog } from "@/components/integrations/ConfigurationDialog";
 import { ConnectionTestDialog } from "@/components/integrations/ConnectionTestDialog";
+import { AppBreadcrumbs } from '@/components/ui/app-breadcrumbs';
+import { generateAdminBreadcrumbs } from '@/helpers/breadcrumbHelper';
 
 interface Company {
   id: string;
@@ -167,7 +169,12 @@ export default function CompanyIntegrations() {
 
   if (companyLoading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div 
+      <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+  category: "Business",
+  currentPage: "Integrations"
+})} />
+      className="min-h-screen bg-background">
         <Header />
         <div className="container mx-auto py-8 px-4">
           <div className="flex items-center justify-center py-12">

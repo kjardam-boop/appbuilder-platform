@@ -22,6 +22,8 @@ import { mcpPolicySetSchema } from '@/modules/core/mcp/validation/schemas';
 import type { McpPolicySet } from '@/modules/core/mcp/types/mcp.types';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
+import { AppBreadcrumbs } from '@/components/ui/app-breadcrumbs';
+import { generateAdminBreadcrumbs } from '@/helpers/breadcrumbHelper';
 
 const TENANT_ID = 'default-tenant'; // TODO: Get from context
 
@@ -126,7 +128,13 @@ export default function McpPolicy() {
   }
 
   return (
-    <div className="w-full px-4 lg:px-6 xl:px-8 py-8 space-y-6">
+    <div 
+    <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+  category: "Integrations",
+  subcategory: "MCP",
+  currentPage: "Policy"
+})} />
+    className="w-full px-4 lg:px-6 xl:px-8 py-8 space-y-6">
       <div>
         <h1 className="text-3xl font-bold">MCP Policy Configuration</h1>
         <p className="text-muted-foreground">

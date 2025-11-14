@@ -11,6 +11,8 @@ import { seedIndustries } from "@/modules/core/industry/services/seedIndustries"
 import { PermissionSeedService } from "@/modules/core/permissions/services/seedPermissions";
 import { toast } from "sonner";
 import Header from "@/components/Dashboard/Header";
+import { AppBreadcrumbs } from '@/components/ui/app-breadcrumbs';
+import { generateAdminBreadcrumbs } from '@/helpers/breadcrumbHelper';
 
 export default function AdminSeed() {
   const [isSeeding, setIsSeeding] = useState({
@@ -142,7 +144,12 @@ export default function AdminSeed() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div 
+    <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+  category: "Operations",
+  currentPage: "Seed Data"
+})} />
+    className="min-h-screen bg-background">
       <Header />
       <div className="container mx-auto py-8 px-4">
         <div className="max-w-4xl mx-auto space-y-6">

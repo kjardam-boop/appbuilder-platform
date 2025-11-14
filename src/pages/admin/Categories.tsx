@@ -14,6 +14,8 @@ import { Plus, Pencil, Trash2, FolderOpen } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { appCategorySchema, type AppCategoryInput } from "@/modules/core/applications/types/category.types";
+import { AppBreadcrumbs } from '@/components/ui/app-breadcrumbs';
+import { generateAdminBreadcrumbs } from '@/helpers/breadcrumbHelper';
 
 export default function Categories() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -78,7 +80,12 @@ export default function Categories() {
   };
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
+    <div 
+    <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+  category: "Content",
+  currentPage: "Categories"
+})} />
+    className="container mx-auto py-8 space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">App Categories</h1>

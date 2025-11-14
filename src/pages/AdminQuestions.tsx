@@ -10,6 +10,8 @@ import { QuestionManager } from "@/components/Admin/QuestionManager";
 import { AIQuestionGenerator } from "@/components/Admin/AIQuestionGenerator";
 import { Shield, ArrowLeft, Building2, Users } from "lucide-react";
 import { SUPPLIER_EVALUATION_CATEGORIES } from "@/modules/core/supplier";
+import { AppBreadcrumbs } from '@/components/ui/app-breadcrumbs';
+import { generateAdminBreadcrumbs } from '@/helpers/breadcrumbHelper';
 
 const AdminQuestions = () => {
   const navigate = useNavigate();
@@ -54,7 +56,12 @@ const AdminQuestions = () => {
 
   if (adminLoading || !isAdmin) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div 
+      <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+  category: "Operations",
+  currentPage: "Questions"
+})} />
+      className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
       </div>
     );

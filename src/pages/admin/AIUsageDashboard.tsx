@@ -28,6 +28,8 @@ import {
 } from 'recharts';
 import { Brain, TrendingUp, DollarSign, Activity } from 'lucide-react';
 import { format, subDays, startOfDay } from 'date-fns';
+import { AppBreadcrumbs } from '@/components/ui/app-breadcrumbs';
+import { generateAdminBreadcrumbs } from '@/helpers/breadcrumbHelper';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
@@ -118,7 +120,12 @@ export default function AIUsageDashboard() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div 
+      <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+  category: "AI",
+  currentPage: "Usage Dashboard"
+})} />
+      className="flex items-center justify-center min-h-[400px]">
         <div className="text-lg">Laster AI-statistikk...</div>
       </div>
     );

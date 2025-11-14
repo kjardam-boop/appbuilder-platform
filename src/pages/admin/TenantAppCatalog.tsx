@@ -7,6 +7,8 @@ import { useAppDefinitions, useInstallApp } from "@/modules/core/applications/ho
 import { useTenantApplicationsByTenantId } from "@/hooks/useTenantApplications";
 import { Loader2, Package, Plus } from "lucide-react";
 import { InstallAppDialog } from "@/components/Admin/InstallAppDialog";
+import { AppBreadcrumbs } from '@/components/ui/app-breadcrumbs';
+import { generateAdminBreadcrumbs } from '@/helpers/breadcrumbHelper';
 
 export default function TenantAppCatalog() {
   const { tenantId } = useParams<{ tenantId: string }>();
@@ -18,7 +20,12 @@ export default function TenantAppCatalog() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-96">
+      <div 
+      <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+  category: "Tenants",
+  currentPage: "App Catalog"
+})} />
+      className="flex items-center justify-center h-96">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );

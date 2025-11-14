@@ -26,6 +26,8 @@ import ReactFlow, {
   useEdgesState,
 } from "reactflow";
 import "reactflow/dist/style.css";
+import { AppBreadcrumbs } from '@/components/ui/app-breadcrumbs';
+import { generateAdminBreadcrumbs } from '@/helpers/breadcrumbHelper';
 
 interface GraphNode {
   id: string;
@@ -188,7 +190,12 @@ export default function IntegrationGraph() {
   }, []);
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div 
+    <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+  category: "Integrations",
+  currentPage: "Integration Graph"
+})} />
+    className="container mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">

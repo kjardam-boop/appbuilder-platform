@@ -11,6 +11,8 @@ import { OpportunityCard } from "@/modules/core/opportunity";
 import { OpportunityDialog } from "@/modules/core/opportunity";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { OpportunityStage } from "@/modules/core/opportunity";
+import { AppBreadcrumbs } from '@/components/ui/app-breadcrumbs';
+import { generateAdminBreadcrumbs } from '@/helpers/breadcrumbHelper';
 
 export default function OpportunitiesPage() {
   const navigate = useNavigate();
@@ -37,7 +39,12 @@ export default function OpportunitiesPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto p-6 space-y-6">
+      <div 
+      <AppBreadcrumbs levels={[
+  { label: "Dashboard", href: "/dashboard" },
+  { label: "Opportunities" }
+]} />
+      className="container mx-auto p-6 space-y-6">
         <Skeleton className="h-12 w-64" />
         <div className="grid gap-6 md:grid-cols-3">
           {[1, 2, 3].map(i => <Skeleton key={i} className="h-32" />)}

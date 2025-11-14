@@ -5,6 +5,8 @@ import { Building2, Database, AlertCircle, Briefcase } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { useAuth } from "@/modules/core/user/hooks/useAuth";
+import { AppBreadcrumbs } from '@/components/ui/app-breadcrumbs';
+import { generateAdminBreadcrumbs } from '@/helpers/breadcrumbHelper';
 
 const Dashboard = () => {
   const { user, loading } = useAuth();
@@ -17,7 +19,9 @@ const Dashboard = () => {
   }, [user, loading, navigate]);
   
   return (
-    <div className="min-h-screen bg-gradient-hero">
+    <div 
+    <AppBreadcrumbs customLabel="Dashboard" />
+    className="min-h-screen bg-gradient-hero">
       <Header 
         userName={user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'}
         userEmail={user?.email}

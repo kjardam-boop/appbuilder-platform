@@ -9,13 +9,20 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Package, Plus, Settings } from "lucide-react";
 import { Link } from "react-router-dom";
+import { AppBreadcrumbs } from '@/components/ui/app-breadcrumbs';
+import { generateAdminBreadcrumbs } from '@/helpers/breadcrumbHelper';
 
 export default function AppCatalog() {
   const { data: apps, isLoading } = useAppDefinitions();
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div 
+      <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+  category: "Content",
+  currentPage: "App Catalog"
+})} />
+      className="flex items-center justify-center h-64">
         <div className="text-muted-foreground">Laster app-katalog...</div>
       </div>
     );

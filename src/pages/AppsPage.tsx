@@ -5,12 +5,19 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Package, ArrowRight } from "lucide-react";
 import Header from "@/components/Dashboard/Header";
+import { AppBreadcrumbs } from '@/components/ui/app-breadcrumbs';
+import { generateAdminBreadcrumbs } from '@/helpers/breadcrumbHelper';
 
 export default function AppsPage() {
   const { data: apps, isLoading } = useTenantApplications();
 
   return (
-    <div className="min-h-screen bg-background">
+    <div 
+    <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+  category: "Content",
+  currentPage: "Apps"
+})} />
+    className="min-h-screen bg-background">
       <Header />
       
       <div className="container mx-auto px-4 py-8">

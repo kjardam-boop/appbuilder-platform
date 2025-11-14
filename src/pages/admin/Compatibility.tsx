@@ -28,6 +28,8 @@ import {
 } from "@/components/ui/sheet";
 import { Progress } from "@/components/ui/progress";
 import { AlertCircle, CheckCircle2, TrendingUp } from "lucide-react";
+import { AppBreadcrumbs } from '@/components/ui/app-breadcrumbs';
+import { generateAdminBreadcrumbs } from '@/helpers/breadcrumbHelper';
 
 interface SystemScore {
   systemSlug: string;
@@ -124,7 +126,12 @@ export default function Compatibility() {
   };
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div 
+    <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+  category: "Integrations",
+  currentPage: "Compatibility"
+})} />
+    className="container mx-auto py-6 space-y-6">
       <div>
         <h1 className="text-3xl font-bold mb-2">Compatibility Matrix</h1>
         <p className="text-muted-foreground">

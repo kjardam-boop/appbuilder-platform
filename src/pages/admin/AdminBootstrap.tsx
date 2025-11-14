@@ -8,6 +8,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import Header from "@/components/Dashboard/Header";
+import { AppBreadcrumbs } from '@/components/ui/app-breadcrumbs';
+import { generateAdminBreadcrumbs } from '@/helpers/breadcrumbHelper';
 
 const AdminBootstrap = () => {
   const { session } = useAuth();
@@ -55,7 +57,12 @@ const AdminBootstrap = () => {
 
   if (!session?.user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
+      <div 
+      <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+  category: "Operations",
+  currentPage: "Bootstrap"
+})} />
+      className="min-h-screen bg-gradient-to-br from-background to-muted/20">
         <Header />
         <div className="w-full px-4 lg:px-6 xl:px-8 py-8">
           <Alert variant="destructive">

@@ -12,6 +12,8 @@ import { format } from "date-fns";
 import { nb } from "date-fns/locale";
 import { ColumnDef } from "@/components/DataTable/types";
 import { SmartDataTable } from "@/components/DataTable/SmartDataTable";
+import { AppBreadcrumbs } from '@/components/ui/app-breadcrumbs';
+import { generateAdminBreadcrumbs } from '@/helpers/breadcrumbHelper';
 
 interface Company {
   orgNumber: string;
@@ -101,7 +103,12 @@ export default function AdminCompanies() {
       render: (value) => {
         if (!value || value.length === 0) return '-';
         return (
-          <div className="flex gap-1 flex-wrap">
+          <div 
+          <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+  category: "Platform",
+  currentPage: "Companies"
+})} />
+          className="flex gap-1 flex-wrap">
             {value.map((role: string) => (
               <Badge key={role} variant="secondary" className="text-xs">
                 {role}

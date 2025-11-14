@@ -6,6 +6,8 @@ import { usePermissionHealth } from "@/modules/core/permissions/hooks/usePermiss
 import { ROLE_LABELS } from "@/modules/core/user/types/role.types";
 import { useNavigate } from "react-router-dom";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AppBreadcrumbs } from '@/components/ui/app-breadcrumbs';
+import { generateAdminBreadcrumbs } from '@/helpers/breadcrumbHelper';
 
 const PermissionHealth = () => {
   const navigate = useNavigate();
@@ -18,7 +20,12 @@ const PermissionHealth = () => {
   const isHealthy = health && health.coveragePercent === 100;
 
   return (
-    <div className="space-y-6 p-8">
+    <div 
+    <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+  category: "Platform",
+  currentPage: "Permission Health"
+})} />
+    className="space-y-6 p-8">
       <div className="flex items-center gap-4">
         <Button
           variant="ghost"

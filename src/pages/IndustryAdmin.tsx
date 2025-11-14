@@ -5,12 +5,19 @@ import { Input } from "@/components/ui/input";
 import { Loader2, Plus, Search } from "lucide-react";
 import { IndustryManager } from "@/modules/core/industry/components/IndustryManager";
 import { Header } from "@/components/layout/Header";
+import { AppBreadcrumbs } from '@/components/ui/app-breadcrumbs';
+import { generateAdminBreadcrumbs } from '@/helpers/breadcrumbHelper';
 
 export default function IndustryAdmin() {
   const [searchQuery, setSearchQuery] = useState("");
 
   return (
-    <div className="min-h-screen bg-background">
+    <div 
+    <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+  category: "Content",
+  currentPage: "Industries"
+})} />
+    className="min-h-screen bg-background">
       <Header />
       
       <main className="container mx-auto py-8 px-4">

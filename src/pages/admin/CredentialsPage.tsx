@@ -15,6 +15,8 @@ import { CredentialsList } from "@/components/admin/credentials/CredentialsList"
 import { CredentialManagementDialog } from "@/components/admin/credentials/CredentialManagementDialog";
 import { CredentialAuditLog } from "@/components/admin/credentials/CredentialAuditLog";
 import { supabase } from "@/integrations/supabase/client";
+import { AppBreadcrumbs } from '@/components/ui/app-breadcrumbs';
+import { generateAdminBreadcrumbs } from '@/helpers/breadcrumbHelper';
 
 export default function CredentialsPage() {
   const context = useTenantContext();
@@ -87,7 +89,12 @@ export default function CredentialsPage() {
 
   if (!context || isPlatformLoading) {
     return (
-      <div className="container mx-auto p-6">
+      <div 
+      <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+  category: "Integrations",
+  currentPage: "Credentials"
+})} />
+      className="container mx-auto p-6">
         <Card className="p-8 text-center">
           <Shield className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
           <p className="text-muted-foreground">Loading tenant context...</p>

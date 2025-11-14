@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Building2, Globe, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
+import { AppBreadcrumbs } from '@/components/ui/app-breadcrumbs';
+import { generateAdminBreadcrumbs } from '@/helpers/breadcrumbHelper';
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -49,7 +51,13 @@ export default function VendorDetailsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div 
+      <AppBreadcrumbs levels={[
+  { label: "Dashboard", href: "/dashboard" },
+  { label: "Vendors", href: "/vendors" },
+  { label: "Details" }
+]} />
+      className="flex items-center justify-center min-h-screen">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
       </div>
     );

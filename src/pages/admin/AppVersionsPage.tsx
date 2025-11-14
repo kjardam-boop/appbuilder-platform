@@ -16,6 +16,8 @@ import { PublishVersionDialog } from "@/components/Admin/PublishVersionDialog";
 import { PromoteVersionDialog } from "@/components/Admin/PromoteVersionDialog";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { AppBreadcrumbs } from '@/components/ui/app-breadcrumbs';
+import { generateAdminBreadcrumbs } from '@/helpers/breadcrumbHelper';
 
 export default function AppVersionsPage() {
   const { appKey } = useParams<{ appKey: string }>();
@@ -57,7 +59,12 @@ export default function AppVersionsPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6 p-6">
+      <div 
+      <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+  category: "Content",
+  currentPage: "App Versions"
+})} />
+      className="space-y-6 p-6">
         <Skeleton className="h-12 w-full" />
         <Skeleton className="h-64 w-full" />
       </div>

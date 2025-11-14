@@ -5,6 +5,8 @@ import { Loader2, PlayCircle, CheckCircle2, XCircle } from "lucide-react";
 import { performanceAnalyzer } from "@/modules/core/applications/services/__tests__/performance-analysis";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { AppBreadcrumbs } from '@/components/ui/app-breadcrumbs';
+import { generateAdminBreadcrumbs } from '@/helpers/breadcrumbHelper';
 
 export default function PerformanceTest() {
   const [isRunning, setIsRunning] = useState(false);
@@ -71,7 +73,12 @@ export default function PerformanceTest() {
   };
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
+    <div 
+    <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+  category: "Operations",
+  currentPage: "Performance Test"
+})} />
+    className="container mx-auto py-8 space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Performance Test</h1>
         <p className="text-muted-foreground mt-2">

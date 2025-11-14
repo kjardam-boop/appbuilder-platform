@@ -9,6 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { useTenantContext } from '@/hooks/useTenantContext';
 import { AVAILABLE_MCP_TOOLS } from '@/modules/core/ai';
 import { Wrench, Database, Cpu } from 'lucide-react';
+import { AppBreadcrumbs } from '@/components/ui/app-breadcrumbs';
+import { generateAdminBreadcrumbs } from '@/helpers/breadcrumbHelper';
 
 export default function AIMcpDemo() {
   const context = useTenantContext();
@@ -16,7 +18,12 @@ export default function AIMcpDemo() {
 
   if (!tenantId) {
     return (
-      <div className="p-8">
+      <div 
+      <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+  category: "AI",
+  currentPage: "MCP Demo"
+})} />
+      className="p-8">
         <Card>
           <CardContent className="pt-6">
             <p className="text-muted-foreground text-center">
