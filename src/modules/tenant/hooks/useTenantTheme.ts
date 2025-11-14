@@ -1,39 +1,28 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { TenantTheme, TenantThemeTokens } from '../types/tenantTheme.types';
-import { resolveTenantByHost } from '../services/tenantResolver';
 
 /**
  * Hook to load and apply tenant theme
  * Fetches active theme for current tenant and injects CSS variables
+ * @param tenantId - Optional tenant ID to load theme for. If not provided, no theme is loaded.
  */
-export function useTenantTheme() {
+export function useTenantTheme(tenantId?: string | null) {
   const [theme, setTheme] = useState<TenantTheme | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tenantId, setTenantId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Resolve current tenant from host
-    resolveTenantByHost(window.location.host).then((tenant) => {
-      if (tenant) {
-        setTenantId(tenant.tenant_id);
-      } else {
-        setLoading(false);
-      }
-    });
-  }, []);
-
-  useEffect(() => {
-    if (tenantId) {
-      loadTheme();
-    }
+    loadTheme();
   }, [tenantId]);
 
   const loadTheme = async () => {
     if (!tenantId) {
       setLoading(false);
+      console.info('[TenantTheme] No tenantId provided, skipping theme load');
       return;
     }
+
+    console.info('[TenantTheme] Loading theme for tenant', { tenantId });
 
     try {
       const { data, error } = await supabase
@@ -103,6 +92,50 @@ function applyThemeTokens(tokens: TenantThemeTokens) {
 }
 
 /**
+ * Convert hex color to HSL format
+ */
+function hexToHSL(hex: string): string {
+  // Remove # if present
+  hex = hex.replace('#', '');
+  
+  // Convert hex to RGB
+  const r = parseInt(hex.substring(0, 2), 16) / 255;
+  const g = parseInt(hex.substring(2, 4), 16) / 255;
+  const b = parseInt(hex.substring(4, 6), 16) / 255;
+
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h = 0;
+  let s = 0;
+  const l = (max + min) / 2;
+
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    
+    switch (max) {
+      case r:
+        h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+        break;
+      case g:
+        h = ((b - r) / d + 2) / 6;
+        break;
+      case b:
+        h = ((r - g) / d + 4) / 6;
+        break;
+    }
+  }
+
+  // Convert to degrees and percentages
+  h = Math.round(h * 360);
+  s = Math.round(s * 100);
+  const lPercent = Math.round(l * 100);
+
+  // Return in Tailwind format: "217 91% 60%"
+  return `${h} ${s}% ${lPercent}%`;
+}
+
+/**
  * Convert color to HSL format if needed
  * Supports: hex, rgb, rgba, hsl formats
  */
@@ -110,19 +143,23 @@ function convertToHSL(color: string): string {
   if (!color) return '';
 
   // Already in HSL format (e.g., "220 13% 91%" or "hsl(220, 13%, 91%)")
-  if (color.includes(' ') && !color.startsWith('hsl') && !color.startsWith('rgb')) {
+  if (color.includes(' ') && !color.startsWith('hsl') && !color.startsWith('rgb') && !color.startsWith('#')) {
     return color;
   }
 
-  // Remove hsl() wrapper if present
+  // Remove hsl() wrapper if present and convert to Tailwind format
   if (color.startsWith('hsl')) {
     const match = color.match(/hsl\(([\\d\\s,%]+)\)/);
     if (match) {
-      return match[1].replace(/,/g, '').replace(/%/g, '%');
+      return match[1].replace(/,/g, '').trim();
     }
   }
 
-  // For hex/rgb colors, we'll keep them as-is and let CSS handle it
-  // In production, you might want to use a color conversion library
+  // Convert hex to HSL
+  if (color.startsWith('#')) {
+    return hexToHSL(color);
+  }
+
+  // For rgb colors, keep as-is (could add rgb-to-hsl conversion if needed)
   return color;
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -487,6 +487,16 @@ function EditContentDialog({
   const [tenantId, setTenantId] = useState(item.tenant_id || 'platform');
   const [isActive, setIsActive] = useState(item.is_active);
   const [saving, setSaving] = useState(false);
+
+  // Sync dialog state whenever a different item is opened
+  useEffect(() => {
+    setTitle(item.title);
+    setCategory(item.category);
+    setContent(item.content_markdown);
+    setKeywords(item.keywords?.join(', ') || '');
+    setTenantId(item.tenant_id || 'platform');
+    setIsActive(item.is_active);
+  }, [item]);
 
   const handleSave = async () => {
     setSaving(true);

@@ -4,13 +4,12 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { useAIMcpChat } from '@/modules/core/ai';
-import { Send, Bot, User, Loader2, Trash2 } from 'lucide-react';
+import { Send, Bot, User, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ExperienceRenderer } from '@/renderer/ExperienceRenderer';
 import type { ExperienceJSON } from '@/renderer/schemas/experience.schema';
@@ -21,13 +20,9 @@ interface AIMcpChatInterfaceProps {
   placeholder?: string;
   title?: string;
   description?: string;
-}
-
-interface BrandColors {
-  primary?: string;
-  accent?: string;
-  surface?: string;
-  textOnSurface?: string;
+  primaryColor?: string;
+  accentColor?: string;
+  fontFamily?: string;
 }
 
 export function AIMcpChatInterface({
@@ -35,27 +30,27 @@ export function AIMcpChatInterface({
   systemPrompt,
   placeholder = "Spør meg om noe...",
   title = "AI Assistent",
-  description = "Med tilgang til plattformens data"
+  description = "Med tilgang til plattformens data",
+  primaryColor,
+  accentColor,
+  fontFamily,
 }: AIMcpChatInterfaceProps) {
   const [input, setInput] = useState('');
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   
-  const { messages, sendMessage, clearMessages, isLoading, error } = useAIMcpChat(
-    tenantId,
-    systemPrompt
-  );
-
-  // Inherit CSS custom properties from parent
-  const cardStyle = {
-    background: 'var(--color-surface, hsl(var(--card)))',
-    color: 'var(--color-text-on-surface, hsl(var(--card-foreground)))',
-  } as React.CSSProperties;
+  const { 
+    messages, 
+    sendMessage, 
+    clearMessages, 
+    isLoading, 
+    error 
+  } = useAIMcpChat(tenantId, systemPrompt);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages]);
 
@@ -75,12 +70,19 @@ export function AIMcpChatInterface({
     if (!input.trim() || isLoading) return;
 
     const message = input.trim();
+    console.info('[AIMcpChat] Sending message', { 
+      tenantId, 
+      messageLength: message.length,
+      timestamp: new Date().toISOString()
+    });
+    
     setInput('');
 
     try {
       await sendMessage(message);
     } catch (err) {
       // Error already handled by hook
+      console.error('[AIMcpChat] Send error:', err);
     }
   };
 
@@ -91,90 +93,60 @@ export function AIMcpChatInterface({
   };
 
   return (
-    <Card 
-      className="h-[80svh] md:h-[65vh] lg:h-[60vh] flex flex-col border-2 overflow-hidden min-h-0" 
-      style={{
-        ...cardStyle,
-        borderColor: 'var(--color-primary, hsl(var(--border)))',
-      }}
-    >
-      <CardHeader 
-        className="border-b-2" 
-        style={{ 
-          borderColor: 'var(--color-primary, hsl(var(--border)))',
-          backgroundColor: 'color-mix(in srgb, var(--color-primary, hsl(var(--primary))) 5%, transparent)',
-        }}
-      >
-        <div className="flex items-center justify-between">
+    <div className="flex h-[calc(100vh-2rem)] max-w-7xl mx-auto bg-surface rounded-lg shadow-lg overflow-hidden">
+      <div className="flex-1 flex flex-col">
+        {/* Header */}
+        <div 
+          className="flex items-center justify-between p-4 border-b border-border"
+          style={{ 
+            backgroundColor: primaryColor || 'hsl(var(--primary))',
+            color: 'white',
+            fontFamily: fontFamily || 'inherit'
+          }}
+        >
           <div>
-            <CardTitle className="flex items-center gap-2" style={{ color: 'var(--color-primary, hsl(var(--primary)))' }}>
-              <Bot className="h-5 w-5" />
-              {title}
-            </CardTitle>
-            {description && (
-              <p className="text-sm mt-1" style={{ color: 'var(--color-text-on-surface, hsl(var(--muted-foreground)))' }}>{description}</p>
-            )}
+            <h1 className="text-xl font-semibold">{title}</h1>
+            {description && <p className="text-sm opacity-90">{description}</p>}
           </div>
-          {messages.length > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={clearMessages}
-              disabled={isLoading}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          )}
+          <Badge variant="secondary" className="bg-white/20 text-white">
+            AI Assistent
+          </Badge>
         </div>
-      </CardHeader>
 
-      <CardContent className="flex-1 min-h-0 p-0 flex flex-col">
-        <ScrollArea ref={scrollRef} className="flex-1 min-h-0 p-4">
-          <div className="space-y-4">
-            {messages.length === 0 && (
-              <div className="text-center text-muted-foreground py-8">
-                <Bot className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                <p>Start en samtale med AI-assistenten</p>
-                <p className="text-xs mt-2">
-                  Den har tilgang til selskaper, prosjekter, oppgaver og applikasjoner
-                </p>
-              </div>
-            )}
-
-            {messages.map((message, idx) => (
+        {/* Messages Area */}
+        <ScrollArea className="flex-1 p-4">
+          {messages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-center">
+              <Bot className="h-16 w-16 text-muted-foreground mb-4" />
+              <h2 className="text-2xl font-semibold mb-2">Velkommen!</h2>
+              <p className="text-muted-foreground max-w-md">
+                Jeg er din AI-assistent med tilgang til bedriftsinformasjon. 
+                Still meg et spørsmål om prosjekter, oppgaver, selskaper eller tjenester.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {messages.map((message, idx) => (
               <div
                 key={idx}
                 className={`flex gap-3 ${
                   message.role === 'user' ? 'justify-end' : 'justify-start'
                 }`}
               >
-                {message.role !== 'user' && (
+              {message.role === 'assistant' && (
                   <div className="flex-shrink-0">
-                    <div 
-                      className="h-8 w-8 rounded-full flex items-center justify-center"
-                      style={{ 
-                        backgroundColor: 'color-mix(in srgb, var(--color-primary, hsl(var(--primary))) 10%, transparent)',
-                        color: 'var(--color-primary, hsl(var(--primary)))'
-                      }}
-                    >
-                      <Bot className="h-4 w-4" />
+                    <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+                      <Bot className="h-5 w-5 text-primary-foreground" />
                     </div>
                   </div>
                 )}
-
+                
                 <div
-                  className="max-w-[80%] rounded-lg px-4 py-2"
-                  style={
+                  className={`rounded-lg p-3 max-w-[80%] ${
                     message.role === 'user'
-                      ? { 
-                          backgroundColor: 'var(--color-primary, hsl(var(--primary)))',
-                          color: '#ffffff'
-                        }
-                      : { 
-                          backgroundColor: 'color-mix(in srgb, var(--color-text-on-surface, hsl(var(--foreground))) 5%, transparent)',
-                          color: 'var(--color-text-on-surface, hsl(var(--foreground)))'
-                        }
-                  }
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted'
+                  }`}
                 >
                   <MessageContent content={message.content} onAction={handleExperienceAction} />
                 </div>
@@ -222,48 +194,26 @@ export function AIMcpChatInterface({
               </div>
             )}
           </div>
+        )}
         </ScrollArea>
 
-        <div 
-          className="border-t-2 p-4"
-          style={{ borderColor: 'var(--color-primary, hsl(var(--border)))' }}
-        >
-          <form onSubmit={handleSubmit} className="flex gap-2">
+        {/* Input Area */}
+        <form onSubmit={handleSubmit} className="p-4 border-t border-border">
+          <div className="flex gap-2">
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder={placeholder}
               disabled={isLoading}
               className="flex-1"
-              style={{
-                borderColor: 'var(--color-primary, hsl(var(--border)))',
-              }}
-              autoFocus
             />
-            <Button 
-              type="submit" 
-              disabled={!input.trim() || isLoading}
-              style={{
-                backgroundColor: 'var(--color-primary, hsl(var(--primary)))',
-                color: '#ffffff',
-              }}
-            >
-              {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
+            <Button type="submit" disabled={!input.trim() || isLoading}>
+              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             </Button>
-          </form>
-          <p 
-            className="text-xs mt-2 text-center" 
-            style={{ color: 'var(--color-text-on-surface, hsl(var(--muted-foreground)))' }}
-          >
-            AI-assistenten har tilgang til MCP tools og kan utføre handlinger
-          </p>
-        </div>
-      </CardContent>
-    </Card>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }
 
@@ -277,6 +227,14 @@ function MessageContent({ content, onAction }: { content: string; onAction?: (ac
   if (experienceMatch) {
     try {
       const experienceData: ExperienceJSON = JSON.parse(experienceMatch[1]);
+      
+      // Apply default layout if missing
+      if (!experienceData.layout) {
+        experienceData.layout = {
+          type: 'stack',
+          gap: 'md'
+        };
+      }
       
       // Apply theme from CSS variables if not already set
       if (!experienceData.theme) {

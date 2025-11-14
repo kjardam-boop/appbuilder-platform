@@ -25,6 +25,15 @@ export const useTenantContext = (): RequestContext | null => {
       try {
         const host = window.location.hostname;
         
+        // Check for tenant override (for multi-tenant on same domain)
+        const urlParams = new URLSearchParams(window.location.search);
+        const tenantSlugOverride = urlParams.get('tenant') || sessionStorage.getItem('tenantOverride');
+        
+        // If override exists, store in sessionStorage for navigation persistence
+        if (urlParams.get('tenant')) {
+          sessionStorage.setItem('tenantOverride', urlParams.get('tenant')!);
+        }
+        
         // Dev mode: fallback to static config if localhost
         const isDev = host === 'localhost' || host.startsWith('127.0.0.1');
         
@@ -69,13 +78,48 @@ export const useTenantContext = (): RequestContext | null => {
           return;
         }
 
-        // Production: resolve from database
-        const tenant = await resolveTenantByHost(host);
+        // Production: resolve from database or override
+        let tenant;
+        let resolveSource = 'domain';
+        
+        if (tenantSlugOverride) {
+          // Fetch tenant by slug override
+          const { data: tenantData, error } = await supabase
+            .from('tenants')
+            .select('*')
+            .eq('slug', tenantSlugOverride)
+            .single();
+          
+          if (tenantData && !error) {
+            tenant = tenantData as any;
+            resolveSource = 'override';
+            console.info('[TenantContext] Using tenant override', { 
+              slug: tenantSlugOverride, 
+              tenantId: tenant.tenant_id,
+              name: tenant.name 
+            });
+          } else {
+            console.warn('[TenantContext] Override slug not found:', tenantSlugOverride);
+            sessionStorage.removeItem('tenantOverride');
+          }
+        }
+        
+        if (!tenant) {
+          tenant = await resolveTenantByHost(host);
+        }
 
         if (!tenant) {
           console.error('[useTenantContext] No tenant found for host:', host);
           return;
         }
+        
+        console.info('[TenantContext] Resolved tenant', { 
+          source: resolveSource,
+          tenantId: tenant.tenant_id,
+          slug: tenant.slug,
+          name: tenant.name,
+          host 
+        });
 
         // Get user's roles for this tenant
         const { data: roles } = await supabase
