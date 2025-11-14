@@ -47,7 +47,9 @@ export default function AIChatApp() {
 
   const isPrimaryDomain = window.location.hostname.includes('jardam.no') || 
                           window.location.hostname.includes('lovableproject.com');
-  const hasOverride = new URLSearchParams(window.location.search).get('tenant') || sessionStorage.getItem('tenantOverride');
+  const hasOverride = new URLSearchParams(window.location.search).get('tenant') 
+                    || sessionStorage.getItem('tenantOverride') 
+                    || localStorage.getItem('tenantOverride');
 
   if (isLoading) {
     return (
