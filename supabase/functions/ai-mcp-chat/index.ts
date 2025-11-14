@@ -313,6 +313,7 @@ async function executeMcpTool(
           .from('companies')
           .select('*')
           .eq('id', args.id)
+          .eq('tenant_id', tenantId)
           .maybeSingle();
         
         if (companyError) throw companyError;
@@ -736,6 +737,39 @@ serve(async (req) => {
     // Get tenant-specific AI configuration
     const tenantAIConfig = await getTenantAIConfig(tenantId, supabaseClient);
     const aiClientConfig = getAIProviderClient(tenantAIConfig?.config || null, LOVABLE_API_KEY);
+
+    // Best-effort: derive a primary company for this tenant to ground ambiguous queries like "hvem jobber her?"
+    let primaryCompany: any = null;
+    let primaryContacts: string[] = [];
+    try {
+      const { data: candidateCompany } = await supabaseClient
+        .from('companies')
+        .select('id, name, website')
+        .eq('tenant_id', tenantId)
+        .ilike('name', `${tenantData?.name || ''}%`)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      primaryCompany = candidateCompany;
+
+      if (primaryCompany?.id) {
+        const { data: meta } = await supabaseClient
+          .from('company_metadata')
+          .select('contact_persons')
+          .eq('company_id', primaryCompany.id)
+          .maybeSingle();
+
+        if (meta?.contact_persons && Array.isArray(meta.contact_persons)) {
+          primaryContacts = meta.contact_persons
+            .map((p: any) => p?.name || p?.full_name)
+            .filter(Boolean)
+            .slice(0, 8);
+        }
+      }
+    } catch (_err) {
+      // best-effort only; proceed without primary company context
+    }
     
     console.log('========================================');
     console.log('🔍 AI-MCP-CHAT DEBUG');
@@ -746,6 +780,10 @@ serve(async (req) => {
     console.log(`📌 AI Provider: ${aiClientConfig.provider}`);
     console.log(`📌 AI Model: ${aiClientConfig.model}`);
     console.log(`📌 Message Count: ${messages.length}`);
+    if (primaryCompany) {
+      console.log(`📌 Primary Company: ${primaryCompany.name} (${primaryCompany.id})`);
+      console.log(`📌 Contacts (cached): ${primaryContacts.join(', ') || 'none'}`);
+    }
     console.log('========================================');
 
     const startTime = Date.now(); // Track request duration
