@@ -76,13 +76,12 @@ export default function OpportunityDetails() {
 
   if (loading) {
     return (
-      <div 
-      <AppBreadcrumbs levels={[
-  { label: "Dashboard", href: "/dashboard" },
-  { label: "Opportunities", href: "/opportunities" },
-  { label: "Details" }
-]} />
-      className="container mx-auto p-6 space-y-6">
+      <div className="container mx-auto p-6 space-y-6">
+        <AppBreadcrumbs levels={[
+          { label: "Dashboard", href: "/dashboard" },
+          { label: "Opportunities", href: "/opportunities" },
+          { label: "Details" }
+        ]} />
         <Skeleton className="h-12 w-64" />
         <Skeleton className="h-64" />
       </div>
