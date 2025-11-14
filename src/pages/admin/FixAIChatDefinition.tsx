@@ -44,34 +44,25 @@ export default function FixAIChatDefinition() {
   const fixRecord = async () => {
     setIsFixing(true);
     try {
-      // First delete any existing record
-      await supabase
-        .from('app_definitions')
-        .delete()
-        .eq('key', 'ai-chat');
-
-      // Insert the record
-      const { data, error } = await supabase
-        .from('app_definitions')
-        .insert({
-          key: 'ai-chat',
-          name: 'AI Chat Assistent',
-          app_type: 'platform',
-          icon_name: 'Bot',
-          description: 'Intelligent AI-assistent med tilgang til plattformens data via MCP-verktøy. Kan hjelpe med selskaper, prosjekter, oppgaver og mer.',
-          domain_tables: ['ai_usage_logs', 'ai_policies', 'ai_app_content_library'],
-          shared_tables: ['companies', 'projects', 'tasks', 'external_systems'],
-          is_active: true,
-          schema_version: '1.0.0'
-        })
-        .select()
-        .single();
+      // Call the edge function to create the definition
+      // This uses service_role key to bypass RLS
+      const { data: result, error } = await supabase.functions.invoke(
+        'create-ai-chat-definition',
+        {
+          body: {}
+        }
+      );
 
       if (error) throw error;
 
-      setStatus('exists');
-      setRecordData(data);
-      toast.success('AI Chat definition created successfully!');
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to create definition');
+      }
+
+      // Refresh the check to get the newly created record
+      await checkRecord();
+      
+      toast.success(result.message || 'AI Chat definition created successfully!');
     } catch (error: any) {
       console.error('Fix error:', error);
       toast.error('Failed to create record', {
