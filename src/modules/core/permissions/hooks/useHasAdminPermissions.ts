@@ -14,17 +14,26 @@ export const useHasAdminPermissions = () => {
   const { data: hasAdminAccess, isLoading } = useQuery({
     queryKey: ['has-admin-access', user?.id],
     queryFn: async () => {
-      if (!user?.id) return false;
+      console.log('[useHasAdminPermissions] Starting check for user:', user?.id);
+      
+      if (!user?.id) {
+        console.log('[useHasAdminPermissions] No user ID, returning false');
+        return false;
+      }
 
+      console.log('[useHasAdminPermissions] Calling RPC...');
       const { data, error } = await supabase.rpc('user_has_admin_access', {
         p_user_id: user.id
       });
 
+      console.log('[useHasAdminPermissions] RPC response:', { data, error });
+
       if (error) {
-        console.error('Error checking admin access:', error);
+        console.error('[useHasAdminPermissions] Error:', error);
         return false;
       }
 
+      console.log('[useHasAdminPermissions] Final result:', data === true);
       return data === true;
     },
     enabled: !!user?.id,

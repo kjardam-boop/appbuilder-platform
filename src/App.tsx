@@ -24,6 +24,7 @@ import AppAdminSidebar from "@/components/admin/AppAdminSidebar";
 import { PermissionProtectedRoute } from "@/components/admin/PermissionProtectedRoute";
 import { getRoutePermission } from "@/config/adminNavigation";
 import { TenantContextIndicator } from "@/components/admin/TenantContextIndicator";
+import { TenantSwitcher } from "@/components/tenant/TenantSwitcher";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminBootstrap from "./pages/admin/AdminBootstrap";
 import ApplicationCreate from "./pages/admin/ApplicationCreate";
@@ -115,6 +116,13 @@ function GlobalLayout({ children }: { children: React.ReactNode }) {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   
+  console.log('[GlobalLayout] Render state:', {
+    hasAdminAccess,
+    isLoading,
+    userId: user?.id,
+    userEmail: user?.email
+  });
+  
   const handleSignOut = async () => {
     try {
       await signOut();
@@ -145,6 +153,7 @@ function GlobalLayout({ children }: { children: React.ReactNode }) {
           <div className="flex h-14 items-center px-4">
             <SidebarTrigger className="-ml-1" />
             <div className="flex-1 flex items-center justify-end gap-3 px-4">
+              <TenantSwitcher />
               <TenantContextIndicator />
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Shield className="h-4 w-4" />
