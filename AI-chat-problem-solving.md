@@ -2067,56 +2067,805 @@ git push  # Trigger redeploy
 
 ---
 
-## 💬 Questions for Lovable Before Implementation
+## 💬 Lovables Svar på Clauds Spørsmål
 
-1. **Theme Variable**: Hvor hentes `theme` fra før system prompt? Må det legges til?
+### 1. Theme Variable
+**Spørsmål**: Hvor hentes `theme` fra før system prompt? Må det legges til?
 
-2. **System Prompt Length**: OK med kortere versjon (50% mindre tokens)?
+**Svar**: ✅ **JA, må legges til!** Theme er ikke hentet før system prompt. Vil legge til theme-henting i **Fase 2.1** (før system prompt defineres).
 
-3. **Tool Descriptions**: Trenger vi full JSON.stringify eller holder navn-liste?
+```typescript
+// Hent tenant theme før system prompt
+const { data: tenantTheme } = await supabaseClient
+  .from('tenant_themes')
+  .select('tokens')
+  .eq('tenant_id', tenantId)
+  .eq('is_active', true)
+  .maybeSingle();
 
-4. **Timeline**: Er 2 timer for P0 realistisk gitt deployment verification kan ta tid hvis funksjon ikke er deployet?
-
-5. **Post-Deploy**: Hvem monitorer KPIs etter deploy? Skal vi sette opp alerts?
-
----
-
-## ✅ Claude's Recommendations Summary
-
-| Item | Priority | Lovable Action Required |
-|------|----------|-------------------------|
-| 1. Shorten system prompt | P1 | Consider reducing from 3→2 examples |
-| 2. Fix theme injection | P0 | Add theme fetch before system prompt |
-| 3. Simplify tool list | P1 | Use names only, not full JSON |
-| 4. Improve logging instructions | P2 | Use code markers instead of line nums |
-| 5. Add 2 more tests | P1 | Rate limit + large response tests |
-| 6. Add monitoring query | P1 | SQL query for dashboard |
-| 7. Clarify rollback | P2 | More detailed steps |
-
-**None of these are blockers - plan kan implementeres som den er!**
+const theme = tenantTheme?.tokens || { 
+  primary: '#0066CC', 
+  accent: '#FF6B00' 
+};
+```
 
 ---
 
-## 🎯 Final Verdict
+### 2. System Prompt Length
+**Spørsmål**: OK med kortere versjon (50% mindre tokens)?
 
-**Lovables plan: 9.5/10** ⭐⭐⭐⭐⭐
-
-**Minor concerns = alle P1/P2, ingen P0 blockers.**
-
-**Jeg anbefaler:**
-1. ✅ Implementer Fase 1-3 akkurat som beskrevet (P0 items)
-2. 🤔 Diskuter mine spørsmål om theme og prompt length før deploy
-3. ✅ Implementer Fase 4-5 (P1 items)
-4. ⏳ Vurder Fase 6 (P2) basert på resultater
-
-**Confidence i suksess:** 
-- Med mine minor tweaks: **98%**
-- Uten tweaks: **95%**
-
-**Klar for implementering!** 🚀
+**Svar**: ✅ **JA, forkorter!** Enig i at 3 fullstendige eksempler er overkill. Vil bruke:
+- **1 grundig eksempel** (enkelt card-svar)
+- **2 kompakte eksempler** (liste + tabell)
+- Totalt ~60 linjer i stedet for ~120 linjer
+- Sparer ~500 tokens per request
 
 ---
 
-## Next Action for Lovable
+### 3. Tool Descriptions
+**Spørsmål**: Trenger vi full JSON.stringify eller holder navn-liste?
 
-Vennligst svar på de 5 spørsmålene over, så kan vi finalize implementeringsplanen og starte!
+**Svar**: ✅ **Navn-liste holder!** AI får allerede full tool description via `tools` parameter i API call. I system prompt holder det med:
+
+```typescript
+**Tilgjengelige MCP Tools:**
+${MCP_TOOLS.map(t => `- ${t.function.name}`).join('\n')}
+```
+
+Dette sparer 50-100 tokens per request.
+
+---
+
+### 4. Timeline Realistisk?
+**Spørsmål**: Er 2 timer for P0 realistisk?
+
+**Svar**: ⚠️ **Justerer til 2.5 timer for P0**
+- Deployment verification kan ta 15-20 min hvis edge function ikke er deployet
+- Testing tar mer tid enn estimert (30 min → 45 min)
+- Buffer for debugging
+
+**Justert timeline:**
+- P0: ~2.5 timer (inkl. deployment troubleshooting)
+- P0 + P1: ~4.5 timer
+- Full implementering: ~6 timer
+
+---
+
+### 5. KPI Monitoring
+**Spørsmål**: Hvem monitorer KPIs etter deploy? Alerts?
+
+**Svar**: ✅ **Vil sette opp dashboard + manual monitoring**
+- **Dashboard**: Supabase Analytics med SQL query fra Clauds forslag
+- **Manual check**: Daglig første uke, deretter ukentlig
+- **Alerts**: Vurderes hvis error_rate > 5% (P2 priority)
+
+---
+
+## ✅ Revidert Implementeringsplan (Med Clauds Tweaks)
+
+### **FASE 1: Debugging & Diagnostics** (~30 min)
+
+#### 1.1 Verifiser Edge Function Deployment (P0) [10 min]
+**Mål**: Bekreft at `ai-mcp-chat` edge function er deployet og kjører
+
+**Steg:**
+1. Åpne Lovable Cloud → Backend → Edge Functions
+2. Sjekk at `ai-mcp-chat` vises i listen
+3. Sjekk status (skal være "Active")
+4. Test deploy med dummy call:
+   ```bash
+   curl -X POST https://lunsgsyeaqnalpdbkhyg.supabase.co/functions/v1/ai-mcp-chat \
+     -H "Authorization: Bearer [ANON_KEY]" \
+     -H "Content-Type: application/json" \
+     -d '{"messages": [{"role": "user", "content": "test"}], "tenantId": "test"}'
+   ```
+
+**Hvis ikke deployet:**
+- Lovable deployer automatisk når koden pushes
+- Vent 2-3 min etter siste kode-endring
+- Sjekk deployment logs i Lovable
+
+**Success criteria:**
+- ✅ Function finnes i Edge Functions liste
+- ✅ Status = Active
+- ✅ Curl returnerer 200/400 (ikke 404/502)
+
+---
+
+#### 1.2 Sjekk Supabase Logs (P0) [10 min]
+**Mål**: Finn feilmeldinger i edge function logs
+
+**Steg:**
+1. Lovable Cloud → Backend → Edge Functions → `ai-mcp-chat`
+2. Klikk "Logs" tab
+3. Send test-melding fra chat interface
+4. Se etter:
+   - ✅ Request kommer inn (ser `🔵 [AI-MCP] Request received`)
+   - ✅ Tool calls (ser `🔧 [TOOL CALL]`)
+   - ✅ Response sendt (ser `✅ [AI-MCP] Response sent`)
+   - ❌ Errors (ser `❌ [ERROR]`)
+
+**Viktige log patterns å lete etter:**
+```
+// God request flow:
+🔵 [AI-MCP] Request received | tenantId: xxx
+🔧 [TOOL CALL] list_companies | result: 5 items
+✅ [AI-MCP] Response sent | tokens: 1234
+
+// Dårlig request flow (mangler response):
+🔵 [AI-MCP] Request received | tenantId: xxx
+❌ [ERROR] Failed to parse AI response
+```
+
+**Success criteria:**
+- ✅ Kan se requests i logs
+- ✅ Kan identifisere failure point
+
+---
+
+#### 1.3 Legg til Frontend Debug Logging (P0) [10 min]
+**Mål**: Se hva som FAKTISK returneres fra edge function
+
+**Fil**: `src/modules/core/ai/hooks/useAIMcpChat.ts`
+
+**Endring 1 - Før invoke (line ~44):**
+```typescript
+// 🚀 [ADD LOGGING HERE - BEFORE INVOKE]
+console.group('🚀 AI Chat Request');
+console.log('📌 Function:', 'ai-mcp-chat');
+console.log('📋 Messages:', updatedMessages.length);
+console.log('🏢 Tenant:', tenantId);
+console.log('🕐 Timestamp:', new Date().toISOString());
+console.groupEnd();
+
+const { data, error: invokeError } = await supabase.functions.invoke<AIMcpChatResponse>(
+  'ai-mcp-chat',
+  { body: request }
+);
+```
+
+**Endring 2 - Etter invoke (line ~54):**
+```typescript
+// 📥 [ADD LOGGING HERE - AFTER INVOKE]
+console.group('📥 AI Chat Response');
+console.log('Success:', !invokeError);
+if (invokeError) {
+  console.error('❌ Invoke Error:', invokeError);
+}
+if (data) {
+  console.log('✅ Data received:', {
+    hasResponse: !!data.response,
+    responseLength: data.response?.length,
+    tokensUsed: data.tokensUsed,
+    toolCallsMade: data.toolCallsMade,
+    responsePreview: data.response?.substring(0, 200)
+  });
+  
+  // 🔍 CRITICAL: Log RAW response for debugging
+  console.log('🔍 RAW Response:', data.response);
+  
+  // Try to parse as ExperienceJSON
+  try {
+    const match = data.response.match(/```experience-json\n([\s\S]*?)\n```/);
+    if (match) {
+      const json = JSON.parse(match[1]);
+      console.log('✅ Valid ExperienceJSON:', json);
+    } else {
+      console.warn('⚠️ No ExperienceJSON block found');
+    }
+  } catch (e) {
+    console.error('❌ Failed to parse ExperienceJSON:', e);
+  }
+}
+console.groupEnd();
+```
+
+**Success criteria:**
+- ✅ Ser full raw response i console
+- ✅ Kan identifisere om response er ExperienceJSON eller plaintext
+
+---
+
+### **FASE 2: Fix System Prompt** (~60 min total)
+
+#### 2.1 Hent Theme Før System Prompt (P0) [15 min] ⭐ **NYTT (Claude)**
+**Mål**: Fikse theme injection issue
+
+**Fil**: `supabase/functions/ai-mcp-chat/index.ts`
+
+**Legg til RETT FØR system prompt definition (~line 790):**
+```typescript
+// ⭐ Fetch tenant theme for branding
+let theme = { primary: '#0066CC', accent: '#FF6B00' }; // defaults
+const { data: tenantTheme } = await supabaseClient
+  .from('tenant_themes')
+  .select('tokens')
+  .eq('tenant_id', tenantId)
+  .eq('is_active', true)
+  .maybeSingle();
+
+if (tenantTheme?.tokens) {
+  theme = {
+    primary: tenantTheme.tokens.primary || theme.primary,
+    accent: tenantTheme.tokens.accent || theme.accent
+  };
+}
+
+console.log('🎨 Theme loaded:', theme);
+```
+
+**Success criteria:**
+- ✅ `theme` definert før system prompt
+- ✅ Fungerer selv om tenant_themes tabell er tom
+
+---
+
+#### 2.2 Erstatt System Prompt (P0) [45 min] ⭐ **FORKORTET (Claude)**
+**Mål**: Tvinge AI til å ALLTID returnere ExperienceJSON
+
+**Fil**: `supabase/functions/ai-mcp-chat/index.ts`
+
+**Finn linje ~803 (current system prompt):**
+```typescript
+const defaultSystemPrompt = `Du er en intelligent AI-assistent for ${tenantData?.name || 'Lovenest'}.`;
+```
+
+**Erstatt med FORKORTET versjon:**
+```typescript
+const defaultSystemPrompt = `Du er AI-assistent for ${tenantData?.name || 'Lovenest'}.
+
+**🔒 SIKKERHET:**
+- Kun data for tenant_id = "${tenantId}"
+- Bruk MCP tools for å hente data (IKKE halluciner data!)
+
+**📋 OBLIGATORISK RESPONSE FORMAT:**
+⚠️ ALLE svar MÅ være ExperienceJSON wrapped i \`\`\`experience-json blokk.
+⚠️ Selv feilmeldinger og enkle svar MÅ være ExperienceJSON!
+
+**ExperienceJSON Struktur:**
+\`\`\`experience-json
+{
+  "version": "1.0",
+  "theme": {
+    "primary": "${theme.primary}",
+    "accent": "${theme.accent}"
+  },
+  "layout": {
+    "type": "stack",
+    "gap": "md",
+    "padding": "lg"
+  },
+  "blocks": [
+    // dine blocks her (card, cards.list, table, flow, etc.)
+  ]
+}
+\`\`\`
+
+**Block Types:**
+- **card**: Enkelt tekstsvar (headline, body, footer)
+- **cards.list**: Liste av items (selskaper, prosjekter, oppgaver)
+- **table**: Tabelldata med columns + rows
+- **flow**: Prosess-steg (start → middle → end)
+
+**Eksempel 1 - Enkelt Svar:**
+User: "Hva er 2+2?"
+Response:
+\`\`\`experience-json
+{
+  "version": "1.0",
+  "theme": {"primary": "${theme.primary}", "accent": "${theme.accent}"},
+  "layout": {"type": "stack", "gap": "md"},
+  "blocks": [{
+    "type": "card",
+    "headline": "Resultat",
+    "body": "2 + 2 = 4"
+  }]
+}
+\`\`\`
+
+**Eksempel 2 - Liste (kompakt):**
+User: "List selskaper"
+→ Call \`list_companies\` tool
+→ Return:
+\`\`\`experience-json
+{
+  "version": "1.0",
+  "theme": {...},
+  "layout": {"type": "stack", "gap": "md"},
+  "blocks": [{
+    "type": "cards.list",
+    "headline": "Selskaper (5)",
+    "items": [
+      {"title": "Acme AS", "description": "Org: 123456789", "metadata": {"employees": 50}},
+      ...
+    ]
+  }]
+}
+\`\`\`
+
+**Eksempel 3 - Tabell (kompakt):**
+User: "Vis selskaper i tabell"
+\`\`\`experience-json
+{
+  "blocks": [{
+    "type": "table",
+    "headline": "Selskaper",
+    "columns": ["Navn", "Org.nr", "Ansatte"],
+    "rows": [["Acme AS", "123456789", "50"], ...]
+  }]
+}
+\`\`\`
+
+**Tilgjengelige MCP Tools:**
+${MCP_TOOLS.map(t => `- ${t.function.name}`).join('\n')}
+
+**VIKTIG:**
+- Bruk tools for data (ikke gitt!)
+- Selv "Jeg fant ingen data" må være ExperienceJSON card
+- Selv feilmeldinger må være ExperienceJSON med type: "error"
+
+**DO:**
+✅ Alltid wrapper i \`\`\`experience-json
+✅ Valider JSON syntax før sending
+✅ Bruk riktig block type for data type
+
+**DON'T:**
+❌ Aldri send plaintext uten ExperienceJSON wrapper
+❌ Aldri send markdown uten ExperienceJSON wrapper
+❌ Aldri send JSON uten \`\`\`experience-json wrapper`;
+```
+
+**Hva er endret fra original:**
+- ✅ Redusert fra 3 fullstendige → 1 fullstendig + 2 kompakte eksempler
+- ✅ Forkortet fra ~120 linjer → ~80 linjer (~50% reduksjon)
+- ✅ Tool descriptions fjernet (kun navn-liste)
+- ✅ Theme injection fikset
+- ✅ Beholder all kritisk info (format, eksempler, rules)
+
+**Success criteria:**
+- ✅ System prompt < 1000 tokens
+- ✅ Theme variables definert
+- ✅ Tool list kun navn (ikke descriptions)
+
+---
+
+### **FASE 3: Backend Fallback Mechanism** (~30 min)
+
+#### 3.1 Legg til Safety Net (P0) [20 min]
+**Mål**: Hvis AI likevel sender plaintext, wrapper det i ExperienceJSON
+
+**Fil**: `supabase/functions/ai-mcp-chat/index.ts`
+
+**Finn linje ~950 (før return statement):**
+```typescript
+return new Response(
+  JSON.stringify({
+    response: aiResponse,
+    tokensUsed,
+    toolCallsMade
+  }),
+  { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+);
+```
+
+**Erstatt med:**
+```typescript
+// ⚠️ Safety net: Ensure response is ALWAYS ExperienceJSON
+let finalResponse = aiResponse;
+const hasExperienceJSON = /```experience-json[\s\S]*?```/.test(aiResponse);
+
+if (!hasExperienceJSON) {
+  console.warn('⚠️ [FALLBACK] AI returned non-ExperienceJSON, wrapping...');
+  console.log('Original response:', aiResponse);
+  
+  // Wrapper plaintext/markdown i en basic card
+  finalResponse = `\`\`\`experience-json
+{
+  "version": "1.0",
+  "theme": {
+    "primary": "${theme.primary}",
+    "accent": "${theme.accent}"
+  },
+  "layout": {
+    "type": "stack",
+    "gap": "md"
+  },
+  "blocks": [{
+    "type": "card",
+    "headline": "Svar",
+    "body": ${JSON.stringify(aiResponse)}
+  }]
+}
+\`\`\``;
+}
+
+return new Response(
+  JSON.stringify({
+    response: finalResponse,
+    tokensUsed,
+    toolCallsMade,
+    fallbackApplied: !hasExperienceJSON // ⭐ Track for monitoring
+  }),
+  { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+);
+```
+
+**Success criteria:**
+- ✅ Alle responses blir ExperienceJSON (enten fra AI eller fallback)
+- ✅ Fallback logges for monitoring
+
+---
+
+#### 3.2 Frontend Fallback Warning (P1) [10 min]
+**Mål**: Varsle utviklere hvis fallback brukes (for debugging)
+
+**Fil**: `src/modules/core/ai/components/AIMcpChatInterface.tsx`
+
+**Legg til i useEffect som håndterer responses (~line 120):**
+```typescript
+useEffect(() => {
+  if (lastResponse && lastResponse.fallbackApplied) {
+    console.warn('⚠️ Backend fallback was applied - AI did not return proper ExperienceJSON');
+    // Optional: Show toast for developers
+    // toast.warning('AI response was reformatted by backend');
+  }
+}, [lastResponse]);
+```
+
+**Success criteria:**
+- ✅ Kan se i console når fallback brukes
+
+---
+
+### **FASE 4: Enhanced Logging & Monitoring** (~30 min) ⭐ **UTVIDET (Claude)**
+
+#### 4.1 Backend Logging Enhancement (P1) [15 min]
+**Fil**: `supabase/functions/ai-mcp-chat/index.ts`
+
+**Legg til etter AI response (~line 940):**
+```typescript
+// 📊 Log metrics for monitoring
+console.log('📊 [METRICS]', {
+  timestamp: new Date().toISOString(),
+  tenantId,
+  messageCount: messages.length,
+  tokensUsed,
+  toolCallsMade,
+  hasExperienceJSON,
+  fallbackApplied: !hasExperienceJSON,
+  responseLength: aiResponse.length,
+  model: 'google/gemini-2.5-flash'
+});
+```
+
+---
+
+#### 4.2 Monitoring Dashboard (P1) [15 min] ⭐ **NYTT (Claude)**
+**Mål**: Sett opp SQL query for monitoring i Supabase
+
+**Opprett ny query i Supabase SQL Editor:**
+```sql
+-- AI Chat Health Monitor
+-- Run this daily første uke, ukentlig deretter
+
+SELECT 
+  DATE(created_at) as date,
+  COUNT(*) as total_requests,
+  COUNT(*) FILTER (WHERE status = 'success') as successful,
+  COUNT(*) FILTER (WHERE status = 'error') as errors,
+  COUNT(*) FILTER (WHERE metadata->>'fallback_applied' = 'true') as fallback_used,
+  ROUND(AVG(request_duration_ms)) as avg_duration_ms,
+  ROUND(AVG(total_tokens)) as avg_tokens,
+  ROUND(SUM(cost_estimate), 2) as total_cost
+FROM ai_usage_logs
+WHERE endpoint = 'ai-mcp-chat'
+  AND created_at >= NOW() - INTERVAL '7 days'
+GROUP BY DATE(created_at)
+ORDER BY date DESC;
+```
+
+**Alert thresholds:**
+- ⚠️ `errors / total_requests > 0.05` (5% error rate)
+- ⚠️ `fallback_used / total_requests > 0.10` (10% fallback rate)
+- ⚠️ `avg_duration_ms > 5000` (5+ sekunder response time)
+
+---
+
+### **FASE 5: Testing & Validation** (~45 min) ⭐ **UTVIDET (Claude)**
+
+**Test Suite** (kjør alle etter deployment):
+
+**Test 1: Enkelt Spørsmål (P0)** [5 min]
+```
+Input: "Hva er 2+2?"
+Forventet:
+- ✅ Response inneholder ```experience-json
+- ✅ Valid JSON parsing
+- ✅ blocks[0].type === 'card'
+- ✅ Svaret "4" finnes i body
+```
+
+**Test 2: List MCP Tool (P0)** [5 min]
+```
+Input: "List alle selskaper"
+Forventet:
+- ✅ Tool call til list_companies
+- ✅ Response inneholder ```experience-json
+- ✅ blocks[0].type === 'cards.list'
+- ✅ items array inneholder selskaper
+```
+
+**Test 3: Table Format (P0)** [5 min]
+```
+Input: "Vis selskaper i tabell"
+Forventet:
+- ✅ Response inneholder ```experience-json
+- ✅ blocks[0].type === 'table'
+- ✅ columns og rows definert
+```
+
+**Test 4: Error Handling (P0)** [5 min]
+```
+Input: "Hent selskap med ID som ikke eksisterer"
+Forventet:
+- ✅ Response FORTSATT ```experience-json
+- ✅ card med type: 'error' eller friendly error message
+- ✅ Ikke crash
+```
+
+**Test 5: Fallback Trigger (P1)** [10 min]
+```
+Test: Midlertidig fjern system prompt constraints
+Forventet:
+- ✅ Backend wrapper response i ExperienceJSON
+- ✅ fallbackApplied === true i response
+- ✅ Frontend viser data korrekt
+- ✅ Console warning vises
+```
+
+**Test 6: Complex Conversation (P1)** [5 min]
+```
+Input: Multi-turn conversation
+- "Hei" → card svar
+- "List selskaper" → cards.list
+- "Takk" → card svar
+Forventet:
+- ✅ ALLE responses er ExperienceJSON
+- ✅ Conversation history fungerer
+```
+
+**Test 7: Rate Limit Handling (P1)** [5 min] ⭐ **NYTT (Claude)**
+```
+Input: Send 10 requests raskt etter hverandre
+Forventet:
+- ✅ Første N requests OK (200)
+- ✅ Rate limit hit returnerer 429
+- ✅ Error message er ExperienceJSON card
+- ✅ Frontend viser brukervennlig melding
+```
+
+**Test 8: Large Response Handling (P1)** [5 min] ⭐ **NYTT (Claude)**
+```
+Input: "Generer en detaljert rapport om alle selskaper"
+Forventet:
+- ✅ Response < 10 sekunder
+- ✅ ExperienceJSON valid selv med 10+ blocks
+- ✅ Frontend renderer uten lag
+- ✅ Ikke over token limit
+```
+
+**Success Criteria for Test Suite:**
+- ✅ 8/8 tests pass
+- ✅ 0 plaintext responses
+- ✅ 0 JSON parse errors
+
+---
+
+### **FASE 6: Rollout & Verification** (~20 min) ⭐ **UTVIDET (Claude)**
+
+#### 6.1 Pre-Deploy Checklist (P0) [5 min]
+- [ ] System prompt oppdatert med theme injection
+- [ ] Backend fallback implementert
+- [ ] Frontend logging aktivert
+- [ ] Test suite kjørt lokalt
+
+#### 6.2 Deploy (P0) [5 min]
+1. Commit changes til Git
+2. Lovable auto-deployer edge function
+3. Vent 2-3 min for deployment
+4. Verifiser deployment:
+   ```bash
+   curl -X POST https://lunsgsyeaqnalpdbkhyg.supabase.co/functions/v1/ai-mcp-chat \
+     -H "Authorization: Bearer [ANON_KEY]" \
+     -H "Content-Type: application/json" \
+     -d '{"messages": [{"role": "user", "content": "test"}], "tenantId": "test"}'
+   ```
+
+#### 6.3 Post-Deploy Verification (P0) [10 min]
+1. **Functional Test** [5 min]
+   - Send test melding i chat interface
+   - Verifiser ExperienceJSON response
+   - Sjekk console logs
+   - Sjekk Supabase edge function logs
+
+2. **Monitoring Setup** [5 min] ⭐ **NYTT (Claude)**
+   - Kjør SQL monitoring query
+   - Bookmark query i Supabase
+   - Sett reminder for daglig check første uke
+
+3. **Smoke Test** [2 min]
+   - Test alle 8 test cases raskt
+   - Verifiser ingen regressions
+
+---
+
+## 📊 Success Metrics
+
+### Before Implementation:
+- ❌ ~50% responses er plaintext (ikke ExperienceJSON)
+- ❌ Ingen fallback mechanism
+- ❌ Begrenset logging
+- ❌ Ingen monitoring
+
+### After Implementation (Target):
+- ✅ 100% responses er ExperienceJSON (via AI eller fallback)
+- ✅ < 10% fallback rate (målet er AI lærer å følge regler)
+- ✅ Full request/response logging synlig i console
+- ✅ Edge function logs synlig i Supabase
+- ✅ Monitoring dashboard med KPIs
+- ✅ < 5% error rate
+- ✅ < 5s avg response time
+
+---
+
+## 🚨 Monitoring KPIs (Post-Deploy)
+
+Track these metrics daglig første uke, deretter ukentlig:
+
+1. **experienceJSON_rate**: `(responses with ```experience-json) / total_responses`
+   - Target: > 90% (via AI, ikke fallback)
+   - Alert if: < 80%
+
+2. **fallback_rate**: `fallback_applied / total_responses`
+   - Target: < 10%
+   - Alert if: > 20%
+
+3. **tool_call_count**: Antall MCP tool calls per request
+   - Target: 0.3-0.5 avg (ikke alle requests trenger tools)
+   - Alert if: > 2 (kan indikere ineffektiv prompting)
+
+4. **response_time_p95**: 95th percentile response time
+   - Target: < 5 sekunder
+   - Alert if: > 10 sekunder
+
+5. **error_rate**: `errors / total_requests`
+   - Target: < 5%
+   - Alert if: > 10%
+
+---
+
+## 🔄 Rollback Plan
+
+**Hvis implementeringen feiler:**
+
+### Level 1: Edge Function Ikke Starter (P0)
+```bash
+# 1. Check Lovable deployment logs
+lovable logs functions/ai-mcp-chat --tail
+
+# 2. Hvis syntax error, fix lokalt:
+deno check supabase/functions/ai-mcp-chat/index.ts
+
+# 3. Hvis config issue:
+# Check supabase/config.toml har:
+[functions.ai-mcp-chat]
+verify_jwt = false
+
+# 4. Hvis alt feiler:
+git log supabase/functions/ai-mcp-chat/index.ts
+git revert <last-working-commit>
+git push  # Trigger redeploy
+```
+
+### Level 2: Funksjon Deployet Men Feiler (P1)
+```bash
+# 1. Disable fallback midlertidig (for å se raw AI responses)
+# Comment out fallback code i index.ts
+
+# 2. Test med ulike prompts for å identifisere pattern
+
+# 3. Juster system prompt basert på findings
+```
+
+### Level 3: Performance Issues (P2)
+```bash
+# 1. Sjekk ai_usage_logs for slow requests
+SELECT * FROM ai_usage_logs 
+WHERE request_duration_ms > 10000 
+ORDER BY created_at DESC LIMIT 10;
+
+# 2. Vurder model downgrade (flash-lite i stedet for flash)
+
+# 3. Reduser system prompt length ytterligere
+```
+
+---
+
+## ⏱️ Justert Timeline Estimate
+
+### P0 (Must Have):
+- Fase 1: Debugging (~30 min)
+- Fase 2.1: Theme injection (~15 min)
+- Fase 2.2: System prompt (~45 min)
+- Fase 3.1: Backend fallback (~20 min)
+- Fase 6: Deploy + verify (~20 min)
+- **Total P0: ~2.5 timer** ⭐ **JUSTERT (+30 min buffer)**
+
+### P1 (Should Have):
+- Fase 3.2: Frontend warning (~10 min)
+- Fase 4: Enhanced logging + monitoring (~30 min)
+- Fase 5: Full test suite (~45 min)
+- **Total P0 + P1: ~4.5 timer** ⭐ **JUSTERT (+45 min for testing)**
+
+### P2 (Nice to Have):
+- Advanced monitoring setup (~30 min)
+- Alert configuration (~30 min)
+- Documentation (~30 min)
+- **Total Full Implementation: ~6 timer** ⭐ **JUSTERT (+1.5 timer)**
+
+---
+
+## 🎯 Prioritization Matrix
+
+### P0 - Must Have (Blocker for basic functionality):
+- ✅ Deployment verification
+- ✅ Theme injection fix
+- ✅ System prompt with ExperienceJSON examples
+- ✅ Backend fallback mechanism
+- ✅ Basic testing (Test 1-4)
+
+### P1 - Should Have (Important but not blocking):
+- ✅ Frontend fallback warning
+- ✅ Enhanced logging
+- ✅ Monitoring dashboard SQL
+- ✅ Full test suite (Test 5-8)
+
+### P2 - Nice to Have (Can be added later):
+- ⏳ Advanced monitoring alerts
+- ⏳ Performance optimization
+- ⏳ Documentation updates
+
+---
+
+## 📞 Contact for Issues
+
+- **For Lovable Platform Issues**: Lovable Support
+- **For Implementation Questions**: AI Assistant (Claude)
+- **For Business Logic**: Project Team
+
+---
+
+## ✅ Final Recommendation
+
+**Confidence Level: 98%** ⭐⭐⭐⭐⭐
+
+**Med Clauds tweaks implementert:**
+1. ✅ Theme injection fikset → Eliminerer undefined errors
+2. ✅ System prompt forkortet → 50% mindre tokens, raskere processing
+3. ✅ Tool list simplified → Sparer 50-100 tokens per request
+4. ✅ Testing utvidet → Dekker edge cases (rate limit, large responses)
+5. ✅ Monitoring SQL added → Enkel KPI tracking
+6. ✅ Timeline justert → Mer realistisk med deployment buffer
+
+**Ingen blockers gjenstår - klar for implementering!** 🚀
+
+**Next Steps:**
+1. Start med Fase 1 (Debugging & Diagnostics)
+2. Implementer Fase 2-3 (System Prompt + Fallback)
+3. Deploy og verifiser med Fase 6
+4. Kjør full test suite (Fase 5)
+5. Sett opp monitoring (Fase 4.2)
+
+---
+
+*Dokumentet oppdatert med Clauds analyse og forslag integrert. Alle tweaks er merket med ⭐ for enkel identifikasjon.*
