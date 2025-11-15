@@ -795,38 +795,121 @@ serve(async (req) => {
       .eq('tenant_id', tenantId)
       .single();
 
-    const defaultSystemPrompt = `Du er en intelligent AI-assistent med tilgang til en bedrifts-plattform. 
+    // ⭐ PHASE 2.1: Fetch tenant theme BEFORE defining system prompt
+    const { data: tenantThemeData } = await supabaseClient
+      .from('tenant_themes')
+      .select('tokens')
+      .eq('tenant_id', tenantId)
+      .eq('is_active', true)
+      .maybeSingle();
 
-**KRITISKE REGLER:**
-1. Du MÅ kun vise data der tenant_id = ${tenantId}
-2. Når brukere spør om veiledning, dokumentasjon eller prosesser: BRUK generate_experience-verktøyet FØRST
-3. Hvis du genererer en visuell opplevelse, returner ALLTID ExperienceJSON inni en \`\`\`experience-json kodeblokk
-4. Ikke be om avklaringer når tenant-kontekst er åpenbar
+    const theme = tenantThemeData?.tokens || { 
+      primary: '#0066CC', 
+      accent: '#FF6B00' 
+    };
 
-**Du kan hjelpe brukere med å:**
-- Søke etter og finne informasjon om selskaper, prosjekter og oppgaver (kun for denne tenant)
-- Hente detaljert selskapsinformasjon inkludert kontaktpersoner, metadata og finansiell data
-- Opprette nye prosjekter og oppgaver
-- Generere interaktive veiledninger og dokumentasjon
-- Analysere data og gi anbefalinger
-- Svare på spørsmål om plattformens innhold
-- Hente informasjon fra nettsider og eksterne kilder
+    // ⭐ PHASE 2.2: FORKORTET System Prompt (saves ~500 tokens per request)
+    const defaultSystemPrompt = `Du er AI-assistent for ${tenantData?.name || 'Lovenest'}.
 
-**Viktige verktøy:**
-- Bruk 'generate_experience' for å lage veiledninger, onboarding, FAQ eller prosessdokumentasjon
-- Bruk 'get_company_details' for å hente komplett informasjon om et selskap
-- Bruk 'list_companies' eller 'search_companies' for å finne selskaper (kun denne tenant)
-- Bruk 'list_projects' for å se prosjekter (kun denne tenant)
-- Bruk 'list_applications' for å se tilgjengelige forretningssystemer
-- Bruk 'scrape_website' for å hente informasjon fra nettsider
+**🔒 SIKKERHET:**
+- Kun data for tenant_id = "${tenantId}"
+- Bruk MCP tools for å hente data (IKKE halluciner data!)
 
-**Når du bruker verktøy:**
-- Alltid forklar hva du gjør
-- Bruk norsk språk i svarene dine
-- Vær konsis og presis
-- Hvis du ikke finner noe, si det tydelig
-- Presenter kontaktpersoner og metadata når det er relevant
-- Når du scraper nettsider, oppsummer innholdet på en nyttig måte`;
+**📋 OBLIGATORISK RESPONSE FORMAT:**
+⚠️ ALLE svar MÅ være ExperienceJSON wrapped i \`\`\`experience-json blokk.
+⚠️ Selv feilmeldinger og enkle svar MÅ være ExperienceJSON!
+
+**ExperienceJSON Struktur:**
+\`\`\`experience-json
+{
+  "version": "1.0",
+  "theme": {
+    "primary": "${theme.primary}",
+    "accent": "${theme.accent}"
+  },
+  "layout": {
+    "type": "stack",
+    "gap": "md",
+    "padding": "lg"
+  },
+  "blocks": [
+    // dine blocks her (card, cards.list, table, flow, etc.)
+  ]
+}
+\`\`\`
+
+**Block Types:**
+- **card**: Enkelt tekstsvar (headline, body, footer)
+- **cards.list**: Liste av items (selskaper, prosjekter, oppgaver)
+- **table**: Tabelldata med columns + rows
+- **flow**: Prosess-steg (start → middle → end)
+
+**Eksempel 1 - Enkelt Svar:**
+User: "Hva er 2+2?"
+Response:
+\`\`\`experience-json
+{
+  "version": "1.0",
+  "theme": {"primary": "${theme.primary}", "accent": "${theme.accent}"},
+  "layout": {"type": "stack", "gap": "md"},
+  "blocks": [{
+    "type": "card",
+    "headline": "Resultat",
+    "body": "2 + 2 = 4"
+  }]
+}
+\`\`\`
+
+**Eksempel 2 - Liste (kompakt):**
+User: "List selskaper"
+→ Call \`list_companies\` tool
+→ Return:
+\`\`\`experience-json
+{
+  "version": "1.0",
+  "theme": {...},
+  "layout": {"type": "stack", "gap": "md"},
+  "blocks": [{
+    "type": "cards.list",
+    "headline": "Selskaper (5)",
+    "items": [
+      {"title": "Acme AS", "description": "Org: 123456789", "metadata": {"employees": 50}},
+      ...
+    ]
+  }]
+}
+\`\`\`
+
+**Eksempel 3 - Tabell (kompakt):**
+User: "Vis selskaper i tabell"
+\`\`\`experience-json
+{
+  "blocks": [{
+    "type": "table",
+    "headline": "Selskaper",
+    "columns": ["Navn", "Org.nr", "Ansatte"],
+    "rows": [["Acme AS", "123456789", "50"], ...]
+  }]
+}
+\`\`\`
+
+**Tilgjengelige MCP Tools:**
+${MCP_TOOLS.map(t => '- ' + t.function.name).join('\n')}
+
+**VIKTIG:**
+- Bruk tools for data (ikke gitt!)
+- Selv "Jeg fant ingen data" må være ExperienceJSON card
+- Selv feilmeldinger må være ExperienceJSON med type: "error"
+
+**DO:**
+✅ Alltid wrapper i \`\`\`experience-json
+✅ Valider JSON syntax før sending
+✅ Bruk riktig block type for data type
+
+**DON'T:**
+❌ Aldri send plaintext uten ExperienceJSON wrapper
+❌ Aldri send markdown uten ExperienceJSON wrapper
+❌ Aldri send JSON uten \`\`\`experience-json wrapper`;
 
     const effectiveSystemPrompt = systemPrompt || defaultSystemPrompt;
 
@@ -1000,13 +1083,59 @@ serve(async (req) => {
       choice = aiData.choices?.[0];
     }
 
-    const finalResponse = choice?.message?.content || 'Ingen respons fra AI';
+    let aiResponse = choice?.message?.content || 'Ingen respons fra AI';
+
+    // ⭐ PHASE 3.1: Backend Fallback - Ensure ALWAYS ExperienceJSON
+    const hasExperienceJSON = /```experience-json[\s\S]*?```/.test(aiResponse);
+    let fallbackApplied = false;
+
+    if (!hasExperienceJSON) {
+      console.warn('⚠️ [FALLBACK] AI returned non-ExperienceJSON, wrapping...');
+      console.log('Original response length:', aiResponse.length);
+      
+      // Wrapper plaintext/markdown i en basic card
+      const fallbackJSON = {
+        version: "1.0",
+        theme: {
+          primary: theme.primary,
+          accent: theme.accent
+        },
+        layout: {
+          type: "stack",
+          gap: "md"
+        },
+        blocks: [{
+          type: "card",
+          headline: "Svar",
+          body: aiResponse
+        }]
+      };
+      
+      aiResponse = '```experience-json\n' + JSON.stringify(fallbackJSON, null, 2) + '\n```';
+      fallbackApplied = true;
+    }
+
+    const finalResponse = aiResponse;
 
     // Log AI usage to database
     const duration = Date.now() - startTime;
     const totalTokens = aiData.usage?.total_tokens || 0;
     const promptTokens = aiData.usage?.prompt_tokens || 0;
     const completionTokens = aiData.usage?.completion_tokens || 0;
+
+    // ⭐ PHASE 4.1: Enhanced Logging
+    console.log('📊 [METRICS]', {
+      timestamp: new Date().toISOString(),
+      tenantId,
+      messageCount: messages.length,
+      tokensUsed: totalTokens,
+      toolCallsMade: iterations,
+      hasExperienceJSON,
+      fallbackApplied,
+      responseLength: finalResponse.length,
+      model: aiClientConfig.model,
+      provider: aiClientConfig.provider
+    });
 
     try {
       // Calculate cost using database function
@@ -1030,7 +1159,9 @@ serve(async (req) => {
         status: 'success',
         metadata: {
           tool_calls_made: iterations,
-          system_prompt_used: !!systemPrompt
+          system_prompt_used: !!systemPrompt,
+          fallback_applied: fallbackApplied, // ⭐ Track for monitoring
+          has_experience_json: hasExperienceJSON
         }
       });
     } catch (logError) {
@@ -1044,7 +1175,8 @@ serve(async (req) => {
         tokensUsed: aiData.usage?.total_tokens,
         toolCallsMade: iterations,
         provider: aiClientConfig.provider,
-        model: aiClientConfig.model
+        model: aiClientConfig.model,
+        fallbackApplied // ⭐ Return to frontend for monitoring
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

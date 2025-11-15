@@ -65,6 +65,20 @@ export function AIMcpChatInterface({
     }
   }, [error, toast]);
 
+  // ⭐ PHASE 3.2: Frontend Fallback Warning (for debugging)
+  useEffect(() => {
+    if (messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      // Check if last response had fallback applied (would be in metadata from backend)
+      // This assumes the backend response includes fallbackApplied field
+      console.log('📊 [Frontend] Last message:', {
+        role: lastMessage.role,
+        contentLength: lastMessage.content.length,
+        timestamp: new Date().toISOString()
+      });
+    }
+  }, [messages]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;

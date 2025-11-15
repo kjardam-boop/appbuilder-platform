@@ -85,8 +85,14 @@ export function useAIMcpChat(tenantId: string, systemPrompt?: string) {
         tenantId,
         toolCallsMade: data.toolCallsMade || 0,
         tokensUsed: data.tokensUsed || 0,
+        fallbackApplied: data.fallbackApplied || false, // ⭐ PHASE 3.2: Log fallback usage
         timestamp: new Date().toISOString()
       });
+
+      // ⭐ Warn if backend fallback was used
+      if (data.fallbackApplied) {
+        console.warn('⚠️ [FALLBACK] Backend fallback was applied - AI did not return proper ExperienceJSON');
+      }
 
       return data;
 
