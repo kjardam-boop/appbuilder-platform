@@ -190,22 +190,6 @@ const MCP_TOOLS = [
       }
     }
   },
-  {
-    type: "function",
-    function: {
-      name: "generate_experience",
-      description: "Generate a dynamic web experience (ExperienceJSON) from user query. Searches content library for relevant markdown, converts to visual blocks, applies company branding. Returns experience-json code block that will render as interactive webpage.",
-      parameters: {
-        type: "object",
-        properties: {
-          query: { type: "string", description: "User's question or topic" },
-          company_url: { type: "string", description: "Optional: Company website URL for brand extraction" },
-          category: { type: "string", description: "Optional: Content category filter (onboarding, faq, help, integration, product)" }
-        },
-        required: ["query"]
-      }
-    }
-  }
 ];
 
 /**
@@ -439,224 +423,6 @@ async function executeMcpTool(
         }
       }
 
-      case "generate_experience": {
-        try {
-          console.log(`[Generate Experience] Query: ${args.query}, Category: ${args.category}`);
-          
-          // Search content library with improved fuzzy search
-          let contentQuery = supabaseClient
-            .from('ai_app_content_library')
-            .select('*')
-            .eq('is_active', true);
-          
-          // Filter by tenant or platform-wide
-          contentQuery = contentQuery.or(`tenant_id.eq.${tenantId},tenant_id.is.null`);
-          
-          // Filter by category if provided
-          if (args.category) {
-            contentQuery = contentQuery.eq('category', args.category);
-          }
-          
-          // Improved search: ilike on title and content_markdown + keyword matching
-          const queryWords = args.query.toLowerCase().split(' ').filter((w: string) => w.length > 3);
-          if (queryWords.length > 0) {
-            // Build fuzzy search conditions
-            const searchConditions = queryWords.map((word: string) => 
-              `title.ilike.%${word}%,content_markdown.ilike.%${word}%,keywords.cs.{${word}}`
-            ).join(',');
-            contentQuery = contentQuery.or(searchConditions);
-          }
-          
-          contentQuery = contentQuery.limit(5);
-          
-          const { data: contentItems, error: contentError } = await contentQuery;
-          
-          if (contentError) {
-            console.error('[Content Library Error]', contentError);
-          }
-          
-          console.log(`[Content Search] Query words: ${queryWords.join(', ')}, Found: ${contentItems?.length || 0} documents`);
-          
-          // If no content found, return all active docs as fallback
-          let finalContentItems = contentItems || [];
-          if (finalContentItems.length === 0) {
-            console.log('[Content Search] No matches, fetching all active documents as fallback');
-            const { data: allDocs } = await supabaseClient
-              .from('ai_app_content_library')
-              .select('*')
-              .eq('is_active', true)
-              .or(`tenant_id.eq.${tenantId},tenant_id.is.null`)
-              .limit(10);
-            
-            if (allDocs && allDocs.length > 0) {
-              finalContentItems = allDocs;
-            }
-          }
-          
-          if (finalContentItems.length === 0) {
-            return {
-              success: false,
-              error: 'No content available in knowledge base',
-              query: args.query
-            };
-          }
-          
-          // Get tenant theme
-          let theme = null;
-          const { data: tenantTheme } = await supabaseClient
-            .from('tenant_themes')
-            .select('tokens')
-            .eq('tenant_id', tenantId)
-            .eq('is_active', true)
-            .maybeSingle();
-          
-          if (tenantTheme) {
-            theme = tenantTheme.tokens;
-          }
-          
-          // If company_url provided, extract brand
-          if (args.company_url && !theme) {
-            try {
-              const brandResponse = await supabaseClient.functions.invoke('extract-brand', {
-                body: { websiteUrl: args.company_url, tenantId }
-              });
-              
-              if (brandResponse.data?.tokens) {
-                theme = brandResponse.data.tokens;
-              }
-            } catch (brandError) {
-              console.error('[Brand Extraction Error]', brandError);
-            }
-          }
-          
-          // Now use AI to transform markdown → ExperienceJSON
-          console.log('[Generate Experience] Transforming markdown to ExperienceJSON with AI...');
-          
-          const combinedMarkdown = finalContentItems.map((item: any) => 
-            `# ${item.title}\n\n${item.content_markdown}`
-          ).join('\n\n---\n\n');
-          
-          const experiencePrompt = `Transform the following markdown content into an interactive web experience (ExperienceJSON format).
-
-USER QUERY: ${args.query}
-
-MARKDOWN CONTENT:
-${combinedMarkdown}
-
-${theme ? `BRAND THEME:
-Primary Color: ${theme.primary || '#000'}
-Accent Color: ${theme.accent || '#666'}
-Font: ${theme.fontStack || 'system-ui'}` : ''}
-
-INSTRUCTIONS:
-1. Create a cohesive, visually appealing page layout
-2. Use hero block for main heading/intro
-3. Convert sections to content blocks with appropriate styling
-4. Add CTAs where relevant
-5. Use step blocks for processes/numbered lists
-6. Apply the brand colors consistently
-7. Make it engaging and professional
-
-Return ONLY the ExperienceJSON structure.`;
-
-          const aiTransformResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              model: 'google/gemini-2.5-flash',
-              messages: [
-                { 
-                  role: 'system', 
-                  content: 'You are an expert at converting markdown content into structured ExperienceJSON format for web rendering. You MUST use the generate_experience_json tool to return your response.' 
-                },
-                { role: 'user', content: experiencePrompt }
-              ],
-              tools: [{
-                type: 'function',
-                function: {
-                  name: 'generate_experience_json',
-                  description: 'Generate structured ExperienceJSON from markdown content',
-                  parameters: {
-                    type: 'object',
-                    properties: {
-                      blocks: {
-                        type: 'array',
-                        description: 'Array of content blocks',
-                        items: {
-                          type: 'object',
-                          properties: {
-                            type: { type: 'string', enum: ['hero', 'content', 'cta', 'steps', 'features', 'testimonial'] },
-                            data: { type: 'object' }
-                          },
-                          required: ['type', 'data']
-                        }
-                      },
-                      theme: {
-                        type: 'object',
-                        properties: {
-                          primary: { type: 'string' },
-                          accent: { type: 'string' },
-                          surface: { type: 'string' },
-                          textOnSurface: { type: 'string' },
-                          fontStack: { type: 'string' }
-                        }
-                      }
-                    },
-                    required: ['blocks']
-                  }
-                }
-              }],
-              tool_choice: { type: 'function', function: { name: 'generate_experience_json' } }
-            })
-          });
-          
-          if (!aiTransformResponse.ok) {
-            const errorText = await aiTransformResponse.text();
-            console.error('[AI Transform Error]', aiTransformResponse.status, errorText);
-            throw new Error(`AI transformation failed: ${errorText}`);
-          }
-          
-          const aiResult = await aiTransformResponse.json();
-          console.log('[AI Transform] Success, tool calls:', aiResult.choices?.[0]?.message?.tool_calls?.length || 0);
-          
-          // Extract ExperienceJSON from tool call
-          const toolCall = aiResult.choices?.[0]?.message?.tool_calls?.[0];
-          if (!toolCall || toolCall.function.name !== 'generate_experience_json') {
-            throw new Error('AI did not return experience JSON');
-          }
-          
-          const experienceJSON = JSON.parse(toolCall.function.arguments);
-          console.log('[Experience JSON] Generated with', experienceJSON.blocks?.length || 0, 'blocks');
-          
-          // Apply theme if not already set
-          if (!experienceJSON.theme && theme) {
-            experienceJSON.theme = {
-              primary: theme.primary || '#000',
-              accent: theme.accent || '#666',
-              surface: theme.surface || '#fff',
-              textOnSurface: theme.textOnSurface || '#000',
-              fontStack: theme.fontStack || 'system-ui, sans-serif'
-            };
-          }
-          
-          // Return the ExperienceJSON formatted as a code block
-          return {
-            success: true,
-            experience_json: experienceJSON,
-            message: 'Generated interactive experience from knowledge base'
-          };
-        } catch (error) {
-          console.error(`[Generate Experience Error]`, error);
-          return {
-            success: false,
-            error: error instanceof Error ? error.message : 'Failed to generate experience',
-            query: args.query
-          };
-        }
-      }
 
       default:
         throw new Error(`Unknown tool: ${toolName}`);
@@ -795,7 +561,7 @@ serve(async (req) => {
       .eq('tenant_id', tenantId)
       .single();
 
-    // ⭐ PHASE 2.1: Fetch tenant theme BEFORE defining system prompt
+    // ⭐ PHASE 2: Fetch tenant theme + content library + website
     const { data: tenantThemeData } = await supabaseClient
       .from('tenant_themes')
       .select('tokens')
@@ -808,108 +574,260 @@ serve(async (req) => {
       accent: '#FF6B00' 
     };
 
-    // ⭐ PHASE 2.2: FORKORTET System Prompt (saves ~500 tokens per request)
-    const defaultSystemPrompt = `Du er AI-assistent for ${tenantData?.name || 'Lovenest'}.
+    // Fetch tenant domain for website scraping
+    const { data: tenantDomainData } = await supabaseClient
+      .from('tenants')
+      .select('domain')
+      .eq('id', tenantId)
+      .single();
+    
+    const tenantDomain = tenantDomainData?.domain;
 
-**🔒 SIKKERHET:**
-- Kun data for tenant_id = "${tenantId}"
-- Bruk MCP tools for å hente data (IKKE halluciner data!)
+    // Fetch all active content library documents
+    console.log('[Content Library] Fetching documents for tenant:', tenantId);
+    const { data: contentDocs, error: contentError } = await supabaseClient
+      .from('ai_app_content_library')
+      .select('id, title, content_markdown, category, keywords')
+      .eq('is_active', true)
+      .or(`tenant_id.eq.${tenantId},tenant_id.is.null`)
+      .order('created_at', { ascending: false });
 
-**📋 OBLIGATORISK RESPONSE FORMAT:**
-⚠️ ALLE svar MÅ være ExperienceJSON wrapped i \`\`\`experience-json blokk.
-⚠️ Selv feilmeldinger og enkle svar MÅ være ExperienceJSON!
+    if (contentError) {
+      console.error('[Content Library Error]', contentError);
+    }
 
-**ExperienceJSON Struktur:**
+    console.log(`[Content Library] Loaded ${contentDocs?.length || 0} documents`);
+
+    // Scrape tenant website if domain exists
+    let websiteContent = '';
+    let websiteScraped = false;
+
+    if (tenantDomain) {
+      try {
+        console.log(`[Website Scraping] Fetching: ${tenantDomain}`);
+        
+        const websiteUrl = tenantDomain.startsWith('http') ? tenantDomain : `https://${tenantDomain}`;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+        
+        const websiteResponse = await fetch(websiteUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (compatible; AkseleraBotAgent/1.0)',
+          },
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+
+        if (websiteResponse.ok) {
+          const html = await websiteResponse.text();
+          
+          // Clean HTML: remove scripts, styles, and HTML tags
+          websiteContent = html
+            .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+            .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .slice(0, 15000); // Limit to 15K chars (~4K tokens)
+          
+          websiteScraped = true;
+          console.log(`[Website Scraping] Success: ${websiteContent.length} chars extracted`);
+        }
+      } catch (scrapeError) {
+        console.error('[Website Scraping Error]', scrapeError instanceof Error ? scrapeError.message : scrapeError);
+      }
+    }
+
+    // ⭐ PHASE 3: Build system prompt with content library + website
+    const websiteSection = websiteScraped && websiteContent ? `
+## 🌐 COMPANY WEBSITE
+
+**Domain:** ${tenantDomain}
+
+**Extracted Content:**
+${websiteContent}
+
+---
+` : '';
+
+    const contentLibrarySection = contentDocs && contentDocs.length > 0 ? `
+## 📚 KNOWLEDGE BASE (Content Library)
+
+Du har tilgang til følgende dokumenter om bedriften. Bruk denne informasjonen til å svare på brukerens spørsmål.
+
+${contentDocs.map((doc: any, idx: number) => `
+### Dokument ${idx + 1}: ${doc.title}
+**Kategori:** ${doc.category || 'general'}
+**Keywords:** ${doc.keywords?.join(', ') || 'ingen'}
+
+**Innhold:**
+${doc.content_markdown}
+
+---
+`).join('\n')}
+` : '';
+
+    const defaultSystemPrompt = `Du er en intelligent AI-assistent for ${tenantData?.name || 'denne bedriften'}.
+
+${websiteSection}
+
+${contentLibrarySection}
+
+## 🎯 PRIORITERING AV KILDER
+
+Når du svarer på brukerens spørsmål:
+1. **FØRST**: Søk i Knowledge Base (content library) for strukturert, kurert informasjon
+2. **DERETTER**: Bruk Company Website-innhold for generell bedriftsinformasjon
+3. **SIST**: Bruk MCP tools for spesifikke data-operasjoner (selskaper, prosjekter, oppgaver)
+
+**VIKTIG:** Hvis du finner relevant informasjon i Knowledge Base eller Website, **ALLTID** svar med ExperienceJSON (se eksempler under).
+
+## 🎨 SVAR-FORMAT: ExperienceJSON
+
+**DU MÅ ALLTID** svare med strukturert ExperienceJSON når du deler innhold/informasjon.
+**ALDRI** svar med plain text (unntatt ved feilmeldinger eller manglende data).
+
+### 🎨 DESIGN REQUIREMENTS (CRITICAL):
+- **ALWAYS** ensure high contrast between text and background
+- Use **dark text (#1a1a1a)** on **light backgrounds (#ffffff, #f5f5f5)**
+- Use **light text (#ffffff)** on **dark/colored backgrounds**
+- **NEVER** use low-contrast combinations (e.g., light pink text on light pink bg)
+- Test readability: can you read the text clearly?
+
+**ExperienceJSON-format:**
 \`\`\`experience-json
 {
   "version": "1.0",
   "theme": {
-    "primary": "${theme.primary}",
-    "accent": "${theme.accent}"
+    "primary": "${theme.primary || '#1a1a1a'}",
+    "accent": "${theme.accent || '#666666'}",
+    "surface": "#ffffff",
+    "textOnSurface": "#1a1a1a",
+    "fontStack": "${theme.fontStack || 'system-ui, -apple-system, sans-serif'}"
   },
-  "layout": {
-    "type": "stack",
-    "gap": "md",
-    "padding": "lg"
-  },
+  "layout": { "type": "stack", "gap": "md" },
   "blocks": [
-    // dine blocks her (card, cards.list, table, flow, etc.)
+    { "type": "hero", "headline": "...", "subheadline": "...", "actions": [...] },
+    { "type": "content", "markdown": "..." },
+    { "type": "steps", "title": "...", "steps": [...] },
+    { "type": "cta", "headline": "...", "actions": [...] }
   ]
 }
 \`\`\`
 
-**Block Types:**
-- **card**: Enkelt tekstsvar (headline, body, footer)
-- **cards.list**: Liste av items (selskaper, prosjekter, oppgaver)
-- **table**: Tabelldata med columns + rows
-- **flow**: Prosess-steg (start → middle → end)
+### 📖 Eksempel 1: Produkt-spørsmål
 
-**Eksempel 1 - Enkelt Svar:**
-User: "Hva er 2+2?"
-Response:
+**User:** "Hvilke produkter har dere?"
+
+**AI Response:**
 \`\`\`experience-json
 {
   "version": "1.0",
-  "theme": {"primary": "${theme.primary}", "accent": "${theme.accent}"},
-  "layout": {"type": "stack", "gap": "md"},
-  "blocks": [{
-    "type": "card",
-    "headline": "Resultat",
-    "body": "2 + 2 = 4"
-  }]
+  "theme": { "primary": "${theme.primary || '#1a1a1a'}", "accent": "${theme.accent || '#666'}", "surface": "#ffffff", "textOnSurface": "#1a1a1a" },
+  "layout": { "type": "stack", "gap": "lg" },
+  "blocks": [
+    {
+      "type": "hero",
+      "headline": "Våre Produkter",
+      "subheadline": "Innovasjonsløsninger for din bedrift"
+    },
+    {
+      "type": "content",
+      "markdown": "## Produktoversikt\\n\\nVi tilbyr:\\n- **Produkt A**: Beskrivelse...\\n- **Produkt B**: Beskrivelse..."
+    },
+    {
+      "type": "cta",
+      "headline": "Vil du vite mer?",
+      "actions": [{ "label": "Kontakt oss", "action_id": "contact" }]
+    }
+  ]
 }
 \`\`\`
 
-**Eksempel 2 - Liste (kompakt):**
-User: "List selskaper"
-→ Call \`list_companies\` tool
-→ Return:
+### 📖 Eksempel 2: Team-spørsmål
+
+**User:** "Hvem jobber hos dere?"
+
+**AI Response:**
 \`\`\`experience-json
 {
   "version": "1.0",
-  "theme": {...},
-  "layout": {"type": "stack", "gap": "md"},
-  "blocks": [{
-    "type": "cards.list",
-    "headline": "Selskaper (5)",
-    "items": [
-      {"title": "Acme AS", "description": "Org: 123456789", "metadata": {"employees": 50}},
-      ...
-    ]
-  }]
+  "theme": { "primary": "${theme.primary || '#1a1a1a'}", "accent": "${theme.accent || '#666'}", "surface": "#ffffff", "textOnSurface": "#1a1a1a" },
+  "layout": { "type": "stack", "gap": "md" },
+  "blocks": [
+    {
+      "type": "hero",
+      "headline": "Vårt Team",
+      "subheadline": "Møt folkene bak ${tenantData?.name || 'bedriften'}"
+    },
+    {
+      "type": "cards.list",
+      "title": "Teammedlemmer",
+      "items": [
+        {
+          "title": "Navn Navnesen",
+          "subtitle": "CEO & Founder",
+          "body": "Beskrivelse av person...",
+          "itemType": "person"
+        }
+      ]
+    }
+  ]
 }
 \`\`\`
 
-**Eksempel 3 - Tabell (kompakt):**
-User: "Vis selskaper i tabell"
+### 📖 Eksempel 3: Prosess-spørsmål
+
+**User:** "Hvordan kommer jeg i gang?"
+
+**AI Response:**
 \`\`\`experience-json
 {
-  "blocks": [{
-    "type": "table",
-    "headline": "Selskaper",
-    "columns": ["Navn", "Org.nr", "Ansatte"],
-    "rows": [["Acme AS", "123456789", "50"], ...]
-  }]
+  "version": "1.0",
+  "theme": { "primary": "${theme.primary || '#1a1a1a'}", "accent": "${theme.accent || '#666'}", "surface": "#ffffff", "textOnSurface": "#1a1a1a" },
+  "layout": { "type": "stack", "gap": "md" },
+  "blocks": [
+    {
+      "type": "steps",
+      "title": "Kom i gang på 3 steg",
+      "steps": [
+        { "title": "Steg 1", "description": "Registrer deg..." },
+        { "title": "Steg 2", "description": "Velg produkt..." },
+        { "title": "Steg 3", "description": "Start bruken..." }
+      ]
+    }
+  ]
 }
 \`\`\`
 
-**Tilgjengelige MCP Tools:**
-${MCP_TOOLS.map(t => '- ' + t.function.name).join('\n')}
+## 🎯 REGLER FOR SVAR
 
-**VIKTIG:**
-- Bruk tools for data (ikke gitt!)
-- Selv "Jeg fant ingen data" må være ExperienceJSON card
-- Selv feilmeldinger må være ExperienceJSON med type: "error"
+1. **ALLTID** bruk ExperienceJSON når du deler informasjon fra knowledge base eller website
+2. **ALLTID** bruk high contrast: mørk tekst (#1a1a1a) på lys bakgrunn (#ffffff)
+3. **ALDRI** bruk low-contrast farger (lys tekst på lys bakgrunn)
+4. **Syntetiser** informasjon fra flere dokumenter når relevant
+5. **Vær kortfattet**: Max 400 ord per block
+6. **Inkluder CTAs** der det er naturlig
+7. Hvis informasjon **ikke finnes** i knowledge base eller website: Svar med enkel tekst "Jeg har ikke informasjon om dette ennå."
 
-**DO:**
-✅ Alltid wrapper i \`\`\`experience-json
-✅ Valider JSON syntax før sending
-✅ Bruk riktig block type for data type
+## 🔧 Tilgjengelige MCP Tools (for data-operasjoner)
 
-**DON'T:**
-❌ Aldri send plaintext uten ExperienceJSON wrapper
-❌ Aldri send markdown uten ExperienceJSON wrapper
-❌ Aldri send JSON uten \`\`\`experience-json wrapper`;
+${MCP_TOOLS.map(t => `- **${t.function.name}**: ${t.function.description}`).join('\n')}
+
+**Bruk disse tools kun for:**
+- Å hente/opprette/endre data (selskaper, prosjekter, oppgaver)
+- Spesifikke data-operasjoner som ikke finnes i knowledge base eller website
+- Web scraping av ANDRE nettsider (ikke tenantens egen nettside)
+
+**IKKE bruk tools for:**
+- Generelle spørsmål som dekkes av knowledge base eller website
+- Innholdsspørsmål (produkter, team, om bedriften)
+
+**🔒 SIKKERHET:**
+- Kun data for tenant_id = "${tenantId}"
+- Bruk MCP tools for å hente data (IKKE halluciner data!)
+`.trim();
 
     const effectiveSystemPrompt = systemPrompt || defaultSystemPrompt;
 
@@ -1085,29 +1003,57 @@ ${MCP_TOOLS.map(t => '- ' + t.function.name).join('\n')}
 
     let aiResponse = choice?.message?.content || 'Ingen respons fra AI';
 
-    // ⭐ PHASE 3.1: Backend Fallback - Ensure ALWAYS ExperienceJSON
-    const hasExperienceJSON = /```experience-json[\s\S]*?```/.test(aiResponse);
+    // ⭐ PHASE 4: Enhanced response parsing with ExperienceJSON detection
+    let hasExperienceJSON = false;
     let fallbackApplied = false;
+    
+    // Parse response for ExperienceJSON
+    const experienceJsonMatch = aiResponse.match(/```experience-json\s*([\s\S]*?)\s*```/);
+
+    if (experienceJsonMatch) {
+      try {
+        const experienceJSON = JSON.parse(experienceJsonMatch[1]);
+        
+        // Validate basic structure
+        if (experienceJSON.version && experienceJSON.blocks) {
+          hasExperienceJSON = true;
+          console.log('[✅ ExperienceJSON] Valid ExperienceJSON detected and parsed successfully');
+        } else {
+          throw new Error('Invalid ExperienceJSON structure');
+        }
+      } catch (parseError) {
+        console.error('[ExperienceJSON Parse Error]', parseError);
+        hasExperienceJSON = false;
+      }
+    }
 
     if (!hasExperienceJSON) {
-      console.warn('⚠️ [FALLBACK] AI returned non-ExperienceJSON, wrapping...');
-      console.log('Original response length:', aiResponse.length);
+      console.warn('[⚠️ Missing ExperienceJSON] AI did not return valid ExperienceJSON, applying fallback wrapper');
       
-      // Wrapper plaintext/markdown i en basic card
+      // Fallback: wrap in basic card with enforced white background + dark text
       const fallbackJSON = {
         version: "1.0",
         theme: {
-          primary: theme.primary,
-          accent: theme.accent
+          primary: theme.primary || '#1a1a1a',
+          accent: theme.accent || '#666666',
+          surface: "#ffffff",
+          textOnSurface: "#1a1a1a"
         },
-        layout: {
-          type: "stack",
-          gap: "md"
+        layout: { 
+          type: "stack", 
+          gap: "md" 
         },
         blocks: [{
           type: "card",
           headline: "Svar",
-          body: aiResponse
+          body: aiResponse,
+          style: {
+            background: "#ffffff",
+            color: "#1a1a1a",
+            padding: "1.5rem",
+            borderRadius: "0.5rem",
+            border: "1px solid #e5e5e5"
+          }
         }]
       };
       
