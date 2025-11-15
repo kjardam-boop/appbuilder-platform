@@ -598,6 +598,107 @@ serve(async (req) => {
 
     console.log(`[Content Library] Loaded ${contentDocs?.length || 0} documents`);
 
+    // ⭐ PHASE 2.5: Extract People Index from Content Library
+    interface PersonEntry {
+      name: string;
+      role?: string;
+      sourceTitle: string;
+      docId: string;
+    }
+
+    const peopleIndex: PersonEntry[] = [];
+    
+    if (contentDocs && contentDocs.length > 0) {
+      console.log('[People Index] Extracting people from content library...');
+      
+      for (const doc of contentDocs) {
+        const content = doc.content_markdown || '';
+        const lines = content.split('\n');
+        
+        // Pattern 1: List format "- Navn Etternavn (Rolle)" or "• Navn Etternavn – Rolle"
+        const listPattern = /^[\s\-•*]+(.+?)\s*[\(–\-]\s*(.+?)[\)]?\s*$/;
+        
+        // Pattern 2: Header + role "### Navn Etternavn" followed by role
+        const headerPattern = /^###?\s+([A-ZÆØÅ][a-zæøå]+(?:\s+[A-ZÆØÅ][a-zæøå]+)+)\s*$/;
+        
+        // Pattern 3: "Navn: Navn Etternavn" and "Rolle: ..."
+        const nameFieldPattern = /^(?:Navn|Name):\s*(.+)$/i;
+        const roleFieldPattern = /^(?:Rolle|Role|Stilling|Title):\s*(.+)$/i;
+        
+        let lastHeaderName: string | null = null;
+        let lastFieldName: string | null = null;
+        
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i].trim();
+          
+          // Try list pattern
+          const listMatch = line.match(listPattern);
+          if (listMatch) {
+            const name = listMatch[1].trim();
+            const role = listMatch[2].trim();
+            
+            // Filter out obvious non-names (section headers, etc.)
+            if (name.length > 3 && name.length < 50 && /^[A-ZÆØÅ]/.test(name)) {
+              peopleIndex.push({
+                name,
+                role,
+                sourceTitle: doc.title,
+                docId: doc.id
+              });
+              console.log(`[People Index] Found (list): ${name} - ${role}`);
+            }
+            continue;
+          }
+          
+          // Try header pattern
+          const headerMatch = line.match(headerPattern);
+          if (headerMatch) {
+            lastHeaderName = headerMatch[1].trim();
+            // Look ahead for role in next few lines
+            const nextLines = lines.slice(i + 1, i + 4).join(' ');
+            const roleMatch = nextLines.match(/(?:rolle|stilling|title|position):\s*(.+?)(?:\.|$)/i);
+            
+            if (lastHeaderName && lastHeaderName.length < 50) {
+              peopleIndex.push({
+                name: lastHeaderName,
+                role: roleMatch ? roleMatch[1].trim() : undefined,
+                sourceTitle: doc.title,
+                docId: doc.id
+              });
+              console.log(`[People Index] Found (header): ${lastHeaderName}${roleMatch ? ' - ' + roleMatch[1] : ''}`);
+            }
+            continue;
+          }
+          
+          // Try name field pattern
+          const nameMatch = line.match(nameFieldPattern);
+          if (nameMatch) {
+            lastFieldName = nameMatch[1].trim();
+            continue;
+          }
+          
+          // Try role field pattern (after name field)
+          const roleMatch = line.match(roleFieldPattern);
+          if (roleMatch && lastFieldName) {
+            const role = roleMatch[1].trim();
+            if (lastFieldName.length < 50) {
+              peopleIndex.push({
+                name: lastFieldName,
+                role,
+                sourceTitle: doc.title,
+                docId: doc.id
+              });
+              console.log(`[People Index] Found (fields): ${lastFieldName} - ${role}`);
+            }
+            lastFieldName = null;
+            continue;
+          }
+        }
+      }
+      
+      console.log(`[People Index] Total persons extracted: ${peopleIndex.length}`);
+    }
+
     // Scrape tenant website if domain exists
     let websiteContent = '';
     let websiteScraped = false;
@@ -674,11 +775,32 @@ ${websiteContent}
 ---
 ` : '';
 
+    const peopleIndexSection = peopleIndex.length > 0 ? `
+## 👤 PEOPLE INDEX (fra Knowledge Base)
+
+**⭐ KRITISK:** Når brukeren spør om personer (navn, roller, hvem som jobber her), bruk denne indeksen FØRST!
+
+${peopleIndex.map((person, idx) => `
+${idx + 1}. **${person.name}**${person.role ? ` - ${person.role}` : ''}
+   - Kilde: ${person.sourceTitle}
+`).join('\n')}
+
+**🔍 REGLER FOR PERSONSØK:**
+- Hvis personen finnes i People Index: Svar med fullt navn, rolle og kilde
+- Hvis personen IKKE finnes: Svar "Ikke funnet i Knowledge Base"
+- For enkeltpersoner: Bruk \`card\` block
+- For flere personer: Bruk \`cards.list\` med \`itemType: "person"\`
+
+---
+` : '';
+
     const defaultSystemPrompt = `Du er en intelligent AI-assistent for ${tenantData?.name || 'denne bedriften'}.
 
 ${contentLibrarySection}
 
 ${websiteSection}
+
+${peopleIndexSection}
 
 ## 🎯 PRIORITERING AV KILDER (KRITISK!)
 
@@ -1161,7 +1283,7 @@ Bruk for: Multi-step forms, prosesser med brukerinput, onboarding flows
 2. **ALLTID** bruk high contrast: mørk tekst (#1a1a1a) på lys bakgrunn (#ffffff)
 3. **ALDRI** bruk low-contrast farger (lys tekst på lys bakgrunn)
 4. **Velg RIKTIG block-type:**
-   - Team/personer → \`cards.list\` med \`itemType: "person"\`
+   - Team/personer → \`cards.list\` med \`itemType: "person"\` (eller \`card\` for enkeltperson)
    - Produkter/tjenester → \`cards.list\` med \`itemType: "product|service"\`
    - Priser/sammenligninger → \`table\`
    - Prosesser/guider → \`steps\`
@@ -1169,11 +1291,15 @@ Bruk for: Multi-step forms, prosesser med brukerinput, onboarding flows
    - CTAs/konvertering → \`cta\`
    - Hero/landing → \`hero\`
    - Enkle meldinger → \`card\`
-5. **Kombiner blocks kreativt** - f.eks. hero → content → table → cta
-6. **Syntetiser** informasjon fra flere dokumenter når relevant
-7. **Vær kortfattet**: Max 400 ord per block
-8. **Inkluder CTAs** der det er naturlig
-9. Hvis informasjon **ikke finnes** i knowledge base eller website: Svar med enkel tekst "Jeg har ikke informasjon om dette ennå."
+5. **PERSONSØK (VIKTIG):**
+   - Sjekk ALLTID People Index først ved spørsmål om personer
+   - Hvis funnet: Svar med fullt navn, rolle og "Kilde: Knowledge Base"
+   - Hvis IKKE funnet: Svar med \`card\` block "Ikke funnet i Knowledge Base. Vil du oppdate kunnskapsbasen?"
+6. **Kombiner blocks kreativt** - f.eks. hero → content → table → cta
+7. **Syntetiser** informasjon fra flere dokumenter når relevant
+8. **Vær kortfattet**: Max 400 ord per block
+9. **Inkluder CTAs** der det er naturlig
+10. Hvis informasjon **ikke finnes** i knowledge base eller website: Svar med enkel tekst "Jeg har ikke informasjon om dette ennå."
 
 ## 🔧 Tilgjengelige MCP Tools (for data-operasjoner)
 
