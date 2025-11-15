@@ -598,106 +598,8 @@ serve(async (req) => {
 
     console.log(`[Content Library] Loaded ${contentDocs?.length || 0} documents`);
 
-    // ⭐ PHASE 2.5: Extract People Index from Content Library
-    interface PersonEntry {
-      name: string;
-      role?: string;
-      sourceTitle: string;
-      docId: string;
-    }
-
-    const peopleIndex: PersonEntry[] = [];
-    
-    if (contentDocs && contentDocs.length > 0) {
-      console.log('[People Index] Extracting people from content library...');
-      
-      for (const doc of contentDocs) {
-        const content = doc.content_markdown || '';
-        const lines = content.split('\n');
-        
-        // Pattern 1: List format "- Navn Etternavn (Rolle)" or "• Navn Etternavn – Rolle"
-        const listPattern = /^[\s\-•*]+(.+?)\s*[\(–\-]\s*(.+?)[\)]?\s*$/;
-        
-        // Pattern 2: Header + role "### Navn Etternavn" followed by role
-        const headerPattern = /^###?\s+([A-ZÆØÅ][a-zæøå]+(?:\s+[A-ZÆØÅ][a-zæøå]+)+)\s*$/;
-        
-        // Pattern 3: "Navn: Navn Etternavn" and "Rolle: ..."
-        const nameFieldPattern = /^(?:Navn|Name):\s*(.+)$/i;
-        const roleFieldPattern = /^(?:Rolle|Role|Stilling|Title):\s*(.+)$/i;
-        
-        let lastHeaderName: string | null = null;
-        let lastFieldName: string | null = null;
-        
-        for (let i = 0; i < lines.length; i++) {
-          const line = lines[i].trim();
-          
-          // Try list pattern
-          const listMatch = line.match(listPattern);
-          if (listMatch) {
-            const name = listMatch[1].trim();
-            const role = listMatch[2].trim();
-            
-            // Filter out obvious non-names (section headers, etc.)
-            if (name.length > 3 && name.length < 50 && /^[A-ZÆØÅ]/.test(name)) {
-              peopleIndex.push({
-                name,
-                role,
-                sourceTitle: doc.title,
-                docId: doc.id
-              });
-              console.log(`[People Index] Found (list): ${name} - ${role}`);
-            }
-            continue;
-          }
-          
-          // Try header pattern
-          const headerMatch = line.match(headerPattern);
-          if (headerMatch) {
-            lastHeaderName = headerMatch[1].trim();
-            // Look ahead for role in next few lines
-            const nextLines = lines.slice(i + 1, i + 4).join(' ');
-            const roleMatch = nextLines.match(/(?:rolle|stilling|title|position):\s*(.+?)(?:\.|$)/i);
-            
-            if (lastHeaderName && lastHeaderName.length < 50) {
-              peopleIndex.push({
-                name: lastHeaderName,
-                role: roleMatch ? roleMatch[1].trim() : undefined,
-                sourceTitle: doc.title,
-                docId: doc.id
-              });
-              console.log(`[People Index] Found (header): ${lastHeaderName}${roleMatch ? ' - ' + roleMatch[1] : ''}`);
-            }
-            continue;
-          }
-          
-          // Try name field pattern
-          const nameMatch = line.match(nameFieldPattern);
-          if (nameMatch) {
-            lastFieldName = nameMatch[1].trim();
-            continue;
-          }
-          
-          // Try role field pattern (after name field)
-          const roleMatch = line.match(roleFieldPattern);
-          if (roleMatch && lastFieldName) {
-            const role = roleMatch[1].trim();
-            if (lastFieldName.length < 50) {
-              peopleIndex.push({
-                name: lastFieldName,
-                role,
-                sourceTitle: doc.title,
-                docId: doc.id
-              });
-              console.log(`[People Index] Found (fields): ${lastFieldName} - ${role}`);
-            }
-            lastFieldName = null;
-            continue;
-          }
-        }
-      }
-      
-      console.log(`[People Index] Total persons extracted: ${peopleIndex.length}`);
-    }
+    // ⭐ PHASE 2.5: Knowledge Base loaded - no special extraction needed
+    // AI will read all content directly from contentDocs
 
     // Scrape tenant website if domain exists
     let websiteContent = '';
@@ -741,25 +643,29 @@ serve(async (req) => {
     }
 
     // ⭐ PHASE 3: Build system prompt with content library + website
-    const contentLibrarySection = contentDocs && contentDocs.length > 0 ? `
-## 📚 KNOWLEDGE BASE (Content Library) ⭐ PRIMARY SOURCE
+    const knowledgeBaseSection = contentDocs && contentDocs.length > 0 ? `
+## 📚 KNOWLEDGE BASE - DIN PRIMÆRE KUNNSKAPSKILDE
 
-**🚨 KRITISK: ALLTID BRUK DENNE FØRST! 🚨**
-
-Du har tilgang til følgende kurerte dokumenter om bedriften. Dette er den **PRIMÆRE KILDEN** for all informasjon.
+**🎯 KRITISK:** Dette er kurert, validert innhold. ALLTID søk her FØRST!
 
 ${contentDocs.map((doc: any, idx: number) => `
-### Dokument ${idx + 1}: ${doc.title}
+---
+### 📄 ${doc.title}
 **Kategori:** ${doc.category || 'general'}
-**Keywords:** ${doc.keywords?.join(', ') || 'ingen'}
 
-**Innhold:**
 ${doc.content_markdown}
-
 ---
 `).join('\n')}
 
-**⚠️ VIKTIG:** Når du svarer på spørsmål, **ALLTID** bruk informasjon fra Knowledge Base FØRST. Dette er kurert, validert innhold som er mer pålitelig enn website-data.
+**🔍 HVORDAN BRUKE KNOWLEDGE BASE:**
+- Når brukeren spør om team/personer → Les "Team"-dokumentet
+- Når brukeren spør om adresse/kontakt → Les "Kontakt"-dokumentet  
+- Når brukeren spør om produkter/tjenester → Les "Tjenester"-dokumentet
+- Når brukeren spør om priser → Les "Priser"-dokumentet
+- Når brukeren spør om prosesser → Les "Prosess"-dokumentet
+
+**⚠️ VIKTIG:** Hvis informasjon FINNES i Knowledge Base → Svar ALLTID med ExperienceJSON (se eksempler under).
+**⚠️ VIKTIG:** Hvis informasjon IKKE finnes → Svar: "Jeg har ikke informasjon om dette ennå. Ønsker du å oppdatere kunnskapsbasen?"
 ` : '';
 
     const websiteSection = websiteScraped && websiteContent ? `
@@ -775,50 +681,12 @@ ${websiteContent}
 ---
 ` : '';
 
-    const peopleIndexSection = peopleIndex.length > 0 ? `
-## 👤 PEOPLE INDEX - KRITISK REFERANSE FOR PERSONSØK
-
-🚨 **OBLIGATORISK:** Når brukeren spør om personer, navn, ansatte eller "hvem jobber her", MÅ du bruke denne indeksen!
-
-**Tilgjengelige personer i bedriften:**
-
-${peopleIndex.map((person, idx) => `
-${idx + 1}. **${person.name}**${person.role ? ` - *${person.role}*` : ''}
-   📁 Kilde: ${person.sourceTitle}
-`).join('\n')}
-
-**🎯 OBLIGATORISKE REGLER FOR PERSONSØK:**
-
-1. ✅ **HVIS PERSONEN FINNES I LISTEN OVER:**
-   - ALLTID svar med ExperienceJSON
-   - Bruk \`card\` block for enkeltperson:
-     - headline: Personens navn
-     - body: "Rolle: [rolle]\\n\\nKilde: Knowledge Base"
-   - Bruk \`cards.list\` for flere personer med \`itemType: "person"\`
-
-2. ❌ **HVIS PERSONEN IKKE FINNES:**
-   - Svar: "Ikke funnet i Knowledge Base"
-   - Foreslå å oppdatere kunnskapsbasen
-
-3. 🔍 **EKSEMPLER PÅ PERSONSØK:**
-   - "Hva heter Kari til etternavn?" → Sjekk om "Kari" finnes i listen
-   - "Hvem jobber i selskapet?" → List alle personer med \`cards.list\`
-   - "Hvem er daglig leder?" → Søk etter rolle "Daglig leder"
-
-**⚠️ VIKTIG:** Ikke si "har ikke tilgang til ansatte-informasjon" hvis personer finnes i listen!
-
----
-` : '';
-
-    console.log(`[People Index] Section ${peopleIndex.length > 0 ? 'INCLUDED' : 'EMPTY'} with ${peopleIndex.length} persons`);
 
     const defaultSystemPrompt = `Du er en intelligent AI-assistent for ${tenantData?.name || 'denne bedriften'}.
 
-${contentLibrarySection}
+${knowledgeBaseSection}
 
 ${websiteSection}
-
-${peopleIndexSection}
 
 ## 🎯 PRIORITERING AV KILDER (KRITISK!)
 
@@ -1295,6 +1163,104 @@ Bruk for: Multi-step forms, prosesser med brukerinput, onboarding flows
 }
 \`\`\`
 
+### 📖 Eksempel 9: Adresse/kontaktspørsmål
+
+**User:** "Hva er adressen til dere?"
+
+**Knowledge Base inneholder:**
+\`\`\`
+## Kontaktinformasjon
+- Adresse: Storgata 12, 0123 Oslo
+- Telefon: 12 34 56 78
+- E-post: post@bedrift.no
+\`\`\`
+
+**AI Response:**
+\`\`\`experience-json
+{
+  "version": "1.0",
+  "theme": { "primary": "${theme?.primary || '#1a1a1a'}", "surface": "#ffffff", "textOnSurface": "#1a1a1a" },
+  "layout": { "type": "stack", "gap": "md" },
+  "blocks": [
+    {
+      "type": "card",
+      "headline": "Kontaktinformasjon",
+      "body": "📍 **Adresse:** Storgata 12, 0123 Oslo\\n\\n📞 **Telefon:** 12 34 56 78\\n\\n✉️ **E-post:** post@bedrift.no"
+    }
+  ]
+}
+\`\`\`
+
+### 📖 Eksempel 10: Produktspørsmål
+
+**User:** "Hvilke produkter selger dere?"
+
+**Knowledge Base inneholder:**
+\`\`\`
+## Produkter
+- **Premium CRM** - Kundestyring for store bedrifter (25 000 kr/mnd)
+- **Starter CRM** - Enkel løsning for små bedrifter (5 000 kr/mnd)
+- **Custom Solutions** - Skreddersydde løsninger (pris på forespørsel)
+\`\`\`
+
+**AI Response:**
+\`\`\`experience-json
+{
+  "version": "1.0",
+  "theme": { "primary": "${theme?.primary || '#1a1a1a'}", "surface": "#ffffff", "textOnSurface": "#1a1a1a" },
+  "layout": { "type": "stack", "gap": "lg" },
+  "blocks": [
+    {
+      "type": "hero",
+      "headline": "Våre Produkter",
+      "subheadline": "Riktig CRM-løsning for din bedrift"
+    },
+    {
+      "type": "table",
+      "title": "Produktoversikt",
+      "columns": ["Produkt", "Målgruppe", "Pris"],
+      "rows": [
+        ["Premium CRM", "Store bedrifter", "25 000 kr/mnd"],
+        ["Starter CRM", "Små bedrifter", "5 000 kr/mnd"],
+        ["Custom Solutions", "Skreddersydd", "Pris på forespørsel"]
+      ]
+    },
+    {
+      "type": "cta",
+      "headline": "Vil du vite mer?",
+      "actions": [{ "label": "Kontakt oss", "action_id": "contact" }]
+    }
+  ]
+}
+\`\`\`
+
+### 📖 Eksempel 11: Åpningstider/praktisk info
+
+**User:** "Når er dere åpne?"
+
+**Knowledge Base inneholder:**
+\`\`\`
+## Åpningstider
+Mandag-fredag: 08:00-16:00
+Stengt i helger og høytider
+\`\`\`
+
+**AI Response:**
+\`\`\`experience-json
+{
+  "version": "1.0",
+  "theme": { "primary": "${theme?.primary || '#1a1a1a'}", "surface": "#ffffff", "textOnSurface": "#1a1a1a" },
+  "layout": { "type": "stack", "gap": "md" },
+  "blocks": [
+    {
+      "type": "card",
+      "headline": "Åpningstider",
+      "body": "🕐 **Mandag-fredag:** 08:00-16:00\\n\\n🚫 **Helger:** Stengt\\n\\n🎄 **Høytider:** Stengt"
+    }
+  ]
+}
+\`\`\`
+
 ## 🎯 REGLER FOR SVAR
 
 1. **ALLTID** bruk ExperienceJSON når du deler informasjon fra knowledge base eller website
@@ -1309,11 +1275,16 @@ Bruk for: Multi-step forms, prosesser med brukerinput, onboarding flows
    - CTAs/konvertering → \`cta\`
    - Hero/landing → \`hero\`
    - Enkle meldinger → \`card\`
-5. **PERSONSØK (KRITISK PRIORITET):**
-   - 🚨 **ALLTID** sjekk People Index FØRST ved spørsmål om personer/ansatte/team
-   - ✅ Hvis funnet i People Index: Svar ALLTID med ExperienceJSON (\`card\` eller \`cards.list\`)
-   - ❌ Hvis IKKE funnet: Svar "Ikke funnet i Knowledge Base"
-   - 🚫 **ALDRI** si "har ikke tilgang til informasjon om ansatte" hvis People Index inneholder personer!
+5. **GENERELL KUNNSKAPSSØK (KRITISK PRIORITET):**
+   - 🚨 **ALLTID** søk i Knowledge Base FØRST for ALL informasjon
+   - ✅ Hvis funnet → Svar med ExperienceJSON (velg riktig block-type)
+   - ❌ Hvis IKKE funnet → Svar: "Jeg har ikke informasjon om dette ennå"
+   - 📋 Eksempler på informasjonstyper:
+     * Team/personer → \`card\` eller \`cards.list\` 
+     * Adresse/kontakt → \`card\`
+     * Produkter/priser → \`table\` eller \`cards.list\`
+     * Prosesser → \`steps\`
+     * Generell info → \`content\` eller \`card\`
 6. **Kombiner blocks kreativt** - f.eks. hero → content → table → cta
 7. **Syntetiser** informasjon fra flere dokumenter når relevant
 8. **Vær kortfattet**: Max 400 ord per block
