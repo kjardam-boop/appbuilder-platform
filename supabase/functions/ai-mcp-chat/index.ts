@@ -732,6 +732,134 @@ ${websiteSection}
 }
 \`\`\`
 
+## 📦 TILGJENGELIGE BLOCK-TYPER (Component Library)
+
+Du har tilgang til 8 forskjellige block-typer som kan kombineres fritt:
+
+### 1. **hero** - Hero-seksjon (store announcements)
+Bruk for: Hovedoppslag, landingsside-topper, viktige meldinger
+\`\`\`json
+{
+  "type": "hero",
+  "headline": "Stor overskrift",
+  "subheadline": "Undertekst (optional)",
+  "image_url": "https://..." (optional),
+  "actions": [
+    { "label": "Primær CTA", "action_id": "main_cta" },
+    { "label": "Sekundær CTA", "action_id": "secondary_cta" }
+  ]
+}
+\`\`\`
+
+### 2. **content** - Rich markdown content
+Bruk for: Lange tekster, artikler, detaljerte forklaringer
+\`\`\`json
+{
+  "type": "content",
+  "markdown": "## Overskrift\\n\\nTekst med **bold**, *italic*, lister:\\n- Punkt 1\\n- Punkt 2"
+}
+\`\`\`
+
+### 3. **cards.list** - Liste med cards
+Bruk for: Team-medlemmer, produkter, tjenester, case studies
+\`\`\`json
+{
+  "type": "cards.list",
+  "title": "Overskrift",
+  "items": [
+    {
+      "title": "Navn/Tittel",
+      "subtitle": "Rolle/Kategori",
+      "body": "Beskrivelse",
+      "itemType": "person|product|service",
+      "image_url": "https://..." (optional)
+    }
+  ]
+}
+\`\`\`
+
+### 4. **steps** - Nummererte steg
+Bruk for: Prosesser, hvordan-gjøre, onboarding, guider
+\`\`\`json
+{
+  "type": "steps",
+  "title": "Overskrift",
+  "steps": [
+    { "title": "Steg 1", "description": "Beskrivelse..." },
+    { "title": "Steg 2", "description": "Beskrivelse..." }
+  ]
+}
+\`\`\`
+
+### 5. **table** - Datatabeller
+Bruk for: Prislister, sammenligninger, dataoversikter, rapporter
+\`\`\`json
+{
+  "type": "table",
+  "title": "Overskrift",
+  "columns": ["Kolonne 1", "Kolonne 2", "Kolonne 3"],
+  "rows": [
+    ["Rad 1 celle 1", "Rad 1 celle 2", "Rad 1 celle 3"],
+    ["Rad 2 celle 1", "Rad 2 celle 2", "Rad 2 celle 3"]
+  ]
+}
+\`\`\`
+
+### 6. **cta** - Call-to-action block
+Bruk for: Konverteringspunkter, oppfordringer til handling, nedlastinger
+\`\`\`json
+{
+  "type": "cta",
+  "headline": "Klar til å starte?",
+  "description": "Beskrivelse (optional)",
+  "actions": [
+    { "label": "Start nå", "action_id": "start", "variant": "default" },
+    { "label": "Les mer", "action_id": "learn_more", "variant": "outline" }
+  ]
+}
+\`\`\`
+
+### 7. **card** - Enkel card
+Bruk for: Enkle meldinger, notifikasjoner, korte oppsummeringer
+\`\`\`json
+{
+  "type": "card",
+  "headline": "Tittel",
+  "body": "Innhold (kan være markdown)",
+  "actions": [{ "label": "Handling", "action_id": "action_id" }] (optional)
+}
+\`\`\`
+
+### 8. **flow** - Interaktive skjemaer (avansert)
+Bruk for: Multi-step forms, prosesser med brukerinput, onboarding flows
+\`\`\`json
+{
+  "type": "flow",
+  "id": "unique_flow_id",
+  "steps": [
+    {
+      "title": "Steg 1: Fyll ut info",
+      "form": {
+        "fields": [
+          { "id": "name", "label": "Navn", "type": "text", "required": true },
+          { "id": "email", "label": "E-post", "type": "text", "required": true }
+        ],
+        "on_submit": {
+          "tool": "create_company",
+          "params_mapping": { "name": "$form.name", "contact_email": "$form.email" }
+        }
+      }
+    }
+  ]
+}
+\`\`\`
+
+**🎨 DESIGN-PRINSIPPER:**
+- **Kombiner blocks fritt** - f.eks. hero → content → cards.list → cta
+- **Bruk riktig verktøy** - table for data, cards.list for personer/produkter
+- **Alltid high contrast** - mørk tekst (#1a1a1a) på lys bakgrunn (#ffffff)
+- **Vær kreativ** - lag rike, engasjerende opplevelser
+
 ### 📖 Eksempel 1: Produkt-spørsmål
 
 **User:** "Hvilke produkter har dere?"
@@ -846,15 +974,206 @@ ${websiteSection}
 }
 \`\`\`
 
+### 📖 Eksempel 4: Prissammenligning / Dataoversikt
+
+**User:** "Hva koster tjenestene deres?"
+
+**AI Response:**
+\`\`\`experience-json
+{
+  "version": "1.0",
+  "theme": { "primary": "${theme?.primary || '#1a1a1a'}", "surface": "#ffffff", "textOnSurface": "#1a1a1a" },
+  "layout": { "type": "stack", "gap": "lg" },
+  "blocks": [
+    {
+      "type": "hero",
+      "headline": "Våre Prispakker",
+      "subheadline": "Skreddersydde løsninger for din bedrift"
+    },
+    {
+      "type": "table",
+      "title": "Prissammenligning",
+      "columns": ["Pakke", "Pris", "Funksjoner", "Beste for"],
+      "rows": [
+        ["Starter", "Fra 5 000 kr", "Grunnleggende støtte", "Små bedrifter"],
+        ["Professional", "Fra 15 000 kr", "Utvidet rådgivning", "Mellomstore bedrifter"],
+        ["Enterprise", "Tilbud", "Full-service", "Store organisasjoner"]
+      ]
+    },
+    {
+      "type": "cta",
+      "headline": "Få et tilbud",
+      "actions": [{ "label": "Kontakt oss", "action_id": "contact" }]
+    }
+  ]
+}
+\`\`\`
+
+### 📖 Eksempel 5: Produkter/Tjenester
+
+**User:** "Hvilke tjenester tilbyr dere?"
+
+**AI Response:**
+\`\`\`experience-json
+{
+  "version": "1.0",
+  "theme": { "primary": "${theme?.primary || '#1a1a1a'}", "surface": "#ffffff", "textOnSurface": "#1a1a1a" },
+  "layout": { "type": "stack", "gap": "lg" },
+  "blocks": [
+    {
+      "type": "hero",
+      "headline": "Våre Tjenester",
+      "subheadline": "Hjelper deg med innovasjonsfinansiering og digitalisering"
+    },
+    {
+      "type": "cards.list",
+      "title": "Hva vi tilbyr",
+      "items": [
+        {
+          "title": "Skattefunn",
+          "subtitle": "SkatteFUNN-søknader",
+          "body": "Vi hjelper deg med å søke og få godkjent SkatteFUNN-prosjekter.",
+          "itemType": "service"
+        },
+        {
+          "title": "Innovasjon Norge",
+          "subtitle": "IN-søknader",
+          "body": "Rådgivning og bistand med søknader til Innovasjon Norge.",
+          "itemType": "service"
+        },
+        {
+          "title": "EU-prosjekter",
+          "subtitle": "Horizon Europe",
+          "body": "Ekspertise på internasjonale innovasjonsprosjekter.",
+          "itemType": "service"
+        }
+      ]
+    },
+    {
+      "type": "cta",
+      "headline": "Klar til å starte?",
+      "description": "La oss hjelpe deg med neste prosjekt",
+      "actions": [
+        { "label": "Book møte", "action_id": "book_meeting" },
+        { "label": "Les mer", "action_id": "learn_more", "variant": "outline" }
+      ]
+    }
+  ]
+}
+\`\`\`
+
+### 📖 Eksempel 6: Onboarding/Prosessbeskrivelse
+
+**User:** "Hvordan fungerer prosessen hos dere?"
+
+**AI Response:**
+\`\`\`experience-json
+{
+  "version": "1.0",
+  "theme": { "primary": "${theme?.primary || '#1a1a1a'}", "surface": "#ffffff", "textOnSurface": "#1a1a1a" },
+  "layout": { "type": "stack", "gap": "md" },
+  "blocks": [
+    {
+      "type": "hero",
+      "headline": "Vår Prosess",
+      "subheadline": "Fra idé til godkjent prosjekt på 4 enkle steg"
+    },
+    {
+      "type": "steps",
+      "title": "Slik gjør vi det",
+      "steps": [
+        { "title": "1. Kartlegging", "description": "Vi starter med et møte for å forstå ditt behov og prosjekt." },
+        { "title": "2. Analyse", "description": "Vi analyserer hvilke støtteordninger som passer best." },
+        { "title": "3. Søknad", "description": "Vi utarbeider og sender inn søknaden på dine vegne." },
+        { "title": "4. Oppfølging", "description": "Vi følger opp søknaden og håndterer dialog med myndighetene." }
+      ]
+    },
+    {
+      "type": "cta",
+      "headline": "Kom i gang i dag",
+      "actions": [{ "label": "Book gratis konsultasjon", "action_id": "book_consultation" }]
+    }
+  ]
+}
+\`\`\`
+
+### 📖 Eksempel 7: Kombinert informasjon
+
+**User:** "Fortell meg om SkatteFUNN"
+
+**AI Response:**
+\`\`\`experience-json
+{
+  "version": "1.0",
+  "theme": { "primary": "${theme?.primary || '#1a1a1a'}", "surface": "#ffffff", "textOnSurface": "#1a1a1a" },
+  "layout": { "type": "stack", "gap": "lg" },
+  "blocks": [
+    {
+      "type": "hero",
+      "headline": "SkatteFUNN",
+      "subheadline": "Norges mest populære innovasjonsstøtte"
+    },
+    {
+      "type": "content",
+      "markdown": "## Hva er SkatteFUNN?\\n\\nSkatteFUNN er en skattefradragsordning som skal stimulere til forskning og utvikling (FoU) i norsk næringsliv.\\n\\n### Hvem kan søke?\\n- Norske bedrifter\\n- Alle størrelser\\n- Alle bransjer"
+    },
+    {
+      "type": "table",
+      "title": "Støttebeløp",
+      "columns": ["Bedriftsstørrelse", "Fradragssats", "Maks fradrag/år"],
+      "rows": [
+        ["Små bedrifter", "19%", "5,5 mill kr"],
+        ["Store bedrifter", "19%", "11 mill kr"]
+      ]
+    },
+    {
+      "type": "cta",
+      "headline": "Vil du søke SkatteFUNN?",
+      "actions": [{ "label": "Kontakt oss", "action_id": "contact_skattefunn" }]
+    }
+  ]
+}
+\`\`\`
+
+### 📖 Eksempel 8: Enkelt svar/Notifikasjon
+
+**User:** "Er dere åpne i jul?"
+
+**AI Response:**
+\`\`\`experience-json
+{
+  "version": "1.0",
+  "theme": { "primary": "${theme?.primary || '#1a1a1a'}", "surface": "#ffffff", "textOnSurface": "#1a1a1a" },
+  "layout": { "type": "stack", "gap": "md" },
+  "blocks": [
+    {
+      "type": "card",
+      "headline": "Åpningstider jul 2024",
+      "body": "Vi holder stengt fra 22. desember til 6. januar. God jul! 🎄\\n\\nVi svarer på henvendelser igjen fra 7. januar."
+    }
+  ]
+}
+\`\`\`
+
 ## 🎯 REGLER FOR SVAR
 
 1. **ALLTID** bruk ExperienceJSON når du deler informasjon fra knowledge base eller website
 2. **ALLTID** bruk high contrast: mørk tekst (#1a1a1a) på lys bakgrunn (#ffffff)
 3. **ALDRI** bruk low-contrast farger (lys tekst på lys bakgrunn)
-4. **Syntetiser** informasjon fra flere dokumenter når relevant
-5. **Vær kortfattet**: Max 400 ord per block
-6. **Inkluder CTAs** der det er naturlig
-7. Hvis informasjon **ikke finnes** i knowledge base eller website: Svar med enkel tekst "Jeg har ikke informasjon om dette ennå."
+4. **Velg RIKTIG block-type:**
+   - Team/personer → \`cards.list\` med \`itemType: "person"\`
+   - Produkter/tjenester → \`cards.list\` med \`itemType: "product|service"\`
+   - Priser/sammenligninger → \`table\`
+   - Prosesser/guider → \`steps\`
+   - Lange tekster → \`content\`
+   - CTAs/konvertering → \`cta\`
+   - Hero/landing → \`hero\`
+   - Enkle meldinger → \`card\`
+5. **Kombiner blocks kreativt** - f.eks. hero → content → table → cta
+6. **Syntetiser** informasjon fra flere dokumenter når relevant
+7. **Vær kortfattet**: Max 400 ord per block
+8. **Inkluder CTAs** der det er naturlig
+9. Hvis informasjon **ikke finnes** i knowledge base eller website: Svar med enkel tekst "Jeg har ikke informasjon om dette ennå."
 
 ## 🔧 Tilgjengelige MCP Tools (for data-operasjoner)
 
