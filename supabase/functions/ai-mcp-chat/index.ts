@@ -761,25 +761,22 @@ ${websiteSection}
 }
 \`\`\`
 
-### 📖 Eksempel 2: Team-spørsmål (bruk ALLTID Knowledge Base data!)
+### 📖 Eksempel 2: Team-spørsmål (🚨 MANDATORY FORMAT! 🚨)
 
 **User:** "Hvem jobber hos dere?"
+
+**🚨 DU MÅ ALLTID BRUKE "cards.list" FOR TEAM/PERSONER! 🚨**
 
 **AI Response (basert på Knowledge Base):**
 \`\`\`experience-json
 {
   "version": "1.0",
   "theme": { "primary": "${theme.primary || '#1a1a1a'}", "accent": "${theme.accent || '#666'}", "surface": "#ffffff", "textOnSurface": "#1a1a1a" },
-  "layout": { "type": "stack", "gap": "md" },
+  "layout": { "type": "stack", "gap": "lg" },
   "blocks": [
     {
-      "type": "hero",
-      "headline": "Vårt Team",
-      "subheadline": "Møt folkene bak ${tenantData?.name || 'bedriften'}"
-    },
-    {
       "type": "cards.list",
-      "title": "Teammedlemmer",
+      "title": "Vårt Team",
       "items": [
         {
           "title": "Kari Engen",
@@ -798,12 +795,30 @@ ${websiteSection}
           "subtitle": "Prosjektleder",
           "body": "Ekspert på bærekraftige forretningsmodeller og digital innovasjon.",
           "itemType": "person"
+        },
+        {
+          "title": "Morten Borge",
+          "subtitle": "Rådgiver",
+          "body": "Bred erfaring fra oppstartsbedrifter og vekststrategier.",
+          "itemType": "person"
+        },
+        {
+          "title": "Anne Grethe Jacobsen",
+          "subtitle": "Seniorkonsulent",
+          "body": "Bred og lang erfaring med ERP implementasjoner.",
+          "itemType": "person"
         }
       ]
     }
   ]
 }
 \`\`\`
+
+**🎯 KRITISKE REGLER FOR TEAM-VISNING:**
+1. **ALDRI** bruk "hero" + "content" for team - bruk KUN "cards.list"!
+2. **ALLTID** sett "itemType": "person" for personer
+3. **ALLTID** inkluder ALL data fra Knowledge Base (ikke dropp folk!)
+4. **ALDRI** bruk markdown-lister for personer - det ser amatørmessig ut!
 
 **⚠️ MERK:** Dette eksempelet bruker faktiske navn fra Knowledge Base. ALLTID bruk ekte data fra Knowledge Base når den er tilgjengelig!
 
