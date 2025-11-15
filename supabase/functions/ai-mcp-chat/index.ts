@@ -640,21 +640,12 @@ serve(async (req) => {
     }
 
     // ⭐ PHASE 3: Build system prompt with content library + website
-    const websiteSection = websiteScraped && websiteContent ? `
-## 🌐 COMPANY WEBSITE
-
-**Domain:** ${tenantDomain}
-
-**Extracted Content:**
-${websiteContent}
-
----
-` : '';
-
     const contentLibrarySection = contentDocs && contentDocs.length > 0 ? `
-## 📚 KNOWLEDGE BASE (Content Library)
+## 📚 KNOWLEDGE BASE (Content Library) ⭐ PRIMARY SOURCE
 
-Du har tilgang til følgende dokumenter om bedriften. Bruk denne informasjonen til å svare på brukerens spørsmål.
+**🚨 KRITISK: ALLTID BRUK DENNE FØRST! 🚨**
+
+Du har tilgang til følgende kurerte dokumenter om bedriften. Dette er den **PRIMÆRE KILDEN** for all informasjon.
 
 ${contentDocs.map((doc: any, idx: number) => `
 ### Dokument ${idx + 1}: ${doc.title}
@@ -666,20 +657,45 @@ ${doc.content_markdown}
 
 ---
 `).join('\n')}
+
+**⚠️ VIKTIG:** Når du svarer på spørsmål, **ALLTID** bruk informasjon fra Knowledge Base FØRST. Dette er kurert, validert innhold som er mer pålitelig enn website-data.
+` : '';
+
+    const websiteSection = websiteScraped && websiteContent ? `
+## 🌐 COMPANY WEBSITE (Secondary Source)
+
+**⚠️ ADVARSEL:** Bruk kun dette hvis informasjon IKKE finnes i Knowledge Base ovenfor.
+
+**Domain:** ${tenantDomain}
+
+**Extracted Content:**
+${websiteContent}
+
+---
 ` : '';
 
     const defaultSystemPrompt = `Du er en intelligent AI-assistent for ${tenantData?.name || 'denne bedriften'}.
 
-${websiteSection}
-
 ${contentLibrarySection}
 
-## 🎯 PRIORITERING AV KILDER
+${websiteSection}
 
-Når du svarer på brukerens spørsmål:
-1. **FØRST**: Søk i Knowledge Base (content library) for strukturert, kurert informasjon
-2. **DERETTER**: Bruk Company Website-innhold for generell bedriftsinformasjon
-3. **SIST**: Bruk MCP tools for spesifikke data-operasjoner (selskaper, prosjekter, oppgaver)
+## 🎯 PRIORITERING AV KILDER (KRITISK!)
+
+**🚨 REKKEFØLGE DU MÅ FØLGE:**
+
+1. **📚 Knowledge Base (Content Library) - ALLTID FØRST!**
+   - Dette er kurert, validert innhold
+   - Bruk dette for: team, tjenester, produkter, prosesser, FAQ
+   - **ALDRI ignorer dette til fordel for website-data!**
+
+2. **🌐 Company Website - KUN hvis info ikke finnes i Knowledge Base**
+   - Backup-kilde for generell bedriftsinformasjon
+   - Kan være utdatert eller upresist
+
+3. **🔧 MCP Tools - KUN for spesifikke data-operasjoner**
+   - Henting/oppretting av selskaper, prosjekter, oppgaver
+   - Ikke for innholdsspørsmål
 
 **VIKTIG:** Hvis du finner relevant informasjon i Knowledge Base eller Website, **ALLTID** svar med ExperienceJSON (se eksempler under).
 
@@ -745,11 +761,11 @@ Når du svarer på brukerens spørsmål:
 }
 \`\`\`
 
-### 📖 Eksempel 2: Team-spørsmål
+### 📖 Eksempel 2: Team-spørsmål (bruk ALLTID Knowledge Base data!)
 
 **User:** "Hvem jobber hos dere?"
 
-**AI Response:**
+**AI Response (basert på Knowledge Base):**
 \`\`\`experience-json
 {
   "version": "1.0",
@@ -766,9 +782,21 @@ Når du svarer på brukerens spørsmål:
       "title": "Teammedlemmer",
       "items": [
         {
-          "title": "Navn Navnesen",
-          "subtitle": "CEO & Founder",
-          "body": "Beskrivelse av person...",
+          "title": "Kari Engen",
+          "subtitle": "Daglig leder",
+          "body": "Over 15 års erfaring med innovasjonsfinansiering.",
+          "itemType": "person"
+        },
+        {
+          "title": "Anders Ruud",
+          "subtitle": "Seniorrådgiver",
+          "body": "Spesialist på EU-prosjekter og offentlig støtte.",
+          "itemType": "person"
+        },
+        {
+          "title": "Siri Lunde",
+          "subtitle": "Prosjektleder",
+          "body": "Ekspert på bærekraftige forretningsmodeller og digital innovasjon.",
           "itemType": "person"
         }
       ]
@@ -776,6 +804,8 @@ Når du svarer på brukerens spørsmål:
   ]
 }
 \`\`\`
+
+**⚠️ MERK:** Dette eksempelet bruker faktiske navn fra Knowledge Base. ALLTID bruk ekte data fra Knowledge Base når den er tilgjengelig!
 
 ### 📖 Eksempel 3: Prosess-spørsmål
 
