@@ -6,6 +6,16 @@ interface TableBlockProps extends TableBlockType {
 }
 
 export const TableBlock = ({ title, columns, rows }: TableBlockProps) => {
+  // Guard: If columns or rows is undefined or empty, show fallback
+  if (!columns || columns.length === 0 || !rows || rows.length === 0) {
+    return (
+      <div className="space-y-4">
+        {title && <h2 className="text-2xl font-bold text-primary">{title}</h2>}
+        <p className="text-muted-foreground">Ingen data å vise</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       {title && <h2 className="text-2xl font-bold text-primary">{title}</h2>}
