@@ -28,12 +28,11 @@ export default function SupplierScoringPage() {
   }, [supplierId]);
 
   return (
-    <div 
-    <AppBreadcrumbs levels={[
-  { label: "Dashboard", href: "/dashboard" },
-  { label: "Suppliers" }
-]} />
-    className="min-h-screen bg-background">
+    <div className="container mx-auto py-8">
+      <AppBreadcrumbs levels={generateBusinessBreadcrumbs({
+        currentPage: "Supplier Scoring"
+      })} />
+      <h1 className="text-3xl font-bold mb-6">Leverandørvurdering</h1>
       <div className="container py-6">
         <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
           <ArrowLeft className="mr-2 h-4 w-4" />

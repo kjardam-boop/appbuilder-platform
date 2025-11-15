@@ -12,15 +12,14 @@ export default function IndustryAdmin() {
   const [searchQuery, setSearchQuery] = useState("");
 
   return (
-    <div 
-    <AppBreadcrumbs levels={generateAdminBreadcrumbs({
-  category: "Content",
-  currentPage: "Industries"
-})} />
-    className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
       <Header />
       
       <main className="container mx-auto py-8 px-4">
+        <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+          category: "Content",
+          currentPage: "Industries"
+        })} />
         <div className="mb-8">
           <h1 className="text-4xl font-bold mb-2">Bransjer & NACE-klassifisering</h1>
           <p className="text-muted-foreground">

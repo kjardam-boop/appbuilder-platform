@@ -56,12 +56,7 @@ const AdminQuestions = () => {
 
   if (adminLoading || !isAdmin) {
     return (
-      <div 
-      <AppBreadcrumbs levels={generateAdminBreadcrumbs({
-  category: "Operations",
-  currentPage: "Questions"
-})} />
-      className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
       </div>
     );
@@ -72,6 +67,10 @@ const AdminQuestions = () => {
       <Header userName={profile?.full_name} userEmail={profile?.email} />
       
       <main className="w-full px-4 lg:px-6 xl:px-8 py-8">
+        <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+          category: "Operations",
+          currentPage: "Questions"
+        })} />
         <Button
           variant="ghost"
           onClick={() => navigate("/dashboard")}

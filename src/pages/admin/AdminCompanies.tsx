@@ -103,12 +103,7 @@ export default function AdminCompanies() {
       render: (value) => {
         if (!value || value.length === 0) return '-';
         return (
-          <div 
-          <AppBreadcrumbs levels={generateAdminBreadcrumbs({
-  category: "Platform",
-  currentPage: "Companies"
-})} />
-          className="flex gap-1 flex-wrap">
+          <div className="flex gap-1 flex-wrap">
             {value.map((role: string) => (
               <Badge key={role} variant="secondary" className="text-xs">
                 {role}

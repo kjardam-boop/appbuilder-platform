@@ -145,12 +145,7 @@ export default function ArchivedResourcesPage() {
 
   if (!isPlatformOwner || loading) {
     return (
-      <div 
-      <AppBreadcrumbs levels={generateAdminBreadcrumbs({
-  category: "Operations",
-  currentPage: "Archived Resources"
-})} />
-      className="container mx-auto p-6">
+      <div className="container mx-auto p-6">
         <div className="text-center">Laster...</div>
       </div>
     );
@@ -158,6 +153,10 @@ export default function ArchivedResourcesPage() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
+      <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+        category: "Platform",
+        currentPage: "Archived Resources"
+      })} />
       <div className="flex items-center gap-3">
         <Archive className="h-8 w-8 text-muted-foreground" />
         <div>

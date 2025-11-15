@@ -18,12 +18,7 @@ export default function AIMcpDemo() {
 
   if (!tenantId) {
     return (
-      <div 
-      <AppBreadcrumbs levels={generateAdminBreadcrumbs({
-  category: "AI",
-  currentPage: "MCP Demo"
-})} />
-      className="p-8">
+      <div className="p-8">
         <Card>
           <CardContent className="pt-6">
             <p className="text-muted-foreground text-center">
