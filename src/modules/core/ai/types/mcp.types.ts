@@ -16,6 +16,7 @@ export interface AIMcpChatResponse {
   response: string;
   tokensUsed?: number;
   toolCallsMade?: number;
+  fallbackApplied?: boolean; // ⭐ Track if backend fallback was applied
 }
 
 export interface McpTool {
