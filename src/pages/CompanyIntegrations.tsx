@@ -169,12 +169,7 @@ export default function CompanyIntegrations() {
 
   if (companyLoading) {
     return (
-      <div 
-      <AppBreadcrumbs levels={generateAdminBreadcrumbs({
-  category: "Business",
-  currentPage: "Integrations"
-})} />
-      className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background">
         <Header />
         <div className="container mx-auto py-8 px-4">
           <div className="flex items-center justify-center py-12">

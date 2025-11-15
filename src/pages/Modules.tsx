@@ -2,9 +2,9 @@ import { Header } from "@/components/layout/Header";
 import { ModuleCard } from "@/components/modules/ModuleCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
 import { AppBreadcrumbs } from '@/components/ui/app-breadcrumbs';
 import { generateAdminBreadcrumbs } from '@/helpers/breadcrumbHelper';
+import { 
   Building2, 
   FolderKanban, 
   FileText, 
@@ -62,15 +62,14 @@ const Modules = () => {
   ];
 
   return (
-    <div 
-    <AppBreadcrumbs levels={generateAdminBreadcrumbs({
-  category: "Platform",
-  currentPage: "Modules"
-})} />
-    className="min-h-screen bg-gradient-hero">
+    <div className="min-h-screen bg-gradient-hero">
       <Header />
       
       <main className="container py-8 space-y-8">
+        <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+          category: "Platform",
+          currentPage: "Modules"
+        })} />
         <div>
           <h1 className="text-4xl font-bold mb-2">Module Library</h1>
           <p className="text-muted-foreground">Browse and manage platform modules and addons</p>

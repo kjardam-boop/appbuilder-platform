@@ -120,12 +120,7 @@ export default function AIUsageDashboard() {
 
   if (isLoading) {
     return (
-      <div 
-      <AppBreadcrumbs levels={generateAdminBreadcrumbs({
-  category: "AI",
-  currentPage: "Usage Dashboard"
-})} />
-      className="flex items-center justify-center min-h-[400px]">
+      <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-lg">Laster AI-statistikk...</div>
       </div>
     );

@@ -144,14 +144,13 @@ export default function AdminSeed() {
   };
 
   return (
-    <div 
-    <AppBreadcrumbs levels={generateAdminBreadcrumbs({
-  category: "Operations",
-  currentPage: "Seed Data"
-})} />
-    className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
       <Header />
       <div className="container mx-auto py-8 px-4">
+        <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+          category: "Operations",
+          currentPage: "Seed Data"
+        })} />
         <div className="max-w-4xl mx-auto space-y-6">
           <div>
             <h1 className="text-3xl font-bold">Database Seeding</h1>

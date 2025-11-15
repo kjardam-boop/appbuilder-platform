@@ -11,9 +11,9 @@ import { OpportunityStageBadge } from "@/modules/core/opportunity";
 import { OpportunityDialog } from "@/modules/core/opportunity";
 import { useToast } from "@/hooks/use-toast";
 import type { OpportunityWithDetails } from "@/modules/opportunity";
-import {
 import { AppBreadcrumbs } from '@/components/ui/app-breadcrumbs';
 import { generateAdminBreadcrumbs } from '@/helpers/breadcrumbHelper';
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,

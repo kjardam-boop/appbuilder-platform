@@ -57,12 +57,7 @@ const AdminBootstrap = () => {
 
   if (!session?.user) {
     return (
-      <div 
-      <AppBreadcrumbs levels={generateAdminBreadcrumbs({
-  category: "Operations",
-  currentPage: "Bootstrap"
-})} />
-      className="min-h-screen bg-gradient-to-br from-background to-muted/20">
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
         <Header />
         <div className="w-full px-4 lg:px-6 xl:px-8 py-8">
           <Alert variant="destructive">
