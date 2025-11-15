@@ -463,3 +463,534 @@ Hovedproblemet er **kombinasjonen** av:
 2. System prompt som ikke tvinger ExperienceJSON
 
 **Anbefalt aksjon**: Fiks system prompt først (Løsning A), deretter debug Edge Function deployment (Debugging Steg 1-4).
+
+---
+
+# 🤖 CLAUDE'S TECHNICAL ANALYSIS & RECOMMENDATIONS
+
+## Executive Summary from Claude
+
+After thorough code review of both frontend and backend, I can confirm:
+
+**✅ CONFIRMED ISSUES:**
+1. **Edge Function Deployment Problem** (90% confidence) - Extensive logging exists but produces no output
+2. **System Prompt Too Permissive** (100% confidence) - Line 795-813 says "Hvis du genererer..." making ExperienceJSON optional
+3. **No Backend Validation** - AI response accepted as-is without ExperienceJSON requirement check
+
+**🎯 ROOT CAUSE HYPOTHESIS:**
+The Edge Function is either:
+- Not deployed to Lovable Cloud
+- Deployed with wrong name
+- Syntax error preventing startup (though Deno should catch this)
+
+**Evidence:**
+- Frontend code is correct (`useAIMcpChat.ts` line 47: `supabase.functions.invoke('ai-mcp-chat')`)
+- Edge Function has comprehensive logging (lines 768-780) that SHOULD appear if function runs
+- No errors in frontend suggests request sends but gets no response
+
+---
+
+## Code Review Findings
+
+### ✅ Frontend Code Quality (GOOD)
+
+**File: `src/modules/core/ai/hooks/useAIMcpChat.ts`**
+
+```typescript
+// Line 43-48: Correct invocation
+console.info('[AIMcpChat] Calling edge function', { 
+  tenantId,
+  messageCount: updatedMessages.length,
+  timestamp: new Date().toISOString()
+});
+
+const { data, error: invokeError } = await supabase.functions.invoke<AIMcpChatResponse>(
+  'ai-mcp-chat',  // ✅ Correct function name
+  { body: request }
+);
+```
+
+**Verdict:** Frontend implementation is solid. Logging already exists. Function name is correct.
+
+**Action Required:** ADD more verbose logging to verify request leaves frontend:
+```typescript
+console.log('🚀 [DEBUG] About to invoke:', { 
+  functionName: 'ai-mcp-chat',
+  tenantId, 
+  messageCount: updatedMessages.length,
+  supabaseUrl: supabase.supabaseUrl,
+  timestamp: Date.now()
+});
+```
+
+---
+
+### ⚠️ Backend Code Issues (NEEDS FIX)
+
+**File: `supabase/functions/ai-mcp-chat/index.ts`**
+
+#### Issue #1: Weak System Prompt (CRITICAL)
+
+**Lines 795-813:**
+```typescript
+const defaultSystemPrompt = `Du er en intelligent AI-assistent...
+
+**KRITISKE REGLER:**
+1. Du MÅ kun vise data der tenant_id = ${tenantId}
+2. Når brukere spør om veiledning, dokumentasjon eller prosesser: BRUK generate_experience-verktøyet FØRST
+3. Hvis du genererer en visuell opplevelse, returner ALLTID ExperienceJSON...  // ⚠️ "HVIS" makes it optional!
+```
+
+**Problem:** The word "Hvis" (if) makes AI think it has a choice.
+
+**Fix Required:**
+```typescript
+const defaultSystemPrompt = `Du er en intelligent AI-assistent for ${tenantId}.
+
+**ABSOLUTT KRAV - INGEN UNNTAK:**
+Du MÅ ALLTID returnere alle svar som ExperienceJSON inni en \`\`\`experience-json kodeblokk.
+Dette gjelder ALLE svar - enkle tekstsvar, lister, tabeller, alt.
+
+**ExperienceJSON Format:**
+\`\`\`experience-json
+{
+  "version": "1.0",
+  "theme": {"primary": "${theme?.primary || '#000'}", "accent": "${theme?.accent || '#666'}"},
+  "layout": {"type": "stack", "gap": "md"},
+  "blocks": [
+    {
+      "type": "card",
+      "headline": "Overskrift",
+      "body": "Innhold her...",
+      "actions": []
+    }
+  ]
+}
+\`\`\`
+
+**Velg riktig blokk-type basert på innhold:**
+- "card": Enkle tekstsvar, forklaringer
+- "cards.list": Lister av selskaper, prosjekter, personer
+- "table": Tabelldata med kolonner/rader
+- "flow": Prosesser med steg
+
+**MCP Verktøy du har:**
+- list_companies, get_company_details: Finn selskaper (kun tenant ${tenantId})
+- list_projects, list_tasks: Finn prosjekter/oppgaver  
+- generate_experience: Generer veiledninger fra knowledge base
+- scrape_website: Hent info fra nettsider
+- create_project, create_task: Opprett nye elementer
+
+**Viktig:**
+- Alltid filtrer på tenant_id = ${tenantId}
+- Hvis du ikke finner data, si det i et card-block
+- Bruk norsk språk
+- Forklar hva du gjør`;
+```
+
+#### Issue #2: No Response Validation (MISSING)
+
+**Current code (line ~900):**
+```typescript
+const finalResponse = choice?.message?.content || 'Ingen respons fra AI';
+
+return new Response(
+  JSON.stringify({ 
+    response: finalResponse,  // ⚠️ No validation if ExperienceJSON exists
+```
+
+**Fix Required - Add Validation & Fallback:**
+```typescript
+let finalResponse = choice?.message?.content || 'Ingen respons fra AI';
+
+// VALIDATE: Check if response contains ExperienceJSON
+if (!finalResponse.includes('```experience-json')) {
+  console.warn('⚠️ AI DID NOT RETURN ExperienceJSON - Wrapping in fallback card');
+  
+  // Wrap plain text in ExperienceJSON card
+  const fallbackExperience = {
+    version: "1.0",
+    theme: {
+      primary: theme?.primary || "#0066CC",
+      accent: theme?.accent || "#FF6B00"
+    },
+    layout: { type: "stack", gap: "md" },
+    blocks: [
+      {
+        type: "card",
+        headline: "Svar fra AI",
+        body: finalResponse.trim(),
+        actions: []
+      }
+    ]
+  };
+  
+  finalResponse = '```experience-json\n' + 
+                  JSON.stringify(fallbackExperience, null, 2) + 
+                  '\n```\n\n' + finalResponse;
+  
+  // Log for monitoring
+  await supabaseClient.from('ai_usage_logs').insert({
+    tenant_id: tenantId,
+    provider: aiClientConfig.provider,
+    model: aiClientConfig.model,
+    endpoint: 'ai-mcp-chat',
+    status: 'warning',
+    error_message: 'AI returned plain text instead of ExperienceJSON - fallback applied',
+    metadata: { fallback_applied: true }
+  });
+}
+
+return new Response(
+  JSON.stringify({ 
+    response: finalResponse,
+    tokensUsed: aiData.usage?.total_tokens,
+    toolCallsMade: iterations,
+    provider: aiClientConfig.provider,
+    model: aiClientConfig.model,
+    fallbackApplied: !finalResponse.includes('```experience-json')  // ✅ Notify frontend
+  }),
+  { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+);
+```
+
+#### Issue #3: Extensive Logging Exists But Not Appearing
+
+**Lines 768-780: Excellent logging already in place**
+```typescript
+console.log('========================================');
+console.log('🔍 AI-MCP-CHAT DEBUG');
+console.log('========================================');
+console.log(`📌 Tenant ID: ${tenantId}`);
+console.log(`📌 Tenant Slug: ${tenantData?.slug || 'N/A'}`);
+console.log(`📌 Tenant Name: ${tenantData?.name || 'N/A'}`);
+```
+
+**This code SHOULD produce logs if function runs.**
+
+**Conclusion:** Function is NOT running → **Deployment Issue**
+
+---
+
+## Priority Action Plan (Claude's Recommendation)
+
+### 🔴 IMMEDIATE (Do First - 15 minutes)
+
+**1. Verify Edge Function Deployment**
+
+**@Lovable - Please check:**
+```bash
+# In Lovable Cloud backend/Supabase dashboard:
+1. Go to Edge Functions section
+2. Confirm function named "ai-mcp-chat" exists
+3. Check deployment status (should be "active")
+4. Verify last deployed timestamp is recent
+5. Check for any deployment errors/warnings
+```
+
+**If function NOT deployed or has errors:**
+```bash
+# Redeploy from Lovable:
+1. Make small change to index.ts (add comment)
+2. Push to trigger redeploy
+3. Monitor deployment logs for errors
+```
+
+**Alternative - Check via Supabase CLI:**
+```bash
+supabase functions list
+# Should show: ai-mcp-chat (active)
+
+# Test function locally:
+supabase functions serve ai-mcp-chat
+# Then call it from browser/Postman
+```
+
+**2. Add Frontend Logging Enhancement**
+
+**File: `src/modules/core/ai/hooks/useAIMcpChat.ts`**
+
+Add BEFORE line 47:
+```typescript
+console.group('🚀 AI Chat Request');
+console.log('Timestamp:', new Date().toISOString());
+console.log('Function:', 'ai-mcp-chat');
+console.log('Tenant ID:', tenantId);
+console.log('Messages:', updatedMessages.length);
+console.log('Supabase URL:', supabase.supabaseUrl);
+console.log('Request Body:', { messages: updatedMessages.slice(-2), tenantId, systemPrompt: !!systemPrompt });
+console.groupEnd();
+```
+
+Add AFTER line 54:
+```typescript
+console.group('📥 AI Chat Response');
+console.log('Success:', !invokeError);
+console.log('Data:', data);
+console.log('Error:', invokeError);
+console.log('Timestamp:', new Date().toISOString());
+console.groupEnd();
+```
+
+---
+
+### 🟡 HIGH PRIORITY (Do Second - 30 minutes)
+
+**3. Fix System Prompt**
+
+**@Lovable - Make this change:**
+
+**File: `supabase/functions/ai-mcp-chat/index.ts`, line 795**
+
+Replace entire `defaultSystemPrompt` with the version I provided above (in Issue #1).
+
+**Key changes:**
+- Remove "Hvis" (if) - make ExperienceJSON mandatory
+- Add explicit format example at top
+- Clarify block type selection
+- Stronger language: "MÅ ALLTID" instead of "Hvis du genererer"
+
+**4. Add Response Validation & Fallback**
+
+**@Lovable - Add validation code:**
+
+**File: `supabase/functions/ai-mcp-chat/index.ts`, line ~900**
+
+Replace final response section with the validation code I provided above (in Issue #2).
+
+**This provides:**
+- ✅ Validation that ExperienceJSON exists
+- ✅ Automatic fallback wrapping if missing
+- ✅ Logging of fallback events for monitoring
+- ✅ Frontend notification via `fallbackApplied` flag
+
+---
+
+### 🟢 MEDIUM PRIORITY (Do After Above Works - 1 hour)
+
+**5. Add Health Check Endpoint**
+
+**New file: `supabase/functions/ai-mcp-chat-health/index.ts`**
+
+```typescript
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+
+serve(async (req) => {
+  return new Response(
+    JSON.stringify({ 
+      status: 'healthy',
+      function: 'ai-mcp-chat',
+      timestamp: new Date().toISOString(),
+      version: '1.0.0'
+    }),
+    { 
+      headers: { 'Content-Type': 'application/json' },
+      status: 200 
+    }
+  );
+});
+```
+
+**Purpose:** Quick way to verify function is deployed and responding.
+
+**6. Enhance Frontend Error Messages**
+
+**File: `src/modules/core/ai/hooks/useAIMcpChat.ts`, line 56**
+
+```typescript
+if (invokeError) {
+  console.error('❌ Edge Function Error:', invokeError);
+  
+  // Enhanced error messages
+  let userMessage = invokeError.message;
+  if (invokeError.message?.includes('FunctionsRelayError')) {
+    userMessage = 'AI funksjonen er ikke tilgjengelig. Kontakt support.';
+  } else if (invokeError.message?.includes('timeout')) {
+    userMessage = 'AI svarte ikke i tide. Prøv igjen.';
+  }
+  
+  throw new AIError(
+    userMessage,
+    'network_error',
+    invokeError
+  );
+}
+```
+
+---
+
+## Testing Strategy
+
+### Test 1: Verify Deployment
+
+**Browser Console:**
+```javascript
+// Should appear in console when you send a message
+🚀 AI Chat Request
+  Timestamp: 2025-11-15T08:45:23.456Z
+  Function: ai-mcp-chat
+  Tenant ID: innowin-as
+  ...
+```
+
+**Supabase Logs (if deployed):**
+```
+🔍 AI-MCP-CHAT DEBUG
+ Tenant ID: innowin-as
+...
+```
+
+**If NO Supabase logs → Function NOT deployed/running**
+
+### Test 2: Verify ExperienceJSON
+
+**Send simple query:**
+```
+"Hva er klokken?"
+```
+
+**Expected response (in chat):**
+```json
+{
+  "version": "1.0",
+  "blocks": [
+    {
+      "type": "card",
+      "headline": "Klokken",
+      "body": "Klokken er [tid]..."
+    }
+  ]
+}
+```
+
+**If plain text appears → System prompt fix needed**
+
+### Test 3: Verify MCP Tools
+
+**Send:**
+```
+"List alle selskaper"
+```
+
+**Expected:**
+1. Supabase logs show: `[MCP Tool] Executing: list_companies`
+2. Response is ExperienceJSON with `cards.list` block
+3. Shows actual companies from database
+
+**If no companies or error → Tool execution failing**
+
+---
+
+## Disagreements with Lovable's Analysis
+
+### ⚠️ Minor Disagreement #1: Hypotese B
+
+**Lovable says:** "Frontend kaller feil funksjon"
+
+**Claude says:** Frontend code is correct. Line 47 uses `'ai-mcp-chat'` which matches function name. Error more likely in deployment than frontend code.
+
+**Evidence:**
+```typescript
+// useAIMcpChat.ts line 47 - CORRECT
+const { data, error } = await supabase.functions.invoke<AIMcpChatResponse>(
+  'ai-mcp-chat',  // ✅ Matches function directory name
+  { body: request }
+);
+```
+
+### ✅ Agreement with Lovable's Analysis
+
+**I fully agree with:**
+- Hypotese A (Deployment Issue) - Most likely root cause
+- Hypotese D (Weak System Prompt) - Definitely needs fixing
+- Løsning A (Fix System Prompt) - Critical change needed
+- Løsning B (Backend Fallback) - Good safety net
+- All debugging steps are excellent
+
+---
+
+## Final Recommendations
+
+### For Lovable (Backend Access):
+
+1. **Check Deployment NOW** (5 min)
+   - Verify function exists in Supabase
+   - Check deployment logs
+   - Redeploy if needed
+
+2. **Fix System Prompt** (10 min)
+   - Use my version above
+   - Deploy change
+   - Test with simple query
+
+3. **Add Response Validation** (15 min)
+   - Add validation code
+   - Add fallback wrapping
+   - Deploy and test
+
+### For Claude (Frontend):
+
+1. **Add Verbose Logging** (5 min)
+   - Enhance console logging
+   - Help diagnose if request leaves frontend
+
+2. **Test After Backend Fixes** (10 min)
+   - Send various queries
+   - Verify ExperienceJSON rendering
+   - Document any remaining issues
+
+---
+
+## Success Criteria
+
+✅ **Deployment Verified:**
+- Supabase logs show "🔍 AI-MCP-CHAT DEBUG" on every request
+- No 404 errors in browser Network tab
+
+✅ **ExperienceJSON Working:**
+- ALL responses wrapped in ```experience-json blocks
+- ExperienceRenderer displays styled content
+- No plain text in chat bubbles
+
+✅ **MCP Tools Working:**
+- Can list companies, projects, tasks
+- Results filtered by tenant
+- Data displays in cards/tables
+
+✅ **User Experience:**
+- Fast responses (<3 seconds)
+- Beautiful branded UI
+- No errors or crashes
+
+---
+
+## Questions for Lovable
+
+1. **Can you confirm function is deployed in Lovable Cloud?**
+   - Function name: `ai-mcp-chat`
+   - Last deployment: [timestamp?]
+   - Status: [active/error?]
+
+2. **Are there any deployment errors in Lovable logs?**
+   - Syntax errors?
+   - Missing dependencies?
+   - Configuration issues?
+
+3. **Can you check if function is receiving requests?**
+   - Any HTTP POST to `/functions/v1/ai-mcp-chat`?
+   - Response codes? (200, 404, 500?)
+
+4. **After system prompt fix, can you test with:**
+   ```
+   User: "Hva er 2+2?"
+   Expected: ExperienceJSON card with "4"
+   ```
+
+---
+
+**Claude's Confidence Level:**
+- Deployment Issue: 90% confident this is root cause
+- System Prompt Issue: 100% confident this needs fixing
+- Combined Fix Success: 95% confident these two fixes resolve the problem
+
+**Next Step:** Lovable checks deployment, we compare notes, implement fixes collaboratively. 🤝
