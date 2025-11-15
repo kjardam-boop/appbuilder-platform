@@ -73,12 +73,11 @@ export default function PerformanceTest() {
   };
 
   return (
-    <div 
-    <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+    <div className="container mx-auto py-8 space-y-6">
+      <AppBreadcrumbs levels={generateAdminBreadcrumbs({
   category: "Operations",
   currentPage: "Performance Test"
 })} />
-    className="container mx-auto py-8 space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Performance Test</h1>
         <p className="text-muted-foreground mt-2">

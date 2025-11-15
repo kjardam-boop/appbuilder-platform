@@ -136,12 +136,11 @@ export default function PlatformInvitationsPage() {
   };
 
   return (
-    <div 
-    <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+    <div className="container mx-auto p-6 space-y-6">
+      <AppBreadcrumbs levels={generateAdminBreadcrumbs({
   category: "Platform",
   currentPage: "Invitations"
 })} />
-    className="container mx-auto p-6 space-y-6">
       <div>
         <h1 className="text-3xl font-bold mb-2">Plattform-invitasjoner</h1>
         <p className="text-muted-foreground">

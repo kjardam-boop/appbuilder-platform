@@ -90,12 +90,11 @@ export default function AppDefinitionCreate() {
   };
 
   return (
-    <div 
-    <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+    <div className="space-y-6 p-6">
+      <AppBreadcrumbs levels={generateAdminBreadcrumbs({
   category: "Content",
   currentPage: "Create App"
 })} />
-    className="space-y-6 p-6">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => navigate("/admin/apps")}>
           <ArrowLeft className="h-5 w-5" />

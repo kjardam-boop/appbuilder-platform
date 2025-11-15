@@ -126,12 +126,11 @@ export default function IntegrationRecommendations() {
     .filter((rec: Recommendation) => rec.score >= parseInt(minScore) || 0);
 
   return (
-    <div 
-    <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+    <div className="container mx-auto p-6 space-y-6">
+      <AppBreadcrumbs levels={generateAdminBreadcrumbs({
   category: "Integrations",
   currentPage: "Recommendations"
 })} />
-    className="container mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Integration Recommendations</h1>

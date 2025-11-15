@@ -45,7 +45,8 @@ export default function CompaniesHub() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <AppBreadcrumbs levels={generateBusinessBreadcrumbs({
+      <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+        category: "CRM",
         currentPage: "Companies Hub"
       })} />
       <div className="flex items-center justify-between">

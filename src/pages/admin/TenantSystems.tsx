@@ -31,12 +31,11 @@ export default function TenantSystems() {
   };
 
   return (
-    <div 
-    <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+    <div className="container mx-auto py-8 space-y-6">
+      <AppBreadcrumbs levels={generateAdminBreadcrumbs({
   category: "Tenants",
   currentPage: "Systems"
 })} />
-    className="container mx-auto py-8 space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">External Systems</h1>

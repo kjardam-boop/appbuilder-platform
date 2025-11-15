@@ -190,12 +190,11 @@ export default function IntegrationGraph() {
   }, []);
 
   return (
-    <div 
-    <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+    <div className="container mx-auto p-6 space-y-6">
+      <AppBreadcrumbs levels={generateAdminBreadcrumbs({
   category: "Integrations",
   currentPage: "Integration Graph"
 })} />
-    className="container mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
