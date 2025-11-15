@@ -463,3 +463,682 @@ Hovedproblemet er **kombinasjonen** av:
 2. System prompt som ikke tvinger ExperienceJSON
 
 **Anbefalt aksjon**: Fiks system prompt først (Løsning A), deretter debug Edge Function deployment (Debugging Steg 1-4).
+
+---
+
+## Implementeringsplan
+
+### Fase 1: Debugging og Diagnostikk (30 min)
+**Mål**: Bekrefte at Edge Function faktisk kjører og identifisere hvor i dataflyten det feiler.
+
+#### Steg 1.1: Legg til Frontend Logging
+**Fil**: `src/modules/core/ai/hooks/useAIMcpChat.ts`
+
+```typescript
+const sendMessage = async (userMessage: string) => {
+  console.group('🔍 [AI-MCP] Send Message');
+  console.log('Tenant ID:', tenantId);
+  console.log('Message:', userMessage);
+  console.log('History:', messages.length, 'messages');
+  
+  try {
+    const request: AIMcpChatRequest = {
+      messages: updatedMessages,
+      tenantId,
+      systemPrompt,
+    };
+    
+    console.log('Request payload:', request);
+    console.time('Edge Function Call');
+    
+    const { data, error: invokeError } = await supabase.functions.invoke<AIMcpChatResponse>(
+      'ai-mcp-chat',
+      { body: request }
+    );
+    
+    console.timeEnd('Edge Function Call');
+    console.log('Response data:', data);
+    console.log('Response error:', invokeError);
+    console.groupEnd();
+    
+    // ... existing error handling
+  }
+};
+```
+
+**Forventet output hvis Edge Function kjører**:
+```
+🔍 [AI-MCP] Send Message
+  Tenant ID: innowin-as
+  Message: List selskaper
+  History: 2 messages
+  Request payload: {...}
+  Edge Function Call: 1234ms
+  Response data: { response: "...", toolCallsMade: 3 }
+```
+
+**Hvis ingen response**: Edge Function kalles ikke → gå til Steg 1.2
+
+#### Steg 1.2: Verifiser Edge Function Deployment
+**Aksjon**: Sjekk `supabase/config.toml`
+
+```toml
+# Forventet konfig
+[functions.ai-mcp-chat]
+verify_jwt = false
+```
+
+**Hvis mangler**: Legg til og redeploy.
+
+**Aksjon 2**: Sjekk Supabase Edge Function logs
+- Åpne Lovable Cloud UI → Backend → Functions
+- Velg `ai-mcp-chat`
+- Sjekk logs for entries med `🔍 AI-MCP-CHAT DEBUG`
+
+**Hvis ingen logs**: Edge Function deployes ikke korrekt → kontakt Lovable support eller sjekk deployment status.
+
+#### Steg 1.3: Test Edge Function Direkte
+**Aksjon**: Kjør curl-test mot Edge Function
+
+```bash
+curl -X POST \
+  https://lunsgsyeaqnalpdbkhyg.supabase.co/functions/v1/ai-mcp-chat \
+  -H "Authorization: Bearer eyJhbG..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "messages": [{"role": "user", "content": "Test"}],
+    "tenantId": "innowin-as"
+  }'
+```
+
+**Forventet response**: JSON med `response` felt  
+**Hvis 404**: Funksjon ikke deployet  
+**Hvis 500**: Server error → sjekk logs
+
+---
+
+### Fase 2: Fiks System Prompt (45 min)
+**Mål**: Tvinge AI til å ALLTID returnere ExperienceJSON, uansett spørsmål.
+
+#### Steg 2.1: Oppdater System Prompt
+**Fil**: `supabase/functions/ai-mcp-chat/index.ts`, linje ~803
+
+**Erstatt**:
+```typescript
+const defaultSystemPrompt = `Du er en intelligent AI-assistent...
+Hvis du genererer en visuell opplevelse, returner ALLTID ExperienceJSON...`;
+```
+
+**Med**:
+```typescript
+const defaultSystemPrompt = `Du er en intelligent AI-assistent for ${tenantConfig?.name || tenantId}.
+
+**KRITISK REGEL - LES NØYE:**
+Du MÅ ALLTID returnere svar som ExperienceJSON inne i en \`\`\`experience-json kodeblokk.
+Dette gjelder ALLE svar - enkle og komplekse - INGEN UNNTAK.
+
+**Obligatorisk format for ALLE svar:**
+\`\`\`experience-json
+{
+  "version": "1.0",
+  "theme": {
+    "primary": "${theme?.primary || '#0066CC'}",
+    "accent": "${theme?.accent || '#FF6B00'}"
+  },
+  "layout": {"type": "stack", "gap": "md"},
+  "blocks": [
+    {
+      "type": "card",
+      "headline": "Overskrift her",
+      "body": "Innhold her",
+      "actions": []
+    }
+  ]
+}
+\`\`\`
+
+**Tilgjengelige blokk-typer:**
+1. **card**: Enkel tekstboks
+   - Bruk for: Enkle svar, forklaringer, feilmeldinger
+   - Påkrevd: headline, body
+   - Valgfri: subtitle, actions[], metadata{}
+
+2. **cards.list**: Liste av kort
+   - Bruk for: Selskaper, prosjekter, leverandører
+   - Påkrevd: headline, items[]
+   - items: [{title, subtitle, metadata{}, actions[]}]
+
+3. **table**: Tabell med kolonner og rader
+   - Bruk for: Sammenligning, detaljert data
+   - Påkrevd: headline, columns[], rows[]
+   - columns: [{key, label, width?}]
+   - rows: [{id, cells: {key: value}}]
+
+4. **flow**: Prosessflyt med steg
+   - Bruk for: Workflow, prosesser
+   - Påkrevd: headline, steps[]
+   - steps: [{label, description?, status?}]
+
+**Når du skal hente data:**
+- Bruk tilgjengelige MCP tools (list_companies, list_projects, etc.)
+- Filtrer alltid på tenant_id="${tenantId}"
+- Presenter resultater som cards.list eller table
+
+**Når du skal generere innhold:**
+- Bruk generate_experience tool for å hente markdown fra ai_app_content_library
+- Konverter markdown til ExperienceJSON blocks
+
+**Eksempel - Enkelt svar på "Hei":**
+\`\`\`experience-json
+{
+  "version": "1.0",
+  "theme": {"primary": "${theme?.primary || '#0066CC'}"},
+  "layout": {"type": "stack"},
+  "blocks": [
+    {
+      "type": "card",
+      "headline": "Velkommen!",
+      "body": "Hei! Jeg kan hjelpe deg med å finne informasjon om selskaper, prosjekter og mer. Hva vil du vite?",
+      "actions": [
+        {"label": "Vis selskaper", "action": "suggest", "value": "List alle selskaper"},
+        {"label": "Vis prosjekter", "action": "suggest", "value": "List aktive prosjekter"}
+      ]
+    }
+  ]
+}
+\`\`\`
+
+**Eksempel - Liste over selskaper:**
+\`\`\`experience-json
+{
+  "version": "1.0",
+  "theme": {"primary": "${theme?.primary || '#0066CC'}"},
+  "layout": {"type": "stack"},
+  "blocks": [
+    {
+      "type": "cards.list",
+      "headline": "Selskaper",
+      "subtitle": "5 selskaper funnet",
+      "items": [
+        {
+          "title": "Acme Corp",
+          "subtitle": "500 ansatte • Oslo",
+          "metadata": {"roles": "Kunde, Partner", "status": "Aktiv"},
+          "actions": [{"label": "Se detaljer", "href": "/companies/123"}]
+        }
+      ]
+    }
+  ]
+}
+\`\`\`
+
+HUSK: Ren tekst er IKKE tillatt. Alle svar må være ExperienceJSON.`;
+```
+
+**Hvorfor dette fungerer:**
+- Sier "MÅ ALLTID" i stedet for "Hvis du genererer..."
+- Gir konkrete eksempler på ALLE svar-typer
+- Forklarer når hver blokk-type skal brukes
+- Viser eksempler med faktisk kode
+
+#### Steg 2.2: Test System Prompt
+**Aksjon**: Send test-meldinger i AI Chat
+
+Test-cases:
+1. ✅ "Hei" → Skal returnere card med velkommen-melding
+2. ✅ "List selskaper" → Skal returnere cards.list med companies
+3. ✅ "Hva er 2+2?" → Skal returnere card med svar "4"
+4. ✅ "Feil melding" → Skal returnere card med error
+
+**Forventet**: Alle svar inneholder ```experience-json kodeblokk
+
+**Hvis fortsatt ren tekst**: Gå til Fase 3 (Backend Fallback)
+
+---
+
+### Fase 3: Backend Fallback (30 min)
+**Mål**: Sikkerhetsnett som wrapper ren tekst i ExperienceJSON hvis AI ignorerer system prompt.
+
+#### Steg 3.1: Legg til Fallback-logikk
+**Fil**: `supabase/functions/ai-mcp-chat/index.ts`, etter AI-respons
+
+**Finn koden**:
+```typescript
+// ... etter AI har generert svar
+return new Response(
+  JSON.stringify({ 
+    response: finalResponse.content,
+    toolCallsMade: conversationMessages.length - messages.length,
+    tokensUsed: 0
+  }),
+  { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+);
+```
+
+**Erstatt med**:
+```typescript
+// Sjekk om AI returnerte ExperienceJSON
+let responseContent = finalResponse.content;
+
+if (!responseContent.includes('```experience-json')) {
+  console.warn('⚠️ [AI-MCP] AI returnerte ikke ExperienceJSON - applying fallback');
+  
+  // Wrap ren tekst i en enkel card
+  const fallbackExperience = {
+    version: "1.0",
+    theme: {
+      primary: theme?.primary || "#0066CC",
+      accent: theme?.accent || "#FF6B00"
+    },
+    layout: { type: "stack", gap: "md" },
+    blocks: [
+      {
+        type: "card",
+        headline: "Svar fra AI",
+        body: responseContent.trim(),
+        metadata: {
+          fallback: true,
+          warning: "AI returnerte ikke strukturert format"
+        },
+        actions: []
+      }
+    ]
+  };
+  
+  responseContent = '```experience-json\n' + 
+    JSON.stringify(fallbackExperience, null, 2) + 
+    '\n```';
+  
+  console.log('✅ [AI-MCP] Fallback applied - wrapped as card');
+}
+
+return new Response(
+  JSON.stringify({ 
+    response: responseContent,
+    toolCallsMade: conversationMessages.length - messages.length,
+    tokensUsed: 0,
+    fallbackApplied: !finalResponse.content.includes('```experience-json')
+  }),
+  { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+);
+```
+
+**Hvorfor dette fungerer:**
+- Sjekker om response inneholder ```experience-json
+- Hvis ikke: wrapper teksten i en enkel card
+- Logger warning for monitoring
+- Sender `fallbackApplied: true` tilbake til frontend
+
+#### Steg 3.2: Vis Fallback-warning i Frontend
+**Fil**: `src/modules/core/ai/components/AIMcpChatInterface.tsx`
+
+**Legg til i response handler**:
+```typescript
+const handleSendMessage = async (content: string) => {
+  // ... existing code
+  const result = await onSendMessage(content);
+  
+  if (result?.fallbackApplied) {
+    console.warn('⚠️ AI response required fallback formatting');
+    // Optional: Show toast to user
+    // toast.warning('AI returnerte ustrukturert svar - fallback brukt');
+  }
+};
+```
+
+---
+
+### Fase 4: Legg til MCP Tool for Format (Valgfritt - 45 min)
+**Mål**: Gi AI et dedikert tool for å formatere svar som ExperienceJSON.
+
+#### Steg 4.1: Definer Tool
+**Fil**: `supabase/functions/ai-mcp-chat/index.ts`, i `tools` array
+
+**Legg til**:
+```typescript
+{
+  name: 'format_response',
+  description: 'Format your final response as ExperienceJSON. REQUIRED before returning to user.',
+  parameters: {
+    type: 'object',
+    properties: {
+      blocks: {
+        type: 'array',
+        description: 'Array of UI blocks to display',
+        items: {
+          type: 'object',
+          properties: {
+            type: {
+              type: 'string',
+              enum: ['card', 'cards.list', 'table', 'flow'],
+              description: 'Block type'
+            },
+            headline: { 
+              type: 'string', 
+              description: 'Main heading' 
+            },
+            body: { 
+              type: 'string', 
+              description: 'Content text' 
+            },
+            subtitle: { 
+              type: 'string', 
+              description: 'Optional subtitle' 
+            },
+            items: {
+              type: 'array',
+              description: 'For cards.list - array of items',
+              items: { type: 'object' }
+            },
+            columns: {
+              type: 'array',
+              description: 'For table - column definitions'
+            },
+            rows: {
+              type: 'array',
+              description: 'For table - row data'
+            },
+            steps: {
+              type: 'array',
+              description: 'For flow - process steps'
+            },
+            actions: {
+              type: 'array',
+              description: 'Optional action buttons',
+              items: {
+                type: 'object',
+                properties: {
+                  label: { type: 'string' },
+                  href: { type: 'string' },
+                  action: { type: 'string' },
+                  value: { type: 'string' }
+                }
+              }
+            },
+            metadata: {
+              type: 'object',
+              description: 'Optional metadata key-value pairs'
+            }
+          },
+          required: ['type', 'headline']
+        }
+      },
+      theme: {
+        type: 'object',
+        description: 'Optional theme overrides',
+        properties: {
+          primary: { type: 'string', description: 'Primary color hex' },
+          accent: { type: 'string', description: 'Accent color hex' }
+        }
+      }
+    },
+    required: ['blocks']
+  }
+}
+```
+
+#### Steg 4.2: Implementer Tool Handler
+**Fil**: `supabase/functions/ai-mcp-chat/index.ts`, i tool execution switch
+
+**Legg til case**:
+```typescript
+case 'format_response': {
+  const { blocks, theme: customTheme } = toolCall.function.arguments;
+  
+  console.log(`📝 [Tool: format_response] Formatting ${blocks.length} blocks`);
+  
+  const experience = {
+    version: "1.0",
+    theme: customTheme || {
+      primary: theme?.primary || "#0066CC",
+      accent: theme?.accent || "#FF6B00"
+    },
+    layout: { type: "stack", gap: "md" },
+    blocks: blocks
+  };
+  
+  const formatted = '```experience-json\n' + 
+    JSON.stringify(experience, null, 2) + 
+    '\n```';
+  
+  toolResult = {
+    success: true,
+    formatted: formatted,
+    blockCount: blocks.length
+  };
+  break;
+}
+```
+
+#### Steg 4.3: Oppdater System Prompt for å kreve Tool
+**Fil**: `supabase/functions/ai-mcp-chat/index.ts`, i system prompt
+
+**Legg til i slutten av prompt**:
+```typescript
+**VIKTIG - Bruk format_response tool:**
+Før du returnerer svar til bruker, MÅ du kalle format_response tool med dine blocks.
+Eksempel:
+1. Hent data med list_companies
+2. Bygg blocks array basert på data
+3. Kall format_response med blocks
+4. Returner formatted output fra tool
+
+Eksempel flow:
+User: "List selskaper"
+→ Call list_companies({tenantId})
+→ Build blocks: [{type: "cards.list", ...}]
+→ Call format_response({blocks})
+→ Return formatted result
+```
+
+---
+
+### Fase 5: Testing og Validering (30 min)
+**Mål**: Verifisere at alle endringer fungerer som forventet.
+
+#### Test Suite
+
+##### Test 1: Enkel Tekstrespons
+**Input**: "Hei, hvordan går det?"
+**Forventet**:
+- ✅ Response inneholder ```experience-json
+- ✅ Blocks array har 1 card
+- ✅ Card har headline og body
+- ✅ Theme inneholder primary og accent
+
+##### Test 2: Liste Selskaper
+**Input**: "List alle selskaper"
+**Forventet**:
+- ✅ Tool call: list_companies
+- ✅ Response inneholder ```experience-json
+- ✅ Blocks array har 1 cards.list
+- ✅ Items array inneholder company data
+- ✅ Hver item har title, subtitle, metadata
+
+##### Test 3: Tabell-data
+**Input**: "Vis prosjekter som tabell"
+**Forventet**:
+- ✅ Tool call: list_projects
+- ✅ Response inneholder ```experience-json
+- ✅ Blocks array har 1 table
+- ✅ Columns og rows er definert
+
+##### Test 4: Feilhåndtering
+**Input**: "Vis selskap med ugyldig ID"
+**Forventet**:
+- ✅ Response inneholder ```experience-json
+- ✅ Card med error melding
+- ✅ Metadata inneholder error: true
+
+##### Test 5: Fallback Aktivering (hvis implementert)
+**Aksjon**: Midlertidig fjern system prompt constraint
+**Forventet**:
+- ✅ AI returnerer ren tekst
+- ✅ Backend wrapper i fallback card
+- ✅ Frontend logger warning
+- ✅ `fallbackApplied: true` i response
+
+---
+
+### Fase 6: Monitoring og Logging (20 min)
+**Mål**: Sikre at vi kan overvåke og debugge fremtidige issues.
+
+#### Steg 6.1: Logging i Edge Function
+**Fil**: `supabase/functions/ai-mcp-chat/index.ts`
+
+**Legg til metrics logging**:
+```typescript
+// I slutten av request handler, før return
+console.log('📊 [AI-MCP] Request Metrics:', {
+  tenantId,
+  messageCount: messages.length,
+  toolCallsMade: conversationMessages.length - messages.length,
+  responseLength: responseContent.length,
+  containsExperienceJSON: responseContent.includes('```experience-json'),
+  fallbackApplied: !finalResponse.content.includes('```experience-json'),
+  duration: Date.now() - requestStartTime
+});
+```
+
+#### Steg 6.2: Error Tracking
+**Fil**: `src/modules/core/ai/hooks/useAIMcpChat.ts`
+
+**Legg til error categorization**:
+```typescript
+catch (err) {
+  const errorCategory = 
+    err.message?.includes('rate limit') ? 'RATE_LIMIT' :
+    err.message?.includes('timeout') ? 'TIMEOUT' :
+    err.message?.includes('experience-json') ? 'FORMAT_ERROR' :
+    'UNKNOWN';
+  
+  console.error(`❌ [AI-MCP] Error (${errorCategory}):`, err);
+  
+  // Optional: Send to analytics
+  // analytics.track('ai_chat_error', { category: errorCategory, message: err.message });
+  
+  setError(aiError);
+}
+```
+
+---
+
+### Fase 7: Rollout og Verification (15 min)
+**Mål**: Deploy endringer og verifiser i produksjon.
+
+#### Checklist før Deploy
+- [ ] System prompt oppdatert i Edge Function
+- [ ] Backend fallback implementert
+- [ ] Frontend logging lagt til
+- [ ] Alle test-cases kjørt lokalt
+- [ ] `supabase/config.toml` verifisert
+- [ ] Edge Function deployet (automatic)
+
+#### Post-Deploy Verification
+1. **Åpne AI Chat i prod** (`/ai-chat-app`)
+2. **Kjør test-meldinger**:
+   - "Hei" → verifiser card
+   - "List selskaper" → verifiser cards.list
+   - "Vis prosjekter" → verifiser table
+3. **Sjekk logs i Lovable Cloud UI**:
+   - Backend → Functions → ai-mcp-chat
+   - Se etter `🔍 AI-MCP-CHAT DEBUG` entries
+4. **Sjekk browser console**:
+   - Se etter `🔍 [AI-MCP] Send Message` logs
+   - Verifiser at responses inneholder ExperienceJSON
+
+---
+
+## Prioritering
+
+### Must Have (P0) - Deploy immediately
+1. ✅ System Prompt Fix (Fase 2)
+2. ✅ Backend Fallback (Fase 3)
+3. ✅ Frontend Logging (Fase 1.1)
+4. ✅ Testing (Fase 5 - Test 1, 2, 3)
+
+### Should Have (P1) - Deploy within 1 week
+5. 🔄 MCP format_response Tool (Fase 4)
+6. 🔄 Error Tracking (Fase 6.2)
+7. 🔄 Metrics Logging (Fase 6.1)
+
+### Nice to Have (P2) - Future iteration
+8. ⏳ Advanced error recovery
+9. ⏳ User feedback loop for bad responses
+10. ⏳ A/B testing different system prompts
+
+---
+
+## Success Metrics
+
+### Before Implementation
+- ❌ 0% of responses contain ExperienceJSON
+- ❌ No Edge Function logs visible
+- ❌ Users see plain text in chat
+- ❌ No branded experience
+
+### After Implementation (Target)
+- ✅ 100% of responses contain ExperienceJSON
+- ✅ All requests logged in Edge Function
+- ✅ Users see branded cards/lists/tables
+- ✅ Fallback applied <5% of time
+- ✅ Average response time <2 seconds
+
+### Monitoring KPIs
+- `experienceJSON_rate`: % of responses that contain ```experience-json
+- `fallback_rate`: % of responses that needed fallback wrapping
+- `tool_call_count`: Average number of MCP tools used per request
+- `response_time_p95`: 95th percentile response time
+- `error_rate`: % of requests that failed
+
+---
+
+## Rollback Plan
+
+If implementation causes issues:
+
+### Rollback Steg 1: Revert System Prompt
+```bash
+git revert <commit-hash-for-system-prompt-change>
+```
+
+### Rollback Steg 2: Disable Fallback
+**Fil**: `supabase/functions/ai-mcp-chat/index.ts`
+```typescript
+// Comment out fallback logic
+// if (!responseContent.includes('```experience-json')) { ... }
+```
+
+### Rollback Steg 3: Remove Frontend Logging
+```bash
+git revert <commit-hash-for-frontend-logging>
+```
+
+### Rollback Steg 4: Revert to Previous Edge Function Version
+```bash
+# Via Lovable Cloud UI:
+# Backend → Functions → ai-mcp-chat → Versions → Select previous → Deploy
+```
+
+---
+
+## Timeline Estimate
+
+- **Fase 1 (Debugging)**: 30 min
+- **Fase 2 (System Prompt)**: 45 min
+- **Fase 3 (Fallback)**: 30 min
+- **Fase 4 (MCP Tool)**: 45 min (optional)
+- **Fase 5 (Testing)**: 30 min
+- **Fase 6 (Monitoring)**: 20 min
+- **Fase 7 (Deploy)**: 15 min
+
+**Total (P0 only)**: ~2.5 timer  
+**Total (P0 + P1)**: ~4 timer  
+
+---
+
+## Contact for Issues
+
+- **Claude AI**: For prompt engineering help
+- **Lovable Support**: For Edge Function deployment issues
+- **Project Team**: For product/UX feedback
