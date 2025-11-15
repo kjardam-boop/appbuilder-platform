@@ -18,7 +18,29 @@ export const FlowBlock = ({ id, steps, onToolCall }: FlowBlockProps) => {
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Guard: If steps is undefined or empty, show fallback
+  if (!steps || steps.length === 0) {
+    return (
+      <Card>
+        <CardContent>
+          <p className="text-muted-foreground">Ingen steg tilgjengelig</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const step = steps[currentStep];
+
+  // Guard: If current step or form fields is undefined, show fallback
+  if (!step || !step.form || !step.form.fields) {
+    return (
+      <Card>
+        <CardContent>
+          <p className="text-muted-foreground">Ugyldig skjema-konfigurasjon</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   const handleFieldChange = (fieldId: string, value: any) => {
     setFormData(prev => ({ ...prev, [fieldId]: value }));

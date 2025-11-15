@@ -30,6 +30,16 @@ const getCtaIcon = (type?: string) => {
 };
 
 export const CardsListBlock = ({ title, items }: CardsListBlockProps) => {
+  // Guard: If items is undefined or empty, show fallback
+  if (!items || items.length === 0) {
+    return (
+      <div className="w-full max-w-full space-y-6 animate-fade-in overflow-hidden">
+        {title && <h2 className="text-2xl md:text-3xl font-bold text-foreground break-words">{title}</h2>}
+        <p className="text-muted-foreground">Ingen elementer å vise</p>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full max-w-full space-y-6 animate-fade-in overflow-hidden">
       {title && <h2 className="text-2xl md:text-3xl font-bold text-foreground break-words">{title}</h2>}

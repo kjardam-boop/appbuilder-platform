@@ -13,6 +13,15 @@ export const ExperienceRenderer = ({ experience, onAction, onToolCall }: Experie
   const theme = experience.theme;
   const layout = experience.layout || { type: 'stack', gap: 'md' };
   
+  // Guard: If blocks is undefined or empty, show fallback
+  if (!experience.blocks || experience.blocks.length === 0) {
+    return (
+      <div className="experience-container w-full max-w-full bg-background text-foreground p-4 md:p-6 rounded-lg overflow-hidden">
+        <p className="text-muted-foreground text-center">Ingen innhold å vise</p>
+      </div>
+    );
+  }
+  
   // Apply theme to root element via CSS variables
   const style = useMemo(() => {
     if (!theme) return {};

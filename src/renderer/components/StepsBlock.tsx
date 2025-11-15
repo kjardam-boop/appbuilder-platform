@@ -7,6 +7,24 @@ interface StepsBlockProps extends StepsBlockType {
 }
 
 export const StepsBlock = ({ title, steps }: StepsBlockProps) => {
+  // Guard: If steps is undefined or empty, show fallback
+  if (!steps || steps.length === 0) {
+    return (
+      <Card className="w-full shadow-xl animate-fade-in">
+        {title && (
+          <CardHeader>
+            <CardTitle className="text-2xl md:text-3xl font-bold text-foreground break-words">
+              {title}
+            </CardTitle>
+          </CardHeader>
+        )}
+        <CardContent>
+          <p className="text-muted-foreground">Ingen steg tilgjengelig</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="w-full shadow-xl animate-fade-in">
       {title && (
