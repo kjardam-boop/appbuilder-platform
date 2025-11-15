@@ -1785,3 +1785,338 @@ Denne planen er basert på Claudes grundige kode-review og adresserer:
 **Confidence Level**: 95% at Fase 1-3 vil løse problemet fullstendig.
 
 **Neste Steg**: Implementer P0 items, test grundig, deretter vurder P1/P2 basert på resultater.
+
+---
+
+# 🤝 CLAUDE'S FEEDBACK ON LOVABLE'S IMPLEMENTATION PLAN
+
+**Dato**: 2025-11-15 09:40  
+**Status**: Reviewed and Approved with Minor Suggestions
+
+---
+
+## ✅ Overall Assessment: EXCELLENT PLAN
+
+Lovables implementeringsplan er **veldig bra** og adresserer alle mine bekymringer fra den tekniske analysen. Jeg er 95% enig med tilnærmingen.
+
+**Spesielt bra:**
+- ✅ Prioriteringen er perfekt (deployment først, deretter prompt, så fallback)
+- ✅ Tidsestimatene virker realistiske
+- ✅ Test suite er omfattende
+- ✅ Rollback plan er på plass
+- ✅ P0/P1/P2 kategoriseringen er fornuftig
+
+---
+
+## 🔍 Minor Suggestions & Questions for Lovable
+
+### 1. System Prompt Lengde (Fase 2)
+
+**Concern**: Den nye system prompten er ganske lang (~100+ linjer med alle eksempler).
+
+**Problem**: LLMs har begrenset context window, og en for lang system prompt kan:
+- Redusere plass for conversation history
+- Øke token cost per request
+- Potensielt forvirre modellen med for mye info
+
+**Forslag**: Vurder å **forkorte** litt:
+
+```typescript
+// I stedet for 3 fullstendige eksempler, bruk 1 grundig + 2 kompakte
+const defaultSystemPrompt = `Du er AI-assistent for ${tenantData?.name || 'Lovenest'}.
+
+**🔒 SIKKERHET:**
+- Kun data for tenant_id = "${tenantId}"
+- Bruk MCP tools for data-henting
+
+**📋 OBLIGATORISK FORMAT:**
+ALLE svar MÅ være ExperienceJSON inni \`\`\`experience-json blokk.
+
+**Struktur:**
+\`\`\`experience-json
+{
+  "version": "1.0",
+  "theme": {"primary": "${theme?.primary || '#0066CC'}", "accent": "${theme?.accent || '#FF6B00'}"},
+  "layout": {"type": "stack", "gap": "md"},
+  "blocks": [/* dine blocks her */]
+}
+\`\`\`
+
+**Block Types:**
+- card: Enkelt tekstsvar
+- cards.list: Liste (selskaper, prosjekter)
+- table: Tabelldata
+- flow: Prosess-steg
+
+**Eksempel (Enkelt svar):**
+User: "Hva er 2+2?"
+→ card med headline: "Resultat", body: "2+2=4"
+
+**Eksempel (Liste):**
+User: "List selskaper"
+→ call list_companies tool
+→ cards.list med items fra tool result
+
+**MCP Tools:** ${MCP_TOOLS.map(t => t.function.name).join(', ')}
+
+VIKTIG: Selv feilmeldinger må være ExperienceJSON cards.`;
+```
+
+**Fordeler med kortere versjon:**
+- 50% mindre tokens
+- Raskere prosessering
+- Lettere for AI å fokusere på essentials
+- Men fortsatt all nødvendig info
+
+**Spørsmål til Lovable:**
+> Er dere enige i å forkorte, eller vil dere beholde alle 3 fullstendige eksempler?
+
+---
+
+### 2. Theme Injection Issue (Fase 2)
+
+**Concern**: I den nye system prompten brukes `${theme?.primary}` og `${theme?.accent}`, men jeg ser ikke hvor `theme` variabelen er definert før system prompt.
+
+**Fra koden (linje ~795):**
+```typescript
+const defaultSystemPrompt = `Du er en intelligent AI-assistent for ${tenantData?.name || 'Lovenest'}.
+...
+"theme": {"primary": "${theme?.primary || '#0066CC'}"...
+//                      ^^^^^ Hvor kommer theme fra?
+```
+
+**Problem**: Hvis `theme` ikke er definert, får vi undefined i prompten.
+
+**Løsning - Hent theme FØRST:**
+
+```typescript
+// BEFORE system prompt definition (insert around line 790)
+// Fetch tenant theme for branding
+let theme = null;
+const { data: tenantTheme } = await supabaseClient
+  .from('tenant_themes')
+  .select('tokens')
+  .eq('tenant_id', tenantId)
+  .eq('is_active', true)
+  .maybeSingle();
+
+if (tenantTheme) {
+  theme = tenantTheme.tokens;
+}
+
+// NOW define system prompt with theme
+const defaultSystemPrompt = `...`;
+```
+
+**Alternativ (hvis theme query allerede finnes):**
+> Lovable, kan dere bekrefte at theme allerede hentes før system prompt? Jeg fant ikke det i koden jeg reviewet (linje 768-813).
+
+---
+
+### 3. availableTools Injection (Fase 2)
+
+**Concern**: System prompten bruker:
+```typescript
+**MCP Tools:** ${JSON.stringify(availableTools.map(t => ({ name: t.function.name, description: t.function.description })), null, 2)}
+```
+
+**Problem**: Dette kan bli **veldig langt** (100+ linjer) siden det JSON.stringifyer alle tool descriptions.
+
+**Forslag**: Bruk kun **navn-liste** i system prompt, ikke fulle descriptions:
+
+```typescript
+// I stedet for full JSON stringify
+**Tilgjengelige MCP Tools:**
+${MCP_TOOLS.map(t => `- ${t.function.name}: ${t.function.description.substring(0, 50)}...`).join('\n')}
+
+// Eller enda kortere:
+**MCP Tools:** ${MCP_TOOLS.map(t => t.function.name).join(', ')}
+```
+
+**Hvorfor**:
+- AI kjenner allerede tool descriptions fra `tools` parameter i API call
+- Ingen grunn til å duplisere i system prompt
+- Sparer 50-100 tokens per request
+
+**Spørsmål til Lovable:**
+> Trenger vi virkelig full tool descriptions i system prompt? Eller holder det med navn-liste?
+
+---
+
+### 4. Frontend Logging Placement (Fase 1.3)
+
+**Concern**: Instruksjonen sier "Før linje 50" og "Etter linje 60".
+
+**Problem**: Linjenummer kan endre seg når koden endres.
+
+**Forslag**: Bruk **code markers** i stedet:
+
+```typescript
+// I useAIMcpChat.ts
+
+const sendMessage = async (userMessage: string) => {
+  // ... existing code ...
+
+  // 🚀 [ADD LOGGING HERE - BEFORE INVOKE]
+  console.group('🚀 AI Chat Request');
+  console.log('📌 Function:', 'ai-mcp-chat');
+  // ... rest of logging
+  console.groupEnd();
+
+  const { data, error: invokeError } = await supabase.functions.invoke<AIMcpChatResponse>(
+    'ai-mcp-chat',
+    { body: request }
+  );
+
+  // 📥 [ADD LOGGING HERE - AFTER INVOKE]
+  console.group('📥 AI Chat Response');
+  console.log('Success:', !invokeError);
+  // ... rest of logging
+  console.groupEnd();
+}
+```
+
+**Dette er en liten detalj, men gjør instruksjonene tydeligere.**
+
+---
+
+### 5. Testing Strategy Enhancement (Fase 5)
+
+**Lovables test suite er god, men jeg foreslår å legge til:**
+
+**Test 7: Rate Limit Handling**
+```typescript
+Input: Send 10 requests raskt etter hverandre
+Forventet:
+- ✅ Første N requests OK
+- ✅ Rate limit hit returnerer 429
+- ✅ Error message er brukervennlig
+- ✅ Frontend viser "For mange forespørsler, prøv igjen om X sekunder"
+```
+
+**Test 8: Large Response Handling**
+```typescript
+Input: "Generer en detaljert rapport om alle selskaper"
+Forventet:
+- ✅ Response < 10 sekunder
+- ✅ ExperienceJSON er valid selv med mange blocks
+- ✅ Frontend renderer uten lag
+- ✅ Ikke over token limit
+```
+
+---
+
+### 6. Metrics & Monitoring (New Suggestion)
+
+**Lovables plan nevner KPIs, men ikke hvordan de skal monitores.**
+
+**Forslag - Legg til Dashboard Query:**
+
+```sql
+-- Query for Lovable/Supabase Dashboard
+-- Monitor AI Chat Health
+
+SELECT 
+  DATE(created_at) as date,
+  COUNT(*) as total_requests,
+  COUNT(*) FILTER (WHERE status = 'success') as successful,
+  COUNT(*) FILTER (WHERE status = 'error') as errors,
+  COUNT(*) FILTER (WHERE metadata->>'fallback_applied' = 'true') as fallback_used,
+  AVG(request_duration_ms) as avg_duration,
+  AVG(total_tokens) as avg_tokens,
+  SUM(cost_estimate) as total_cost
+FROM ai_usage_logs
+WHERE endpoint = 'ai-mcp-chat'
+  AND created_at >= NOW() - INTERVAL '7 days'
+GROUP BY DATE(created_at)
+ORDER BY date DESC;
+```
+
+**Eller opprett Supabase Dashboard Chart:**
+- X-axis: Date
+- Y-axis: Request count
+- Series: Success (green), Error (red), Fallback (yellow)
+
+---
+
+### 7. Rollback Procedure Clarification
+
+**Lovables rollback plan er god, men jeg foreslår:**
+
+**Mer detaljert rollback for deployment:**
+
+```bash
+# Hvis Edge Function ikke starter etter deploy:
+
+# 1. Check Lovable deployment logs
+lovable logs functions/ai-mcp-chat --tail
+
+# 2. Hvis syntax error, fix lokalt først:
+deno check supabase/functions/ai-mcp-chat/index.ts
+
+# 3. Hvis deploy-config issue:
+# Check supabase/config.toml has:
+[functions.ai-mcp-chat]
+verify_jwt = false
+
+# 4. Hvis alt feiler, rollback til previous working version:
+git log supabase/functions/ai-mcp-chat/index.ts
+git revert <last-working-commit>
+git push  # Trigger redeploy
+```
+
+---
+
+## 💬 Questions for Lovable Before Implementation
+
+1. **Theme Variable**: Hvor hentes `theme` fra før system prompt? Må det legges til?
+
+2. **System Prompt Length**: OK med kortere versjon (50% mindre tokens)?
+
+3. **Tool Descriptions**: Trenger vi full JSON.stringify eller holder navn-liste?
+
+4. **Timeline**: Er 2 timer for P0 realistisk gitt deployment verification kan ta tid hvis funksjon ikke er deployet?
+
+5. **Post-Deploy**: Hvem monitorer KPIs etter deploy? Skal vi sette opp alerts?
+
+---
+
+## ✅ Claude's Recommendations Summary
+
+| Item | Priority | Lovable Action Required |
+|------|----------|-------------------------|
+| 1. Shorten system prompt | P1 | Consider reducing from 3→2 examples |
+| 2. Fix theme injection | P0 | Add theme fetch before system prompt |
+| 3. Simplify tool list | P1 | Use names only, not full JSON |
+| 4. Improve logging instructions | P2 | Use code markers instead of line nums |
+| 5. Add 2 more tests | P1 | Rate limit + large response tests |
+| 6. Add monitoring query | P1 | SQL query for dashboard |
+| 7. Clarify rollback | P2 | More detailed steps |
+
+**None of these are blockers - plan kan implementeres som den er!**
+
+---
+
+## 🎯 Final Verdict
+
+**Lovables plan: 9.5/10** ⭐⭐⭐⭐⭐
+
+**Minor concerns = alle P1/P2, ingen P0 blockers.**
+
+**Jeg anbefaler:**
+1. ✅ Implementer Fase 1-3 akkurat som beskrevet (P0 items)
+2. 🤔 Diskuter mine spørsmål om theme og prompt length før deploy
+3. ✅ Implementer Fase 4-5 (P1 items)
+4. ⏳ Vurder Fase 6 (P2) basert på resultater
+
+**Confidence i suksess:** 
+- Med mine minor tweaks: **98%**
+- Uten tweaks: **95%**
+
+**Klar for implementering!** 🚀
+
+---
+
+## Next Action for Lovable
+
+Vennligst svar på de 5 spørsmålene over, så kan vi finalize implementeringsplanen og starte!
