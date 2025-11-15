@@ -17,12 +17,7 @@ export default function AppCatalog() {
 
   if (isLoading) {
     return (
-      <div 
-      <AppBreadcrumbs levels={generateAdminBreadcrumbs({
-  category: "Content",
-  currentPage: "App Catalog"
-})} />
-      className="flex items-center justify-center h-64">
+      <div className="flex items-center justify-center h-64">
         <div className="text-muted-foreground">Laster app-katalog...</div>
       </div>
     );

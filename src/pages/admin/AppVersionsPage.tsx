@@ -59,12 +59,11 @@ export default function AppVersionsPage() {
 
   if (isLoading) {
     return (
-      <div 
-      <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+      <div className="space-y-6 p-6">
+        <AppBreadcrumbs levels={generateAdminBreadcrumbs({
   category: "Content",
   currentPage: "App Versions"
 })} />
-      className="space-y-6 p-6">
         <Skeleton className="h-12 w-full" />
         <Skeleton className="h-64 w-full" />
       </div>

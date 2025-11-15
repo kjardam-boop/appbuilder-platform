@@ -19,15 +19,14 @@ const Dashboard = () => {
   }, [user, loading, navigate]);
   
   return (
-    <div 
-    <AppBreadcrumbs customLabel="Dashboard" />
-    className="min-h-screen bg-gradient-hero">
+    <div className="min-h-screen bg-gradient-hero">
       <Header 
         userName={user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'}
         userEmail={user?.email}
       />
       
       <main className="container py-8 space-y-8">
+        <AppBreadcrumbs customLabel="Dashboard" />
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-4xl font-bold mb-2">Dashboard</h1>

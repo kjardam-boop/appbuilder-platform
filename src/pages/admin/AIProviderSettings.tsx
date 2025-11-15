@@ -129,12 +129,7 @@ export default function AIProviderSettings() {
 
   if (isLoadingProviders || isLoadingIntegrations) {
     return (
-      <div 
-      <AppBreadcrumbs levels={generateAdminBreadcrumbs({
-  category: "AI",
-  currentPage: "Provider Settings"
-})} />
-      className="flex items-center justify-center min-h-[400px]">
+      <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-lg">Laster AI-providers...</div>
       </div>
     );

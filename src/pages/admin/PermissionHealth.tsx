@@ -20,12 +20,11 @@ const PermissionHealth = () => {
   const isHealthy = health && health.coveragePercent === 100;
 
   return (
-    <div 
-    <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+    <div className="space-y-6 p-8">
+      <AppBreadcrumbs levels={generateAdminBreadcrumbs({
   category: "Platform",
   currentPage: "Permission Health"
 })} />
-    className="space-y-6 p-8">
       <div className="flex items-center gap-4">
         <Button
           variant="ghost"

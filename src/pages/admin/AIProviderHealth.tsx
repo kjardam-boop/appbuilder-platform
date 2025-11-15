@@ -60,12 +60,7 @@ export default function AIProviderHealth() {
     };
 
     return (
-      <Badge 
-      <AppBreadcrumbs levels={generateAdminBreadcrumbs({
-  category: "AI",
-  currentPage: "Provider Health"
-})} />
-      variant={variants[status || 'unknown']}>
+      <Badge variant={variants[status || 'unknown']}>
         {status || 'Unknown'}
       </Badge>
     );

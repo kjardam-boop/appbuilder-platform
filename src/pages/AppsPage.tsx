@@ -12,15 +12,14 @@ export default function AppsPage() {
   const { data: apps, isLoading } = useTenantApplications();
 
   return (
-    <div 
-    <AppBreadcrumbs levels={generateAdminBreadcrumbs({
-  category: "Content",
-  currentPage: "Apps"
-})} />
-    className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
       <Header />
       
       <div className="container mx-auto px-4 py-8">
+        <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+          category: "Platform",
+          currentPage: "Apps"
+        })} />
         <div className="space-y-6">
           <div>
             <h1 className="text-3xl font-bold">Mine Apper</h1>

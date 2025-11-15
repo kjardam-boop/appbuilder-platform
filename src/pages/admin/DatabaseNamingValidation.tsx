@@ -51,12 +51,7 @@ export default function DatabaseNamingValidation() {
     };
     
     return (
-      <Badge 
-      <AppBreadcrumbs levels={generateAdminBreadcrumbs({
-  category: "Operations",
-  currentPage: "Database Naming"
-})} />
-      variant={variants[severity] || 'outline'}>
+      <Badge variant={variants[severity] || 'outline'}>
         {severity}
       </Badge>
     );
@@ -76,6 +71,10 @@ export default function DatabaseNamingValidation() {
 
   return (
     <div className="p-8 space-y-6">
+      <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+  category: "Operations",
+  currentPage: "Database Naming"
+})} />
       <div>
         <h1 className="text-3xl font-bold">Database Naming Validation</h1>
         <p className="text-muted-foreground mt-2">

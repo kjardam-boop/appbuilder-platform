@@ -20,12 +20,11 @@ export default function TenantAppCatalog() {
 
   if (isLoading) {
     return (
-      <div 
-      <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+      <div className="flex items-center justify-center h-96">
+        <AppBreadcrumbs levels={generateAdminBreadcrumbs({
   category: "Tenants",
   currentPage: "App Catalog"
 })} />
-      className="flex items-center justify-center h-96">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );

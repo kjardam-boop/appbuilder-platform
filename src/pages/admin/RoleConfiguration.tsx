@@ -112,12 +112,11 @@ const RoleConfiguration = () => {
   }
 
   return (
-    <div 
-    <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+    <div className="space-y-6 p-8">
+      <AppBreadcrumbs levels={generateAdminBreadcrumbs({
   category: "Platform",
   currentPage: "Role Configuration"
 })} />
-    className="space-y-6 p-8">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold mb-2">Rollekonfigurasjon</h1>

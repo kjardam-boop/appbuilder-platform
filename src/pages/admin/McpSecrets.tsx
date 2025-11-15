@@ -329,13 +329,12 @@ export default function McpSecrets() {
   };
 
   return (
-    <div 
-    <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+    <div className="container mx-auto py-6 space-y-6">
+      <AppBreadcrumbs levels={generateAdminBreadcrumbs({
   category: "Integrations",
   subcategory: "MCP",
   currentPage: "Secrets"
 })} />
-    className="container mx-auto py-6 space-y-6">
       <div>
         <h1 className="text-3xl font-bold mb-2">MCP Secrets</h1>
         <p className="text-muted-foreground">
