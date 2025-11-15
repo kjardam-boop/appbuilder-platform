@@ -776,23 +776,41 @@ ${websiteContent}
 ` : '';
 
     const peopleIndexSection = peopleIndex.length > 0 ? `
-## 👤 PEOPLE INDEX (fra Knowledge Base)
+## 👤 PEOPLE INDEX - KRITISK REFERANSE FOR PERSONSØK
 
-**⭐ KRITISK:** Når brukeren spør om personer (navn, roller, hvem som jobber her), bruk denne indeksen FØRST!
+🚨 **OBLIGATORISK:** Når brukeren spør om personer, navn, ansatte eller "hvem jobber her", MÅ du bruke denne indeksen!
+
+**Tilgjengelige personer i bedriften:**
 
 ${peopleIndex.map((person, idx) => `
-${idx + 1}. **${person.name}**${person.role ? ` - ${person.role}` : ''}
-   - Kilde: ${person.sourceTitle}
+${idx + 1}. **${person.name}**${person.role ? ` - *${person.role}*` : ''}
+   📁 Kilde: ${person.sourceTitle}
 `).join('\n')}
 
-**🔍 REGLER FOR PERSONSØK:**
-- Hvis personen finnes i People Index: Svar med fullt navn, rolle og kilde
-- Hvis personen IKKE finnes: Svar "Ikke funnet i Knowledge Base"
-- For enkeltpersoner: Bruk \`card\` block
-- For flere personer: Bruk \`cards.list\` med \`itemType: "person"\`
+**🎯 OBLIGATORISKE REGLER FOR PERSONSØK:**
+
+1. ✅ **HVIS PERSONEN FINNES I LISTEN OVER:**
+   - ALLTID svar med ExperienceJSON
+   - Bruk \`card\` block for enkeltperson:
+     - headline: Personens navn
+     - body: "Rolle: [rolle]\\n\\nKilde: Knowledge Base"
+   - Bruk \`cards.list\` for flere personer med \`itemType: "person"\`
+
+2. ❌ **HVIS PERSONEN IKKE FINNES:**
+   - Svar: "Ikke funnet i Knowledge Base"
+   - Foreslå å oppdatere kunnskapsbasen
+
+3. 🔍 **EKSEMPLER PÅ PERSONSØK:**
+   - "Hva heter Kari til etternavn?" → Sjekk om "Kari" finnes i listen
+   - "Hvem jobber i selskapet?" → List alle personer med \`cards.list\`
+   - "Hvem er daglig leder?" → Søk etter rolle "Daglig leder"
+
+**⚠️ VIKTIG:** Ikke si "har ikke tilgang til ansatte-informasjon" hvis personer finnes i listen!
 
 ---
 ` : '';
+
+    console.log(`[People Index] Section ${peopleIndex.length > 0 ? 'INCLUDED' : 'EMPTY'} with ${peopleIndex.length} persons`);
 
     const defaultSystemPrompt = `Du er en intelligent AI-assistent for ${tenantData?.name || 'denne bedriften'}.
 
@@ -1291,10 +1309,11 @@ Bruk for: Multi-step forms, prosesser med brukerinput, onboarding flows
    - CTAs/konvertering → \`cta\`
    - Hero/landing → \`hero\`
    - Enkle meldinger → \`card\`
-5. **PERSONSØK (VIKTIG):**
-   - Sjekk ALLTID People Index først ved spørsmål om personer
-   - Hvis funnet: Svar med fullt navn, rolle og "Kilde: Knowledge Base"
-   - Hvis IKKE funnet: Svar med \`card\` block "Ikke funnet i Knowledge Base. Vil du oppdate kunnskapsbasen?"
+5. **PERSONSØK (KRITISK PRIORITET):**
+   - 🚨 **ALLTID** sjekk People Index FØRST ved spørsmål om personer/ansatte/team
+   - ✅ Hvis funnet i People Index: Svar ALLTID med ExperienceJSON (\`card\` eller \`cards.list\`)
+   - ❌ Hvis IKKE funnet: Svar "Ikke funnet i Knowledge Base"
+   - 🚫 **ALDRI** si "har ikke tilgang til informasjon om ansatte" hvis People Index inneholder personer!
 6. **Kombiner blocks kreativt** - f.eks. hero → content → table → cta
 7. **Syntetiser** informasjon fra flere dokumenter når relevant
 8. **Vær kortfattet**: Max 400 ord per block
