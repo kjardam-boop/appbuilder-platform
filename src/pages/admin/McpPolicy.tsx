@@ -128,13 +128,12 @@ export default function McpPolicy() {
   }
 
   return (
-    <div 
-    <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+    <div className="w-full px-4 lg:px-6 xl:px-8 py-8 space-y-6">
+      <AppBreadcrumbs levels={generateAdminBreadcrumbs({
   category: "Integrations",
   subcategory: "MCP",
   currentPage: "Policy"
 })} />
-    className="w-full px-4 lg:px-6 xl:px-8 py-8 space-y-6">
       <div>
         <h1 className="text-3xl font-bold">MCP Policy Configuration</h1>
         <p className="text-muted-foreground">

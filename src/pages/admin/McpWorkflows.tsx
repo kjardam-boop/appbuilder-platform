@@ -406,13 +406,12 @@ export default function McpWorkflows() {
 
   if (!tenantId) {
     return (
-      <div 
-      <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+      <div className="p-8">
+        <AppBreadcrumbs levels={generateAdminBreadcrumbs({
   category: "Integrations",
   subcategory: "MCP",
   currentPage: "Workflows"
 })} />
-      className="p-8">
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>

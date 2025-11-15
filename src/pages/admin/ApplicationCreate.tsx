@@ -51,12 +51,11 @@ export default function ApplicationCreate() {
   };
 
   return (
-    <div 
-    <AppBreadcrumbs levels={generateAdminBreadcrumbs({
+    <div className="min-h-screen bg-background">
+      <AppBreadcrumbs levels={generateAdminBreadcrumbs({
   category: "Content",
   currentPage: "Create Application"
 })} />
-    className="min-h-screen bg-background">
       <Header />
       <div className="container mx-auto py-8 px-4">
         <div className="max-w-4xl mx-auto space-y-6">
