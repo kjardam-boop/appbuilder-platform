@@ -13,7 +13,10 @@ export const StepsBlock = ({ title, steps }: StepsBlockProps) => {
       <Card className="w-full shadow-xl animate-fade-in">
         {title && (
           <CardHeader>
-            <CardTitle className="text-2xl md:text-3xl font-bold text-foreground break-words">
+            <CardTitle 
+              className="text-2xl md:text-3xl font-bold text-foreground"
+              style={{ wordBreak: 'normal', overflowWrap: 'break-word', hyphens: 'auto' }}
+            >
               {title}
             </CardTitle>
           </CardHeader>
@@ -29,7 +32,10 @@ export const StepsBlock = ({ title, steps }: StepsBlockProps) => {
     <Card className="w-full shadow-xl animate-fade-in">
       {title && (
         <CardHeader>
-          <CardTitle className="text-2xl md:text-3xl font-bold text-foreground break-words">
+          <CardTitle 
+            className="text-2xl md:text-3xl font-bold text-foreground"
+            style={{ wordBreak: 'normal', overflowWrap: 'break-word', hyphens: 'auto' }}
+          >
             {title}
           </CardTitle>
         </CardHeader>
@@ -44,10 +50,16 @@ export const StepsBlock = ({ title, steps }: StepsBlockProps) => {
 
             {/* Step Content */}
             <div className="flex-1 pt-1">
-              <h3 className="text-lg md:text-xl font-semibold text-foreground mb-2 break-words">
+              <h3 
+                className="text-lg md:text-xl font-semibold text-foreground mb-2"
+                style={{ wordBreak: 'normal', overflowWrap: 'break-word', hyphens: 'auto' }}
+              >
                 {step.title}
               </h3>
-              <p className="text-sm md:text-base text-muted-foreground leading-relaxed break-words">
+              <p 
+                className="text-sm md:text-base text-muted-foreground leading-relaxed"
+                style={{ wordBreak: 'normal', overflowWrap: 'break-word', hyphens: 'auto' }}
+              >
                 {step.description}
               </p>
             </div>
