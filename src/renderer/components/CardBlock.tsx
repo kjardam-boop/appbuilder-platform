@@ -12,7 +12,7 @@ export const CardBlock = ({ headline, body, actions, onAction }: CardBlockProps)
       <CardHeader className="pb-4 px-4 md:px-6">
         <CardTitle 
           className="text-2xl md:text-3xl font-bold text-foreground leading-tight"
-          style={{ wordBreak: 'normal', overflowWrap: 'break-word', hyphens: 'auto' }}
+          style={{ wordBreak: 'keep-all', overflowWrap: 'break-word', hyphens: 'none' }}
         >
           {headline}
         </CardTitle>
@@ -20,7 +20,7 @@ export const CardBlock = ({ headline, body, actions, onAction }: CardBlockProps)
       <CardContent className="space-y-4 md:space-y-6 px-4 md:px-6">
         <CardDescription 
           className="text-sm md:text-base leading-relaxed whitespace-pre-wrap text-muted-foreground"
-          style={{ wordBreak: 'normal', overflowWrap: 'break-word', hyphens: 'auto' }}
+          style={{ wordBreak: 'keep-all', overflowWrap: 'break-word', hyphens: 'none' }}
         >
           {body}
         </CardDescription>
