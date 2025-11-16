@@ -41,6 +41,32 @@
   ],
   "actions": [
     {
+      "name": "search_content_library",
+      "description": "Search the tenant's Knowledge Base (ai_app_content_library) for information",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Search query for matching content"
+          },
+          "category": {
+            "type": "string",
+            "description": "Optional category filter"
+          }
+        },
+        "required": ["query"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "documents": { "type": "array" },
+          "count": { "type": "number" }
+        }
+      }
+    },
+    {
       "name": "create_project",
       "description": "Create a new project",
       "inputSchema": {

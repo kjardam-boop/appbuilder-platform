@@ -27,6 +27,14 @@ export interface McpTool {
 
 export const AVAILABLE_MCP_TOOLS: McpTool[] = [
   {
+    name: 'search_content_library',
+    description: 'Search tenant Knowledge Base for company information',
+    parameters: {
+      query: 'Search query (required)',
+      category: 'Optional category filter'
+    }
+  },
+  {
     name: 'list_companies',
     description: 'List and search companies',
     parameters: {
