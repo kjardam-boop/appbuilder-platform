@@ -205,6 +205,72 @@ const MCP_TOOLS = [
       }
     }
   },
+  {
+    type: "function",
+    function: {
+      name: "generate_experience_json",
+      description: "Generate structured ExperienceJSON for presenting information to users with rich UI components. ALWAYS use this when sharing information from knowledge base or website content.",
+      parameters: {
+        type: "object",
+        properties: {
+          version: { 
+            type: "string",
+            description: "ExperienceJSON version",
+            default: "1.0"
+          },
+          layout: {
+            type: "object",
+            properties: {
+              maxWidth: { type: "string", default: "1200px" },
+              spacing: { type: "string", default: "2rem" }
+            }
+          },
+          theme: {
+            type: "object",
+            properties: {
+              mode: { type: "string", enum: ["light", "dark"], default: "light" },
+              colors: {
+                type: "object",
+                properties: {
+                  background: { type: "string", default: "#ffffff" },
+                  text: { type: "string", default: "#1a1a1a" },
+                  accent: { type: "string" },
+                  border: { type: "string", default: "#e5e5e5" }
+                }
+              }
+            }
+          },
+          blocks: {
+            type: "array",
+            description: "Array of content blocks (hero, content, cards.list, cta, steps)",
+            items: {
+              type: "object",
+              properties: {
+                type: { 
+                  type: "string",
+                  enum: ["hero", "content", "cards.list", "cta", "steps"]
+                },
+                headline: { type: "string" },
+                subheadline: { type: "string" },
+                body: { type: "string" },
+                items: { type: "array" },
+                cta: { 
+                  type: "object",
+                  properties: {
+                    text: { type: "string" },
+                    href: { type: "string" }
+                  }
+                }
+              },
+              required: ["type"]
+            }
+          }
+        },
+        required: ["version", "blocks"],
+        additionalProperties: false
+      }
+    }
+  }
 ];
 
 /**
@@ -1367,11 +1433,17 @@ ${MCP_TOOLS.map(t => `- **${t.function.name}**: ${t.function.description}`).join
     ];
 
     const buildRequestBody = (messages: any[]) => {
+      // Detect if we should force ExperienceJSON output via tool calling
+      const expectsExperienceJSON = effectiveSystemPrompt.includes('ExperienceJSON');
+      
       const body: any = {
         model: aiClientConfig.model,
         messages,
         tools: MCP_TOOLS,
-        tool_choice: forceSearchOnFirstCall ? { type: 'function', function: { name: 'search_content_library' } } : 'auto',
+        // Priority: 1) Force ExperienceJSON if expected, 2) Force search on first call, 3) Auto
+        tool_choice: expectsExperienceJSON 
+          ? { type: 'function', function: { name: 'generate_experience_json' } }
+          : (forceSearchOnFirstCall ? { type: 'function', function: { name: 'search_content_library' } } : 'auto'),
       };
 
       // Handle temperature (not supported by GPT-5+)
@@ -1549,64 +1621,85 @@ ${MCP_TOOLS.map(t => `- **${t.function.name}**: ${t.function.description}`).join
       choice = aiData.choices?.[0];
     }
 
-    let aiResponse = choice?.message?.content || 'Ingen respons fra AI';
-
-    // ⭐ PHASE 4: Enhanced response parsing with ExperienceJSON detection
+    let aiResponse = choice?.message?.content || '';
+    
+    // ⭐ PHASE 4: Enhanced response parsing - Check for tool calls FIRST (structured output)
     let hasExperienceJSON = false;
     let fallbackApplied = false;
     
-    // Parse response for ExperienceJSON
-    const experienceJsonMatch = aiResponse.match(/```experience-json\s*([\s\S]*?)\s*```/);
-
-    if (experienceJsonMatch) {
+    // Check if AI used generate_experience_json tool (structured output)
+    const toolCalls = choice?.message?.tool_calls;
+    const experienceJsonTool = toolCalls?.find((tc: any) => tc.function?.name === 'generate_experience_json');
+    
+    if (experienceJsonTool) {
       try {
-        const experienceJSON = JSON.parse(experienceJsonMatch[1]);
+        const experienceJSON = JSON.parse(experienceJsonTool.function.arguments);
         
         // Validate basic structure
         if (experienceJSON.version && experienceJSON.blocks) {
           hasExperienceJSON = true;
-          console.log('[✅ ExperienceJSON] Valid ExperienceJSON detected and parsed successfully');
+          
+          // Wrap the structured JSON in markdown format for frontend parsing
+          aiResponse = '```experience-json\n' + JSON.stringify(experienceJSON, null, 2) + '\n```';
+          
+          console.log('[✅ ExperienceJSON Tool] Successfully generated structured ExperienceJSON via tool calling');
         } else {
-          throw new Error('Invalid ExperienceJSON structure');
+          throw new Error('Invalid ExperienceJSON structure from tool');
         }
       } catch (parseError) {
-        console.error('[ExperienceJSON Parse Error]', parseError);
+        console.error('[ExperienceJSON Tool Parse Error]', parseError);
         hasExperienceJSON = false;
       }
     }
-
-    if (!hasExperienceJSON) {
-      console.warn('[⚠️ Missing ExperienceJSON] AI did not return valid ExperienceJSON, applying fallback wrapper');
+    
+    // Fallback: Parse markdown-wrapped ExperienceJSON (legacy support)
+    if (!hasExperienceJSON && aiResponse) {
+      const experienceJsonMatch = aiResponse.match(/```experience-json\s*([\s\S]*?)\s*```/);
       
-      // Fallback: wrap in basic card with enforced white background + dark text
-      const fallbackJSON = {
-        version: "1.0",
-        theme: {
-          primary: theme.primary || '#1a1a1a',
-          accent: theme.accent || '#666666',
-          surface: "#ffffff",
-          textOnSurface: "#1a1a1a"
-        },
-        layout: { 
-          type: "stack", 
-          gap: "md" 
-        },
-        blocks: [{
-          type: "card",
-          headline: "Svar",
-          body: aiResponse,
-          style: {
-            background: "#ffffff",
-            color: "#1a1a1a",
-            padding: "1.5rem",
-            borderRadius: "0.5rem",
-            border: "1px solid #e5e5e5"
+      if (experienceJsonMatch) {
+        try {
+          const experienceJSON = JSON.parse(experienceJsonMatch[1]);
+          
+          // Validate basic structure
+          if (experienceJSON.version && experienceJSON.blocks) {
+            hasExperienceJSON = true;
+            console.log('[✅ ExperienceJSON Markdown] Valid ExperienceJSON detected in markdown');
+          } else {
+            throw new Error('Invalid ExperienceJSON structure in markdown');
           }
-        }]
-      };
-      
-      aiResponse = '```experience-json\n' + JSON.stringify(fallbackJSON, null, 2) + '\n```';
+        } catch (parseError) {
+          console.error('[ExperienceJSON Markdown Parse Error]', parseError);
+          hasExperienceJSON = false;
+        }
+      }
+    }
+
+    // Only apply fallback if no valid response exists
+    if (!hasExperienceJSON && !aiResponse) {
+      console.warn('[⚠️ Missing ExperienceJSON] No valid ExperienceJSON, applying fallback wrapper');
       fallbackApplied = true;
+      
+      aiResponse = `\`\`\`experience-json
+{
+  "version": "1.0",
+  "layout": { "maxWidth": "1200px", "spacing": "2rem" },
+  "theme": {
+    "mode": "light",
+    "colors": {
+      "background": "#ffffff",
+      "text": "#1a1a1a",
+      "accent": "#0066cc",
+      "border": "#e5e5e5"
+    }
+  },
+  "blocks": [
+    {
+      "type": "content",
+      "body": "Jeg kunne dessverre ikke hente informasjonen du ba om. Vennligst prøv igjen."
+    }
+  ]
+}
+\`\`\``;
     }
 
     const finalResponse = aiResponse;
