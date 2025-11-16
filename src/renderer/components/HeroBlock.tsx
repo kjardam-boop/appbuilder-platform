@@ -18,11 +18,17 @@ export const HeroBlock = ({
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
           {/* Text Content */}
           <div className="space-y-6 text-center lg:text-left">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground leading-tight break-words">
+            <h1 
+              className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground leading-tight"
+              style={{ wordBreak: 'normal', overflowWrap: 'break-word', hyphens: 'auto' }}
+            >
               {headline}
             </h1>
             {subheadline && (
-              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed break-words">
+              <p 
+                className="text-lg md:text-xl text-muted-foreground leading-relaxed"
+                style={{ wordBreak: 'normal', overflowWrap: 'break-word', hyphens: 'auto' }}
+              >
                 {subheadline}
               </p>
             )}

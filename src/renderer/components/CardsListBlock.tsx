@@ -1,151 +1,269 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ExternalLink, Mail, Phone, User } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Mail, Phone, Globe, ChevronRight } from 'lucide-react';
 import type { CardsListBlock as CardsListBlockType } from '../schemas/experience.schema';
+import { useState } from 'react';
 
 interface CardsListBlockProps extends CardsListBlockType {
   onAction?: (actionId: string) => void;
 }
 
-const getInitials = (name: string) => {
-  const parts = name.split(' ').filter(Boolean);
-  if (parts.length === 0) return '?';
-  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
-  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+// Get initials from name
+const getInitials = (name: string): string => {
+  return name
+    .split(' ')
+    .map(n => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
 };
 
+// Get icon for CTA type
 const getCtaIcon = (type?: string) => {
   switch (type) {
-    case 'email':
-      return <Mail className="h-4 w-4" />;
-    case 'phone':
-      return <Phone className="h-4 w-4" />;
-    case 'web':
-      return <ExternalLink className="h-4 w-4" />;
-    default:
-      return <ExternalLink className="h-4 w-4" />;
+    case 'email': return <Mail className="w-4 h-4" />;
+    case 'phone': return <Phone className="w-4 h-4" />;
+    case 'web': return <Globe className="w-4 h-4" />;
+    default: return null;
   }
 };
 
-export const CardsListBlock = ({ title, items }: CardsListBlockProps) => {
+export const CardsListBlock = ({ title, items, onAction }: CardsListBlockProps) => {
+  const [openCardId, setOpenCardId] = useState<string | null>(null);
+
   // Guard: If items is undefined or empty, show fallback
   if (!items || items.length === 0) {
     return (
-      <div className="w-full max-w-full space-y-6 animate-fade-in overflow-hidden">
-        {title && <h2 className="text-2xl md:text-3xl font-bold text-foreground break-words">{title}</h2>}
-        <p className="text-muted-foreground">Ingen elementer å vise</p>
-      </div>
+      <Card className="w-full shadow-xl animate-fade-in">
+        {title && (
+          <CardHeader>
+            <CardTitle className="text-2xl md:text-3xl font-bold text-foreground">
+              {title}
+            </CardTitle>
+          </CardHeader>
+        )}
+        <CardContent>
+          <p className="text-muted-foreground">Ingen elementer tilgjengelig</p>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="w-full max-w-full space-y-8 animate-fade-in overflow-hidden">
+    <div className="space-y-6 animate-fade-in">
       {title && (
-        <div className="text-center space-y-2">
-          <h2 className="text-3xl md:text-4xl font-bold text-foreground">{title}</h2>
-          <div className="w-20 h-1 bg-primary mx-auto rounded-full" />
-        </div>
+        <h2 
+          className="text-2xl md:text-3xl font-bold text-foreground"
+          style={{ wordBreak: 'normal', overflowWrap: 'break-word', hyphens: 'auto' }}
+        >
+          {title}
+        </h2>
       )}
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 w-full max-w-full">
-        {items.map((item, index) => (
-          <Card 
-            key={index} 
-            className="bg-card border-border hover:border-primary/50 shadow-md hover:shadow-xl transition-all duration-300 rounded-2xl overflow-hidden group flex flex-col h-full"
-          >
-            {item.itemType === 'person' ? (
-              <>
-                <CardHeader className="space-y-4 text-center pb-4">
-                  <div className="flex justify-center">
-                    <div className="relative">
-                      <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-primary-foreground font-bold text-2xl md:text-3xl shadow-lg group-hover:scale-105 transition-transform">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {items.map((item, idx) => {
+          const isPerson = item.itemType === 'person';
+          const hasFullDescription = item.fullDescription && item.fullDescription !== item.body;
+
+          return (
+            <Dialog key={idx} open={openCardId === `card-${idx}`} onOpenChange={(open) => setOpenCardId(open ? `card-${idx}` : null)}>
+              <DialogTrigger asChild>
+                <Card 
+                  className={`group h-full flex flex-col bg-gradient-to-br from-card via-card to-card/90 backdrop-blur-sm border-border shadow-lg hover:shadow-2xl transition-all duration-300 rounded-xl overflow-hidden ${
+                    hasFullDescription ? 'cursor-pointer' : ''
+                  }`}
+                >
+                  {isPerson ? (
+                    // Person card layout (centered, with initials)
+                    <CardContent className="flex flex-col items-center text-center p-6 flex-1">
+                      {/* Avatar/Initials Circle */}
+                      <div className="w-20 h-20 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-2xl mb-4 shadow-lg group-hover:scale-110 transition-transform">
                         {getInitials(item.title)}
                       </div>
-                      <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping opacity-0 group-hover:opacity-100" />
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <CardTitle className="text-xl md:text-2xl font-bold text-foreground">
-                      {item.title}
-                    </CardTitle>
-                    {item.subtitle && (
-                      <CardDescription className="text-primary font-semibold text-sm md:text-base">
-                        {item.subtitle}
-                      </CardDescription>
-                    )}
-                  </div>
-                </CardHeader>
-                {(item.body || item.cta) && (
-                  <CardContent className="space-y-4 flex-1 flex flex-col pt-0">
-                    {item.body && (
-                      <p className="text-sm md:text-base leading-relaxed text-muted-foreground text-center">
-                        {item.body}
-                      </p>
-                    )}
-                    {item.cta && item.cta.length > 0 && (
-                      <div className="flex flex-wrap justify-center gap-2 mt-auto pt-4 border-t border-border">
-                        {item.cta.map((action, ctaIndex) => (
-                          <Button
-                            key={ctaIndex}
-                            size="sm"
-                            variant="ghost"
-                            className="gap-2 hover:bg-primary/10 hover:text-primary transition-all"
-                            asChild
+
+                      {/* Name */}
+                      <h3 
+                        className="text-xl font-bold text-foreground mb-1"
+                        style={{ wordBreak: 'normal', overflowWrap: 'break-word', hyphens: 'auto' }}
+                      >
+                        {item.title}
+                      </h3>
+
+                      {/* Role/Subtitle */}
+                      {item.subtitle && (
+                        <p 
+                          className="text-sm text-muted-foreground mb-3"
+                          style={{ wordBreak: 'normal', overflowWrap: 'break-word', hyphens: 'auto' }}
+                        >
+                          {item.subtitle}
+                        </p>
+                      )}
+
+                      {/* Description */}
+                      {item.body && (
+                        <p 
+                          className="text-sm text-muted-foreground mb-4"
+                          style={{ wordBreak: 'normal', overflowWrap: 'break-word', hyphens: 'auto' }}
+                        >
+                          {item.body}
+                        </p>
+                      )}
+
+                      {hasFullDescription && (
+                        <div className="flex items-center gap-1 text-sm text-primary group-hover:gap-2 transition-all">
+                          <span>Les mer</span>
+                          <ChevronRight className="w-4 h-4" />
+                        </div>
+                      )}
+
+                      {/* Contact CTAs */}
+                      {item.cta && item.cta.length > 0 && (
+                        <div className="flex flex-wrap gap-2 justify-center mt-auto pt-4">
+                          {item.cta.map((cta, ctaIdx) => (
+                            <Button
+                              key={ctaIdx}
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (cta.href) {
+                                  if (cta.type === 'email') window.location.href = `mailto:${cta.href}`;
+                                  else if (cta.type === 'phone') window.location.href = `tel:${cta.href}`;
+                                  else window.open(cta.href, '_blank');
+                                }
+                              }}
+                              className="flex items-center gap-2"
+                            >
+                              {getCtaIcon(cta.type)}
+                              <span className="truncate">{cta.label}</span>
+                            </Button>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  ) : (
+                    // Service/Company/Generic card layout (left-aligned)
+                    <>
+                      <CardHeader className="pb-3">
+                        <CardTitle 
+                          className="text-xl font-bold text-foreground"
+                          style={{ wordBreak: 'normal', overflowWrap: 'break-word', hyphens: 'auto' }}
+                        >
+                          {item.title}
+                        </CardTitle>
+                        {item.subtitle && (
+                          <CardDescription 
+                            className="text-sm"
+                            style={{ wordBreak: 'normal', overflowWrap: 'break-word', hyphens: 'auto' }}
                           >
-                            <a href={action.href} target="_blank" rel="noopener noreferrer">
-                              {getCtaIcon(action.type)}
-                              <span>{action.label}</span>
-                            </a>
-                          </Button>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                )}
-              </>
-            ) : (
-              <>
-                <CardHeader className="space-y-3">
-                  <CardTitle className="text-xl md:text-2xl font-bold text-foreground group-hover:text-primary transition-colors">
-                    {item.title}
-                  </CardTitle>
-                  {item.subtitle && (
-                    <CardDescription className="text-muted-foreground font-medium">
-                      {item.subtitle}
-                    </CardDescription>
+                            {item.subtitle}
+                          </CardDescription>
+                        )}
+                      </CardHeader>
+
+                      <CardContent className="flex flex-col flex-1">
+                        {item.body && (
+                          <p 
+                            className="text-sm text-muted-foreground mb-4"
+                            style={{ wordBreak: 'normal', overflowWrap: 'break-word', hyphens: 'auto' }}
+                          >
+                            {item.body}
+                          </p>
+                        )}
+
+                        {hasFullDescription && (
+                          <div className="flex items-center gap-1 text-sm text-primary group-hover:gap-2 transition-all mt-auto">
+                            <span>Les mer</span>
+                            <ChevronRight className="w-4 h-4" />
+                          </div>
+                        )}
+
+                        {item.cta && item.cta.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-auto pt-4">
+                            {item.cta.map((cta, ctaIdx) => (
+                              <Button
+                                key={ctaIdx}
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (cta.href) {
+                                    if (cta.type === 'email') window.location.href = `mailto:${cta.href}`;
+                                    else if (cta.type === 'phone') window.location.href = `tel:${cta.href}`;
+                                    else window.open(cta.href, '_blank');
+                                  }
+                                }}
+                                className="flex items-center gap-2"
+                              >
+                                {getCtaIcon(cta.type)}
+                                <span className="truncate">{cta.label}</span>
+                              </Button>
+                            ))}
+                          </div>
+                        )}
+                      </CardContent>
+                    </>
                   )}
-                </CardHeader>
-                {(item.body || item.cta) && (
-                  <CardContent className="space-y-4 flex-1 flex flex-col">
-                    {item.body && (
-                      <p className="text-sm md:text-base leading-relaxed text-muted-foreground flex-1">
-                        {item.body}
-                      </p>
+                </Card>
+              </DialogTrigger>
+
+              {/* Modal with full description */}
+              {hasFullDescription && (
+                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle 
+                      className="text-2xl"
+                      style={{ wordBreak: 'normal', overflowWrap: 'break-word', hyphens: 'auto' }}
+                    >
+                      {item.title}
+                    </DialogTitle>
+                    {item.subtitle && (
+                      <DialogDescription 
+                        className="text-base"
+                        style={{ wordBreak: 'normal', overflowWrap: 'break-word', hyphens: 'auto' }}
+                      >
+                        {item.subtitle}
+                      </DialogDescription>
                     )}
+                  </DialogHeader>
+                  
+                  <div className="mt-4 space-y-4">
+                    <p 
+                      className="text-base leading-relaxed whitespace-pre-wrap"
+                      style={{ wordBreak: 'normal', overflowWrap: 'break-word', hyphens: 'auto' }}
+                    >
+                      {item.fullDescription}
+                    </p>
+
+                    {/* CTA buttons in modal */}
                     {item.cta && item.cta.length > 0 && (
-                      <div className="flex flex-wrap gap-2 pt-2">
-                        {item.cta.map((action, ctaIndex) => (
+                      <div className="flex flex-wrap gap-3 pt-4 border-t">
+                        {item.cta.map((cta, ctaIdx) => (
                           <Button
-                            key={ctaIndex}
-                            size="sm"
-                            variant="outline"
-                            className="gap-2 hover:bg-primary hover:text-primary-foreground transition-all"
-                            asChild
+                            key={ctaIdx}
+                            onClick={() => {
+                              if (cta.href) {
+                                if (cta.type === 'email') window.location.href = `mailto:${cta.href}`;
+                                else if (cta.type === 'phone') window.location.href = `tel:${cta.href}`;
+                                else window.open(cta.href, '_blank');
+                              }
+                              setOpenCardId(null);
+                            }}
+                            className="flex items-center gap-2"
                           >
-                            <a href={action.href} target="_blank" rel="noopener noreferrer">
-                              {getCtaIcon(action.type)}
-                              <span>{action.label}</span>
-                            </a>
+                            {getCtaIcon(cta.type)}
+                            <span>{cta.label}</span>
                           </Button>
                         ))}
                       </div>
                     )}
-                  </CardContent>
-                )}
-              </>
-            )}
-          </Card>
-        ))}
+                  </div>
+                </DialogContent>
+              )}
+            </Dialog>
+          );
+        })}
       </div>
     </div>
   );

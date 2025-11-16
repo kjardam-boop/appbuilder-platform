@@ -18,6 +18,7 @@ const CardsListBlockSchema = z.object({
     title: z.string(),
     subtitle: z.string().optional(),
     body: z.string().optional(),
+    fullDescription: z.string().optional(), // ⭐ NEW: Full description for modal
     itemType: z.enum(['person', 'service', 'company', 'generic']).optional(),
     icon: z.string().optional(),
     color: z.string().optional(),
