@@ -13,12 +13,12 @@ export const StepsBlock = ({ title, steps }: StepsBlockProps) => {
       <Card className="w-full shadow-xl animate-fade-in">
         {title && (
           <CardHeader>
-            <CardTitle 
-              className="text-2xl md:text-3xl font-bold text-foreground"
-              style={{ wordBreak: 'normal', overflowWrap: 'break-word', hyphens: 'auto' }}
-            >
-              {title}
-            </CardTitle>
+          <CardTitle 
+            className="text-2xl md:text-3xl font-bold text-foreground"
+            style={{ wordBreak: 'keep-all', overflowWrap: 'break-word', hyphens: 'none' }}
+          >
+            {title}
+          </CardTitle>
           </CardHeader>
         )}
         <CardContent>
@@ -34,7 +34,7 @@ export const StepsBlock = ({ title, steps }: StepsBlockProps) => {
         <CardHeader>
           <CardTitle 
             className="text-2xl md:text-3xl font-bold text-foreground"
-            style={{ wordBreak: 'normal', overflowWrap: 'break-word', hyphens: 'auto' }}
+            style={{ wordBreak: 'keep-all', overflowWrap: 'break-word', hyphens: 'none' }}
           >
             {title}
           </CardTitle>
@@ -52,13 +52,13 @@ export const StepsBlock = ({ title, steps }: StepsBlockProps) => {
             <div className="flex-1 pt-1">
               <h3 
                 className="text-lg md:text-xl font-semibold text-foreground mb-2"
-                style={{ wordBreak: 'normal', overflowWrap: 'break-word', hyphens: 'auto' }}
+                style={{ wordBreak: 'keep-all', overflowWrap: 'break-word', hyphens: 'none' }}
               >
                 {step.title}
               </h3>
               <p 
                 className="text-sm md:text-base text-muted-foreground leading-relaxed"
-                style={{ wordBreak: 'normal', overflowWrap: 'break-word', hyphens: 'auto' }}
+                style={{ wordBreak: 'keep-all', overflowWrap: 'break-word', hyphens: 'none' }}
               >
                 {step.description}
               </p>

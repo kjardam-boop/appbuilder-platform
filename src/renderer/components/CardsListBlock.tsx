@@ -55,7 +55,7 @@ export const CardsListBlock = ({ title, items, onAction }: CardsListBlockProps) 
       {title && (
         <h2 
           className="text-2xl md:text-3xl font-bold text-foreground"
-          style={{ wordBreak: 'normal', overflowWrap: 'break-word', hyphens: 'auto' }}
+          style={{ wordBreak: 'keep-all', overflowWrap: 'break-word', hyphens: 'none' }}
         >
           {title}
         </h2>
@@ -85,7 +85,7 @@ export const CardsListBlock = ({ title, items, onAction }: CardsListBlockProps) 
                       {/* Name */}
                       <h3 
                         className="text-xl font-bold text-foreground mb-1"
-                        style={{ wordBreak: 'normal', overflowWrap: 'break-word', hyphens: 'auto' }}
+                        style={{ wordBreak: 'keep-all', overflowWrap: 'break-word', hyphens: 'none' }}
                       >
                         {item.title}
                       </h3>
@@ -94,7 +94,7 @@ export const CardsListBlock = ({ title, items, onAction }: CardsListBlockProps) 
                       {item.subtitle && (
                         <p 
                           className="text-sm text-muted-foreground mb-3"
-                          style={{ wordBreak: 'normal', overflowWrap: 'break-word', hyphens: 'auto' }}
+                          style={{ wordBreak: 'keep-all', overflowWrap: 'break-word', hyphens: 'none' }}
                         >
                           {item.subtitle}
                         </p>
@@ -104,7 +104,7 @@ export const CardsListBlock = ({ title, items, onAction }: CardsListBlockProps) 
                       {item.body && (
                         <p 
                           className="text-sm text-muted-foreground mb-4"
-                          style={{ wordBreak: 'normal', overflowWrap: 'break-word', hyphens: 'auto' }}
+                          style={{ wordBreak: 'keep-all', overflowWrap: 'break-word', hyphens: 'none' }}
                         >
                           {item.body}
                         </p>
@@ -148,14 +148,14 @@ export const CardsListBlock = ({ title, items, onAction }: CardsListBlockProps) 
                       <CardHeader className="pb-3">
                         <CardTitle 
                           className="text-xl font-bold text-foreground"
-                          style={{ wordBreak: 'normal', overflowWrap: 'break-word', hyphens: 'auto' }}
+                          style={{ wordBreak: 'keep-all', overflowWrap: 'break-word', hyphens: 'none' }}
                         >
                           {item.title}
                         </CardTitle>
                         {item.subtitle && (
                           <CardDescription 
                             className="text-sm"
-                            style={{ wordBreak: 'normal', overflowWrap: 'break-word', hyphens: 'auto' }}
+                            style={{ wordBreak: 'keep-all', overflowWrap: 'break-word', hyphens: 'none' }}
                           >
                             {item.subtitle}
                           </CardDescription>
@@ -166,7 +166,7 @@ export const CardsListBlock = ({ title, items, onAction }: CardsListBlockProps) 
                         {item.body && (
                           <p 
                             className="text-sm text-muted-foreground mb-4"
-                            style={{ wordBreak: 'normal', overflowWrap: 'break-word', hyphens: 'auto' }}
+                            style={{ wordBreak: 'keep-all', overflowWrap: 'break-word', hyphens: 'none' }}
                           >
                             {item.body}
                           </p>
@@ -214,14 +214,14 @@ export const CardsListBlock = ({ title, items, onAction }: CardsListBlockProps) 
                   <DialogHeader>
                     <DialogTitle 
                       className="text-2xl"
-                      style={{ wordBreak: 'normal', overflowWrap: 'break-word', hyphens: 'auto' }}
+                      style={{ wordBreak: 'keep-all', overflowWrap: 'break-word', hyphens: 'none' }}
                     >
                       {item.title}
                     </DialogTitle>
                     {item.subtitle && (
                       <DialogDescription 
                         className="text-base"
-                        style={{ wordBreak: 'normal', overflowWrap: 'break-word', hyphens: 'auto' }}
+                        style={{ wordBreak: 'keep-all', overflowWrap: 'break-word', hyphens: 'none' }}
                       >
                         {item.subtitle}
                       </DialogDescription>
@@ -231,7 +231,7 @@ export const CardsListBlock = ({ title, items, onAction }: CardsListBlockProps) 
                   <div className="mt-4 space-y-4">
                     <p 
                       className="text-base leading-relaxed whitespace-pre-wrap"
-                      style={{ wordBreak: 'normal', overflowWrap: 'break-word', hyphens: 'auto' }}
+                      style={{ wordBreak: 'keep-all', overflowWrap: 'break-word', hyphens: 'none' }}
                     >
                       {item.fullDescription}
                     </p>
