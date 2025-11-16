@@ -534,8 +534,12 @@ serve(async (req) => {
 
   console.log('🚀 [ai-mcp-chat] invoked', { method: req.method, ts: new Date().toISOString() });
 
+  // Parse request body once and store for error logging
+  let requestTenantId: string | undefined;
+  
   try {
     const { messages, tenantId, systemPrompt } = await req.json();
+    requestTenantId = tenantId;
 
     if (!messages || !Array.isArray(messages)) {
       throw new Error('Messages array is required');
@@ -1678,25 +1682,24 @@ ${MCP_TOOLS.map(t => `- **${t.function.name}**: ${t.function.description}`).join
     console.error('Error in ai-mcp-chat:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     
-    // Try to log failed request
-    try {
-      const { tenantId } = await req.clone().json();
-      if (tenantId) {
+    // Try to log failed request using the stored tenantId
+    if (requestTenantId) {
+      try {
         const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
         const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
         const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
 
         await supabaseClient.from('ai_usage_logs').insert({
-          tenant_id: tenantId,
+          tenant_id: requestTenantId,
           provider: 'lovable', // Default for errors
           model: 'unknown',
           endpoint: 'ai-mcp-chat',
           status: errorMessage.includes('Rate limit') ? 'rate_limited' : 'error',
           error_message: errorMessage
         });
+      } catch (logError) {
+        console.error('[Error Log Failed]', logError);
       }
-    } catch (logError) {
-      console.error('[Error Log Failed]', logError);
     }
     
     return new Response(
