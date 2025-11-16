@@ -178,8 +178,23 @@ const MCP_TOOLS = [
   {
     type: "function",
     function: {
+      name: "search_content_library",
+      description: "🚨 ALWAYS USE THIS FIRST! Search the tenant's Knowledge Base (ai_app_content_library) for information about team, products, services, contact info, and company details. This is the PRIMARY source of truth. Only use other tools if information is not found here.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "Search query for matching content (searches title, content, keywords)" },
+          category: { type: "string", description: "Optional category filter (e.g., 'team', 'products', 'services', 'contact')" }
+        },
+        required: ["query"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
       name: "scrape_website",
-      description: "Scrape content from a website URL. Returns the HTML content and extracted text. Use this to get information from company websites or external sources.",
+      description: "Scrape content from a website URL. Use ONLY for external URLs or when search_content_library returns no results.",
       parameters: {
         type: "object",
         properties: {
@@ -366,6 +381,44 @@ async function executeMcpTool(
         
         if (error) throw error;
         return { success: true, task: data };
+      }
+
+      case "search_content_library": {
+        console.log('[Content Library] Searching:', args.query, 'Category:', args.category || 'all');
+        
+        let query = supabaseClient
+          .from('ai_app_content_library')
+          .select('id, title, content_markdown, category, keywords')
+          .eq('is_active', true)
+          .or(`tenant_id.eq.${tenantId},tenant_id.is.null`);
+        
+        // Filter by category if provided
+        if (args.category) {
+          query = query.eq('category', args.category);
+        }
+        
+        // Search in title, content, and keywords
+        if (args.query) {
+          query = query.or(
+            `title.ilike.%${args.query}%,content_markdown.ilike.%${args.query}%,keywords.cs.{${args.query}}`
+          );
+        }
+        
+        query = query.order('created_at', { ascending: false }).limit(10);
+        
+        const { data, error } = await query;
+        if (error) throw error;
+        
+        console.log(`[Content Library] Found ${data?.length || 0} documents`);
+        
+        return {
+          success: true,
+          documents: data || [],
+          count: data?.length || 0,
+          message: data?.length 
+            ? `Found ${data.length} relevant documents in Knowledge Base`
+            : 'No documents found. Consider using scrape_website for external information.'
+        };
       }
 
       case "scrape_website": {
@@ -583,20 +636,8 @@ serve(async (req) => {
     
     const tenantDomain = tenantDomainData?.domain;
 
-    // Fetch all active content library documents
-    console.log('[Content Library] Fetching documents for tenant:', tenantId);
-    const { data: contentDocs, error: contentError } = await supabaseClient
-      .from('ai_app_content_library')
-      .select('id, title, content_markdown, category, keywords')
-      .eq('is_active', true)
-      .or(`tenant_id.eq.${tenantId},tenant_id.is.null`)
-      .order('created_at', { ascending: false });
-
-    if (contentError) {
-      console.error('[Content Library Error]', contentError);
-    }
-
-    console.log(`[Content Library] Loaded ${contentDocs?.length || 0} documents`);
+    // Content Library now accessed via search_content_library tool
+    console.log('[Content Library] Using tool-based access for knowledge base');
 
     // ⭐ PHASE 2.5: Knowledge Base loaded - no special extraction needed
     // AI will read all content directly from contentDocs
@@ -642,70 +683,25 @@ serve(async (req) => {
       }
     }
 
-    // ⭐ PHASE 3: Build system prompt with content library + website
-    const knowledgeBaseSection = contentDocs && contentDocs.length > 0 ? `
-## 📚 KNOWLEDGE BASE - DIN PRIMÆRE KUNNSKAPSKILDE
+    // ⭐ PHASE 3: Minimal system prompt - data accessed via tools
+    const defaultSystemPrompt = `You are an intelligent AI assistant for ${tenantData?.name || 'this company'}.
 
-**🎯 KRITISK:** Dette er kurert, validert innhold. ALLTID søk her FØRST!
+## 🎯 CRITICAL: TOOL USAGE PRIORITY
 
-${contentDocs.map((doc: any, idx: number) => `
----
-### 📄 ${doc.title}
-**Kategori:** ${doc.category || 'general'}
+**🚨 YOU MUST FOLLOW THIS ORDER:**
 
-${doc.content_markdown}
----
-`).join('\n')}
+1. **search_content_library** - ALWAYS USE FIRST
+   - For: team, products, services, contact info, FAQ, processes
+   - This is curated, validated content - THE SOURCE OF TRUTH
+   - Example: User asks "Hvem jobber her?" → FIRST call search_content_library(query: "team")
 
-**🔍 HVORDAN BRUKE KNOWLEDGE BASE:**
-- Når brukeren spør om team/personer → Les "Team"-dokumentet
-- Når brukeren spør om adresse/kontakt → Les "Kontakt"-dokumentet  
-- Når brukeren spør om produkter/tjenester → Les "Tjenester"-dokumentet
-- Når brukeren spør om priser → Les "Priser"-dokumentet
-- Når brukeren spør om prosesser → Les "Prosess"-dokumentet
+2. **scrape_website** - ONLY if Content Library has no results
+   - For: External websites or when search_content_library returns empty
+   - Domain: ${tenantDomain || 'Not registered'}
 
-**⚠️ VIKTIG:** Hvis informasjon FINNES i Knowledge Base → Svar ALLTID med ExperienceJSON (se eksempler under).
-**⚠️ VIKTIG:** Hvis informasjon IKKE finnes → Svar: "Jeg har ikke informasjon om dette ennå. Ønsker du å oppdatere kunnskapsbasen?"
-` : '';
-
-    const websiteSection = websiteScraped && websiteContent ? `
-## 🌐 COMPANY WEBSITE (Secondary Source)
-
-**⚠️ ADVARSEL:** Bruk kun dette hvis informasjon IKKE finnes i Knowledge Base ovenfor.
-
-**Domain:** ${tenantDomain}
-
-**Extracted Content:**
-${websiteContent}
-
----
-` : '';
-
-
-    const defaultSystemPrompt = `Du er en intelligent AI-assistent for ${tenantData?.name || 'denne bedriften'}.
-
-${knowledgeBaseSection}
-
-${websiteSection}
-
-## 🎯 PRIORITERING AV KILDER (KRITISK!)
-
-**🚨 REKKEFØLGE DU MÅ FØLGE:**
-
-1. **📚 Knowledge Base (Content Library) - ALLTID FØRST!**
-   - Dette er kurert, validert innhold
-   - Bruk dette for: team, tjenester, produkter, prosesser, FAQ
-   - **ALDRI ignorer dette til fordel for website-data!**
-
-2. **🌐 Company Website - KUN hvis info ikke finnes i Knowledge Base**
-   - Backup-kilde for generell bedriftsinformasjon
-   - Kan være utdatert eller upresist
-
-3. **🔧 MCP Tools - KUN for spesifikke data-operasjoner**
-   - Henting/oppretting av selskaper, prosjekter, oppgaver
-   - Ikke for innholdsspørsmål
-
-**VIKTIG:** Hvis du finner relevant informasjon i Knowledge Base eller Website, **ALLTID** svar med ExperienceJSON (se eksempler under).
+3. **Database tools** - For structured data operations ONLY
+   - list_companies, create_project, list_tasks, etc.
+   - NOT for content/information questions
 
 ## 🎨 SVAR-FORMAT: ExperienceJSON
 
