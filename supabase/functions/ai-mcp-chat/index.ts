@@ -386,37 +386,75 @@ async function executeMcpTool(
       case "search_content_library": {
         console.log('[Content Library] Searching:', args.query, 'Category:', args.category || 'all');
         
-        let query = supabaseClient
-          .from('ai_app_content_library')
-          .select('id, title, content_markdown, category, keywords')
-          .eq('is_active', true)
-          .or(`tenant_id.eq.${tenantId},tenant_id.is.null`);
-        
-        // Filter by category if provided
-        if (args.category) {
-          query = query.eq('category', args.category);
+        // Helper: fetch tenant name for smarter fallbacks
+        let tenantName: string | null = null;
+        try {
+          const { data: t } = await supabaseClient
+            .from('tenants')
+            .select('name')
+            .eq('id', tenantId)
+            .single();
+          tenantName = t?.name || null;
+        } catch (_e) {
+          // ignore
         }
         
-        // Search in title, content, and keywords
-        if (args.query) {
-          query = query.or(
-            `title.ilike.%${args.query}%,content_markdown.ilike.%${args.query}%,keywords.cs.{${args.query}}`
-          );
+        const trySearch = async (q: string, category?: string) => {
+          let q1 = supabaseClient
+            .from('ai_app_content_library')
+            .select('id, title, content_markdown, category, keywords')
+            .eq('is_active', true)
+            .or(`tenant_id.eq.${tenantId},tenant_id.is.null`);
+          if (category) q1 = q1.eq('category', category);
+          if (q) {
+            q1 = q1.or(
+              `title.ilike.%${q}%,content_markdown.ilike.%${q}%,keywords.cs.{${q}}`
+            );
+          }
+          q1 = q1.order('created_at', { ascending: false }).limit(10);
+          const { data, error } = await q1;
+          if (error) throw error;
+          return data || [];
+        };
+        
+        // Primary + fallback queries (robust search)
+        const candidates = [
+          String(args.query || '').trim(),
+          'om selskapet',
+          'about',
+          'company',
+          tenantName || ''
+        ].filter(Boolean);
+        
+        let results: any[] = [];
+        for (const q of candidates) {
+          const found = await trySearch(q, args.category);
+          console.log(`[Content Library] Tried query="${q}" → ${found.length} hit(s)`);
+          if (found.length) {
+            results = found;
+            break;
+          }
         }
         
-        query = query.order('created_at', { ascending: false }).limit(10);
-        
-        const { data, error } = await query;
-        if (error) throw error;
-        
-        console.log(`[Content Library] Found ${data?.length || 0} documents`);
+        // Final fallback: serve recent tenant docs if nothing matched
+        if (!results.length) {
+          console.log('[Content Library] Final fallback: recent tenant docs');
+          const { data: fallbackData } = await supabaseClient
+            .from('ai_app_content_library')
+            .select('id, title, content_markdown, category, keywords')
+            .eq('is_active', true)
+            .eq('tenant_id', tenantId)
+            .order('created_at', { ascending: false })
+            .limit(3);
+          results = fallbackData || [];
+        }
         
         return {
           success: true,
-          documents: data || [],
-          count: data?.length || 0,
-          message: data?.length 
-            ? `Found ${data.length} relevant documents in Knowledge Base`
+          documents: results,
+          count: results.length,
+          message: results.length
+            ? `Found ${results.length} document(s) in Knowledge Base`
             : 'No documents found. Consider using scrape_website for external information.'
         };
       }
@@ -493,6 +531,8 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  console.log('🚀 [ai-mcp-chat] invoked', { method: req.method, ts: new Date().toISOString() });
 
   try {
     const { messages, tenantId, systemPrompt } = await req.json();
@@ -685,6 +725,11 @@ serve(async (req) => {
 
     // ⭐ PHASE 3: Minimal system prompt - data accessed via tools
     const defaultSystemPrompt = `You are an intelligent AI assistant for ${tenantData?.name || 'this company'}.
+
+## 🔎 TENANT CONTEXT (Norwegian)
+- Når brukeren sier "selskapet", "firmaet", "oss", "vi", "bedriften": det betyr ALLTID ${tenantData?.name}.
+- Ved slike spørsmål: kall search_content_library FØRST med en av: "${tenantData?.name}", "om selskapet", "about", "company".
+- Ikke spør "hvilket selskap?" med mindre brukeren eksplisitt nevner en annen bedrift.
 
 ## 🎯 CRITICAL: TOOL USAGE PRIORITY
 
@@ -1307,6 +1352,10 @@ ${MCP_TOOLS.map(t => `- **${t.function.name}**: ${t.function.description}`).join
 
     const effectiveSystemPrompt = systemPrompt || defaultSystemPrompt;
 
+    const lastUserMessage = [...messages].reverse().find((m: any) => m.role === 'user');
+    const isCompanyQuestion = !!lastUserMessage && /(selskap|firma|oss|vi|bedrift|om dere|hvem er|hva gjør)/i.test((lastUserMessage.content || '').toString());
+    let forceSearchOnFirstCall = !!isCompanyQuestion;
+
     // Initial AI call with tools
     let aiMessages = [
       { role: 'system', content: effectiveSystemPrompt },
@@ -1318,7 +1367,7 @@ ${MCP_TOOLS.map(t => `- **${t.function.name}**: ${t.function.description}`).join
         model: aiClientConfig.model,
         messages,
         tools: MCP_TOOLS,
-        tool_choice: 'auto',
+        tool_choice: forceSearchOnFirstCall ? { type: 'function', function: { name: 'search_content_library' } } : 'auto',
       };
 
       // Handle temperature (not supported by GPT-5+)
@@ -1436,6 +1485,25 @@ ${MCP_TOOLS.map(t => `- **${t.function.name}**: ${t.function.description}`).join
     // Initial AI call with failover support
     let aiData = await callAIWithFailover(aiClientConfig, aiMessages);
     let choice = aiData.choices?.[0];
+
+    // Reset forced tool choice after first call
+    forceSearchOnFirstCall = false;
+
+    // If no tool calls and this looks like a company question, force a content search programmatically
+    if (!choice?.message?.tool_calls && isCompanyQuestion) {
+      console.log('[Forced Search] No tool calls detected, injecting search_content_library');
+      const forcedToolCallId = `forced-search-${Date.now()}`;
+      const forcedArgs = { query: tenantData?.name || 'om selskapet' };
+      aiMessages.push({
+        role: 'assistant',
+        content: '',
+        tool_calls: [{ id: forcedToolCallId, type: 'function', function: { name: 'search_content_library', arguments: JSON.stringify(forcedArgs) } }]
+      });
+      const toolResult = await executeMcpTool('search_content_library', forcedArgs, supabaseClient, tenantId);
+      aiMessages.push({ role: 'tool', tool_call_id: forcedToolCallId, content: JSON.stringify(toolResult) });
+      aiData = await callAIWithFailover(aiClientConfig, aiMessages);
+      choice = aiData.choices?.[0];
+    }
 
     // Handle tool calls (up to 5 iterations)
     const maxIterations = 5;
