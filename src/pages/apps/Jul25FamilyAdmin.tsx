@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Plus, Edit2, Trash2, MapPin, CalendarIcon, Users, UserPlus, Minus, RefreshCw, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Plus, Edit2, Trash2, MapPin, CalendarIcon, Users, UserPlus, Minus, RefreshCw, AlertTriangle, AlertCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,11 +11,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toDateOnlyString } from "@/lib/date";
 import { toast } from "sonner";
-import { useJul25Families, useJul25FamilyMembers, useUpdateFamily, useSyncFamilyMembers, useDeleteFamily } from "@/hooks/useJul25Families";
+import { useJul25Families, useJul25FamilyMembers, useUpdateFamily, useSyncFamilyMembers, useDeleteFamily, useDeleteFamilyMember } from "@/hooks/useJul25Families";
 import { useJul25FamilyPeriods, useCreatePeriod, useUpdatePeriod, useDeletePeriod, useMemberPeriods } from "@/hooks/useJul25FamilyPeriods";
 import { useDebounce } from "@/hooks/useDebounce";
 
@@ -38,6 +39,7 @@ export default function Jul25FamilyAdmin() {
   const createPeriod = useCreatePeriod();
   const updatePeriod = useUpdatePeriod();
   const deletePeriod = useDeletePeriod();
+  const deleteMember = useDeleteFamilyMember();
   const syncMembers = useSyncFamilyMembers();
   
   // Local state for inline editing
@@ -156,6 +158,31 @@ export default function Jul25FamilyAdmin() {
       familyId: family.id,
       familyName: family.name,
       targetCount: family.number_of_people,
+    });
+  };
+
+  const handleDeleteMember = (memberId: string, memberName: string) => {
+    if (!confirm(`Er du sikker på at du vil slette ${memberName}?`)) return;
+    
+    deleteMember.mutate(memberId, {
+      onSuccess: () => {
+        // Update family member count
+        if (family && members) {
+          const newCount = Math.max(1, members.length - 1);
+          updateFamily.mutate({
+            id: family.id,
+            number_of_people: newCount,
+          });
+        }
+      },
+    });
+  };
+
+  const handleAdjustCount = () => {
+    if (!family || !members) return;
+    updateFamily.mutate({
+      id: family.id,
+      number_of_people: members.length,
     });
   };
   
@@ -289,6 +316,26 @@ export default function Jul25FamilyAdmin() {
               </div>
             </div>
             
+            {/* Show mismatch warning with fix button */}
+            {members && members.length !== family.number_of_people && (
+              <Alert className="mt-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                  <span className="text-sm">
+                    Antall registrerte medlemmer ({members.length}) stemmer ikke med telleren ({family.number_of_people})
+                  </span>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleAdjustCount}
+                    className="flex-shrink-0"
+                  >
+                    Sett antall til {members.length}
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            )}
+            
             {/* Periods */}
             <div>
               <Label className="text-sm">Perioder / Steder</Label>
@@ -402,14 +449,24 @@ export default function Jul25FamilyAdmin() {
                             })}
                           </div>
                         </div>
-                        <Button 
-                          size="sm" 
-                          variant="ghost"
-                          onClick={() => navigate(`/apps/jul25/member/${member.id}`)}
-                          className="h-8 w-8 p-0 flex-shrink-0"
-                        >
-                          <Edit2 className="h-3 w-3 sm:h-4 sm:w-4" />
-                        </Button>
+                        <div className="flex gap-1">
+                          <Button 
+                            size="sm" 
+                            variant="ghost"
+                            onClick={() => navigate(`/apps/jul25/member/${member.id}`)}
+                            className="h-8 w-8 p-0 flex-shrink-0"
+                          >
+                            <Edit2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleDeleteMember(member.id, member.name)}
+                            className="h-8 w-8 p-0 flex-shrink-0"
+                          >
+                            <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-destructive" />
+                          </Button>
+                        </div>
                       </CardContent>
                     </Card>
                   );
