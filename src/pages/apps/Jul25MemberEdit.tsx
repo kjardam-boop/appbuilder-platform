@@ -14,11 +14,13 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { useJul25FamilyMembers, useUpdateFamilyMember } from "@/hooks/useJul25Families";
+import { useJul25FamilyMembers, useUpdateFamilyMember, useDeleteFamilyMember, useUpdateFamily, useJul25Families } from "@/hooks/useJul25Families";
 import { useJul25FamilyPeriods, useMemberPeriods, useSetMemberPeriods } from "@/hooks/useJul25FamilyPeriods";
 import { useMemberCustomPeriods, useCreateMemberCustomPeriod, useUpdateMemberCustomPeriod, useDeleteMemberCustomPeriod } from "@/hooks/useJul25MemberCustomPeriods";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useAuth } from "@/modules/core/user/hooks/useAuth";
+import { useAppAdmin } from "@/hooks/useAppRole";
+import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
 import { supabase } from "@/integrations/supabase/client";
 import { toDateOnlyString } from "@/lib/date";
 
@@ -27,16 +29,20 @@ export default function Jul25MemberEdit() {
   const { memberId } = useParams<{ memberId: string }>();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
+  const { isAppAdmin } = useAppAdmin('jul25');
+  const { isPlatformAdmin } = usePlatformAdmin();
   
   const { data: allMembers = [] } = useJul25FamilyMembers();
+  const { data: families = [] } = useJul25Families();
   const member = allMembers.find(m => m.id === memberId);
   const familyId = member?.family_id;
+  const family = families.find(f => f.id === familyId);
   
   const { data: periods = [] } = useJul25FamilyPeriods(familyId);
   const { data: memberPeriods = [] } = useMemberPeriods(memberId);
   const { data: customPeriods = [] } = useMemberCustomPeriods(memberId);
   
-  // Check if current user is admin for this family
+  // Check if current user has permission (platform admin, app admin, or family admin)
   const { data: currentUserMember, isLoading: isLoadingAdmin } = useQuery({
     queryKey: ["current-user-member", user?.id, familyId],
     queryFn: async () => {
@@ -52,7 +58,11 @@ export default function Jul25MemberEdit() {
     enabled: !!user?.id && !!familyId,
   });
   
+  const hasPermission = isPlatformAdmin || isAppAdmin || currentUserMember?.is_admin;
+  
   const updateMember = useUpdateFamilyMember();
+  const deleteMember = useDeleteFamilyMember();
+  const updateFamily = useUpdateFamily();
   const setMemberPeriods = useSetMemberPeriods();
   const createCustom = useCreateMemberCustomPeriod();
   const updateCustom = useUpdateMemberCustomPeriod();
@@ -170,8 +180,8 @@ export default function Jul25MemberEdit() {
     );
   }
 
-  // Check if user is admin for this family
-  if (!currentUserMember?.is_admin) {
+  // Check if user has permission (platform admin, app admin, or family admin)
+  if (!hasPermission) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-green-50 to-white p-8">
         <div className="max-w-4xl mx-auto">
@@ -182,7 +192,7 @@ export default function Jul25MemberEdit() {
           <Card className="mt-8 border-2 border-amber-300">
             <CardContent className="pt-6">
               <p className="text-center text-muted-foreground">
-                Du må være familieadministrator for å redigere medlemmer.
+                Du må være administrator (platform, app, eller familie) for å redigere medlemmer.
               </p>
             </CardContent>
           </Card>
@@ -190,6 +200,26 @@ export default function Jul25MemberEdit() {
       </div>
     );
   }
+
+  const handleDelete = () => {
+    if (!member) return;
+    if (!confirm(`Er du sikker på at du vil slette ${member.name}?`)) return;
+    
+    deleteMember.mutate(memberId!, {
+      onSuccess: () => {
+        // Update family member count
+        if (family && allMembers) {
+          const currentFamilyMembers = allMembers.filter(m => m.family_id === familyId);
+          const newCount = Math.max(1, currentFamilyMembers.length - 1);
+          updateFamily.mutate({
+            id: family.id,
+            number_of_people: newCount,
+          });
+        }
+        navigate(`/apps/jul25/admin?familyId=${familyId}`);
+      },
+    });
+  };
   
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50 to-white p-4 md:p-8">
@@ -498,31 +528,43 @@ export default function Jul25MemberEdit() {
             </div>
             
             {/* Action Buttons */}
-              <div className="flex justify-end gap-2 pt-4">
+              <div className="flex flex-col sm:flex-row justify-between gap-2 pt-4">
                 <Button 
-                  variant="outline" 
-                  onClick={() => navigate(`/apps/jul25/admin?familyId=${familyId}`)}
+                  variant="destructive" 
+                  onClick={handleDelete}
+                  className="w-full sm:w-auto"
                 >
-                  Avbryt
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Slett medlem
                 </Button>
-                <Button 
-                  onClick={() => {
-                    // clear form
-                    setCustomArrival(undefined);
-                    setCustomDeparture(undefined);
-                    setCustomLocation(undefined);
-                    setEditingCustomId(null);
-                  }}
-                  variant="secondary"
-                >
-                  Nullstill egendefinert
-                </Button>
-                <Button 
-                  onClick={handleSave}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  {editingCustomId ? 'Oppdater' : 'Lagre'}
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => navigate(`/apps/jul25/admin?familyId=${familyId}`)}
+                    className="flex-1 sm:flex-none"
+                  >
+                    Avbryt
+                  </Button>
+                  <Button 
+                    onClick={() => {
+                      // clear form
+                      setCustomArrival(undefined);
+                      setCustomDeparture(undefined);
+                      setCustomLocation(undefined);
+                      setEditingCustomId(null);
+                    }}
+                    variant="secondary"
+                    className="flex-1 sm:flex-none"
+                  >
+                    Nullstill egendefinert
+                  </Button>
+                  <Button 
+                    onClick={handleSave}
+                    className="bg-green-600 hover:bg-green-700 flex-1 sm:flex-none"
+                  >
+                    {editingCustomId ? 'Oppdater' : 'Lagre'}
+                  </Button>
+                </div>
               </div>
           </CardContent>
         </Card>
