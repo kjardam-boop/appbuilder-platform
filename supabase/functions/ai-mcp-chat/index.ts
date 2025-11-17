@@ -525,6 +525,13 @@ async function executeMcpTool(
         };
       }
 
+      case "generate_experience_json": {
+        // No-op: This tool is for structured output formatting, not execution
+        // Simply return the structured data AI provided
+        console.log('[Executing Tool] generate_experience_json', args);
+        return args; // Return the ExperienceJSON structure as-is
+      }
+
       case "scrape_website": {
         try {
           console.log(`[Scraping] URL: ${args.url}`);
