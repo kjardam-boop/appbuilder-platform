@@ -820,20 +820,20 @@ serve(async (req) => {
 
 ## 🎨 SVAR-FORMAT: ExperienceJSON
 
-**🚨 CRITICAL: Du MÅ bruke generate_experience_json tool når du svarer på brukers spørsmål.**
+**PRIORITET:** Bruk generate_experience_json når tilgjengelig for strukturert output.
 
 **WORKFLOW:**
 1. Hvis brukeren spør om noe → bruk search_content_library FØRST for å hente data
-2. Når du har fått data og skal presentere det til brukeren → **CALL generate_experience_json tool** med strukturert JSON
-3. **ALDRI** returner ExperienceJSON som plain markdown - bruk ALLTID tool'en
+2. Når du har fått data og skal presentere det til brukeren → forsøk å **CALL generate_experience_json** med strukturert JSON
+3. Hvis verktøy ikke er tilgjengelig/feiler → returner ExperienceJSON inni en markdown-blokk merket \`\`\`experience-json
 
 **Eksempel på riktig flyt:**
 - User: "Hvem jobber her?"
 - AI: Calls search_content_library(query: "team")
-- AI: Calls generate_experience_json({ version: "1.0", blocks: [...] })
-- ✅ Result: Strukturert output via tool
+- AI: Calls generate_experience_json({ version: "1.0", blocks: [...] }) ELLER svarer med \`\`\`experience-json-blokk
+- ✅ Resultat: Strukturert output
 
-**UNNTAKET:** Hvis du mangler data eller får en feilmelding, kan du svare med plain text for å forklare problemet.
+**UNNTAK:** Hvis du mangler data eller får en feilmelding, kan du svare med plain text for å forklare problemet.
 
 ### 🎨 DESIGN REQUIREMENTS (CRITICAL):
 - **ALWAYS** ensure high contrast between text and background
