@@ -13,6 +13,7 @@ import { Send, Bot, User, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ExperienceRenderer } from '@/renderer/ExperienceRenderer';
 import type { ExperienceJSON } from '@/renderer/schemas/experience.schema';
+import ReactMarkdown from 'react-markdown';
 
 interface AIMcpChatInterfaceProps {
   tenantId: string;
@@ -276,10 +277,76 @@ function MessageContent({ content, onAction }: { content: string; onAction?: (ac
       );
     } catch (error) {
       console.error('Failed to parse ExperienceJSON:', error);
-      // Fallback to plain text
+      // Continue to markdown fallback below
     }
   }
   
-  // Default: plain text rendering
-  return <p className="text-sm whitespace-pre-wrap">{content}</p>;
+  // Default: Markdown rendering with styling from ContentBlock
+  return (
+    <div className="prose prose-sm max-w-none dark:prose-invert">
+      <ReactMarkdown
+        components={{
+          h1: ({ children }) => (
+            <h1 className="text-2xl font-bold text-foreground mb-3 break-words">
+              {children}
+            </h1>
+          ),
+          h2: ({ children }) => (
+            <h2 className="text-xl font-bold text-foreground mb-2 break-words">
+              {children}
+            </h2>
+          ),
+          h3: ({ children }) => (
+            <h3 className="text-lg font-semibold text-foreground mb-2 break-words">
+              {children}
+            </h3>
+          ),
+          p: ({ children }) => (
+            <p className="text-sm leading-relaxed mb-2 break-words">
+              {children}
+            </p>
+          ),
+          ul: ({ children }) => (
+            <ul className="list-disc list-inside space-y-1 mb-2 ml-2">
+              {children}
+            </ul>
+          ),
+          ol: ({ children }) => (
+            <ol className="list-decimal list-inside space-y-1 mb-2 ml-2">
+              {children}
+            </ol>
+          ),
+          li: ({ children }) => (
+            <li className="text-sm leading-relaxed break-words">
+              {children}
+            </li>
+          ),
+          code: ({ className, children, ...props }: any) => {
+            const inline = !className;
+            return inline ? (
+              <code className="bg-muted px-1 py-0.5 rounded text-xs font-mono">
+                {children}
+              </code>
+            ) : (
+              <code className="block bg-muted p-2 rounded text-xs font-mono overflow-x-auto my-2">
+                {children}
+              </code>
+            );
+          },
+          blockquote: ({ children }) => (
+            <blockquote className="border-l-4 border-primary pl-3 italic my-2 text-sm text-muted-foreground">
+              {children}
+            </blockquote>
+          ),
+          a: ({ children, href }) => (
+            <a href={href} className="text-primary hover:underline break-words" target="_blank" rel="noopener noreferrer">
+              {children}
+            </a>
+          ),
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
+  );
 }
