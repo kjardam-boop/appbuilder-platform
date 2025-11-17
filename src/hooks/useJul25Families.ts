@@ -372,6 +372,26 @@ export const useDeleteFamilyMember = () => {
   
   return useMutation({
     mutationFn: async (memberId: string) => {
+      // 1) Delete dependent rows (member periods, custom periods, task assignments)
+      const { error: mpErr } = await supabase
+        .from("jul25_member_periods")
+        .delete()
+        .eq("member_id", memberId);
+      if (mpErr) throw mpErr;
+
+      const { error: mcpErr } = await supabase
+        .from("jul25_member_custom_periods")
+        .delete()
+        .eq("member_id", memberId);
+      if (mcpErr) throw mcpErr;
+
+      const { error: taErr } = await (supabase as any)
+        .from("jul25_task_assignments")
+        .delete()
+        .eq("member_id", memberId);
+      if (taErr) throw taErr;
+
+      // 2) Delete the member
       const { error } = await supabase
         .from("jul25_family_members")
         .delete()
@@ -381,6 +401,7 @@ export const useDeleteFamilyMember = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["jul25-family-members"] });
+      queryClient.invalidateQueries({ queryKey: ["jul25-member-periods"] });
       toast.success("Medlem slettet");
     },
     onError: (error: any) => {
