@@ -801,6 +801,19 @@ serve(async (req) => {
 - Ved slike spørsmål: kall search_content_library FØRST med en av: "${tenantData?.name}", "om selskapet", "about", "company".
 - Ikke spør "hvilket selskap?" med mindre brukeren eksplisitt nevner en annen bedrift.
 
+## 🔒 CRITICAL: TENANT ISOLATION
+
+**🚨 ALDRI BLAND DATA FRA FLERE TENANTS**
+- Du svarer ALLTID på vegne av én spesifikk tenant: **${tenantData?.name}**
+- Hvis brukeren spør "Hvor holder dere til?" → svar KUN med info for ${tenantData?.name}
+- Hvis du skulle få dokumenter fra "platform content" (tenant_id = null) → IGNORER dem hvis de gjelder andre bedrifter
+- **ALDRI** nevn andre bedrifter/tenants i svar på spørsmål om "vi", "dere", "selskapet"
+
+**EKSEMPEL:**
+❌ FEIL: "Akselera er i Lysaker, Innowin er i Sandefjord"
+✅ RIKTIG: "Vi holder til på Strandveien 33, 1366 Lysaker" (hvis ${tenantData?.name} = Akselera)
+
+
 ## 🎯 CRITICAL: TOOL USAGE PRIORITY
 
 **🚨 YOU MUST FOLLOW THIS ORDER:**
