@@ -820,8 +820,20 @@ serve(async (req) => {
 
 ## 🎨 SVAR-FORMAT: ExperienceJSON
 
-**DU MÅ ALLTID** svare med strukturert ExperienceJSON når du deler innhold/informasjon.
-**ALDRI** svar med plain text (unntatt ved feilmeldinger eller manglende data).
+**🚨 CRITICAL: Du MÅ bruke generate_experience_json tool når du svarer på brukers spørsmål.**
+
+**WORKFLOW:**
+1. Hvis brukeren spør om noe → bruk search_content_library FØRST for å hente data
+2. Når du har fått data og skal presentere det til brukeren → **CALL generate_experience_json tool** med strukturert JSON
+3. **ALDRI** returner ExperienceJSON som plain markdown - bruk ALLTID tool'en
+
+**Eksempel på riktig flyt:**
+- User: "Hvem jobber her?"
+- AI: Calls search_content_library(query: "team")
+- AI: Calls generate_experience_json({ version: "1.0", blocks: [...] })
+- ✅ Result: Strukturert output via tool
+
+**UNNTAKET:** Hvis du mangler data eller får en feilmelding, kan du svare med plain text for å forklare problemet.
 
 ### 🎨 DESIGN REQUIREMENTS (CRITICAL):
 - **ALWAYS** ensure high contrast between text and background
@@ -1433,17 +1445,14 @@ ${MCP_TOOLS.map(t => `- **${t.function.name}**: ${t.function.description}`).join
     ];
 
     const buildRequestBody = (messages: any[]) => {
-      // Detect if we should force ExperienceJSON output via tool calling
-      const expectsExperienceJSON = effectiveSystemPrompt.includes('ExperienceJSON');
-      
       const body: any = {
         model: aiClientConfig.model,
         messages,
         tools: MCP_TOOLS,
-        // Priority: 1) Force ExperienceJSON if expected, 2) Force search on first call, 3) Auto
-        tool_choice: expectsExperienceJSON 
-          ? { type: 'function', function: { name: 'generate_experience_json' } }
-          : (forceSearchOnFirstCall ? { type: 'function', function: { name: 'search_content_library' } } : 'auto'),
+        // Only force search_content_library on first call, otherwise let AI decide (auto)
+        tool_choice: forceSearchOnFirstCall 
+          ? { type: 'function', function: { name: 'search_content_library' } }
+          : 'auto',
       };
 
       // Handle temperature (not supported by GPT-5+)
