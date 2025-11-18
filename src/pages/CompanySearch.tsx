@@ -13,7 +13,6 @@ import Header from "@/components/Dashboard/Header";
 import { format } from "date-fns";
 import { nb } from "date-fns/locale";
 import { AppBreadcrumbs } from "@/components/ui/app-breadcrumbs";
-import { useTenantContext } from "@/hooks/useTenantContext";
 
 interface Company {
   orgNumber: string;
@@ -29,7 +28,6 @@ interface Company {
 
 const CompanySearch = () => {
   const navigate = useNavigate();
-  const context = useTenantContext();
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<Company[]>([]);
@@ -72,11 +70,6 @@ const CompanySearch = () => {
   };
 
   const handleViewCompany = async (company: Company) => {
-    if (!context?.tenant_id) {
-      toast.error("Mangler tenant informasjon");
-      return;
-    }
-
     try {
       // Check if company exists in database
       const { data: existing } = await supabase
@@ -101,11 +94,10 @@ const CompanySearch = () => {
           contactPersonRole = enhancedData.kontaktpersonRolle || null;
         }
 
-        // Save company to database first with contact person data
+        // Save company to database (will use platform tenant as default)
         const { data: newCompany, error } = await supabase
           .from('companies')
           .insert({
-            tenant_id: context.tenant_id,
             org_number: company.orgNumber,
             name: company.name,
             org_form: company.orgForm,

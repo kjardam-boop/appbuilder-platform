@@ -253,15 +253,20 @@ export class CompanyService {
 
 
   /**
-   * Create new company with auto-classification (ALWAYS sets tenant_id)
+   * Create new company with auto-classification
+   * If tenantId is not provided, database will use platform tenant as default
    */
-  static async createCompany(companyData: any, tenantId: string, userId?: string): Promise<Company> {
+  static async createCompany(companyData: any, tenantId?: string, userId?: string): Promise<Company> {
+    const insertData: any = { ...companyData };
+    
+    // Only set tenant_id explicitly if provided, otherwise let DB use default
+    if (tenantId) {
+      insertData.tenant_id = tenantId;
+    }
+
     const { data, error } = await supabase
       .from('companies')
-      .insert([{
-        ...companyData,
-        tenant_id: tenantId, // CRITICAL: always set tenant_id
-      }])
+      .insert([insertData])
       .select()
       .single();
 
@@ -269,8 +274,8 @@ export class CompanyService {
 
     const company = data as Company;
 
-    // Grant access automatically
-    if (userId) {
+    // Grant access automatically if both tenantId and userId provided
+    if (tenantId && userId) {
       const { TenantCompanyAccessService } = await import('./tenantCompanyAccessService');
       await TenantCompanyAccessService.grantAccess(tenantId, company.id, 'owner', userId);
     }
