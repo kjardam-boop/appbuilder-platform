@@ -849,7 +849,7 @@ export type Database = {
           slug?: string | null
           source?: string | null
           supplier_certifications?: string[] | null
-          tenant_id: string
+          tenant_id?: string
           totalkapital?: number | null
           updated_at?: string
           website?: string | null

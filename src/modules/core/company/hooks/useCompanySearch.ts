@@ -4,10 +4,8 @@ import { CompanyService } from '../services/companyService';
 import { BrregCompanySearchResult, Company } from '../types/company.types';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { useTenantContext } from '@/hooks/useTenantContext';
 
 export const useCompanySearch = () => {
-  const context = useTenantContext();
   const [searchResults, setSearchResults] = useState<BrregCompanySearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
@@ -44,10 +42,6 @@ export const useCompanySearch = () => {
   };
 
   const getOrCreateCompany = async (searchResult: BrregCompanySearchResult): Promise<string> => {
-    if (!context?.tenant_id) {
-      throw new Error('Mangler tenant informasjon');
-    }
-
     // Check if company exists
     const existing = await CompanyService.findByOrgNumber(searchResult.orgNumber);
     if (existing) {
@@ -68,10 +62,7 @@ export const useCompanySearch = () => {
       console.error('Error fetching enhanced data:', error);
     }
 
-    // Get current user ID
-    const { data: { user } } = await supabase.auth.getUser();
-
-    // Create new company with tenant_id
+    // Create new company - will use platform tenant as default
     const newCompany = await CompanyService.createCompany({
       org_number: searchResult.orgNumber,
       name: searchResult.name,
@@ -82,7 +73,7 @@ export const useCompanySearch = () => {
       founding_date: searchResult.foundingDate,
       website: searchResult.website,
       last_fetched_at: new Date().toISOString(),
-    }, context.tenant_id, user?.id);
+    });
 
     return newCompany.id;
   };
