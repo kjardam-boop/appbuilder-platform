@@ -39,6 +39,11 @@ export async function getTenantTheme(
   };
 }
 
+const NORWEGIAN_STOP_WORDS = [
+  'og', 'i', 'å', 'det', 'som', 'på', 'er', 'av', 'for', 'den', 'med', 'til', 'en', 
+  'kan', 'har', 'vi', 'om', 'fra', 'de', 'ved', 'et', 'være', 'eller', 'han', 'hun'
+];
+
 export async function searchContentLibrary(
   supabaseClient: any,
   tenantId: string,
@@ -48,45 +53,84 @@ export async function searchContentLibrary(
 ): Promise<ContentDoc[]> {
   console.log(`[Content Library Search] Query: "${query}", TenantId: ${tenantId}, Category: ${category || 'any'}`);
   
+  // Tokenize natural language query
+  const tokens = query
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+    .replace(/[^\wæøå\s]/g, ' ')
+    .split(/\s+/)
+    .filter(t => t.length > 2)
+    .filter(t => !NORWEGIAN_STOP_WORDS.includes(t));
+  
+  console.log(`[Content Library Search] Tokens: [${tokens.join(', ')}]`);
+  
+  if (tokens.length === 0) {
+    console.log('[Content Library Search] No valid tokens, returning empty');
+    return [];
+  }
+  
+  // Build base query
   let queryBuilder = supabaseClient
     .from('ai_app_content_library')
-    .select('id, title, content_markdown, keywords')
+    .select('id, title, content_markdown, keywords, category')
     .eq('tenant_id', tenantId)
     .eq('is_active', true);
-
+  
   if (category) {
     queryBuilder = queryBuilder.eq('category', category);
   }
-
-  // ILIKE search across title, content_markdown, and keywords array
-  // Using OR condition for flexible matching
-  const searchPattern = `%${query}%`;
-  queryBuilder = queryBuilder.or(
-    `title.ilike.${searchPattern},content_markdown.ilike.${searchPattern},keywords.cs.{${query}}`
-  );
-
-  const { data, error } = await queryBuilder
-    .limit(limit)
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.error('[Content Library Search Error]', error);
+  
+  // Strategy 1: Try PostgreSQL Full-Text Search with Norwegian config
+  const tsquery = tokens.join(' | '); // OR between tokens
+  
+  try {
+    const { data: ftsData, error: ftsError } = await queryBuilder
+      .textSearch('content_markdown', tsquery, {
+        type: 'websearch',
+        config: 'norwegian'
+      })
+      .limit(limit);
+    
+    if (!ftsError && ftsData && ftsData.length > 0) {
+      console.log(`[Content Library Search] FTS found ${ftsData.length} documents`);
+      return ftsData.map((doc: any) => ({
+        ...doc,
+        snippet: doc.content_markdown.slice(0, 600)
+      }));
+    }
+    
+    console.log('[Content Library Search] FTS returned no results, falling back to ILIKE');
+  } catch (ftsErr) {
+    console.error('[Content Library Search] FTS error:', ftsErr);
+  }
+  
+  // Strategy 2: Fallback to ILIKE search
+  const orConditions = tokens
+    .map(token => 
+      `title.ilike.%${token}%,content_markdown.ilike.%${token}%,keywords.cs.{${token}}`
+    )
+    .join(',');
+  
+  const { data: ilikeData, error: ilikeError } = await supabaseClient
+    .from('ai_app_content_library')
+    .select('id, title, content_markdown, keywords, category')
+    .eq('tenant_id', tenantId)
+    .eq('is_active', true)
+    .or(orConditions)
+    .limit(limit);
+  
+  if (ilikeError) {
+    console.error('[Content Library Search] ILIKE error:', ilikeError);
     return [];
   }
-
-  console.log(`[Content Library Search] Found ${data?.length || 0} documents`);
   
-  // Return snippets (max 500 chars per doc)
-  const results = (data || []).map((doc: any) => ({
+  console.log(`[Content Library Search] ILIKE found ${ilikeData?.length || 0} documents`);
+  
+  return (ilikeData || []).map((doc: any) => ({
     ...doc,
-    snippet: doc.content_markdown.slice(0, 500)
+    snippet: doc.content_markdown.slice(0, 600)
   }));
-  
-  if (results.length > 0) {
-    console.log(`[Content Library Search] First result title: "${results[0].title}"`);
-  }
-  
-  return results;
 }
 
 export async function loadTenantContext(

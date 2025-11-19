@@ -7,6 +7,27 @@ export const MCP_TOOLS = [
   {
     type: "function",
     function: {
+      name: "search_content_library",
+      description: "Search tenant's knowledge base for relevant information. Use this when you need company-specific information. The query should be natural language (e.g. 'employees team', 'competence skills').",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { 
+            type: "string", 
+            description: "Natural language search query (e.g. 'hvem jobber', 'kompetanse', 'erfaring')" 
+          },
+          category: { 
+            type: "string", 
+            description: "Optional category filter (e.g. 'company_info', 'services')" 
+          }
+        },
+        required: ["query"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
       name: "scrape_website",
       description: "Scrape external website ONLY if answer is not in knowledge base or you need updated info from web.",
       parameters: {
