@@ -20,7 +20,8 @@ import { MCP_TOOLS } from './config/tools.ts';
 // Import services
 import { 
   getTenantConfig, 
-  getTenantTheme 
+  getTenantTheme,
+  loadTenantContext
 } from './services/contentService.ts';
 import { handleToolCalls } from './services/toolHandler.ts';
 import { mapQaToExperience } from './services/layoutMapper.ts';
@@ -70,12 +71,14 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Layer 1: Fetch config (NOT content - that comes via tools)
+    // Layer 1: Fetch config AND load all content library documents
     const tenant = await getTenantConfig(supabaseClient, tenantId);
     const theme = await getTenantTheme(supabaseClient, tenantId);
+    const knowledgeBase = await loadTenantContext(supabaseClient, tenantId);
 
     console.log(`✅ Tenant: ${tenant.name} (${tenant.slug})`);
     console.log(`✅ Domain: ${tenant.domain || 'N/A'}`);
+    console.log(`✅ Knowledge Base: ${knowledgeBase.length} chars loaded into context`);
 
     // Get AI config
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY') || '';
@@ -85,10 +88,10 @@ serve(async (req) => {
     console.log(`✅ AI Provider: ${aiClientConfig.provider}`);
     console.log(`✅ AI Model: ${aiClientConfig.model}`);
 
-    // Layer 2: Reasoning - build messages
-    const systemPrompt = customSystemPrompt || buildSystemPrompt(tenant);
+    // Layer 2: Reasoning - build messages with knowledge base in system prompt
+    const systemPrompt = customSystemPrompt || buildSystemPrompt(tenant, knowledgeBase);
     
-    console.log(`✅ System Prompt: ${systemPrompt.length} chars (reduced from 650+ lines)`);
+    console.log(`✅ System Prompt: ${systemPrompt.length} chars (with knowledge base embedded)`);
 
     let aiMessages: any[] = [
       { role: 'system', content: systemPrompt },

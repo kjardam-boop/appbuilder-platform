@@ -4,7 +4,7 @@
  */
 
 import type { ToolCall, ToolResult } from '../types/index.ts';
-import { searchContentLibrary, scrapeWebsite, getTenantConfig } from './contentService.ts';
+import { scrapeWebsite, getTenantConfig } from './contentService.ts';
 
 export async function handleToolCalls(
   supabaseClient: any,
@@ -22,30 +22,6 @@ export async function handleToolCalls(
       console.log(`[Tool Call] ${call.function.name}`, args);
 
       switch (call.function.name) {
-        case 'search_content_library': {
-          const docs = await searchContentLibrary(
-            supabaseClient,
-            tenantId,
-            args.query,
-            undefined, // Always search all categories
-            args.limit || 5
-          );
-          data = {
-            matches: docs.map(d => ({
-              id: d.id,
-              title: d.title,
-              snippet: d.snippet,
-              keywords: d.keywords
-            })),
-            count: docs.length
-          };
-          console.log(`[Tool Result] search_content_library returned ${docs.length} documents to AI model`);
-          if (docs.length > 0) {
-            console.log(`[Tool Result] First document: "${docs[0].title}"`);
-          }
-          break;
-        }
-
         case 'scrape_website': {
           const url = args.url || tenantDomain;
           if (!url) {
