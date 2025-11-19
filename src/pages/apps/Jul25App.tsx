@@ -1088,7 +1088,7 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
             
             {/* Desktop Calendar - Gantt Chart */}
             <div className="hidden sm:block overflow-x-auto pb-2 -mx-2 px-2">
-              <div className="flex flex-col min-w-full w-max">
+              <div className="flex flex-col min-w-fit" style={{ minWidth: `${160 + eventDates.length * 40}px` }}>
                 
                 {/* Date Header */}
                 <div className="flex gap-0 mb-4">
