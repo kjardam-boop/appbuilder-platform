@@ -27,7 +27,7 @@ export async function handleToolCalls(
             supabaseClient,
             tenantId,
             args.query,
-            args.category,
+            undefined, // Always search all categories
             args.limit || 5
           );
           data = {
