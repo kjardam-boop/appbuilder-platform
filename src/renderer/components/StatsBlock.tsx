@@ -13,12 +13,12 @@ export const StatsBlock: React.FC<StatsBlockProps> = ({ block }) => {
   };
 
   return (
-    <div className="py-12">
+    <div className="py-8 md:py-12 w-full">
       {block.headline && (
-        <h2 className="text-3xl font-bold text-center mb-12">{block.headline}</h2>
+        <h2 className="text-2xl md:text-3xl font-bold text-center mb-8 md:mb-12 px-4">{block.headline}</h2>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 w-full">
         {block.stats.map((stat, idx) => {
           const IconComponent = stat.icon ? getIcon(stat.icon) : null;
           
