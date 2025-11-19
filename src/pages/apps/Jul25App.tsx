@@ -40,6 +40,8 @@ import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useJul25DoorContent, useUpsertDoorContent } from "@/hooks/useJul25DoorContent";
 import { useJul25ChristmasWords } from "@/hooks/useJul25ChristmasWords";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { useIsLandscape } from "@/hooks/use-orientation";
 
 interface ChristmasWord {
   date: number;
@@ -52,6 +54,9 @@ export default function Jul25App() {
   const navigate = useNavigate();
   const { isAppAdmin, isLoading: isLoadingAppRole } = useAppAdmin('jul25');
   const { isPlatformAdmin } = usePlatformAdmin();
+  const isMobile = useIsMobile();
+  const isLandscape = useIsLandscape();
+  const showGantt = !isMobile || (isMobile && isLandscape);
   
   // Data fra database
   const { data: families = [] } = useJul25Families();
@@ -851,7 +856,7 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
   const guestsPerDayMap = useMemo(() => getGuestsPerDay(), [families, allMembers, allPeriods, allCustomPeriods]);
   
   return (
-    <div className="min-h-screen bg-gradient-to-b from-jul25-red-dark via-jul25-red to-jul25-red-dark/80">
+    <div className="min-h-screen bg-gradient-to-b from-jul25-red-dark via-jul25-red to-jul25-red-dark/80 overflow-x-hidden">
       {/* Christmas decorations */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <Star className="absolute top-10 left-10 w-8 h-8 text-jul25-gold animate-pulse drop-shadow-lg" />
@@ -860,7 +865,7 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
         <Baby className="absolute bottom-10 right-10 w-6 h-6 text-white/60 animate-pulse drop-shadow-lg" />
       </div>
 
-      <div className="w-full px-2 sm:px-4 md:px-6 lg:px-8 py-8 space-y-8 relative z-10">
+      <div className="w-full max-w-full px-2 sm:px-4 md:px-6 lg:px-8 py-8 space-y-8 relative z-10">
         {/* Header */}
         <div className="text-center space-y-4 px-2">
             <div className="flex items-center justify-center gap-3 flex-wrap">
@@ -950,7 +955,7 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
                 </CardTitle>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4 sm:space-y-6 overflow-x-auto">
+            <CardContent className="space-y-4 sm:space-y-6">
             
             {/* Mobile Calendar - Compact List View */}
             <div className="block sm:hidden space-y-3">
@@ -1085,8 +1090,9 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
               )}
             </div>
             
-            {/* Desktop Calendar - Gantt Chart */}
-            <div className="hidden sm:block overflow-x-auto pb-2 -mx-2 px-2">
+            {/* Gantt - PC/iPad alltid, mobil kun i horisontal modus */}
+            {showGantt && (
+              <div className="overflow-x-auto pb-2 -mx-2 px-2">
               <div className="flex flex-col min-w-fit" style={{ minWidth: `${160 + eventDates.length * 40}px` }}>
                 
                 {/* Date Header */}
@@ -1299,6 +1305,7 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
                 )}
               </div>
             </div>
+            )}
           </CardContent>
         </Card>
         )}
