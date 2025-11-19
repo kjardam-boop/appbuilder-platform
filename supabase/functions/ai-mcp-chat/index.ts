@@ -24,6 +24,7 @@ import {
 } from './services/contentService.ts';
 import { handleToolCalls } from './services/toolHandler.ts';
 import { mapQaToExperience } from './services/layoutMapper.ts';
+import { parseAIResponse } from './services/responseParser.ts';
 
 // Import AI client
 import { callAI } from './clients/aiClient.ts';
@@ -163,78 +164,14 @@ serve(async (req) => {
     console.log(`✅ Total Tool Calls: ${iterations}`);
     console.log(`✅ Total Tokens: ${totalTokens}`);
 
-    // Parse QA result from AI response
-    let qaResult: QaResult;
-    let parsingSuccessful = false;
-
-    try {
-      // Strategy 1: Try direct JSON parse (AI should return raw JSON)
-      try {
-        const parsed = JSON.parse(finalMessage.trim());
-        
-        // Check if it's QaResult (has "answer" field)
-        if (parsed.answer && typeof parsed.answer === 'string') {
-          qaResult = parsed;
-          parsingSuccessful = true;
-          console.log('[QA Parse] ✅ Direct QaResult JSON parse successful');
-        } 
-        // Check if AI returned ExperienceJSON by mistake (has "blocks" field)
-        else if (parsed.blocks && Array.isArray(parsed.blocks)) {
-          console.warn('[QA Parse] ⚠️ AI returned ExperienceJSON directly (should be QaResult)');
-          
-          // Try to extract answer from first content block
-          const contentBlock = parsed.blocks.find((b: any) => b.type === 'content');
-          qaResult = {
-            answer: contentBlock?.markdown || 'Kunne ikke parse svar',
-            sources: [],
-            followups: [
-              "Kan du utdype dette?",
-              "Fortell meg mer",
-              "Hva betyr dette i praksis?"
-            ]
-          };
-          parsingSuccessful = false;
-        }
-        else {
-          throw new Error('Parsed JSON does not match QaResult or ExperienceJSON schema');
-        }
-        
-      } catch (directErr) {
-        // Strategy 2: Try to extract JSON from markdown code block
-        const jsonMatch = finalMessage.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[1]);
-          if (parsed.answer) {
-            qaResult = parsed;
-            parsingSuccessful = true;
-            console.log('[QA Parse] ✅ Code block QaResult JSON parse successful');
-          } else {
-            throw new Error('Code block JSON missing answer field');
-          }
-        } else {
-          throw new Error('No valid JSON found in response');
-        }
-      }
-      
-    } catch (parseError) {
-      console.error('[QA Parse Error]', parseError);
-      console.log('[QA Parse] Raw message (first 500 chars):', finalMessage.slice(0, 500));
-      
-      // Fallback: wrap plain text as answer with generic followups
-      qaResult = {
-        answer: finalMessage,
-        sources: [],
-        followups: [
-          "Kan du utdype dette?",
-          "Fortell meg mer",
-          "Hva betyr dette i praksis?"
-        ]
-      };
-      parsingSuccessful = false;
-    }
+    // Layer 3: Layout - parse AI response to QA format with robust sanitization
+    const parseResult = parseAIResponse(finalMessage);
+    const qaResult = parseResult.qaResult;
+    const parsingSuccessful = parseResult.success;
 
     // Log parsing result
     console.log(`[QA Parse] Result: ${parsingSuccessful ? 'SUCCESS ✅' : 'FALLBACK ⚠️'}`);
+    console.log(`[QA Parse] Strategy: ${parseResult.strategy}`);
     console.log(`[QA Parse] answer length: ${qaResult.answer.length}`);
     console.log(`[QA Parse] sources: ${qaResult.sources?.length || 0}`);
     console.log(`[QA Parse] followups: ${qaResult.followups?.length || 0}`);
