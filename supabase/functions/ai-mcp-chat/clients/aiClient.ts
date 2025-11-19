@@ -75,8 +75,19 @@ export async function callAI(
       tokensUsed: data.usage?.total_tokens || 0,
       finishReason: data.choices?.[0]?.finish_reason,
       hasToolCalls: !!data.choices?.[0]?.message?.tool_calls,
-      toolCallCount: data.choices?.[0]?.message?.tool_calls?.length || 0
+      toolCallCount: data.choices?.[0]?.message?.tool_calls?.length || 0,
+      hasContent: !!data.choices?.[0]?.message?.content,
+      contentLength: data.choices?.[0]?.message?.content?.length || 0
     });
+
+    // Warning if we got tokens but no content
+    if (data.usage?.total_tokens > 0 && !data.choices?.[0]?.message?.content) {
+      console.warn('⚠️ [AI Response Warning] Received tokens but no content!', {
+        tokens: data.usage.total_tokens,
+        finishReason: data.choices?.[0]?.finish_reason,
+        hasToolCalls: !!data.choices?.[0]?.message?.tool_calls
+      });
+    }
 
     return data;
 
