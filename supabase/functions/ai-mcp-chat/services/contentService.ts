@@ -46,6 +46,8 @@ export async function searchContentLibrary(
   category?: string,
   limit = 5
 ): Promise<ContentDoc[]> {
+  console.log(`[Content Library Search] Query: "${query}", TenantId: ${tenantId}, Category: ${category || 'any'}`);
+  
   let queryBuilder = supabaseClient
     .from('ai_app_content_library')
     .select('id, title, content_markdown, keywords')
@@ -56,8 +58,12 @@ export async function searchContentLibrary(
     queryBuilder = queryBuilder.eq('category', category);
   }
 
-  // Semantic search using textSearch
-  queryBuilder = queryBuilder.textSearch('content_markdown', query);
+  // ILIKE search across title, content_markdown, and keywords array
+  // Using OR condition for flexible matching
+  const searchPattern = `%${query}%`;
+  queryBuilder = queryBuilder.or(
+    `title.ilike.${searchPattern},content_markdown.ilike.${searchPattern},keywords.cs.{${query}}`
+  );
 
   const { data, error } = await queryBuilder
     .limit(limit)
@@ -68,11 +74,19 @@ export async function searchContentLibrary(
     return [];
   }
 
+  console.log(`[Content Library Search] Found ${data?.length || 0} documents`);
+  
   // Return snippets (max 500 chars per doc)
-  return (data || []).map((doc: any) => ({
+  const results = (data || []).map((doc: any) => ({
     ...doc,
     snippet: doc.content_markdown.slice(0, 500)
   }));
+  
+  if (results.length > 0) {
+    console.log(`[Content Library Search] First result title: "${results[0].title}"`);
+  }
+  
+  return results;
 }
 
 export async function scrapeWebsite(

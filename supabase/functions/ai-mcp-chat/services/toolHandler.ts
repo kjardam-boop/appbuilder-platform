@@ -39,6 +39,10 @@ export async function handleToolCalls(
             })),
             count: docs.length
           };
+          console.log(`[Tool Result] search_content_library returned ${docs.length} documents to AI model`);
+          if (docs.length > 0) {
+            console.log(`[Tool Result] First document: "${docs[0].title}"`);
+          }
           break;
         }
 
