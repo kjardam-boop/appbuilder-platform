@@ -253,6 +253,9 @@ function MessageContent({ content, onAction }: { content: string; onAction?: (ac
       // Valid ExperienceJSON
       const experienceData: ExperienceJSON = parsed;
       
+      // Check if backend fallback was applied
+      const fallbackApplied = (parsed as any).metadata?.fallbackApplied;
+      
       // Apply default layout if missing
       if (!experienceData.layout) {
         experienceData.layout = {
@@ -276,6 +279,12 @@ function MessageContent({ content, onAction }: { content: string; onAction?: (ac
         return (
           <div className="my-2">
             <ExperienceRenderer experience={experienceData} onAction={onAction} />
+            {fallbackApplied && (
+              <div className="text-xs text-muted-foreground italic mt-2 flex items-center gap-1">
+                <span className="opacity-50">ℹ️</span>
+                <span>AI returnerte ikke strukturert data (fallback brukt)</span>
+              </div>
+            )}
           </div>
         );
       } catch (renderError) {
@@ -286,6 +295,11 @@ function MessageContent({ content, onAction }: { content: string; onAction?: (ac
             <p className="text-sm text-muted-foreground mt-2">
               AI-en returnerte data, men den kunne ikke rendres riktig.
             </p>
+            {fallbackApplied && (
+              <p className="text-xs text-muted-foreground italic mt-1">
+                ℹ️ Backend fallback ble brukt
+              </p>
+            )}
             <details className="mt-2">
               <summary className="cursor-pointer text-sm">Se rå data</summary>
               <pre className="text-xs mt-2 p-2 bg-muted rounded overflow-auto max-h-40">
