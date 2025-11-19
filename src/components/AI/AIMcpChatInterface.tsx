@@ -102,8 +102,18 @@ export function AIMcpChatInterface({
   };
 
   const handleExperienceAction = (actionId: string, context?: any) => {
-    // Bridge Experience buttons to the chat agent as explicit action commands
-    // The agent prompt should interpret ACTION:<id> and respond accordingly
+    // Handle followup questions specially
+    if (actionId.startsWith('ask_followup_')) {
+      const question = context?.question;
+      if (question) {
+        setInput(question);
+        // Auto-submit the followup question
+        sendMessage(question);
+      }
+      return;
+    }
+    
+    // Bridge other Experience buttons to the chat agent as explicit action commands
     sendMessage(`ACTION:${actionId}`);
   };
 
