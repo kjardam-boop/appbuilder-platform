@@ -20,8 +20,7 @@ import { MCP_TOOLS } from './config/tools.ts';
 // Import services
 import { 
   getTenantConfig, 
-  getTenantTheme,
-  loadTenantContext
+  getTenantTheme
 } from './services/contentService.ts';
 import { handleToolCalls } from './services/toolHandler.ts';
 import { mapQaToExperience } from './services/layoutMapper.ts';
@@ -71,14 +70,13 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Layer 1: Fetch config AND load all content library documents
+    // Layer 1: Fetch config (NO document loading - that happens via tools!)
     const tenant = await getTenantConfig(supabaseClient, tenantId);
     const theme = await getTenantTheme(supabaseClient, tenantId);
-    const knowledgeBase = await loadTenantContext(supabaseClient, tenantId);
 
     console.log(`✅ Tenant: ${tenant.name} (${tenant.slug})`);
     console.log(`✅ Domain: ${tenant.domain || 'N/A'}`);
-    console.log(`✅ Knowledge Base: ${knowledgeBase.length} chars loaded into context`);
+    console.log(`✅ RAG Mode: Tool-based (search_content_library)`);
 
     // Get AI config
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY') || '';
@@ -88,10 +86,10 @@ serve(async (req) => {
     console.log(`✅ AI Provider: ${aiClientConfig.provider}`);
     console.log(`✅ AI Model: ${aiClientConfig.model}`);
 
-    // Layer 2: Reasoning - build messages with knowledge base in system prompt
-    const systemPrompt = customSystemPrompt || buildSystemPrompt(tenant, knowledgeBase);
+    // Layer 2: Reasoning - build tool-first system prompt (no documents embedded)
+    const systemPrompt = customSystemPrompt || buildSystemPrompt(tenant);
     
-    console.log(`✅ System Prompt: ${systemPrompt.length} chars (with knowledge base embedded)`);
+    console.log(`✅ System Prompt: ${systemPrompt.length} chars (tool-first, no KB injection)`);
 
     let aiMessages: any[] = [
       { role: 'system', content: systemPrompt },
@@ -168,20 +166,31 @@ serve(async (req) => {
     // Parse QA result from AI response
     let qaResult: QaResult;
     try {
-      // Try to parse as JSON
-      const jsonMatch = finalMessage.match(/```json\s*([\s\S]*?)\s*```/);
-      if (jsonMatch) {
-        qaResult = JSON.parse(jsonMatch[1]);
-      } else {
-        // Fallback: treat as plain text answer
-        qaResult = {
-          answer: finalMessage,
-          sources: [],
-          followups: []
-        };
+      // Strategy 1: Try direct JSON parse (AI should return raw JSON)
+      try {
+        qaResult = JSON.parse(finalMessage.trim());
+        console.log('[QA Parse] ✅ Direct JSON parse successful');
+      } catch (directErr) {
+        // Strategy 2: Try to extract JSON from markdown code block (fallback)
+        const jsonMatch = finalMessage.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+        if (jsonMatch) {
+          qaResult = JSON.parse(jsonMatch[1]);
+          console.log('[QA Parse] ✅ Code block JSON parse successful');
+        } else {
+          throw new Error('No valid JSON found in response');
+        }
       }
+      
+      // Validate structure
+      if (!qaResult.answer || typeof qaResult.answer !== 'string') {
+        throw new Error('Invalid QaResult: missing answer field');
+      }
+      
     } catch (parseError) {
-      console.warn('[QA Parse Warning]', parseError);
+      console.error('[QA Parse Error]', parseError);
+      console.log('[QA Parse] Raw message:', finalMessage);
+      
+      // Fallback: wrap plain text as answer
       qaResult = {
         answer: finalMessage,
         sources: [],

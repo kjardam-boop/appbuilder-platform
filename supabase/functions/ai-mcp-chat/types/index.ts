@@ -66,5 +66,6 @@ export interface ContentDoc {
   title: string;
   content_markdown: string;
   keywords?: string[];
+  category?: string;
   snippet?: string;
 }

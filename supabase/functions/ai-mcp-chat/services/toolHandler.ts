@@ -4,7 +4,7 @@
  */
 
 import type { ToolCall, ToolResult } from '../types/index.ts';
-import { scrapeWebsite, getTenantConfig } from './contentService.ts';
+import { scrapeWebsite, getTenantConfig, searchContentLibrary } from './contentService.ts';
 
 export async function handleToolCalls(
   supabaseClient: any,
@@ -22,6 +22,33 @@ export async function handleToolCalls(
       console.log(`[Tool Call] ${call.function.name}`, args);
 
       switch (call.function.name) {
+        case 'search_content_library': {
+          const { query, category } = args;
+          
+          // Backend injects tenantId automatically (AI doesn't need to send it)
+          const docs = await searchContentLibrary(
+            supabaseClient, 
+            tenantId, 
+            query, 
+            category
+          );
+          
+          // Return structured data (not full markdown)
+          data = {
+            found: docs.length,
+            documents: docs.map(doc => ({
+              id: doc.id,
+              title: doc.title,
+              snippet: doc.snippet,
+              keywords: doc.keywords,
+              category: doc.category
+            }))
+          };
+          
+          console.log(`[Tool Result] search_content_library returned ${docs.length} documents`);
+          break;
+        }
+
         case 'scrape_website': {
           const url = args.url || tenantDomain;
           if (!url) {
