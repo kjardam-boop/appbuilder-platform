@@ -11,11 +11,10 @@ export function mapQaToExperience(
 ): ExperienceJSON {
   const blocks: any[] = [];
 
-  // Main answer card
+  // Main answer as markdown content
   blocks.push({
-    type: "card",
-    headline: "Svar",
-    body: qaResult.answer
+    type: "content",
+    markdown: qaResult.answer
   });
 
   // Sources (if any)
@@ -25,10 +24,12 @@ export function mapQaToExperience(
       title: "Kilder",
       items: qaResult.sources.map(source => ({
         title: source.title,
+        body: "Dette dokumentet inneholder relevant informasjon om ditt spørsmål.",
         cta: [
           {
-            label: "Åpne",
-            href: `/docs/${source.id}`
+            label: "Åpne dokument",
+            href: `/docs/${source.id}`,
+            icon: "external-link"
           }
         ]
       }))
@@ -40,8 +41,17 @@ export function mapQaToExperience(
     blocks.push({
       type: "cards.list",
       title: "Videre spørsmål",
-      items: qaResult.followups.map(question => ({
-        title: question
+      items: qaResult.followups.map((question, idx) => ({
+        title: question,
+        body: "Klikk for å stille dette spørsmålet til AI-assistenten.",
+        cta: [
+          {
+            label: "Still spørsmål",
+            action_id: `ask_followup_${idx}`,
+            icon: "message-circle",
+            context: { question }
+          }
+        ]
       }))
     });
   }
