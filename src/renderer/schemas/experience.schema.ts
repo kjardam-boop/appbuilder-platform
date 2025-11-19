@@ -105,6 +105,70 @@ const StepsBlockSchema = z.object({
   })),
 });
 
+const FeaturesBlockSchema = z.object({
+  type: z.literal('features'),
+  headline: z.string(),
+  description: z.string().optional(),
+  items: z.array(z.object({
+    icon: z.string(),
+    title: z.string(),
+    description: z.string(),
+    cta: z.object({
+      label: z.string(),
+      href: z.string().optional(),
+      action_id: z.string().optional(),
+    }).optional(),
+  })),
+});
+
+const TeamBlockSchema = z.object({
+  type: z.literal('team'),
+  headline: z.string(),
+  description: z.string().optional(),
+  members: z.array(z.object({
+    name: z.string(),
+    role: z.string(),
+    bio: z.string().optional(),
+    image: z.string().optional(),
+    social: z.object({
+      linkedin: z.string().optional(),
+      twitter: z.string().optional(),
+      email: z.string().optional(),
+    }).optional(),
+  })),
+});
+
+const StatsBlockSchema = z.object({
+  type: z.literal('stats'),
+  headline: z.string().optional(),
+  stats: z.array(z.object({
+    value: z.string(),
+    label: z.string(),
+    icon: z.string().optional(),
+  })),
+});
+
+const TestimonialsBlockSchema = z.object({
+  type: z.literal('testimonials'),
+  headline: z.string().optional(),
+  items: z.array(z.object({
+    quote: z.string(),
+    author: z.string(),
+    role: z.string(),
+    company: z.string().optional(),
+    image: z.string().optional(),
+  })),
+});
+
+const FAQBlockSchema = z.object({
+  type: z.literal('faq'),
+  headline: z.string().optional(),
+  items: z.array(z.object({
+    question: z.string(),
+    answer: z.string(),
+  })),
+});
+
 const BlockSchema = z.discriminatedUnion('type', [
   CardBlockSchema,
   CardsListBlockSchema,
@@ -114,6 +178,11 @@ const BlockSchema = z.discriminatedUnion('type', [
   ContentBlockSchema,
   CTABlockSchema,
   StepsBlockSchema,
+  FeaturesBlockSchema,
+  TeamBlockSchema,
+  StatsBlockSchema,
+  TestimonialsBlockSchema,
+  FAQBlockSchema,
 ]);
 
 export const ExperienceJSONSchema = z.object({
@@ -136,3 +205,8 @@ export type HeroBlock = z.infer<typeof HeroBlockSchema>;
 export type ContentBlock = z.infer<typeof ContentBlockSchema>;
 export type CTABlock = z.infer<typeof CTABlockSchema>;
 export type StepsBlock = z.infer<typeof StepsBlockSchema>;
+export type FeaturesBlock = z.infer<typeof FeaturesBlockSchema>;
+export type TeamBlock = z.infer<typeof TeamBlockSchema>;
+export type StatsBlock = z.infer<typeof StatsBlockSchema>;
+export type TestimonialsBlock = z.infer<typeof TestimonialsBlockSchema>;
+export type FAQBlock = z.infer<typeof FAQBlockSchema>;

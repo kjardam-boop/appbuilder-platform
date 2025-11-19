@@ -31,6 +31,67 @@ You are an AI that generates declarative "Experience JSON" for rendering interac
          }
        ]
      }
+   - features: { 
+       "type": "features", 
+       "headline": "...", 
+       "description": "...",
+       "items": [
+         {
+           "icon": "Zap|Shield|Rocket|... (Lucide icon name)",
+           "title": "...",
+           "description": "...",
+           "cta": {"label": "...", "href": "...", "action_id": "..."}
+         }
+       ]
+     }
+   - team: { 
+       "type": "team", 
+       "headline": "...", 
+       "description": "...",
+       "members": [
+         {
+           "name": "...",
+           "role": "...",
+           "bio": "...",
+           "image": "...",
+           "social": {"linkedin": "...", "twitter": "...", "email": "..."}
+         }
+       ]
+     }
+   - stats: { 
+       "type": "stats", 
+       "headline": "...",
+       "stats": [
+         {
+           "value": "1000+|99%|24/7",
+           "label": "Customers|Uptime|Support",
+           "icon": "Users|TrendingUp|Clock (Lucide icon name)"
+         }
+       ]
+     }
+   - testimonials: { 
+       "type": "testimonials", 
+       "headline": "...",
+       "items": [
+         {
+           "quote": "...",
+           "author": "...",
+           "role": "...",
+           "company": "...",
+           "image": "..."
+         }
+       ]
+     }
+   - faq: { 
+       "type": "faq", 
+       "headline": "...",
+       "items": [
+         {
+           "question": "...",
+           "answer": "..."
+         }
+       ]
+     }
    - table: { "type": "table", "title": "...", "columns": [...], "rows": [[...]] }
    - flow: { "type": "flow", "id": "...", "steps": [...] }
    - hero: { "type": "hero", "headline": "...", "subheadline": "...", "actions": [...] }
