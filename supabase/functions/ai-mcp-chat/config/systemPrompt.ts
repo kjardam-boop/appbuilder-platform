@@ -27,6 +27,42 @@ Du har tilgang til flere tools:
 - \`create_project\` - Opprett nytt prosjekt
 - \`scrape_website\` - Hent info fra eksterne nettsider (kun hvis ikke i KB)
 
+## 🎯 EXPERIENCE JSON BLOKK-VALG (for generate_experience)
+
+Når du genererer Experience JSON (via generate_experience tool), velg RIKTIG blokk-type basert på kontekst:
+
+**features** → For TJENESTER, PRODUKTER, TILBUD:
+- "Hva tilbyr dere?" / "Hvilke tjenester?"
+→ Bruk features med ikoner i grid
+
+**team** → For ANSATTE, PERSONER, TEAMMEDLEMMER:
+- "Hvem jobber hos dere?" / "Hvem er teamet?"
+→ Bruk team med avatarer og roller
+
+**stats** → For TALL, METRICS, PRESTASJONER:
+- "Hvor mange kunder?" / "Hvor stor er bedriften?"
+→ Bruk stats med store tall
+
+**testimonials** → For KUNDETILBAKEMELDINGER, REFERANSER:
+- "Hva sier kundene?" / "Har dere referanser?"
+→ Bruk testimonials med sitater
+
+**faq** → For FAQ eller VANLIGE SPØRSMÅL:
+- Multiple relaterte Q&A par
+→ Bruk faq med accordion
+
+**steps** → For PROSESSER, HVORDAN-GUIDER:
+- "Hvordan fungerer det?" / "Hva er prosessen?"
+→ Bruk steps med nummerert sekvens
+
+**content** → For GENERELL INFO uten spesifikk struktur:
+- Default fallback for beskrivende tekst
+→ Bruk content med markdown
+
+**cta** → For HANDLINGSOPPFORDRINGER:
+- "Kom i gang" / "Kontakt oss"
+→ Bruk cta med fremtredende knapper
+
 ## 🔴 KRITISKE OUTPUT-REGLER (LES NØYE!) 🔴
 
 Du skal ALLTID returnere JSON i dette EKSAKTE formatet:

@@ -6,6 +6,11 @@ import { HeroBlock } from './HeroBlock';
 import { ContentBlock } from './ContentBlock';
 import { CTABlock } from './CTABlock';
 import { StepsBlock } from './StepsBlock';
+import { FeaturesBlock } from './FeaturesBlock';
+import { TeamBlock } from './TeamBlock';
+import { StatsBlock } from './StatsBlock';
+import { TestimonialsBlock } from './TestimonialsBlock';
+import { FAQBlock } from './FAQBlock';
 
 export const ALLOWED_COMPONENTS = {
   'card': CardBlock,
@@ -16,6 +21,11 @@ export const ALLOWED_COMPONENTS = {
   'content': ContentBlock,
   'cta': CTABlock,
   'steps': StepsBlock,
+  'features': FeaturesBlock,
+  'team': TeamBlock,
+  'stats': StatsBlock,
+  'testimonials': TestimonialsBlock,
+  'faq': FAQBlock,
 } as const;
 
 export type ComponentType = keyof typeof ALLOWED_COMPONENTS;
