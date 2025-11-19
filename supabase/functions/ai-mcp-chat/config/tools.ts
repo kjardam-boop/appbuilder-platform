@@ -8,17 +8,13 @@ export const MCP_TOOLS = [
     type: "function",
     function: {
       name: "search_content_library",
-      description: "Search tenant Knowledge Base for company information. Use semantic search with synonyms.",
+      description: "Search tenant Knowledge Base for company information. ALWAYS search ALL categories unless user specifically requests a category filter. Use semantic search with synonyms.",
       parameters: {
         type: "object",
         properties: {
           query: { 
             type: "string", 
             description: "Search query with synonyms and related terms" 
-          },
-          category: { 
-            type: "string", 
-            description: "Optional category filter (team, products, about, contact, etc.)" 
           },
           limit: {
             type: "number",
