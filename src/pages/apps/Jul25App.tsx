@@ -860,9 +860,8 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
         <Baby className="absolute bottom-10 right-10 w-6 h-6 text-white/60 animate-pulse drop-shadow-lg" />
       </div>
 
-      <div className="w-full px-2 sm:px-4 md:px-6 lg:px-8 py-8 relative z-10">
-        <div className="max-w-screen-sm sm:max-w-4xl mx-auto space-y-8">
-          {/* Header */}
+      <div className="w-full px-2 sm:px-4 md:px-6 lg:px-8 py-8 space-y-8 relative z-10">
+        {/* Header */}
         <div className="text-center space-y-4 px-2">
             <div className="flex items-center justify-center gap-3 flex-wrap">
             <Star className="w-8 h-8 sm:w-12 sm:h-12 text-jul25-gold animate-pulse drop-shadow-lg" />
@@ -1950,7 +1949,6 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
         </Dialog>
 
         {/* Dialogs removed - now use dedicated admin pages */}
-        </div>
       </div>
     </div>
   );
