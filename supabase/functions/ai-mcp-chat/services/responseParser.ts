@@ -34,6 +34,24 @@ export function parseAIResponse(rawResponse: string): ParseResult {
     // Continue to next strategy
   }
 
+  // Strategy 1.5: Remove text before JSON (common AI mistake)
+  const textBeforeJsonMatch = rawResponse.match(/^[^{]*(\{[\s\S]*\})$/);
+  if (textBeforeJsonMatch) {
+    try {
+      const parsed = JSON.parse(textBeforeJsonMatch[1]);
+      if (isValidQaResult(parsed)) {
+        console.log('[ResponseParser] ✅ Strategy 1.5: Removed text before JSON');
+        return {
+          qaResult: sanitizeQaResult(parsed),
+          success: true,
+          strategy: 'text-before-json'
+        };
+      }
+    } catch (e) {
+      // Continue to next strategy
+    }
+  }
+
   // Strategy 2: Extract JSON from markdown code block
   const codeBlockMatch = rawResponse.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
   if (codeBlockMatch) {

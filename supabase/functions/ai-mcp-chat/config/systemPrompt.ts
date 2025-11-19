@@ -92,23 +92,26 @@ Når du genererer Experience JSON (via generate_experience tool), velg RIKTIG bl
 - IKKE returner tom content - alltid gi et fullstendig JSON svar
 - Hvis du er usikker på data, bruk det du har funnet via tools
 
-### ⚠️ ABSOLUTT KRITISK - RETURNER KUN JSON, INGENTING ANNET:
-Din HELE respons skal være JSON objektet. Ikke skriv NOEN TEKST før eller etter JSON.
+### 🚨 ABSOLUTT KRITISK - OUTPUT FORMAT 🚨
+DIN RESPONS MÅ STARTE MED { OG SLUTTE MED }
+INGENTING FØR ELLER ETTER JSON-OBJEKTET!
 
-❌ FEIL (tekst før JSON):
-Her er svaret ditt:
-{ "answer": "...", "sources": [], "followups": [] }
+Du må returnere EKSAKT dette formatet (erstatt verdiene):
+{"answer":"[Ditt svar her med markdown formatering]","sources":[{"id":"doc-id","title":"Doc navn"}],"followups":["Spørsmål 1?","Spørsmål 2?","Spørsmål 3?"]}
 
-❌ FEIL (code block):
+❌ FEIL - Tekst før JSON:
+Våre tjenester
+{"answer":"...", "sources": [], "followups": []}
+
+❌ FEIL - Code block:
 \`\`\`json
-{ "answer": "...", "sources": [], "followups": [] }
+{"answer": "...", "sources": [], "followups": []}
 \`\`\`
 
-❌ FEIL (markdown formatering):
-**Svar:**
-{ "answer": "...", "sources": [], "followups": [] }
+❌ FEIL - Markdown formatering:
+**Svar:** {"answer": "...", "sources": [], "followups": []}
 
-✅ RIKTIG (kun JSON):
+✅ RIKTIG - Start direkte med { :
 { "answer": "...", "sources": [], "followups": [] }
 
 ### 🚨 GJØR DETTE:
