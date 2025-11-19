@@ -89,6 +89,44 @@ export async function searchContentLibrary(
   return results;
 }
 
+export async function loadTenantContext(
+  supabaseClient: any,
+  tenantId: string
+): Promise<string> {
+  console.log(`[Load Tenant Context] Loading all documents for tenant: ${tenantId}`);
+  
+  const { data, error } = await supabaseClient
+    .from('ai_app_content_library')
+    .select('title, content_markdown, category')
+    .eq('tenant_id', tenantId)
+    .eq('is_active', true)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('[Load Tenant Context Error]', error);
+    return "Ingen dokumenter funnet i knowledge base.";
+  }
+
+  if (!data || data.length === 0) {
+    console.log('[Load Tenant Context] No documents found');
+    return "Ingen dokumenter funnet i knowledge base.";
+  }
+
+  console.log(`[Load Tenant Context] Found ${data.length} documents`);
+
+  // Build formatted context
+  let context = "## KNOWLEDGE BASE\n\n";
+  for (const doc of data) {
+    context += `### ${doc.title}\n`;
+    context += `Kategori: ${doc.category}\n\n`;
+    context += `${doc.content_markdown}\n\n`;
+    context += `---\n\n`;
+  }
+  
+  console.log(`[Load Tenant Context] Context built: ${context.length} characters`);
+  return context;
+}
+
 export async function scrapeWebsite(
   url: string
 ): Promise<string> {

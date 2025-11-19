@@ -7,30 +7,8 @@ export const MCP_TOOLS = [
   {
     type: "function",
     function: {
-      name: "search_content_library",
-      description: "Search tenant Knowledge Base for company information. ALWAYS search ALL categories unless user specifically requests a category filter. Use semantic search with synonyms.",
-      parameters: {
-        type: "object",
-        properties: {
-          query: { 
-            type: "string", 
-            description: "Search query with synonyms and related terms" 
-          },
-          limit: {
-            type: "number",
-            description: "Max results (default 5, max 10)",
-            default: 5
-          }
-        },
-        required: ["query"]
-      }
-    }
-  },
-  {
-    type: "function",
-    function: {
       name: "scrape_website",
-      description: "Scrape company website ONLY when content_library returns no results or you need updated info.",
+      description: "Scrape external website ONLY if answer is not in knowledge base or you need updated info from web.",
       parameters: {
         type: "object",
         properties: {
