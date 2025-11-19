@@ -6,7 +6,7 @@ import type { CardsListBlock as CardsListBlockType } from '../schemas/experience
 import { useState } from 'react';
 
 interface CardsListBlockProps extends CardsListBlockType {
-  onAction?: (actionId: string) => void;
+  onAction?: (actionId: string, context?: any) => void;
 }
 
 // Get initials from name
@@ -127,7 +127,12 @@ export const CardsListBlock = ({ title, items, onAction }: CardsListBlockProps) 
                               size="sm"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                if (cta.href) {
+                                // Prioritize action_id for follow-up questions
+                                if (cta.action_id && onAction) {
+                                  onAction(cta.action_id, cta.context);
+                                } 
+                                // Fallback to href for external links
+                                else if (cta.href) {
                                   if (cta.type === 'email') window.location.href = `mailto:${cta.href}`;
                                   else if (cta.type === 'phone') window.location.href = `tel:${cta.href}`;
                                   else window.open(cta.href, '_blank');
@@ -188,7 +193,12 @@ export const CardsListBlock = ({ title, items, onAction }: CardsListBlockProps) 
                                 size="sm"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  if (cta.href) {
+                                  // Prioritize action_id for follow-up questions
+                                  if (cta.action_id && onAction) {
+                                    onAction(cta.action_id, cta.context);
+                                  } 
+                                  // Fallback to href for external links
+                                  else if (cta.href) {
                                     if (cta.type === 'email') window.location.href = `mailto:${cta.href}`;
                                     else if (cta.type === 'phone') window.location.href = `tel:${cta.href}`;
                                     else window.open(cta.href, '_blank');
