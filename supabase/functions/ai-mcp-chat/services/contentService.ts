@@ -94,10 +94,14 @@ export async function searchContentLibrary(
     
     if (!ftsError && ftsData && ftsData.length > 0) {
       console.log(`[Content Library Search] FTS found ${ftsData.length} documents`);
-      return ftsData.map((doc: any) => ({
-        ...doc,
-        snippet: doc.content_markdown.slice(0, 600)
-      }));
+      return ftsData.map((doc: any) => {
+        // Smart snippet size: full content for small docs, 8000 chars for larger
+        const snippetSize = doc.content_markdown.length < 10000 ? doc.content_markdown.length : 8000;
+        return {
+          ...doc,
+          snippet: doc.content_markdown.slice(0, snippetSize)
+        };
+      });
     }
     
     console.log('[Content Library Search] FTS returned no results, falling back to ILIKE');
@@ -127,10 +131,14 @@ export async function searchContentLibrary(
   
   console.log(`[Content Library Search] ILIKE found ${ilikeData?.length || 0} documents`);
   
-  return (ilikeData || []).map((doc: any) => ({
-    ...doc,
-    snippet: doc.content_markdown.slice(0, 600)
-  }));
+  return (ilikeData || []).map((doc: any) => {
+    // Smart snippet size: full content for small docs, 8000 chars for larger
+    const snippetSize = doc.content_markdown.length < 10000 ? doc.content_markdown.length : 8000;
+    return {
+      ...doc,
+      snippet: doc.content_markdown.slice(0, snippetSize)
+    };
+  });
 }
 
 export async function loadTenantContext(

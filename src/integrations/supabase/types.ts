@@ -17,6 +17,7 @@ export type Database = {
       ai_app_content_library: {
         Row: {
           category: string
+          chunk_index: number
           content_markdown: string
           created_at: string
           extracted_text: string | null
@@ -29,12 +30,14 @@ export type Database = {
           last_processed_at: string | null
           metadata: Json | null
           original_filename: string | null
+          parent_doc_id: string | null
           tenant_id: string | null
           title: string
           updated_at: string
         }
         Insert: {
           category: string
+          chunk_index?: number
           content_markdown: string
           created_at?: string
           extracted_text?: string | null
@@ -47,12 +50,14 @@ export type Database = {
           last_processed_at?: string | null
           metadata?: Json | null
           original_filename?: string | null
+          parent_doc_id?: string | null
           tenant_id?: string | null
           title: string
           updated_at?: string
         }
         Update: {
           category?: string
+          chunk_index?: number
           content_markdown?: string
           created_at?: string
           extracted_text?: string | null
@@ -65,11 +70,19 @@ export type Database = {
           last_processed_at?: string | null
           metadata?: Json | null
           original_filename?: string | null
+          parent_doc_id?: string | null
           tenant_id?: string | null
           title?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "ai_app_content_library_parent_doc_id_fkey"
+            columns: ["parent_doc_id"]
+            isOneToOne: false
+            referencedRelation: "ai_app_content_library"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ai_app_content_library_tenant_id_fkey"
             columns: ["tenant_id"]

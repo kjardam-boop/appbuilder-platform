@@ -26,6 +26,8 @@ const CardsListBlockSchema = z.object({
       label: z.string(),
       href: z.string().url().optional(),
       type: z.enum(['email', 'phone', 'web', 'generic']).optional(),
+      action_id: z.string().optional(),
+      context: z.any().optional(),
     })).optional(),
     meta: z.record(z.string()).optional(),
   })),
