@@ -24,7 +24,6 @@ export function mapQaToExperience(
       title: "Videre spørsmål",
       items: qaResult.followups.map((question, idx) => ({
         title: question,
-        body: "Klikk for å stille dette spørsmålet til AI-assistenten.",
         cta: [
           {
             label: "Still spørsmål",
