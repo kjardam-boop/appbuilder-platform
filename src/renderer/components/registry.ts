@@ -3,7 +3,7 @@ import { CardsListBlock } from './CardsListBlock';
 import { TableBlock } from './TableBlock';
 import { FlowBlock } from './FlowBlock';
 import { HeroBlock } from './HeroBlock';
-import { ContentBlock } from './ContentBlock';
+import { ContentBlockEnhanced as ContentBlock } from './ContentBlockEnhanced';
 import { CTABlock } from './CTABlock';
 import { StepsBlock } from './StepsBlock';
 import { FeaturesBlock } from './FeaturesBlock';
