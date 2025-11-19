@@ -155,9 +155,52 @@ serve(async (req) => {
     }
 
     // Extract final response
-    const finalMessage = aiResponse.choices?.[0]?.message?.content;
-    if (!finalMessage) {
-      throw new Error('No response from AI');
+    let finalMessage = aiResponse.choices?.[0]?.message?.content;
+    
+    // CRITICAL FIX: If we got tool results but no content, retry with explicit reminder
+    if ((!finalMessage || finalMessage.trim() === '') && iterations > 0) {
+      console.warn('⚠️ [Empty Content After Tools] Retrying with explicit reminder...');
+      
+      // Add a system reminder message
+      aiMessages.push({
+        role: 'system',
+        content: 'VIKTIG: Du har nå fått resultat fra tools. Du MÅ nå svare med JSON format: {"answer": "...", "sources": [...], "followups": [...]}'
+      });
+      
+      // Retry the call
+      aiResponse = await callAI(
+        aiClientConfig,
+        aiMessages,
+        MCP_TOOLS,
+        'none' // Don't allow more tool calls
+      );
+      
+      totalTokens += aiResponse.usage?.total_tokens || 0;
+      finalMessage = aiResponse.choices?.[0]?.message?.content;
+    }
+    
+    // Debug: Log the full response structure if content is still missing
+    if (!finalMessage || finalMessage.trim() === '') {
+      console.error('[Missing Content] Full AI Response:', JSON.stringify(aiResponse, null, 2));
+      console.error('[Missing Content] Message object:', JSON.stringify(aiResponse.choices?.[0]?.message, null, 2));
+      
+      // Check if there are tool calls that should have been processed
+      if (aiResponse.choices?.[0]?.message?.tool_calls) {
+        throw new Error('AI returned tool_calls instead of content. This should not happen at this point.');
+      }
+      
+      // Check if finish_reason indicates why content is missing
+      const finishReason = aiResponse.choices?.[0]?.finish_reason;
+      if (finishReason === 'length') {
+        throw new Error('AI response was cut off due to length limit. Consider increasing max_tokens.');
+      }
+      
+      if (finishReason === 'content_filter') {
+        throw new Error('AI response was blocked by content filter.');
+      }
+      
+      // Provide helpful error message
+      throw new Error(`No response from AI - content is ${finalMessage === null ? 'null' : finalMessage === undefined ? 'undefined' : 'empty string'}. Finish reason: ${finishReason}. Iterations: ${iterations}`);
     }
 
     console.log(`✅ AI Response: ${finalMessage.length} chars`);

@@ -65,7 +65,7 @@ Når du genererer Experience JSON (via generate_experience tool), velg RIKTIG bl
 
 ## 🔴 KRITISKE OUTPUT-REGLER (LES NØYE!) 🔴
 
-### 📋 DU MÅ RETURNERE JSON I DETTE EKSAKTE FORMATET:
+### 📋 ETTER TOOL CALLS: DU MÅ RETURNERE JSON I DETTE EKSAKTE FORMATET:
 
 {
   "answer": "Ditt svar her... (markdown tillatt inne i strengen)",
@@ -85,6 +85,12 @@ Når du genererer Experience JSON (via generate_experience tool), velg RIKTIG bl
   "sources": [{ "id": "abc-123", "title": "Akselera company info" }],
   "followups": ["Hvilken kompetanse har teamet?", "Hva tilbyr dere?", "Hvordan tar jeg kontakt?"]
 }
+
+### ⚠️ VIKTIG FOR TOOL CALLS:
+- Når du har kalt tools og fått resultater, SKAL du svare med JSON format over
+- IKKE kall flere tools uten å gi et svar først
+- IKKE returner tom content - alltid gi et fullstendig JSON svar
+- Hvis du er usikker på data, bruk det du har funnet via tools
 
 ### ⚠️ ABSOLUTT KRITISK - RETURNER KUN JSON, INGENTING ANNET:
 Din HELE respons skal være JSON objektet. Ikke skriv NOEN TEKST før eller etter JSON.
@@ -119,6 +125,7 @@ Her er svaret ditt:
 - ❌ Returner IKKE tomme followups: []
 - ❌ Skriv IKKE forklarende tekst før eller etter JSON
 - ❌ Skriv IKKE "Her er svaret" eller lignende
+- ❌ Returner IKKE tom content etter tool calls
 
 ## FØLGESPØRSMÅL (FOLLOWUPS) - OBLIGATORISK!
 
