@@ -1,7 +1,8 @@
 import React from 'react';
 import { TeamBlock as TeamBlockType } from '../schemas/experience.schema';
-import { Linkedin, Twitter, Mail } from 'lucide-react';
+import { Mail, Linkedin, Twitter, Globe } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 
 interface TeamBlockProps {
   block: TeamBlockType;
@@ -32,54 +33,80 @@ export const TeamBlock: React.FC<TeamBlockProps> = ({ block }) => {
         {block.members.map((member, idx) => (
           <div
             key={idx}
-            className="bg-card border border-border rounded-lg p-6 text-center hover:shadow-lg transition-shadow"
+            className="group bg-card border border-border rounded-lg p-6 hover:shadow-lg transition-all text-center"
           >
-            <Avatar className="w-24 h-24 mx-auto mb-4">
-              <AvatarImage src={member.image} alt={member.name} />
-              <AvatarFallback className="text-lg bg-primary/10 text-primary">
-                {getInitials(member.name)}
-              </AvatarFallback>
-            </Avatar>
-            
-            <h3 className="text-xl font-semibold mb-1">{member.name}</h3>
-            <p className="text-sm text-primary font-medium mb-3">{member.role}</p>
-            
-            {member.bio && (
-              <p className="text-sm text-muted-foreground mb-4">{member.bio}</p>
-            )}
-            
-            {member.social && (
-              <div className="flex items-center justify-center gap-3">
-                {member.social.linkedin && (
-                  <a
-                    href={member.social.linkedin}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-muted-foreground hover:text-primary transition-colors"
-                  >
-                    <Linkedin className="w-5 h-5" />
-                  </a>
-                )}
-                {member.social.twitter && (
-                  <a
-                    href={member.social.twitter}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-muted-foreground hover:text-primary transition-colors"
-                  >
-                    <Twitter className="w-5 h-5" />
-                  </a>
-                )}
-                {member.social.email && (
-                  <a
-                    href={`mailto:${member.social.email}`}
-                    className="text-muted-foreground hover:text-primary transition-colors"
-                  >
-                    <Mail className="w-5 h-5" />
-                  </a>
-                )}
+            <div className="flex flex-col items-center gap-4">
+              {/* Avatar with ring effect */}
+              <Avatar className="h-24 w-24 ring-2 ring-primary/10 group-hover:ring-primary/30 transition-all">
+                <AvatarImage src={member.image} alt={member.name} />
+                <AvatarFallback className="text-2xl font-semibold bg-primary/10 text-primary">
+                  {getInitials(member.name)}
+                </AvatarFallback>
+              </Avatar>
+
+              {/* Name and role */}
+              <div className="space-y-2">
+                <h3 className="text-xl font-bold">{member.name}</h3>
+                <Badge variant="secondary" className="text-sm">
+                  {member.role}
+                </Badge>
               </div>
-            )}
+
+              {/* Bio */}
+              {member.bio && (
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {member.bio}
+                </p>
+              )}
+
+              {/* Social links */}
+              {member.social && (
+                <div className="flex gap-3 mt-2">
+                  {member.social.email && (
+                    <a
+                      href={`mailto:${member.social.email}`}
+                      className="text-muted-foreground hover:text-primary transition-colors"
+                      title="Send e-post"
+                    >
+                      <Mail className="h-5 w-5" />
+                    </a>
+                  )}
+                  {member.social.linkedin && (
+                    <a
+                      href={member.social.linkedin}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-muted-foreground hover:text-primary transition-colors"
+                      title="LinkedIn"
+                    >
+                      <Linkedin className="h-5 w-5" />
+                    </a>
+                  )}
+                  {member.social.twitter && (
+                    <a
+                      href={member.social.twitter}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-muted-foreground hover:text-primary transition-colors"
+                      title="Twitter/X"
+                    >
+                      <Twitter className="h-5 w-5" />
+                    </a>
+                  )}
+                  {member.social.website && (
+                    <a
+                      href={member.social.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-muted-foreground hover:text-primary transition-colors"
+                      title="Nettside"
+                    >
+                      <Globe className="h-5 w-5" />
+                    </a>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         ))}
       </div>

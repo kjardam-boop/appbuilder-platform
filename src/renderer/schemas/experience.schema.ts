@@ -134,6 +134,7 @@ const TeamBlockSchema = z.object({
       linkedin: z.string().optional(),
       twitter: z.string().optional(),
       email: z.string().optional(),
+      website: z.string().optional(),
     }).optional(),
   })),
 });
