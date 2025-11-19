@@ -860,20 +860,20 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
         <Baby className="absolute bottom-10 right-10 w-6 h-6 text-white/60 animate-pulse drop-shadow-lg" />
       </div>
 
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 relative z-10 max-w-full overflow-x-hidden">
+      <div className="w-full px-2 sm:px-4 md:px-6 lg:px-8 py-8 space-y-8 relative z-10">
         {/* Header */}
-        <div className="text-center space-y-4">
+        <div className="text-center space-y-4 px-2">
             <div className="flex items-center justify-center gap-3 flex-wrap">
-            <Star className="w-12 h-12 text-jul25-gold animate-pulse drop-shadow-lg" />
-            <h1 className="text-4xl sm:text-5xl font-bold text-white drop-shadow-lg">
+            <Star className="w-8 h-8 sm:w-12 sm:h-12 text-jul25-gold animate-pulse drop-shadow-lg" />
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white drop-shadow-lg">
               JaJabo jul 2025
             </h1>
-            <Star className="w-12 h-12 text-jul25-gold animate-pulse drop-shadow-lg" />
+            <Star className="w-8 h-8 sm:w-12 sm:h-12 text-jul25-gold animate-pulse drop-shadow-lg" />
           </div>
-          <p className="text-xl text-white/90">
+          <p className="text-lg sm:text-xl text-white/90 px-2">
             AG Jacobsen Consulting - Familiejul 2025
           </p>
-          <p className="text-sm text-white/80">
+          <p className="text-sm text-white/80 px-2">
             🎄 Meld deg på og fortell oss når du kommer! 🎅
           </p>
           
@@ -941,7 +941,7 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
 
         {/* Main Calendar - Only visible when logged in */}
         {user && (
-          <Card className="border-2 border-green-200 dark:border-green-900">
+          <Card className="border-2 border-green-200 dark:border-green-900 w-full">
             <CardHeader>
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
@@ -950,7 +950,7 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
                 </CardTitle>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4 sm:space-y-6">
+            <CardContent className="space-y-4 sm:space-y-6 overflow-x-auto">
             
             {/* Mobile Calendar - Compact List View */}
             <div className="block sm:hidden space-y-3">
@@ -1086,8 +1086,8 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
             </div>
             
             {/* Desktop Calendar - Gantt Chart */}
-            <div className="hidden sm:block overflow-x-auto pb-2">
-              <div className="flex flex-col" style={{ minWidth: `${160 + eventDates.length * 40}px` }}>
+            <div className="hidden sm:block overflow-x-auto pb-2 -mx-2 px-2">
+              <div className="flex flex-col min-w-fit" style={{ minWidth: `${160 + eventDates.length * 40}px` }}>
                 
                 {/* Date Header */}
                 <div className="flex gap-0 mb-4">
@@ -1306,7 +1306,7 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           {/* Tasks Widget - Visible to all logged-in users */}
           {user && (
-            <Card className="border-amber-200 dark:border-amber-900">
+            <Card className="border-amber-200 dark:border-amber-900 w-full">
               <CardHeader>
                 <div className="flex flex-col gap-3">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
@@ -1562,7 +1562,7 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
           )}
 
           {/* Christmas Calendar */}
-          <Card className="border-2 border-purple-300 dark:border-purple-900">
+          <Card className="border-2 border-purple-300 dark:border-purple-900 w-full">
             <CardHeader>
               <CardTitle className="text-base sm:text-lg flex items-center gap-2">
                 <Church className="w-5 h-5 text-purple-600" />
