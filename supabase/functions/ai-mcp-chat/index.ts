@@ -222,16 +222,17 @@ serve(async (req) => {
     console.log(`✅ Success in ${duration}ms`);
     console.log('========================================');
 
-    // Return ExperienceJSON as stringified response for frontend parsing
+    // Return ExperienceJSON as object (frontend will stringify)
     return new Response(
       JSON.stringify({
-        experience: experience,
-        response: JSON.stringify(experience), // Frontend expects string that can be parsed as JSON
+        response: JSON.stringify(experience), // Frontend expects stringified ExperienceJSON
         tokensUsed: totalTokens,
         toolCallsMade: iterations,
         provider: aiClientConfig.provider,
         model: aiClientConfig.model,
-        durationMs: duration
+        durationMs: duration,
+        parsingSuccessful,
+        fallbackApplied: !parsingSuccessful
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
