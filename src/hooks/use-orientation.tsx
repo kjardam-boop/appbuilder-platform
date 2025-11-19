@@ -4,13 +4,19 @@ export function useIsLandscape() {
   const [isLandscape, setIsLandscape] = React.useState<boolean>(false);
 
   React.useEffect(() => {
-    const mql = window.matchMedia("(orientation: landscape)");
-    const onChange = () => {
-      setIsLandscape(mql.matches);
+    const update = () => {
+      if (typeof window === "undefined") return;
+      setIsLandscape(window.innerWidth > window.innerHeight);
     };
-    mql.addEventListener("change", onChange);
-    setIsLandscape(mql.matches);
-    return () => mql.removeEventListener("change", onChange);
+
+    window.addEventListener("resize", update);
+    window.addEventListener("orientationchange", update);
+    update(); // Call on mount
+
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("orientationchange", update);
+    };
   }, []);
 
   return isLandscape;
