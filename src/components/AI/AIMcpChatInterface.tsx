@@ -236,7 +236,61 @@ export function AIMcpChatInterface({
  * Parse and render message content with ExperienceJSON support
  */
 function MessageContent({ content, onAction }: { content: string; onAction?: (actionId: string, context?: any) => void }) {
-  // Try to parse experience-json code block
+  // Strategy 1: Try direct JSON parse (for v2.0 edge function)
+  try {
+    const parsed = JSON.parse(content);
+    if (parsed.version && parsed.blocks) {
+      // Valid ExperienceJSON
+      const experienceData: ExperienceJSON = parsed;
+      
+      // Apply default layout if missing
+      if (!experienceData.layout) {
+        experienceData.layout = {
+          type: 'stack',
+          gap: 'md'
+        };
+      }
+      
+      // Apply theme from CSS variables if not already set
+      if (!experienceData.theme) {
+        experienceData.theme = {
+          primary: getComputedStyle(document.documentElement).getPropertyValue('--color-primary') || '#000',
+          accent: getComputedStyle(document.documentElement).getPropertyValue('--color-accent') || '#666',
+          surface: getComputedStyle(document.documentElement).getPropertyValue('--color-surface') || '#fff',
+          textOnSurface: getComputedStyle(document.documentElement).getPropertyValue('--color-text-on-surface') || '#000',
+          fontStack: getComputedStyle(document.documentElement).getPropertyValue('--font-stack') || 'system-ui, sans-serif',
+        };
+      }
+      
+      try {
+        return (
+          <div className="my-2">
+            <ExperienceRenderer experience={experienceData} onAction={onAction} />
+          </div>
+        );
+      } catch (renderError) {
+        console.error('[Render Error]', renderError);
+        return (
+          <div className="p-4 border border-destructive/50 rounded-md">
+            <p className="text-destructive font-semibold">Kunne ikke vise innhold</p>
+            <p className="text-sm text-muted-foreground mt-2">
+              AI-en returnerte data, men den kunne ikke rendres riktig.
+            </p>
+            <details className="mt-2">
+              <summary className="cursor-pointer text-sm">Se rå data</summary>
+              <pre className="text-xs mt-2 p-2 bg-muted rounded overflow-auto max-h-40">
+                {JSON.stringify(experienceData, null, 2)}
+              </pre>
+            </details>
+          </div>
+        );
+      }
+    }
+  } catch {
+    // Not direct JSON, continue to other strategies
+  }
+  
+  // Strategy 2: Try experience-json code block (backwards compatibility)
   const experienceMatch = content.match(/```experience-json\n([\s\S]*?)\n```/);
   
   if (experienceMatch) {
@@ -266,18 +320,36 @@ function MessageContent({ content, onAction }: { content: string; onAction?: (ac
       const beforeText = content.substring(0, content.indexOf('```experience-json')).trim();
       const afterText = content.substring(content.indexOf('```', content.indexOf('```experience-json') + 3) + 3).trim();
       
-      return (
-        <div className="space-y-3">
-          {beforeText && <p className="text-sm whitespace-pre-wrap">{beforeText}</p>}
-          <div className="my-2">
-            <ExperienceRenderer experience={experienceData} onAction={onAction} />
+      try {
+        return (
+          <div className="space-y-3">
+            {beforeText && <p className="text-sm whitespace-pre-wrap">{beforeText}</p>}
+            <div className="my-2">
+              <ExperienceRenderer experience={experienceData} onAction={onAction} />
+            </div>
+            {afterText && <p className="text-sm whitespace-pre-wrap">{afterText}</p>}
           </div>
-          {afterText && <p className="text-sm whitespace-pre-wrap">{afterText}</p>}
-        </div>
-      );
+        );
+      } catch (renderError) {
+        console.error('[Render Error]', renderError);
+        return (
+          <div className="p-4 border border-destructive/50 rounded-md">
+            <p className="text-destructive font-semibold">Kunne ikke vise innhold</p>
+            <p className="text-sm text-muted-foreground mt-2">
+              AI-en returnerte data, men den kunne ikke rendres riktig.
+            </p>
+            <details className="mt-2">
+              <summary className="cursor-pointer text-sm">Se rå data</summary>
+              <pre className="text-xs mt-2 p-2 bg-muted rounded overflow-auto max-h-40">
+                {JSON.stringify(experienceData, null, 2)}
+              </pre>
+            </details>
+          </div>
+        );
+      }
     } catch (error) {
-      console.error('Failed to parse ExperienceJSON:', error);
-      // Continue to markdown fallback below
+      console.error('[Parse Error] Invalid experience-json:', error);
+      // Continue to markdown fallback
     }
   }
   

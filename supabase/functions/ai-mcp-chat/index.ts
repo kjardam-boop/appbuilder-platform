@@ -226,11 +226,11 @@ serve(async (req) => {
     console.log(`✅ Success in ${duration}ms`);
     console.log('========================================');
 
-    // Return ExperienceJSON
+    // Return ExperienceJSON as stringified response for frontend parsing
     return new Response(
       JSON.stringify({
-        experience: JSON.stringify(experience),
-        response: JSON.stringify(experience), // Keep for backwards compatibility
+        experience: experience,
+        response: JSON.stringify(experience), // Frontend expects string that can be parsed as JSON
         tokensUsed: totalTokens,
         toolCallsMade: iterations,
         provider: aiClientConfig.provider,
