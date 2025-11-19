@@ -118,11 +118,11 @@ export function AIMcpChatInterface({
   };
 
   return (
-    <div className="flex h-[calc(100vh-2rem)] max-w-7xl mx-auto bg-surface rounded-lg shadow-lg overflow-hidden">
+    <div className="flex h-[calc(100vh-2rem)] w-full bg-surface rounded-lg shadow-lg overflow-hidden">
       <div className="flex-1 flex flex-col">
         {/* Header */}
         <div 
-          className="flex items-center justify-between p-4 border-b border-border"
+          className="flex items-center justify-between px-4 md:px-6 py-4 border-b border-border"
           style={{ 
             backgroundColor: primaryColor || 'hsl(var(--primary))',
             color: 'white',
@@ -130,16 +130,16 @@ export function AIMcpChatInterface({
           }}
         >
           <div>
-            <h1 className="text-xl font-semibold">{title}</h1>
-            {description && <p className="text-sm opacity-90">{description}</p>}
+            <h1 className="text-lg md:text-xl font-semibold">{title}</h1>
+            {description && <p className="text-xs md:text-sm opacity-90">{description}</p>}
           </div>
-          <Badge variant="secondary" className="bg-white/20 text-white">
+          <Badge variant="secondary" className="bg-white/20 text-white text-xs">
             AI Assistent
           </Badge>
         </div>
 
         {/* Messages Area */}
-        <ScrollArea className="flex-1 p-4">
+        <ScrollArea className="flex-1 px-4 md:px-6 py-4">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center">
               <Bot className="h-16 w-16 text-muted-foreground mb-4" />
