@@ -56,7 +56,13 @@ export default function Jul25App() {
   const { isPlatformAdmin } = usePlatformAdmin();
   const isMobile = useIsMobile();
   const isLandscape = useIsLandscape();
-  const showGantt = !isMobile || (isMobile && isLandscape);
+  const [orientationReady, setOrientationReady] = useState(false);
+
+  useEffect(() => {
+    setOrientationReady(true);
+  }, []);
+
+  const showGantt = orientationReady && (!isMobile || (isMobile && isLandscape));
   
   // Data fra database
   const { data: families = [] } = useJul25Families();
