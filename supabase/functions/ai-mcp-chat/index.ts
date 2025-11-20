@@ -81,9 +81,9 @@ serve(async (req) => {
     
     // Proactive scraping: if tenant has no documents and has a domain, scrape it
     const { proactiveScrapeIfNeeded } = await import('./services/contentService.ts');
-    const scraped = await proactiveScrapeIfNeeded(supabaseClient, tenantId, tenant.domain);
+    const scraped = await proactiveScrapeIfNeeded(supabaseClient, tenantId, tenant);
     if (scraped) {
-      console.log(`✅ Proactive scraping: Scraped ${tenant.domain} and saved to content library`);
+      console.log(`✅ Proactive scraping: Scraped domain and saved to content library`);
     }
 
     // Get AI config

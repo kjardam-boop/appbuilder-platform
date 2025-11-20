@@ -13,6 +13,10 @@ export interface TenantConfig {
   name: string;
   slug: string;
   domain?: string;
+  settings?: {
+    company_id?: string;
+    [key: string]: any;
+  };
 }
 
 export interface Theme {
