@@ -8,7 +8,7 @@ export const MCP_TOOLS = [
     type: "function",
     function: {
       name: "search_content_library",
-      description: "Search tenant's knowledge base for relevant information. Use this when you need company-specific information. The query should be natural language (e.g. 'employees team', 'competence skills').",
+      description: "Search tenant's knowledge base for relevant information. Use this when you need company-specific information. Returns: {found: number, bestScore: number (0-1), avgScore: number (0-1), documents: [{id, title, snippet, keywords, category, relevanceScore}]}. If bestScore < 0.3 or found < 2, consider using scrape_website for more information.",
       parameters: {
         type: "object",
         properties: {
