@@ -78,6 +78,13 @@ serve(async (req) => {
     console.log(`✅ Tenant: ${tenant.name} (${tenant.slug})`);
     console.log(`✅ Domain: ${tenant.domain || 'N/A'}`);
     console.log(`✅ RAG Mode: Tool-based (search_content_library)`);
+    
+    // Proactive scraping: if tenant has no documents and has a domain, scrape it
+    const { proactiveScrapeIfNeeded } = await import('./services/contentService.ts');
+    const scraped = await proactiveScrapeIfNeeded(supabaseClient, tenantId, tenant.domain);
+    if (scraped) {
+      console.log(`✅ Proactive scraping: Scraped ${tenant.domain} and saved to content library`);
+    }
 
     // Get AI config
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY') || '';

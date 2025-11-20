@@ -54,11 +54,16 @@ export async function handleToolCalls(
           if (!url) {
             throw new Error('No URL provided and no tenant domain configured');
           }
-          const content = await scrapeWebsite(url);
+          const content = await scrapeWebsite(url, {
+            saveToDb: true,
+            supabaseClient,
+            tenantId
+          });
           data = {
             url,
             content,
-            length: content.length
+            length: content.length,
+            savedToDatabase: true
           };
           break;
         }
