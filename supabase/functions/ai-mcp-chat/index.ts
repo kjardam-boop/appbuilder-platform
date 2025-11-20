@@ -95,7 +95,13 @@ serve(async (req) => {
     console.log(`✅ AI Model: ${aiClientConfig.model}`);
 
     // Layer 2: Reasoning - build tool-first system prompt (no documents embedded)
-    const systemPrompt = customSystemPrompt || buildSystemPrompt(tenant);
+    const systemPrompt = customSystemPrompt || buildSystemPrompt(tenant) + `
+
+IMPORTANT: Keep your answers concise and well-structured:
+- Main answer: 2-3 sentences maximum per point
+- For detailed information, indicate that more details are available
+- Use bullet points for clarity
+- Be direct and to the point`;
     
     console.log(`✅ System Prompt: ${systemPrompt.length} chars (tool-first, no KB injection)`);
 
