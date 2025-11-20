@@ -12,7 +12,7 @@ export async function getTenantConfig(
 ): Promise<TenantConfig> {
   const { data, error } = await supabaseClient
     .from('tenants')
-    .select('id, name, slug, domain')
+    .select('id, name, slug, domain, settings')
     .eq('id', tenantId)
     .single();
 
@@ -474,7 +474,7 @@ export async function scrapeWebsite(
 export async function proactiveScrapeIfNeeded(
   supabaseClient: any,
   tenantId: string,
-  tenantDomain?: string
+  tenantConfig?: TenantConfig
 ): Promise<boolean> {
   // Check if tenant has any documents
   const { count } = await supabaseClient
@@ -488,15 +488,33 @@ export async function proactiveScrapeIfNeeded(
     return false;
   }
   
-  if (!tenantDomain) {
-    console.log('[Proactive Scraping] No domain configured, skipping');
+  // Try to get domain from tenant or company
+  let domainToScrape = tenantConfig?.domain;
+  
+  if (!domainToScrape && tenantConfig?.settings?.company_id) {
+    console.log('[Proactive Scraping] No tenant domain, fetching company website');
+    
+    const { data: company } = await supabaseClient
+      .from('companies')
+      .select('website')
+      .eq('id', tenantConfig.settings.company_id)
+      .maybeSingle();
+    
+    if (company?.website) {
+      domainToScrape = company.website;
+      console.log(`[Proactive Scraping] Using company website: ${domainToScrape}`);
+    }
+  }
+  
+  if (!domainToScrape) {
+    console.log('[Proactive Scraping] No domain or company website configured, skipping');
     return false;
   }
   
-  console.log(`[Proactive Scraping] No documents found, scraping ${tenantDomain}`);
+  console.log(`[Proactive Scraping] No documents found, scraping ${domainToScrape}`);
   
   try {
-    await scrapeWebsite(tenantDomain, {
+    await scrapeWebsite(domainToScrape, {
       saveToDb: true,
       supabaseClient,
       tenantId
