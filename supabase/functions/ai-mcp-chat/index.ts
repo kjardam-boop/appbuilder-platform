@@ -97,11 +97,27 @@ serve(async (req) => {
     // Layer 2: Reasoning - build tool-first system prompt (no documents embedded)
     const systemPrompt = customSystemPrompt || buildSystemPrompt(tenant) + `
 
-IMPORTANT: Keep your answers concise and well-structured:
-- Main answer: 2-3 sentences maximum per point
-- For detailed information, indicate that more details are available
+IMPORTANT GUIDELINES:
+
+**Answer Quality:**
+- Keep answers concise: 2-3 sentences maximum per point
 - Use bullet points for clarity
-- Be direct and to the point`;
+- Indicate when detailed information is available via "Les mer"
+- Be direct and to the point
+
+**Search Strategy:**
+- ALWAYS use search_content_library FIRST before answering
+- Check the search results carefully:
+  * If fewer than 2 documents found → Consider using scrape_website for more information
+  * If documents seem off-topic → Try rephrasing search or use scrape_website
+  * If user asks very specific questions not covered → Use scrape_website to find current info
+- Prefer cached content (search_content_library) over scraping when possible
+- Only scrape when: (1) No relevant docs found, (2) User asks for very recent info, (3) User explicitly requests external sources
+
+**Tool Usage Priority:**
+1. search_content_library (always first)
+2. scrape_website (if search insufficient)
+3. Other tools as needed (list_companies, list_projects, etc.)`;
     
     console.log(`✅ System Prompt: ${systemPrompt.length} chars (tool-first, no KB injection)`);
 

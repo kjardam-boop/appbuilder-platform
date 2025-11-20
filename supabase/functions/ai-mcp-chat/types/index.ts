@@ -72,4 +72,5 @@ export interface ContentDoc {
   keywords?: string[];
   category?: string;
   snippet?: string;
+  relevanceScore?: number;
 }
