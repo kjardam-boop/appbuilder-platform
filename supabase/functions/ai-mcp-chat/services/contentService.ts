@@ -179,12 +179,241 @@ export async function loadTenantContext(
   return context;
 }
 
-export async function scrapeWebsite(
+/**
+ * Check if a URL has been recently scraped (< 7 days)
+ */
+export async function getExistingScrapedContent(
+  supabaseClient: any,
+  tenantId: string,
   url: string
+): Promise<{ exists: boolean; content?: string; docId?: string }> {
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  
+  const { data, error } = await supabaseClient
+    .from('ai_app_content_library')
+    .select('id, content_markdown, last_processed_at')
+    .eq('tenant_id', tenantId)
+    .eq('is_active', true)
+    .contains('metadata', { source_url: url })
+    .gte('last_processed_at', sevenDaysAgo)
+    .order('last_processed_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  
+  if (error || !data) {
+    return { exists: false };
+  }
+  
+  console.log(`[Cache Hit] Found existing content for ${url}, scraped ${data.last_processed_at}`);
+  return {
+    exists: true,
+    content: data.content_markdown,
+    docId: data.id
+  };
+}
+
+/**
+ * Extract keywords from content using simple heuristics
+ */
+function extractKeywords(content: string, maxKeywords = 10): string[] {
+  // Tokenize and filter
+  const words = content
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\wæøå\s]/g, ' ')
+    .split(/\s+/)
+    .filter(w => w.length > 3)
+    .filter(w => !NORWEGIAN_STOP_WORDS.includes(w));
+  
+  // Count word frequency
+  const freq: Record<string, number> = {};
+  for (const word of words) {
+    freq[word] = (freq[word] || 0) + 1;
+  }
+  
+  // Sort by frequency and take top N
+  const sorted = Object.entries(freq)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, maxKeywords)
+    .map(([word]) => word);
+  
+  return sorted;
+}
+
+/**
+ * Auto-categorize content based on keywords and patterns
+ */
+function autoCategory(content: string, url: string): string {
+  const lower = content.toLowerCase();
+  
+  if (lower.includes('employee') || lower.includes('team') || lower.includes('ansatte') || lower.includes('medarbeider')) {
+    return 'team';
+  }
+  if (lower.includes('service') || lower.includes('tjeneste') || lower.includes('løsning')) {
+    return 'services';
+  }
+  if (lower.includes('about') || lower.includes('om oss') || lower.includes('company')) {
+    return 'company_info';
+  }
+  if (lower.includes('contact') || lower.includes('kontakt')) {
+    return 'contact';
+  }
+  if (lower.includes('product') || lower.includes('produkt')) {
+    return 'products';
+  }
+  
+  // Default based on URL structure
+  if (url.includes('/about') || url.includes('/om')) return 'company_info';
+  if (url.includes('/team')) return 'team';
+  if (url.includes('/services') || url.includes('/tjenester')) return 'services';
+  if (url.includes('/contact') || url.includes('/kontakt')) return 'contact';
+  
+  return 'general';
+}
+
+/**
+ * Chunk content into smaller pieces for better search
+ */
+function chunkContent(content: string, url: string, chunkSize = 5000): Array<{
+  content: string;
+  title: string;
+  chunkIndex: number;
+}> {
+  if (content.length <= chunkSize) {
+    return [{
+      content,
+      title: `Content from ${new URL(url).hostname}`,
+      chunkIndex: 0
+    }];
+  }
+  
+  // Split by paragraphs or sentences
+  const paragraphs = content.split(/\n\n+/);
+  const chunks: Array<{ content: string; title: string; chunkIndex: number }> = [];
+  let currentChunk = '';
+  let chunkIndex = 0;
+  
+  for (const para of paragraphs) {
+    if (currentChunk.length + para.length > chunkSize && currentChunk.length > 0) {
+      chunks.push({
+        content: currentChunk.trim(),
+        title: `Content from ${new URL(url).hostname} (Part ${chunkIndex + 1})`,
+        chunkIndex
+      });
+      currentChunk = para;
+      chunkIndex++;
+    } else {
+      currentChunk += (currentChunk ? '\n\n' : '') + para;
+    }
+  }
+  
+  // Add last chunk
+  if (currentChunk) {
+    chunks.push({
+      content: currentChunk.trim(),
+      title: `Content from ${new URL(url).hostname} (Part ${chunkIndex + 1})`,
+      chunkIndex
+    });
+  }
+  
+  console.log(`[Chunking] Split ${content.length} chars into ${chunks.length} chunks`);
+  return chunks;
+}
+
+/**
+ * Save scraped content to database
+ */
+export async function saveScrapedContent(
+  supabaseClient: any,
+  tenantId: string,
+  url: string,
+  content: string
+): Promise<{ saved: boolean; docIds: string[] }> {
+  console.log(`[Save Scraped Content] URL: ${url}, Length: ${content.length}`);
+  
+  const category = autoCategory(content, url);
+  const keywords = extractKeywords(content);
+  const chunks = chunkContent(content, url);
+  
+  const docIds: string[] = [];
+  let parentDocId: string | null = null;
+  
+  for (const chunk of chunks) {
+    try {
+      const response: any = await supabaseClient
+        .from('ai_app_content_library')
+        .insert({
+          tenant_id: tenantId,
+          title: chunk.title,
+          content_markdown: chunk.content,
+          category,
+          keywords,
+          chunk_index: chunk.chunkIndex,
+          parent_doc_id: parentDocId,
+          metadata: {
+            source_url: url,
+            scraped_at: new Date().toISOString(),
+            auto_generated: true
+          },
+          is_active: true,
+          last_processed_at: new Date().toISOString()
+        })
+        .select('id')
+        .single();
+      
+      if (response.error) {
+        console.error('[Save Error]', response.error);
+        throw response.error;
+      }
+      
+      if (response.data && response.data.id) {
+        docIds.push(response.data.id);
+        
+        // First chunk becomes parent for subsequent chunks
+        if (parentDocId === null) {
+          parentDocId = response.data.id;
+        }
+      }
+    } catch (error) {
+      console.error('[Save Error]', error);
+      throw error;
+    }
+  }
+  
+  console.log(`[Save Success] Created ${docIds.length} document(s) for ${url}`);
+  return { saved: true, docIds };
+}
+
+/**
+ * Scrape website and optionally save to database
+ */
+export async function scrapeWebsite(
+  url: string,
+  options?: {
+    saveToDb?: boolean;
+    supabaseClient?: any;
+    tenantId?: string;
+  }
 ): Promise<string> {
   console.log(`[Website Scraping] Fetching: ${url}`);
 
   const websiteUrl = url.startsWith('http') ? url : `https://${url}`;
+  
+  // Check cache first if we have DB access
+  if (options?.saveToDb && options?.supabaseClient && options?.tenantId) {
+    const cached = await getExistingScrapedContent(
+      options.supabaseClient,
+      options.tenantId,
+      websiteUrl
+    );
+    
+    if (cached.exists && cached.content) {
+      console.log(`[Cache Hit] Using cached content for ${url}`);
+      return cached.content;
+    }
+  }
+  
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
 
@@ -214,10 +443,67 @@ export async function scrapeWebsite(
       .slice(0, 15000); // Limit to 15K chars (~4K tokens)
 
     console.log(`[Website Scraping] Success: ${cleanedContent.length} chars extracted`);
+    
+    // Save to database if requested
+    if (options?.saveToDb && options?.supabaseClient && options?.tenantId && cleanedContent.length > 100) {
+      try {
+        await saveScrapedContent(
+          options.supabaseClient,
+          options.tenantId,
+          websiteUrl,
+          cleanedContent
+        );
+      } catch (saveError) {
+        console.error('[Save Error] Failed to save scraped content:', saveError);
+        // Continue even if save fails
+      }
+    }
+    
     return cleanedContent;
 
   } catch (error) {
+    clearTimeout(timeoutId);
     console.error('[Website Scraping Error]', error instanceof Error ? error.message : error);
     throw error;
+  }
+}
+
+/**
+ * Proactive scraping: scrape tenant domain if no documents exist
+ */
+export async function proactiveScrapeIfNeeded(
+  supabaseClient: any,
+  tenantId: string,
+  tenantDomain?: string
+): Promise<boolean> {
+  // Check if tenant has any documents
+  const { count } = await supabaseClient
+    .from('ai_app_content_library')
+    .select('id', { count: 'exact', head: true })
+    .eq('tenant_id', tenantId)
+    .eq('is_active', true);
+  
+  if (count > 0) {
+    console.log(`[Proactive Scraping] Tenant has ${count} documents, skipping`);
+    return false;
+  }
+  
+  if (!tenantDomain) {
+    console.log('[Proactive Scraping] No domain configured, skipping');
+    return false;
+  }
+  
+  console.log(`[Proactive Scraping] No documents found, scraping ${tenantDomain}`);
+  
+  try {
+    await scrapeWebsite(tenantDomain, {
+      saveToDb: true,
+      supabaseClient,
+      tenantId
+    });
+    return true;
+  } catch (error) {
+    console.error('[Proactive Scraping] Failed:', error);
+    return false;
   }
 }
