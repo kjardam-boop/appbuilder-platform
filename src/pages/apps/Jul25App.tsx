@@ -895,8 +895,7 @@ Visste du at: [Interessant historisk fakta om ${day}. desember]"`;
   const guestsPerDayMap = useMemo(() => getGuestsPerDay(), [families, allMembers, allPeriods, allCustomPeriods]);
 
   return (
-   return (
-  <div className="min-h-screen w-full max-w-full bg-gradient-to-b from-jul25-red-dark via-jul25-red to-jul25-red-dark/80 overflow-x-hidden">
+    <div className="min-h-screen w-full max-w-full bg-gradient-to-b from-jul25-red-dark via-jul25-red to-jul25-red-dark/80 overflow-x-hidden">
         {/* Christmas decorations */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <Star className="absolute top-10 left-10 w-8 h-8 text-jul25-gold animate-pulse drop-shadow-lg" />
