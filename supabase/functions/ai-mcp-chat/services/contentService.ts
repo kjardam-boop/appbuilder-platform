@@ -81,25 +81,42 @@ export async function searchContentLibrary(
     queryBuilder = queryBuilder.eq('category', category);
   }
   
-  // Strategy 1: Try PostgreSQL Full-Text Search with Norwegian config
-  const tsquery = tokens.join(' | '); // OR between tokens
+  // Strategy 1: Try PostgreSQL Full-Text Search with Norwegian config and relevance scoring
+  const tsquery = tokens.join(' & '); // AND between tokens for better relevance
   
   try {
     const { data: ftsData, error: ftsError } = await queryBuilder
+      .select(`
+        id, 
+        title, 
+        content_markdown, 
+        keywords, 
+        category,
+        ts_rank(
+          to_tsvector('norwegian', title || ' ' || content_markdown || ' ' || coalesce(keywords::text, '')), 
+          websearch_to_tsquery('norwegian', '${tsquery}')
+        ) as relevance_score
+      `)
       .textSearch('content_markdown', tsquery, {
         type: 'websearch',
         config: 'norwegian'
       })
+      .order('relevance_score', { ascending: false })
       .limit(limit);
     
     if (!ftsError && ftsData && ftsData.length > 0) {
       console.log(`[Content Library Search] FTS found ${ftsData.length} documents`);
       return ftsData.map((doc: any) => {
-        // Smart snippet size: full content for small docs, 8000 chars for larger
-        const snippetSize = doc.content_markdown.length < 10000 ? doc.content_markdown.length : 8000;
+        // Smart snippet size: full content for small docs, 12000 chars for larger
+        const snippetSize = doc.content_markdown.length < 15000 ? doc.content_markdown.length : 12000;
         return {
-          ...doc,
-          snippet: doc.content_markdown.slice(0, snippetSize)
+          id: doc.id,
+          title: doc.title,
+          content_markdown: doc.content_markdown,
+          keywords: doc.keywords,
+          category: doc.category,
+          snippet: doc.content_markdown.slice(0, snippetSize),
+          relevanceScore: doc.relevance_score || 0
         };
       });
     }
@@ -132,11 +149,16 @@ export async function searchContentLibrary(
   console.log(`[Content Library Search] ILIKE found ${ilikeData?.length || 0} documents`);
   
   return (ilikeData || []).map((doc: any) => {
-    // Smart snippet size: full content for small docs, 8000 chars for larger
-    const snippetSize = doc.content_markdown.length < 10000 ? doc.content_markdown.length : 8000;
+    // Smart snippet size: full content for small docs, 12000 chars for larger
+    const snippetSize = doc.content_markdown.length < 15000 ? doc.content_markdown.length : 12000;
     return {
-      ...doc,
-      snippet: doc.content_markdown.slice(0, snippetSize)
+      id: doc.id,
+      title: doc.title,
+      content_markdown: doc.content_markdown,
+      keywords: doc.keywords,
+      category: doc.category,
+      snippet: doc.content_markdown.slice(0, snippetSize),
+      relevanceScore: 0
     };
   });
 }
