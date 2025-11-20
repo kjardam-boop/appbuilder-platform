@@ -33,15 +33,24 @@ export async function handleToolCalls(
             category
           );
           
-          // Return structured data (not full markdown)
+          // Calculate relevance metrics
+          const bestScore = docs.reduce((max, d) => Math.max(max, d.relevanceScore ?? 0), 0);
+          const avgScore = docs.length > 0 
+            ? docs.reduce((sum, d) => sum + (d.relevanceScore ?? 0), 0) / docs.length 
+            : 0;
+          
+          // Return structured data with relevance info
           data = {
             found: docs.length,
+            bestScore,
+            avgScore,
             documents: docs.map(doc => ({
               id: doc.id,
               title: doc.title,
               snippet: doc.snippet,
               keywords: doc.keywords,
-              category: doc.category
+              category: doc.category,
+              relevanceScore: doc.relevanceScore ?? 0
             }))
           };
           

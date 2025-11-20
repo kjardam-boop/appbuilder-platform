@@ -11,7 +11,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.1';
 
 // Import types
-import type { QaResult } from './types/index.ts';
+import type { QaResult, ToolCall } from './types/index.ts';
 
 // Import config
 import { buildSystemPrompt } from './config/systemPrompt.ts';
@@ -20,7 +20,8 @@ import { MCP_TOOLS } from './config/tools.ts';
 // Import services
 import { 
   getTenantConfig, 
-  getTenantTheme
+  getTenantTheme,
+  scrapeWebsite
 } from './services/contentService.ts';
 import { handleToolCalls } from './services/toolHandler.ts';
 import { mapQaToExperience } from './services/layoutMapper.ts';
@@ -140,6 +141,92 @@ IMPORTANT GUIDELINES:
     );
 
     totalTokens += aiResponse.usage?.total_tokens || 0;
+
+    // Backend Guardrail: Force search_content_library if AI didn't use any tools
+    if (!aiResponse.choices?.[0]?.message?.tool_calls && iterations === 0) {
+      console.warn('⚠️ [Guardrail] AI did not use any tools. Forcing search_content_library...');
+      
+      // Find last user message
+      const lastUserMsg = messages.filter(m => m.role === 'user').slice(-1)[0];
+      if (lastUserMsg) {
+        // Create forced tool call
+        const forcedCall: ToolCall = {
+          id: 'backend_forced_search',
+          type: 'function',
+          function: {
+            name: 'search_content_library',
+            arguments: JSON.stringify({ query: lastUserMsg.content })
+          }
+        };
+        
+        // Execute the forced search
+        const searchResults = await handleToolCalls(
+          supabaseClient,
+          [forcedCall],
+          tenantId,
+          tenant.domain
+        );
+        
+        const searchData = searchResults[0].data;
+        console.log(`[Guardrail] Search found ${searchData.found} docs, bestScore: ${searchData.bestScore?.toFixed(2)}`);
+        
+        // Check if we need automatic scraping (poor coverage)
+        const needsScraping = (searchData.found < 2 || searchData.bestScore < 0.25) && tenant.domain;
+        
+        if (needsScraping && tenant.domain) {
+          console.log(`⚠️ [Auto-Scrape] Poor coverage detected. Scraping ${tenant.domain}...`);
+          
+          try {
+            // Scrape website and save to DB
+            await scrapeWebsite(tenant.domain, {
+              saveToDb: true,
+              supabaseClient,
+              tenantId
+            });
+            
+            console.log(`✅ [Auto-Scrape] Website scraped. Re-searching...`);
+            
+            // Re-run search after scraping
+            const updatedSearchResults = await handleToolCalls(
+              supabaseClient,
+              [forcedCall],
+              tenantId,
+              tenant.domain
+            );
+            
+            searchResults[0].data = updatedSearchResults[0].data;
+            console.log(`[Auto-Scrape] Updated search: ${updatedSearchResults[0].data.found} docs`);
+          } catch (scrapeError) {
+            console.error('[Auto-Scrape] Failed:', scrapeError);
+            // Continue with original search results
+          }
+        }
+        
+        // Inject forced tool call and results into conversation
+        aiMessages.push({
+          role: 'assistant',
+          content: null,
+          tool_calls: [forcedCall]
+        });
+        
+        aiMessages.push({
+          role: 'tool',
+          tool_call_id: forcedCall.id,
+          content: JSON.stringify(searchResults[0].data)
+        });
+        
+        // Get AI response with the search results
+        aiResponse = await callAI(
+          aiClientConfig,
+          aiMessages,
+          MCP_TOOLS,
+          'none' // Force final answer, no more tools
+        );
+        
+        totalTokens += aiResponse.usage?.total_tokens || 0;
+        iterations = 1; // Mark that we had one iteration
+      }
+    }
 
     // Handle tool calls (loop until AI stops calling tools)
     while (aiResponse.choices?.[0]?.message?.tool_calls && iterations < maxIterations) {
