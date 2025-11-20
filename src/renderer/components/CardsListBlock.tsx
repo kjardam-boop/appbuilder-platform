@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Mail, Phone, Globe, ChevronRight } from 'lucide-react';
 import type { CardsListBlock as CardsListBlockType } from '../schemas/experience.schema';
 import { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 
 interface CardsListBlockProps extends CardsListBlockType {
   onAction?: (actionId: string, context?: any) => void;
@@ -92,22 +93,22 @@ export const CardsListBlock = ({ title, items, onAction }: CardsListBlockProps) 
 
                       {/* Role/Subtitle */}
                       {item.subtitle && (
-                        <p 
-                          className="text-sm text-muted-foreground mb-3"
+                        <div 
+                          className="text-sm text-muted-foreground mb-3 prose prose-sm max-w-none"
                           style={{ wordBreak: 'keep-all', overflowWrap: 'break-word', hyphens: 'none' }}
                         >
-                          {item.subtitle}
-                        </p>
+                          <ReactMarkdown>{item.subtitle}</ReactMarkdown>
+                        </div>
                       )}
 
                       {/* Description */}
                       {item.body && (
-                        <p 
-                          className="text-sm text-muted-foreground mb-4"
+                        <div 
+                          className="text-sm text-muted-foreground mb-4 prose prose-sm max-w-none"
                           style={{ wordBreak: 'keep-all', overflowWrap: 'break-word', hyphens: 'none' }}
                         >
-                          {item.body}
-                        </p>
+                          <ReactMarkdown>{item.body}</ReactMarkdown>
+                        </div>
                       )}
 
                       {hasFullDescription && (
@@ -169,12 +170,12 @@ export const CardsListBlock = ({ title, items, onAction }: CardsListBlockProps) 
 
                       <CardContent className="flex flex-col flex-1">
                         {item.body && (
-                          <p 
-                            className="text-sm text-muted-foreground mb-4"
+                          <div 
+                            className="text-sm text-muted-foreground mb-4 prose prose-sm max-w-none"
                             style={{ wordBreak: 'keep-all', overflowWrap: 'break-word', hyphens: 'none' }}
                           >
-                            {item.body}
-                          </p>
+                            <ReactMarkdown>{item.body}</ReactMarkdown>
+                          </div>
                         )}
 
                         {hasFullDescription && (

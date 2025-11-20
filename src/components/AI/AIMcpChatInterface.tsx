@@ -170,10 +170,10 @@ export function AIMcpChatInterface({
                 
                 <div
                   className={cn(
-                    "rounded-lg p-2 md:p-3 max-w-[85%] md:max-w-[80%] min-w-0 break-words overflow-hidden",
+                    "rounded-lg p-2 md:p-3 min-w-0 break-words overflow-hidden",
                     message.role === 'user'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted w-full'
+                      ? 'bg-primary text-primary-foreground max-w-[85%] md:max-w-[80%]'
+                      : 'bg-muted w-full max-w-full'
                   )}
                 >
                   <MessageContent content={message.content} onAction={handleExperienceAction} />
