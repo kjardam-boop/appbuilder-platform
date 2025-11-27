@@ -1,4 +1,8 @@
-// @ts-nocheck
+/**
+ * Opportunity Service
+ * 
+ * Sales opportunity management service.
+ */
 /**
  * Opportunity Service
  */

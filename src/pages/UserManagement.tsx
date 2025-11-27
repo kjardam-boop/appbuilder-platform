@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useCurrentUser } from "@/modules/core/user";
 import { UserList } from "@/modules/core/user";
 import { Alert, AlertDescription } from "@/components/ui/alert";

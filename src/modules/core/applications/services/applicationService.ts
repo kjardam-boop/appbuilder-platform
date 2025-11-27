@@ -1,4 +1,8 @@
-// @ts-nocheck
+/**
+ * Application Service
+ * 
+ * App catalog and installation service.
+ */
 import { supabase } from "@/integrations/supabase/client";
 import type { RequestContext } from "@/shared/types";
 import type {

@@ -52,8 +52,6 @@ export interface ExternalSystem extends BaseEntity {
   skus?: ExternalSystemSKU[];
   erp_extension?: ExternalSystemERPData;
   category_id?: string | null;
-  // Backward compat aliases
-  app_types?: string[]; // Deprecated: use system_types
 }
 
 export interface ExternalSystemSKU extends BaseEntity {

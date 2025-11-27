@@ -56,7 +56,7 @@ CREATE POLICY "Tenant admins can manage tenant content"
       WHERE user_roles.user_id = auth.uid()
       AND user_roles.role IN ('tenant_owner', 'tenant_admin')
       AND user_roles.scope_type = 'tenant'
-      AND user_roles.scope_id = ai_app_content_library.tenant_id
+      AND user_roles.scope_id = ai_app_content_library.tenant_id::uuid
     )
   );
 

@@ -1,4 +1,8 @@
-// @ts-nocheck
+/**
+ * Document Service
+ * 
+ * Document management service.
+ */
 import { supabase } from "@/integrations/supabase/client";
 import { Document, DocumentVersion } from "../types/document.types";
 import { ProjectPhase } from "@/modules/core/project/types/project.types";

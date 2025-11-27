@@ -7,7 +7,7 @@ import { useAppDefinitions } from "@/modules/core/applications/hooks/useAppRegis
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Package, Plus, Settings } from "lucide-react";
+import { Package, Plus, Settings, Wand2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { AppBreadcrumbs } from '@/components/ui/app-breadcrumbs';
 import { generateAdminBreadcrumbs } from '@/helpers/breadcrumbHelper';
@@ -38,12 +38,20 @@ export default function AppCatalog() {
             Platform-level app definitions og versjoner
           </p>
         </div>
-        <Button asChild>
-          <Link to="/admin/apps/new">
-            <Plus className="mr-2 h-4 w-4" />
-            Registrer ny app
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button asChild variant="default">
+            <Link to="/admin/apps/wizard">
+              <Wand2 className="mr-2 h-4 w-4" />
+              App Creation Wizard
+            </Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link to="/admin/apps/new">
+              <Plus className="mr-2 h-4 w-4" />
+              Registrer ny app
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Core Apps */}

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useNavigate } from "react-router-dom";
 import { useUserProjects } from "@/modules/core/project";
 import { useCurrentUser } from "@/modules/core/user";

@@ -1,7 +1,12 @@
-// @ts-nocheck
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import type { RequestContext } from "@/shared/types";
 import type { ExternalSystemVendor, ExternalSystemVendorInput } from "../types/application.types";
+
+type VendorRow = Database['public']['Tables']['external_system_vendors']['Row'];
+type VendorInsert = Database['public']['Tables']['external_system_vendors']['Insert'];
+type VendorUpdate = Database['public']['Tables']['external_system_vendors']['Update'];
+type CompanyRow = Database['public']['Tables']['companies']['Row'];
 
 export class VendorService {
   static async listVendors(ctx: RequestContext, includeArchived: boolean = false): Promise<ExternalSystemVendor[]> {

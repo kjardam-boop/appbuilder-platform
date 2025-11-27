@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Webhook Service
  * Handles webhook registration and processing
@@ -6,6 +5,10 @@
 
 import { WebhookHandler, WebhookPayload, WebhookLog } from '../types/webhook.types';
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
+
+type WebhookLogRow = Database['public']['Tables']['webhook_logs']['Row'];
+type WebhookLogInsert = Database['public']['Tables']['webhook_logs']['Insert'];
 
 export class WebhookService {
   private static handlers = new Map<string, WebhookHandler<any>>();

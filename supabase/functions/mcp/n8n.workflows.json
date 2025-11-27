@@ -2,5 +2,8 @@
   "send_gmail_on_project_create": "/webhook/send-gmail",
   "sync_vendor_catalog": "/webhook/sync-vendors",
   "notify_project_update": "/webhook/notify-project",
-  "process_supplier_evaluation": "/webhook/process-evaluation"
+  "process_supplier_evaluation": "/webhook/process-evaluation",
+  "prepare-miro-workshop": "/webhook/prepare-miro-workshop",
+  "process-workshop-results": "/webhook/process-workshop-results",
+  "sync-workshop-notion": "/webhook/sync-workshop-notion"
 }

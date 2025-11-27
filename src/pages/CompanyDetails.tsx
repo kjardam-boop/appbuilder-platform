@@ -1,5 +1,3 @@
-// @ts-nocheck
-// @ts-nocheck
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Building2, Copy, RefreshCw, Globe, ExternalLink, Phone, Users, ChevronRight, ChevronDown, Plug } from "lucide-react";

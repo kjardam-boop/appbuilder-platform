@@ -1,4 +1,8 @@
-// @ts-nocheck
+/**
+ * User Service
+ * 
+ * User management and profile service.
+ */
 import { supabase } from "@/integrations/supabase/client";
 import { AuthUser, Profile, UserRole, UserRoleRecord } from "../types/user.types";
 import { RoleService } from "./roleService";

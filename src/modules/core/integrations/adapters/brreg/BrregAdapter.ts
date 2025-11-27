@@ -1,13 +1,13 @@
-// @ts-nocheck
 /**
  * Brreg Adapter
  * Handles all communication with Brønnøysundregistrene
  */
 
 import { BaseAdapter } from '../base/BaseAdapter';
-import { BrregConfig, BrregCompanyData, BrregSearchResult } from './types';
+import { BrregConfig, BrregCompanyData, BrregSearchResult, BrregEnhancedData } from './types';
 import { IntegrationResponse, IntegrationCallOptions } from '../../types/integration.types';
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 
 export class BrregAdapter extends BaseAdapter<BrregConfig, BrregCompanyData> {
   name = 'brreg';

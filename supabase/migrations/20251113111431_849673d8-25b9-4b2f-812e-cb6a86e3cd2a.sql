@@ -43,7 +43,7 @@ USING (
     SELECT 1 FROM public.user_roles
     WHERE user_roles.user_id = auth.uid()
     AND user_roles.scope_type = 'tenant'
-    AND user_roles.scope_id = ai_app_content_library.tenant_id
+    AND user_roles.scope_id = ai_app_content_library.tenant_id::uuid
   )
 )
 WITH CHECK (
@@ -52,6 +52,6 @@ WITH CHECK (
     SELECT 1 FROM public.user_roles
     WHERE user_roles.user_id = auth.uid()
     AND user_roles.scope_type = 'tenant'
-    AND user_roles.scope_id = ai_app_content_library.tenant_id
+    AND user_roles.scope_id = ai_app_content_library.tenant_id::uuid
   )
 );

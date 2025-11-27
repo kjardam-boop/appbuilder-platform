@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +9,7 @@ import { CompanyUserService } from '@/modules/core/company/services/companyUserS
 import { CompanyMembership, CompanyRole, COMPANY_ROLES } from '@/modules/core/company/types/companyUser.types';
 import { supabase } from '@/integrations/supabase/client';
 import { buildClientContext } from '@/shared/lib/buildContext';
+import type { Database } from '@/integrations/supabase/types';
 
 interface CompanyAccessManagerProps {
   userId: string;

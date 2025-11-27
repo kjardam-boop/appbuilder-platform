@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { OpportunityService } from "@/modules/core/opportunity";

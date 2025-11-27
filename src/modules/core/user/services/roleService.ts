@@ -1,6 +1,9 @@
-// @ts-nocheck
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { UserRoleRecord, RoleScope, AppRole, RoleGrant } from "../types/role.types";
+
+type UserRoleRow = Database['public']['Tables']['user_roles']['Row'];
+type UserRoleInsert = Database['public']['Tables']['user_roles']['Insert'];
 
 export class RoleService {
   /**

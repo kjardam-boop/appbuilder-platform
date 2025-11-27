@@ -1,10 +1,14 @@
-// @ts-nocheck
 /**
  * Product Service
  */
 
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 import type { Product } from '../types/opportunity.types';
+
+type ProductRow = Database['public']['Tables']['products']['Row'];
+type ProductInsert = Database['public']['Tables']['products']['Insert'];
+type ProductUpdate = Database['public']['Tables']['products']['Update'];
 
 export class ProductService {
   static async getProducts(filters?: {

@@ -1,5 +1,5 @@
-// @ts-nocheck
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import type { RequestContext } from "@/modules/tenant/types/tenant.types";
 import type { AIScore, AICriteria, AIRisk, AIFollowUpQuestion } from "./aiScoringService";
 

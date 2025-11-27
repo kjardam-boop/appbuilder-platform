@@ -1,7 +1,6 @@
-// @ts-nocheck
 import { useState } from 'react';
 import { CompanyService } from '../services/companyService';
-import { BrregCompanySearchResult, Company } from '../types/company.types';
+import { BrregCompanySearchResult } from '../types/company.types';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 

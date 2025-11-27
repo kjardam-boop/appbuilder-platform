@@ -1,0 +1,463 @@
+{
+  "name": "Prepare Miro Workshop Board",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "prepare-miro-workshop",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 300],
+      "webhookId": "prepare-miro-workshop"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract input data from webhook\nconst input = $input.first().json;\n\nconst projectId = input.body?.input?.project_id;\nconst companyId = input.body?.input?.company_id;\nconst systems = input.body?.input?.systems || [];\nconst questionnaire = input.body?.input?.questionnaire || {};\nconst context = input.body?.context || {};\n\nif (!projectId) {\n  throw new Error('project_id is required');\n}\n\nreturn {\n  projectId,\n  companyId,\n  systems,\n  questionnaire,\n  tenantId: context.tenant_id,\n  userId: context.user_id,\n  requestId: context.request_id\n};"
+      },
+      "id": "parse-input",
+      "name": "Parse Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  cap.id,\n  cap.name,\n  cap.description,\n  cap.status,\n  cap.workshop_status,\n  c.id as company_id,\n  c.name as company_name,\n  c.industry_description,\n  c.org_number\nFROM customer_app_projects cap\nLEFT JOIN companies c ON c.id = cap.company_id\nWHERE cap.id = '{{ $json.projectId }}'::uuid",
+        "options": {}
+      },
+      "id": "get-project",
+      "name": "Get Project & Company",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [440, 300],
+      "credentials": {
+        "postgres": {
+          "id": "SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  ps.id,\n  ps.integration_priority,\n  ps.data_direction,\n  COALESCE(es.name, ps.custom_system_name) as system_name,\n  COALESCE(es.category, ps.custom_system_type) as system_type,\n  esv.name as vendor_name\nFROM project_systems ps\nLEFT JOIN external_systems es ON es.id = ps.external_system_id\nLEFT JOIN external_system_vendors esv ON esv.id = es.vendor_id\nWHERE ps.project_id = '{{ $json.projectId }}'::uuid",
+        "options": {}
+      },
+      "id": "get-systems",
+      "name": "Get Project Systems",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [440, 500],
+      "credentials": {
+        "postgres": {
+          "id": "SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  question_key,\n  question_text,\n  answer,\n  category,\n  sentiment\nFROM project_questionnaire_responses\nWHERE project_id = '{{ $json.projectId }}'::uuid\nORDER BY sort_order",
+        "options": {}
+      },
+      "id": "get-questionnaire",
+      "name": "Get Questionnaire Responses",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [440, 700],
+      "credentials": {
+        "postgres": {
+          "id": "SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.miro.com/v2/boards",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"name\": \"{{ $node['Get Project & Company'].json[0].company_name }} - Discovery Workshop\",\n  \"description\": \"Workshop board for {{ $node['Get Project & Company'].json[0].name }}\",\n  \"teamId\": \"{{ $env.MIRO_TEAM_ID }}\",\n  \"sharingPolicy\": {\n    \"access\": \"private\",\n    \"inviteToAccountAndBoardLinkAccess\": \"editor\",\n    \"organizationAccess\": \"edit\"\n  }\n}",
+        "options": {}
+      },
+      "id": "create-miro-board",
+      "name": "Create Miro Board",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "MIRO_API_CREDENTIAL_ID",
+          "name": "Miro API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.miro.com/v2/boards/{{ $node['Create Miro Board'].json.id }}/frames",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"data\": {\n    \"title\": \"1. Company Context\",\n    \"format\": \"custom\",\n    \"width\": 1200,\n    \"height\": 800\n  },\n  \"position\": {\n    \"x\": 0,\n    \"y\": 0\n  }\n}",
+        "options": {}
+      },
+      "id": "create-context-frame",
+      "name": "Create Context Frame",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 100],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "MIRO_API_CREDENTIAL_ID",
+          "name": "Miro API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.miro.com/v2/boards/{{ $node['Create Miro Board'].json.id }}/frames",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"data\": {\n    \"title\": \"2. Current Systems\",\n    \"format\": \"custom\",\n    \"width\": 1600,\n    \"height\": 800\n  },\n  \"position\": {\n    \"x\": 1400,\n    \"y\": 0\n  }\n}",
+        "options": {}
+      },
+      "id": "create-systems-frame",
+      "name": "Create Systems Frame",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "MIRO_API_CREDENTIAL_ID",
+          "name": "Miro API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.miro.com/v2/boards/{{ $node['Create Miro Board'].json.id }}/frames",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"data\": {\n    \"title\": \"3. Discovery Insights\",\n    \"format\": \"custom\",\n    \"width\": 2000,\n    \"height\": 800\n  },\n  \"position\": {\n    \"x\": 0,\n    \"y\": 1000\n  }\n}",
+        "options": {}
+      },
+      "id": "create-discovery-frame",
+      "name": "Create Discovery Frame",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 500],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "MIRO_API_CREDENTIAL_ID",
+          "name": "Miro API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.miro.com/v2/boards/{{ $node['Create Miro Board'].json.id }}/frames",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"data\": {\n    \"title\": \"4. Process Mapping\",\n    \"format\": \"custom\",\n    \"width\": 2400,\n    \"height\": 1200\n  },\n  \"position\": {\n    \"x\": 0,\n    \"y\": 2000\n  }\n}",
+        "options": {}
+      },
+      "id": "create-process-frame",
+      "name": "Create Process Frame",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 700],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "MIRO_API_CREDENTIAL_ID",
+          "name": "Miro API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.miro.com/v2/boards/{{ $node['Create Miro Board'].json.id }}/frames",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"data\": {\n    \"title\": \"5. Solution Ideation (MoSCoW)\",\n    \"format\": \"custom\",\n    \"width\": 2000,\n    \"height\": 1000\n  },\n  \"position\": {\n    \"x\": 0,\n    \"y\": 3400\n  }\n}",
+        "options": {}
+      },
+      "id": "create-solution-frame",
+      "name": "Create Solution Frame",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 900],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "MIRO_API_CREDENTIAL_ID",
+          "name": "Miro API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.miro.com/v2/boards/{{ $node['Create Miro Board'].json.id }}/sticky_notes",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"data\": {\n    \"content\": \"<strong>{{ $node['Get Project & Company'].json[0].company_name }}</strong>\\n\\nIndustry: {{ $node['Get Project & Company'].json[0].industry_description || 'N/A' }}\\nOrg: {{ $node['Get Project & Company'].json[0].org_number || 'N/A' }}\",\n    \"shape\": \"square\"\n  },\n  \"style\": {\n    \"fillColor\": \"light_blue\",\n    \"textAlign\": \"left\",\n    \"textAlignVertical\": \"top\"\n  },\n  \"position\": {\n    \"x\": 100,\n    \"y\": 100\n  },\n  \"geometry\": {\n    \"width\": 300,\n    \"height\": 200\n  },\n  \"parent\": {\n    \"id\": \"{{ $node['Create Context Frame'].json.id }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "add-company-sticky",
+      "name": "Add Company Info Sticky",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, 100],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "MIRO_API_CREDENTIAL_ID",
+          "name": "Miro API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Create sticky notes for each system\nconst systems = $node['Get Project Systems'].json || [];\nconst boardId = $node['Create Miro Board'].json.id;\nconst frameId = $node['Create Systems Frame'].json.id;\n\nconst colors = {\n  'erp': 'green',\n  'crm': 'blue', \n  'bi': 'yellow',\n  'ecommerce': 'orange',\n  'hr': 'violet',\n  'default': 'gray'\n};\n\nreturn systems.map((system, index) => ({\n  boardId,\n  frameId,\n  system,\n  x: 100 + (index % 4) * 350,\n  y: 100 + Math.floor(index / 4) * 250,\n  color: colors[system.system_type?.toLowerCase()] || colors.default\n}));"
+      },
+      "id": "prepare-systems",
+      "name": "Prepare Systems Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.miro.com/v2/boards/{{ $json.boardId }}/sticky_notes",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"data\": {\n    \"content\": \"<strong>{{ $json.system.system_name }}</strong>\\n{{ $json.system.system_type }}\\n{{ $json.system.vendor_name || '' }}\",\n    \"shape\": \"square\"\n  },\n  \"style\": {\n    \"fillColor\": \"{{ $json.color }}\",\n    \"textAlign\": \"center\",\n    \"textAlignVertical\": \"middle\"\n  },\n  \"position\": {\n    \"x\": {{ $json.x }},\n    \"y\": {{ $json.y }}\n  },\n  \"geometry\": {\n    \"width\": 280,\n    \"height\": 180\n  },\n  \"parent\": {\n    \"id\": \"{{ $json.frameId }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "add-system-stickies",
+      "name": "Add System Stickies",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1540, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "MIRO_API_CREDENTIAL_ID",
+          "name": "Miro API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Create sticky notes for questionnaire responses categorized by type\nconst responses = $node['Get Questionnaire Responses'].json || [];\nconst boardId = $node['Create Miro Board'].json.id;\nconst frameId = $node['Create Discovery Frame'].json.id;\n\nconst categoryColors = {\n  'pain_point': 'red',\n  'need': 'light_blue',\n  'goal': 'green',\n  'risk': 'orange',\n  'requirement': 'yellow',\n  'constraint': 'violet',\n  'default': 'gray'\n};\n\nconst categoryColumns = {\n  'pain_point': 0,\n  'need': 1,\n  'goal': 2,\n  'risk': 3\n};\n\nconst categoryCounts = {};\n\nreturn responses.map((response) => {\n  const category = response.category || 'default';\n  const column = categoryColumns[category] ?? 4;\n  categoryCounts[column] = (categoryCounts[column] || 0) + 1;\n  \n  return {\n    boardId,\n    frameId,\n    response,\n    x: 100 + column * 450,\n    y: 100 + (categoryCounts[column] - 1) * 200,\n    color: categoryColors[category] || categoryColors.default\n  };\n});"
+      },
+      "id": "prepare-discovery",
+      "name": "Prepare Discovery Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 500]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.miro.com/v2/boards/{{ $json.boardId }}/sticky_notes",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"data\": {\n    \"content\": \"{{ $json.response.answer?.substring(0, 200) || $json.response.question_text }}\",\n    \"shape\": \"square\"\n  },\n  \"style\": {\n    \"fillColor\": \"{{ $json.color }}\",\n    \"textAlign\": \"left\",\n    \"textAlignVertical\": \"top\"\n  },\n  \"position\": {\n    \"x\": {{ $json.x }},\n    \"y\": {{ $json.y }}\n  },\n  \"geometry\": {\n    \"width\": 400,\n    \"height\": 160\n  },\n  \"parent\": {\n    \"id\": \"{{ $json.frameId }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "add-discovery-stickies",
+      "name": "Add Discovery Stickies",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1540, 500],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "MIRO_API_CREDENTIAL_ID",
+          "name": "Miro API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Create MoSCoW column headers\nconst boardId = $node['Create Miro Board'].json.id;\nconst frameId = $node['Create Solution Frame'].json.id;\n\nconst columns = [\n  { title: 'MUST HAVE', color: 'red', x: 100 },\n  { title: 'SHOULD HAVE', color: 'yellow', x: 550 },\n  { title: 'COULD HAVE', color: 'green', x: 1000 },\n  { title: 'WON\\'T HAVE', color: 'gray', x: 1450 }\n];\n\nreturn columns.map(col => ({\n  boardId,\n  frameId,\n  title: col.title,\n  color: col.color,\n  x: col.x,\n  y: 50\n}));"
+      },
+      "id": "prepare-moscow",
+      "name": "Prepare MoSCoW Headers",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 900]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.miro.com/v2/boards/{{ $json.boardId }}/sticky_notes",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"data\": {\n    \"content\": \"<strong>{{ $json.title }}</strong>\",\n    \"shape\": \"rectangle\"\n  },\n  \"style\": {\n    \"fillColor\": \"{{ $json.color }}\",\n    \"textAlign\": \"center\",\n    \"textAlignVertical\": \"middle\"\n  },\n  \"position\": {\n    \"x\": {{ $json.x }},\n    \"y\": {{ $json.y }}\n  },\n  \"geometry\": {\n    \"width\": 380,\n    \"height\": 80\n  },\n  \"parent\": {\n    \"id\": \"{{ $json.frameId }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "add-moscow-headers",
+      "name": "Add MoSCoW Headers",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1540, 900],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "MIRO_API_CREDENTIAL_ID",
+          "name": "Miro API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE customer_app_projects\nSET \n  miro_board_id = '{{ $node['Create Miro Board'].json.id }}',\n  miro_board_url = '{{ $node['Create Miro Board'].json.viewLink }}',\n  workshop_status = 'board_ready',\n  updated_at = NOW()\nWHERE id = '{{ $node['Parse Input'].json.projectId }}'::uuid\nRETURNING id, miro_board_id, miro_board_url, workshop_status",
+        "options": {}
+      },
+      "id": "update-project",
+      "name": "Update Project Status",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1760, 500],
+      "credentials": {
+        "postgres": {
+          "id": "SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"board_id\": \"{{ $node['Create Miro Board'].json.id }}\",\n  \"board_url\": \"{{ $node['Create Miro Board'].json.viewLink }}\",\n  \"project_id\": \"{{ $node['Parse Input'].json.projectId }}\",\n  \"status\": \"board_ready\"\n}",
+        "options": {}
+      },
+      "id": "respond-success",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1980, 500]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [{ "node": "Parse Input", "type": "main", "index": 0 }]
+      ]
+    },
+    "Parse Input": {
+      "main": [
+        [
+          { "node": "Get Project & Company", "type": "main", "index": 0 },
+          { "node": "Get Project Systems", "type": "main", "index": 0 },
+          { "node": "Get Questionnaire Responses", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Get Project & Company": {
+      "main": [
+        [{ "node": "Create Miro Board", "type": "main", "index": 0 }]
+      ]
+    },
+    "Create Miro Board": {
+      "main": [
+        [
+          { "node": "Create Context Frame", "type": "main", "index": 0 },
+          { "node": "Create Systems Frame", "type": "main", "index": 0 },
+          { "node": "Create Discovery Frame", "type": "main", "index": 0 },
+          { "node": "Create Process Frame", "type": "main", "index": 0 },
+          { "node": "Create Solution Frame", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Create Context Frame": {
+      "main": [
+        [{ "node": "Add Company Info Sticky", "type": "main", "index": 0 }]
+      ]
+    },
+    "Create Systems Frame": {
+      "main": [
+        [{ "node": "Prepare Systems Data", "type": "main", "index": 0 }]
+      ]
+    },
+    "Prepare Systems Data": {
+      "main": [
+        [{ "node": "Add System Stickies", "type": "main", "index": 0 }]
+      ]
+    },
+    "Create Discovery Frame": {
+      "main": [
+        [{ "node": "Prepare Discovery Data", "type": "main", "index": 0 }]
+      ]
+    },
+    "Prepare Discovery Data": {
+      "main": [
+        [{ "node": "Add Discovery Stickies", "type": "main", "index": 0 }]
+      ]
+    },
+    "Create Solution Frame": {
+      "main": [
+        [{ "node": "Prepare MoSCoW Headers", "type": "main", "index": 0 }]
+      ]
+    },
+    "Prepare MoSCoW Headers": {
+      "main": [
+        [{ "node": "Add MoSCoW Headers", "type": "main", "index": 0 }]
+      ]
+    },
+    "Add MoSCoW Headers": {
+      "main": [
+        [{ "node": "Update Project Status", "type": "main", "index": 0 }]
+      ]
+    },
+    "Update Project Status": {
+      "main": [
+        [{ "node": "Respond Success", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    { "name": "workshop" },
+    { "name": "miro" },
+    { "name": "appbuilder" }
+  ],
+  "triggerCount": 0,
+  "updatedAt": "2024-11-26T00:00:00.000Z",
+  "versionId": "1"
+}
+

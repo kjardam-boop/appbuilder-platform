@@ -1,6 +1,9 @@
-// @ts-nocheck
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import type { ExternalSystemERPData, ExternalSystemERPDataInput } from "../types/erpExtension.types";
+
+// Note: external_system_erp_data table may not be in generated types yet
+type SupabaseClient = typeof supabase;
 
 export class ERPExtensionService {
   static async getByProductId(externalSystemId: string): Promise<ExternalSystemERPData | null> {

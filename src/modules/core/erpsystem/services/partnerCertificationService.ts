@@ -1,11 +1,13 @@
-// @ts-nocheck
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import type {
   PartnerCertification,
   PartnerCertificationInput,
 } from "../types/erpsystem.types";
 import type { Company } from "@/modules/core/company/types/company.types";
 import type { RequestContext } from "@/modules/tenant/types/tenant.types";
+
+type PartnerCertificationRow = Database['public']['Tables']['partner_certifications']['Row'];
 
 export class PartnerCertificationService {
   /**

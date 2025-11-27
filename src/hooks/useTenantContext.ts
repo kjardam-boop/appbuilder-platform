@@ -136,11 +136,11 @@ export const useTenantContext = (): RequestContext | null => {
           } catch {}
         }
         
-        // Dev mode: fallback to static config if localhost
+        // Dev mode: fallback to platform tenant from database
         const isDev = host === 'localhost' || host.startsWith('127.0.0.1');
         
         if (isDev) {
-          // Check for specific tenant paths
+          // Check for specific tenant paths (static configs)
           if (window.location.pathname.startsWith('/akselera')) {
             const staticConfig = staticConfigs['akselera'];
             const ctx: RequestContext = {
@@ -161,7 +161,38 @@ export const useTenantContext = (): RequestContext | null => {
             return;
           }
           
-          // Default dev tenant for other paths (jul25, admin, etc.)
+          // For admin/wizard: use actual platform tenant from database
+          // This ensures we have a valid UUID for database operations
+          const { data: platformTenant } = await supabase
+            .from('tenants')
+            .select('*')
+            .or('slug.eq.default,is_platform_tenant.eq.true')
+            .order('created_at', { ascending: true })
+            .limit(1)
+            .single();
+          
+          if (platformTenant) {
+            console.info('[TenantContext] Dev mode: using platform tenant', platformTenant.name);
+            const ctx: RequestContext = {
+              tenant_id: platformTenant.id,
+              tenant: {
+                tenant_id: platformTenant.id,
+                name: platformTenant.name,
+                host,
+                enabled_modules: [],
+                custom_config: platformTenant.settings || {},
+              } as any,
+              user_id: user.id,
+              user_role: 'platform_owner',
+              request_id: crypto.randomUUID(),
+              timestamp: new Date().toISOString(),
+            };
+            setContext(ctx);
+            return;
+          }
+          
+          // Fallback: create minimal dev context (will fail on DB writes)
+          console.warn('[TenantContext] No platform tenant found in database!');
           const ctx: RequestContext = {
             tenant_id: 'dev-tenant',
             tenant: {

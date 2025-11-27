@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/modules/core/user/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';

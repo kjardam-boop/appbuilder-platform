@@ -138,7 +138,7 @@ export function transformExternalSystemToDefinition(system: ExternalSystemData) 
       ip_allowlist: !!system.ip_allowlist,
       rate_limits: system.rate_limits || null,
     },
-    tags: system.app_types || [],
+    tags: system.system_types || system.app_types || [],
     is_active: system.status === 'Active',
   };
 }

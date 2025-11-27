@@ -1,7 +1,10 @@
-// @ts-nocheck
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import type { RequestContext } from "@/modules/tenant/types/tenant.types";
 import type { AuditLog, AuditLogInput } from "../types/compliance.types";
+
+type AuditLogRow = Database['public']['Tables']['audit_logs']['Row'];
+type AuditLogInsert = Database['public']['Tables']['audit_logs']['Insert'];
 
 export class AuditLogService {
   /**

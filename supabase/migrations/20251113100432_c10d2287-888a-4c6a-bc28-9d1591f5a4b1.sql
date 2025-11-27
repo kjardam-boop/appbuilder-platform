@@ -1,5 +1,5 @@
--- Create ai_app_content_library table
-CREATE TABLE public.ai_app_content_library (
+-- Create ai_app_content_library table (if not exists - may be created by earlier migration)
+CREATE TABLE IF NOT EXISTS public.ai_app_content_library (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id UUID REFERENCES public.tenants(id) ON DELETE CASCADE,
   category TEXT NOT NULL,
@@ -22,52 +22,67 @@ CREATE TABLE public.ai_app_content_library (
   CONSTRAINT valid_file_size CHECK (file_size_bytes IS NULL OR file_size_bytes <= 10485760)
 );
 
--- Create indexes
-CREATE INDEX idx_ai_content_tenant ON public.ai_app_content_library(tenant_id);
-CREATE INDEX idx_ai_content_category ON public.ai_app_content_library(category);
-CREATE INDEX idx_ai_content_keywords ON public.ai_app_content_library USING GIN(keywords);
-CREATE INDEX idx_ai_content_active ON public.ai_app_content_library(is_active);
-CREATE INDEX idx_ai_content_file_path ON public.ai_app_content_library(file_storage_path);
-CREATE INDEX idx_ai_content_file_type ON public.ai_app_content_library(file_type);
+-- Create indexes (if not exists)
+CREATE INDEX IF NOT EXISTS idx_ai_content_tenant ON public.ai_app_content_library(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_ai_content_category ON public.ai_app_content_library(category);
+CREATE INDEX IF NOT EXISTS idx_ai_content_keywords ON public.ai_app_content_library USING GIN(keywords);
+CREATE INDEX IF NOT EXISTS idx_ai_content_active ON public.ai_app_content_library(is_active);
+CREATE INDEX IF NOT EXISTS idx_ai_content_file_path ON public.ai_app_content_library(file_storage_path);
+CREATE INDEX IF NOT EXISTS idx_ai_content_file_type ON public.ai_app_content_library(file_type);
 
 -- Enable RLS
 ALTER TABLE public.ai_app_content_library ENABLE ROW LEVEL SECURITY;
 
--- RLS Policies
-CREATE POLICY "Platform admins can manage all content"
-ON public.ai_app_content_library
-FOR ALL
-USING (is_platform_admin(auth.uid()))
-WITH CHECK (is_platform_admin(auth.uid()));
+-- RLS Policies (skip if already exist from earlier migration)
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'ai_app_content_library' AND policyname = 'Platform admins can manage all content v2') THEN
+    CREATE POLICY "Platform admins can manage all content v2"
+    ON public.ai_app_content_library
+    FOR ALL
+    USING (is_platform_admin(auth.uid()))
+    WITH CHECK (is_platform_admin(auth.uid()));
+  END IF;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE POLICY "Tenant admins can manage their content"
-ON public.ai_app_content_library
-FOR ALL
-USING (
-  tenant_id IS NULL OR
-  EXISTS (
-    SELECT 1 FROM public.user_roles
-    WHERE user_id = auth.uid()
-      AND scope_type = 'tenant'
-      AND scope_id = ai_app_content_library.tenant_id
-      AND role IN ('tenant_owner', 'tenant_admin')
-  )
-)
-WITH CHECK (
-  tenant_id IS NULL OR
-  EXISTS (
-    SELECT 1 FROM public.user_roles
-    WHERE user_id = auth.uid()
-      AND scope_type = 'tenant'
-      AND scope_id = ai_app_content_library.tenant_id
-      AND role IN ('tenant_owner', 'tenant_admin')
-  )
-);
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'ai_app_content_library' AND policyname = 'Tenant admins can manage their content v2') THEN
+    CREATE POLICY "Tenant admins can manage their content v2"
+    ON public.ai_app_content_library
+    FOR ALL
+    USING (
+      tenant_id IS NULL OR
+      EXISTS (
+        SELECT 1 FROM public.user_roles
+        WHERE user_id = auth.uid()
+          AND scope_type = 'tenant'::role_scope
+          AND scope_id = ai_app_content_library.tenant_id::uuid
+          AND role IN ('tenant_owner'::app_role, 'tenant_admin'::app_role)
+      )
+    )
+    WITH CHECK (
+      tenant_id IS NULL OR
+      EXISTS (
+        SELECT 1 FROM public.user_roles
+        WHERE user_id = auth.uid()
+          AND scope_type = 'tenant'::role_scope
+          AND scope_id = ai_app_content_library.tenant_id::uuid
+          AND role IN ('tenant_owner'::app_role, 'tenant_admin'::app_role)
+      )
+    );
+  END IF;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE POLICY "Authenticated users can view active content"
-ON public.ai_app_content_library
-FOR SELECT
-USING (is_active = true);
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'ai_app_content_library' AND policyname = 'Authenticated users can view active content v2') THEN
+    CREATE POLICY "Authenticated users can view active content v2"
+    ON public.ai_app_content_library
+    FOR SELECT
+    USING (is_active = true);
+  END IF;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- Trigger for updated_at
 CREATE TRIGGER update_ai_content_library_updated_at

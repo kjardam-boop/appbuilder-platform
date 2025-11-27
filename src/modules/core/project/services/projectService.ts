@@ -1,4 +1,9 @@
-// @ts-nocheck
+/**
+ * Project Service
+ * 
+ * Business logic for project management.
+ * Handles CRUD operations, requirements, stakeholders, and suppliers.
+ */
 import { supabase } from "@/integrations/supabase/client";
 import type {
   Project,
@@ -10,6 +15,7 @@ import type {
   SupplierStatus,
 } from "../types/project.types";
 import type { RequestContext } from "@/modules/tenant/types/tenant.types";
+import { asSingle, asArray } from "@/shared/types/database.types";
 
 export class ProjectService {
   /**

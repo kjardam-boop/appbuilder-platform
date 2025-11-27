@@ -1,9 +1,12 @@
-// @ts-nocheck
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 import { CompanyUser, CompanyMembership, CompanyRole } from '../types/companyUser.types';
 import type { RequestContext } from '@/modules/tenant/types/tenant.types';
 import { RoleService } from '@/modules/core/user/services/roleService';
-import { COMPANY_ROLE_MAPPING, APP_TO_COMPANY_ROLE, AppRole } from '@/modules/core/user/types/role.types';
+import { COMPANY_ROLE_MAPPING, APP_TO_COMPANY_ROLE } from '@/modules/core/user/types/role.types';
+
+type ProfileRow = Database['public']['Tables']['profiles']['Row'];
+type CompanyRow = Database['public']['Tables']['companies']['Row'];
 
 export class CompanyUserService {
   /**

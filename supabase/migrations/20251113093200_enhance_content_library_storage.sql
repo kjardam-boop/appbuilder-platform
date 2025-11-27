@@ -41,37 +41,38 @@ CREATE INDEX IF NOT EXISTS idx_ai_content_file_path ON public.ai_app_content_lib
 CREATE INDEX IF NOT EXISTS idx_ai_content_file_type ON public.ai_app_content_library(file_type);
 
 -- Function to help with storage bucket policy checks
-CREATE OR REPLACE FUNCTION public.is_platform_admin(user_id UUID)
+-- Note: is_platform_admin already exists with _user_id param, so we use that name
+CREATE OR REPLACE FUNCTION public.is_platform_admin(_user_id UUID)
 RETURNS BOOLEAN AS $$
 BEGIN
   RETURN EXISTS (
     SELECT 1 FROM public.user_roles
-    WHERE user_roles.user_id = $1
+    WHERE user_roles.user_id = _user_id
     AND user_roles.role IN ('platform_owner', 'platform_admin', 'platform_support')
     AND user_roles.scope_type = 'platform'
   );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
-CREATE OR REPLACE FUNCTION public.is_tenant_admin(user_id UUID)
+CREATE OR REPLACE FUNCTION public.is_tenant_admin(_user_id UUID)
 RETURNS BOOLEAN AS $$
 BEGIN
   RETURN EXISTS (
     SELECT 1 FROM public.user_roles
-    WHERE user_roles.user_id = $1
+    WHERE user_roles.user_id = _user_id
     AND user_roles.role IN ('tenant_owner', 'tenant_admin')
     AND user_roles.scope_type = 'tenant'
   );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
-CREATE OR REPLACE FUNCTION public.get_user_tenant(user_id UUID)
+CREATE OR REPLACE FUNCTION public.get_user_tenant(_user_id UUID)
 RETURNS TEXT AS $$
 BEGIN
   RETURN (
     SELECT user_roles.scope_id
     FROM public.user_roles
-    WHERE user_roles.user_id = $1
+    WHERE user_roles.user_id = _user_id
     AND user_roles.scope_type = 'tenant'
     LIMIT 1
   );

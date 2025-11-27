@@ -19,7 +19,8 @@ export type Database = {
           category: string
           chunk_index: number
           content_markdown: string
-          created_at: string
+          created_at: string | null
+          created_by: string | null
           extracted_text: string | null
           file_size_bytes: number | null
           file_storage_path: string | null
@@ -33,13 +34,14 @@ export type Database = {
           parent_doc_id: string | null
           tenant_id: string | null
           title: string
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
           category: string
           chunk_index?: number
           content_markdown: string
-          created_at?: string
+          created_at?: string | null
+          created_by?: string | null
           extracted_text?: string | null
           file_size_bytes?: number | null
           file_storage_path?: string | null
@@ -53,13 +55,14 @@ export type Database = {
           parent_doc_id?: string | null
           tenant_id?: string | null
           title: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
           category?: string
           chunk_index?: number
           content_markdown?: string
-          created_at?: string
+          created_at?: string | null
+          created_by?: string | null
           extracted_text?: string | null
           file_size_bytes?: number | null
           file_storage_path?: string | null
@@ -73,7 +76,7 @@ export type Database = {
           parent_doc_id?: string | null
           tenant_id?: string | null
           title?: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -81,20 +84,6 @@ export type Database = {
             columns: ["parent_doc_id"]
             isOneToOne: false
             referencedRelation: "ai_app_content_library"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ai_app_content_library_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ai_app_content_library_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants_list_view"
             referencedColumns: ["id"]
           },
         ]
@@ -917,15 +906,12 @@ export type Database = {
           company_id: string
           config: Json | null
           created_at: string
-          credential_expires_at: string | null
           credentials: Json | null
           environment: string | null
           external_system_id: string
           id: string
-          last_tested_at: string | null
           notes: string | null
           sku_id: string | null
-          test_status: string | null
           updated_at: string
           vault_credential_id: string | null
           version: string | null
@@ -934,15 +920,12 @@ export type Database = {
           company_id: string
           config?: Json | null
           created_at?: string
-          credential_expires_at?: string | null
           credentials?: Json | null
           environment?: string | null
           external_system_id: string
           id?: string
-          last_tested_at?: string | null
           notes?: string | null
           sku_id?: string | null
-          test_status?: string | null
           updated_at?: string
           vault_credential_id?: string | null
           version?: string | null
@@ -951,15 +934,12 @@ export type Database = {
           company_id?: string
           config?: Json | null
           created_at?: string
-          credential_expires_at?: string | null
           credentials?: Json | null
           environment?: string | null
           external_system_id?: string
           id?: string
-          last_tested_at?: string | null
           notes?: string | null
           sku_id?: string | null
-          test_status?: string | null
           updated_at?: string
           vault_credential_id?: string | null
           version?: string | null
@@ -1095,56 +1075,12 @@ export type Database = {
           },
         ]
       }
-      credential_audit_logs: {
-        Row: {
-          action: string
-          created_at: string
-          error_message: string | null
-          id: string
-          ip_address: unknown
-          resource_id: string
-          resource_type: string
-          status: string | null
-          tenant_id: string
-          user_agent: string | null
-          user_id: string | null
-          vault_secret_id: string | null
-        }
-        Insert: {
-          action: string
-          created_at?: string
-          error_message?: string | null
-          id?: string
-          ip_address?: unknown
-          resource_id: string
-          resource_type: string
-          status?: string | null
-          tenant_id: string
-          user_agent?: string | null
-          user_id?: string | null
-          vault_secret_id?: string | null
-        }
-        Update: {
-          action?: string
-          created_at?: string
-          error_message?: string | null
-          id?: string
-          ip_address?: unknown
-          resource_id?: string
-          resource_type?: string
-          status?: string | null
-          tenant_id?: string
-          user_agent?: string | null
-          user_id?: string | null
-          vault_secret_id?: string | null
-        }
-        Relationships: []
-      }
       customer_app_projects: {
         Row: {
           app_key: string | null
           approved_at: string | null
           approved_by: string | null
+          company_id: string | null
           created_at: string | null
           created_by: string | null
           deployed_to_preview_at: string | null
@@ -1153,17 +1089,23 @@ export type Database = {
           estimated_cost: number | null
           estimated_hours: number | null
           id: string
+          miro_board_id: string | null
+          miro_board_url: string | null
           name: string
+          notion_page_id: string | null
+          notion_page_url: string | null
           selected_capabilities: Json | null
           status: string | null
           subdomain: string | null
           tenant_id: string
           updated_at: string | null
+          workshop_status: string | null
         }
         Insert: {
           app_key?: string | null
           approved_at?: string | null
           approved_by?: string | null
+          company_id?: string | null
           created_at?: string | null
           created_by?: string | null
           deployed_to_preview_at?: string | null
@@ -1172,17 +1114,23 @@ export type Database = {
           estimated_cost?: number | null
           estimated_hours?: number | null
           id?: string
+          miro_board_id?: string | null
+          miro_board_url?: string | null
           name: string
+          notion_page_id?: string | null
+          notion_page_url?: string | null
           selected_capabilities?: Json | null
           status?: string | null
           subdomain?: string | null
           tenant_id: string
           updated_at?: string | null
+          workshop_status?: string | null
         }
         Update: {
           app_key?: string | null
           approved_at?: string | null
           approved_by?: string | null
+          company_id?: string | null
           created_at?: string | null
           created_by?: string | null
           deployed_to_preview_at?: string | null
@@ -1191,14 +1139,26 @@ export type Database = {
           estimated_cost?: number | null
           estimated_hours?: number | null
           id?: string
+          miro_board_id?: string | null
+          miro_board_url?: string | null
           name?: string
+          notion_page_id?: string | null
+          notion_page_url?: string | null
           selected_capabilities?: Json | null
           status?: string | null
           subdomain?: string | null
           tenant_id?: string
           updated_at?: string | null
+          workshop_status?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "customer_app_projects_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "customer_app_projects_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -3503,6 +3463,196 @@ export type Database = {
           },
         ]
       }
+      project_questionnaire_responses: {
+        Row: {
+          answer: string | null
+          category: string | null
+          created_at: string | null
+          id: string
+          keywords: string[] | null
+          priority_score: number | null
+          project_id: string
+          question_key: string
+          question_text: string
+          sentiment: string | null
+          sort_order: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          answer?: string | null
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          keywords?: string[] | null
+          priority_score?: number | null
+          project_id: string
+          question_key: string
+          question_text: string
+          sentiment?: string | null
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          answer?: string | null
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          keywords?: string[] | null
+          priority_score?: number | null
+          project_id?: string
+          question_key?: string
+          question_text?: string
+          sentiment?: string | null
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_questionnaire_responses_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "customer_app_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_systems: {
+        Row: {
+          created_at: string | null
+          custom_system_name: string | null
+          custom_system_type: string | null
+          data_direction: string | null
+          external_system_id: string | null
+          id: string
+          integration_priority: string | null
+          notes: string | null
+          project_id: string
+          sync_frequency: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          custom_system_name?: string | null
+          custom_system_type?: string | null
+          data_direction?: string | null
+          external_system_id?: string | null
+          id?: string
+          integration_priority?: string | null
+          notes?: string | null
+          project_id: string
+          sync_frequency?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          custom_system_name?: string | null
+          custom_system_type?: string | null
+          data_direction?: string | null
+          external_system_id?: string | null
+          id?: string
+          integration_priority?: string | null
+          notes?: string | null
+          project_id?: string
+          sync_frequency?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_systems_external_system_id_fkey"
+            columns: ["external_system_id"]
+            isOneToOne: false
+            referencedRelation: "external_systems"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_systems_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "customer_app_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_workshop_results: {
+        Row: {
+          architecture_mermaid: string | null
+          attendees: Json | null
+          created_at: string | null
+          data_model_mermaid: string | null
+          duration_minutes: number | null
+          executive_summary: string | null
+          facilitator_id: string | null
+          facilitator_notes: string | null
+          id: string
+          integrations_needed: Json | null
+          miro_board_id: string | null
+          notion_page_id: string | null
+          pain_points: Json | null
+          process_flows: Json | null
+          project_id: string
+          raw_miro_export: Json | null
+          requirements: Json | null
+          technical_summary: string | null
+          updated_at: string | null
+          user_stories: Json | null
+          wireframe_refs: Json | null
+          workshop_date: string | null
+        }
+        Insert: {
+          architecture_mermaid?: string | null
+          attendees?: Json | null
+          created_at?: string | null
+          data_model_mermaid?: string | null
+          duration_minutes?: number | null
+          executive_summary?: string | null
+          facilitator_id?: string | null
+          facilitator_notes?: string | null
+          id?: string
+          integrations_needed?: Json | null
+          miro_board_id?: string | null
+          notion_page_id?: string | null
+          pain_points?: Json | null
+          process_flows?: Json | null
+          project_id: string
+          raw_miro_export?: Json | null
+          requirements?: Json | null
+          technical_summary?: string | null
+          updated_at?: string | null
+          user_stories?: Json | null
+          wireframe_refs?: Json | null
+          workshop_date?: string | null
+        }
+        Update: {
+          architecture_mermaid?: string | null
+          attendees?: Json | null
+          created_at?: string | null
+          data_model_mermaid?: string | null
+          duration_minutes?: number | null
+          executive_summary?: string | null
+          facilitator_id?: string | null
+          facilitator_notes?: string | null
+          id?: string
+          integrations_needed?: Json | null
+          miro_board_id?: string | null
+          notion_page_id?: string | null
+          pain_points?: Json | null
+          process_flows?: Json | null
+          project_id?: string
+          raw_miro_export?: Json | null
+          requirements?: Json | null
+          technical_summary?: string | null
+          updated_at?: string | null
+          user_stories?: Json | null
+          wireframe_refs?: Json | null
+          workshop_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_workshop_results_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: true
+            referencedRelation: "customer_app_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           budget: number | null
@@ -4134,15 +4284,12 @@ export type Database = {
           adapter_id: string
           config: Json
           created_at: string
-          credential_expires_at: string | null
           credentials: Json | null
           id: string
           is_active: boolean
-          last_tested_at: string | null
           last_used_at: string | null
           rate_limit: Json | null
           tenant_id: string
-          test_status: string | null
           updated_at: string
           vault_credential_id: string | null
         }
@@ -4150,15 +4297,12 @@ export type Database = {
           adapter_id: string
           config?: Json
           created_at?: string
-          credential_expires_at?: string | null
           credentials?: Json | null
           id?: string
           is_active?: boolean
-          last_tested_at?: string | null
           last_used_at?: string | null
           rate_limit?: Json | null
           tenant_id: string
-          test_status?: string | null
           updated_at?: string
           vault_credential_id?: string | null
         }
@@ -4166,15 +4310,12 @@ export type Database = {
           adapter_id?: string
           config?: Json
           created_at?: string
-          credential_expires_at?: string | null
           credentials?: Json | null
           id?: string
           is_active?: boolean
-          last_tested_at?: string | null
           last_used_at?: string | null
           rate_limit?: Json | null
           tenant_id?: string
-          test_status?: string | null
           updated_at?: string
           vault_credential_id?: string | null
         }
@@ -4299,12 +4440,93 @@ export type Database = {
           },
         ]
       }
+      tenant_workflows: {
+        Row: {
+          created_at: string | null
+          credentials_config: Json | null
+          custom_mapping: Json | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          last_error: string | null
+          last_run_at: string | null
+          last_status: string | null
+          name: string
+          run_count: number | null
+          schedule: string | null
+          template_id: string | null
+          tenant_id: string
+          updated_at: string | null
+          webhook_secret: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          credentials_config?: Json | null
+          custom_mapping?: Json | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_error?: string | null
+          last_run_at?: string | null
+          last_status?: string | null
+          name: string
+          run_count?: number | null
+          schedule?: string | null
+          template_id?: string | null
+          tenant_id: string
+          updated_at?: string | null
+          webhook_secret?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          credentials_config?: Json | null
+          custom_mapping?: Json | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_error?: string | null
+          last_run_at?: string | null
+          last_status?: string | null
+          name?: string
+          run_count?: number | null
+          schedule?: string | null
+          template_id?: string | null
+          tenant_id?: string
+          updated_at?: string | null
+          webhook_secret?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_workflows_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_workflows_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_workflows_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants_list_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenants: {
         Row: {
           created_at: string
           domain: string | null
           id: string
+          is_active: boolean
           is_platform_tenant: boolean | null
+          logo_url: string | null
           name: string
           plan: string
           settings: Json | null
@@ -4316,7 +4538,9 @@ export type Database = {
           created_at?: string
           domain?: string | null
           id?: string
+          is_active?: boolean
           is_platform_tenant?: boolean | null
+          logo_url?: string | null
           name: string
           plan?: string
           settings?: Json | null
@@ -4328,7 +4552,9 @@ export type Database = {
           created_at?: string
           domain?: string | null
           id?: string
+          is_active?: boolean
           is_platform_tenant?: boolean | null
+          logo_url?: string | null
           name?: string
           plan?: string
           settings?: Json | null
@@ -4503,6 +4729,72 @@ export type Database = {
           },
         ]
       }
+      workflow_templates: {
+        Row: {
+          category: string
+          created_at: string | null
+          default_mapping: Json | null
+          description: string | null
+          documentation_url: string | null
+          example_output: Json | null
+          id: string
+          input_schema: Json | null
+          is_active: boolean | null
+          is_system: boolean | null
+          key: string
+          n8n_webhook_path: string | null
+          n8n_workflow_id: string | null
+          name: string
+          output_schema: Json | null
+          required_credentials: string[] | null
+          required_systems: string[] | null
+          schedule_options: string[] | null
+          updated_at: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          default_mapping?: Json | null
+          description?: string | null
+          documentation_url?: string | null
+          example_output?: Json | null
+          id?: string
+          input_schema?: Json | null
+          is_active?: boolean | null
+          is_system?: boolean | null
+          key: string
+          n8n_webhook_path?: string | null
+          n8n_workflow_id?: string | null
+          name: string
+          output_schema?: Json | null
+          required_credentials?: string[] | null
+          required_systems?: string[] | null
+          schedule_options?: string[] | null
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          default_mapping?: Json | null
+          description?: string | null
+          documentation_url?: string | null
+          example_output?: Json | null
+          id?: string
+          input_schema?: Json | null
+          is_active?: boolean | null
+          is_system?: boolean | null
+          key?: string
+          n8n_webhook_path?: string | null
+          n8n_workflow_id?: string | null
+          name?: string
+          output_schema?: Json | null
+          required_credentials?: string[] | null
+          required_systems?: string[] | null
+          schedule_options?: string[] | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       app_categories_tree: {
@@ -4653,6 +4945,7 @@ export type Database = {
         }
         Returns: Database["public"]["Enums"]["app_role"][]
       }
+      get_user_tenant: { Args: { _user_id: string }; Returns: string }
       has_any_role_in_company: {
         Args: { _company_id: string; _user_id: string }
         Returns: boolean
@@ -4705,18 +4998,6 @@ export type Database = {
       }
       is_platform_admin: { Args: { _user_id: string }; Returns: boolean }
       is_tenant_admin: { Args: { _user_id: string }; Returns: boolean }
-      log_credential_operation: {
-        Args: {
-          p_action: string
-          p_error_message?: string
-          p_resource_id: string
-          p_resource_type: string
-          p_status?: string
-          p_tenant_id: string
-          p_vault_secret_id?: string
-        }
-        Returns: undefined
-      }
       seed_jul25_data_for_tenant: {
         Args: { p_tenant_id: string }
         Returns: undefined
@@ -4759,15 +5040,21 @@ export type Database = {
     Enums: {
       app_role:
         | "platform_owner"
+        | "platform_admin"
         | "platform_support"
         | "tenant_owner"
         | "tenant_admin"
-        | "security_admin"
-        | "compliance_officer"
+        | "tenant_user"
+        | "company_admin"
+        | "company_user"
+        | "project_manager"
+        | "project_member"
         | "project_owner"
-        | "analyst"
         | "contributor"
         | "viewer"
+        | "analyst"
+        | "compliance_officer"
+        | "security_admin"
         | "app_admin"
         | "app_user"
         | "supplier"
@@ -4908,15 +5195,21 @@ export const Constants = {
     Enums: {
       app_role: [
         "platform_owner",
+        "platform_admin",
         "platform_support",
         "tenant_owner",
         "tenant_admin",
-        "security_admin",
-        "compliance_officer",
+        "tenant_user",
+        "company_admin",
+        "company_user",
+        "project_manager",
+        "project_member",
         "project_owner",
-        "analyst",
         "contributor",
         "viewer",
+        "analyst",
+        "compliance_officer",
+        "security_admin",
         "app_admin",
         "app_user",
         "supplier",

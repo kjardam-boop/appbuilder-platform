@@ -1,7 +1,9 @@
-// @ts-nocheck
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import type { RequestContext } from "@/shared/types";
 import type { PartnerSystemCertification, PartnerSystemCertificationInput } from "../types/application.types";
+
+type PartnerCertificationRow = Database['public']['Tables']['partner_certifications']['Row'];
 
 export class PartnerCertificationService {
   static async getCertifiedPartners(ctx: RequestContext, appProductId: string): Promise<PartnerSystemCertification[]> {

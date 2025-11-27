@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Building2 } from "lucide-react";

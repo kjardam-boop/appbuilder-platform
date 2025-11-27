@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -193,7 +192,7 @@ const CustomersPage = () => {
             <h1 className="text-3xl font-bold">Kunder ({filteredCustomers.length})</h1>
           </div>
           <p className="text-muted-foreground mb-4">
-            Selskaper som bruker ERP-systemer
+            Selskaper som bruker våre produkter
           </p>
           
           <div className="flex items-center gap-4 mb-4">

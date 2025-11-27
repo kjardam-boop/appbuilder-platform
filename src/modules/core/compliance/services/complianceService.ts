@@ -1,4 +1,8 @@
-// @ts-nocheck
+/**
+ * Compliance Service
+ * 
+ * Compliance and audit service.
+ */
 import { supabase } from "@/integrations/supabase/client";
 import type { RequestContext } from "@/modules/tenant/types/tenant.types";
 import type {

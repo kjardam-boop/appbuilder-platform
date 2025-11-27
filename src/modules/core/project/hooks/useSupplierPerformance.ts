@@ -1,9 +1,7 @@
-// @ts-nocheck
 import { useState, useEffect, useCallback } from 'react';
 import { ProjectService } from '../services/projectService';
 import { SupplierPerformanceMetric } from '../types/project.types';
 import { toast } from 'sonner';
-import { buildClientContext } from '@/shared/lib/buildContext';
 
 export const useSupplierPerformance = (projectId: string) => {
   const [metrics, setMetrics] = useState<SupplierPerformanceMetric[]>([]);

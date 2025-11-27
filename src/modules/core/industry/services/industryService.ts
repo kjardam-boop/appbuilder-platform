@@ -1,7 +1,11 @@
-// @ts-nocheck
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import type { Industry, IndustryInput } from "../types/industry.types";
 import { STANDARD_INDUSTRIES } from "../types/industry.types";
+
+type IndustryRow = Database['public']['Tables']['industries']['Row'];
+type IndustryInsert = Database['public']['Tables']['industries']['Insert'];
+type IndustryUpdate = Database['public']['Tables']['industries']['Update'];
 
 // In-memory cache for industries (5 min TTL)
 let industriesCache: Industry[] | null = null;

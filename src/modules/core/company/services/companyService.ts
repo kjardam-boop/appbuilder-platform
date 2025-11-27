@@ -1,8 +1,22 @@
-// @ts-nocheck
+/**
+ * Company Service
+ * 
+ * Business logic for company management.
+ * Handles CRUD operations, Brreg integration, and company metadata.
+ */
 import { supabase } from "@/integrations/supabase/client";
-import { Company, CompanyMetadata, BrregCompanySearchResult, EnhancedCompanyData, FinancialData, HierarchicalCompany, CustomerInteraction } from "../types/company.types";
+import { 
+  Company, 
+  CompanyMetadata, 
+  BrregCompanySearchResult, 
+  EnhancedCompanyData, 
+  FinancialData, 
+  HierarchicalCompany, 
+  CustomerInteraction 
+} from "../types/company.types";
 import { CompanyClassificationService } from "./companyClassificationService";
 import { classifyByNace } from "./companyClassificationHelpers";
+import { asSingle, asArray } from "@/shared/types/database.types";
 
 export class CompanyService {
   /**

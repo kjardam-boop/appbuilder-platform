@@ -1,4 +1,8 @@
-// @ts-nocheck
+/**
+ * Auth Service
+ * 
+ * Authentication and authorization service.
+ */
 import { supabase } from "@/integrations/supabase/client";
 import { AuthUser, Profile, UserRole } from "../../user/types/user.types";
 

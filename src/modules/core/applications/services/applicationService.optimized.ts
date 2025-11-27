@@ -36,8 +36,8 @@ export class ApplicationServiceOptimized {
     if (filters?.status) {
       query = query.eq("status", filters.status);
     }
-    if (filters?.app_types && filters.app_types.length > 0) {
-      query = query.contains("app_types", filters.app_types);
+    if (filters?.system_types && filters.system_types.length > 0) {
+      query = query.contains("system_types", filters.system_types);
     }
 
     query = query.order("external_system_name");

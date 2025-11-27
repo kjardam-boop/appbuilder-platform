@@ -1,5 +1,5 @@
-// @ts-nocheck
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import type {
   ERPSystem,
   ERPSystemInput,
@@ -10,6 +10,11 @@ import type {
   ProjectERPSystem,
   ProjectERPSystemInput,
 } from "../types/erpsystem.types";
+
+type ErpSystemRow = Database['public']['Tables']['erp_systems']['Row'];
+type ErpSkuRow = Database['public']['Tables']['erp_skus']['Row'];
+type ErpIntegrationRow = Database['public']['Tables']['erp_integrations']['Row'];
+type ProjectErpSystemRow = Database['public']['Tables']['project_erp_systems']['Row'];
 
 export class ERPSystemService {
   static async listErpSystems(filters?: {
