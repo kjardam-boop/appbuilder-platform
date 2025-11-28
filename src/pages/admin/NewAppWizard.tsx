@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenantContext } from '@/hooks/useTenantContext';
+import { useDebounce } from '@/hooks/useDebounce';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -27,7 +28,8 @@ import {
   Sparkles,
   Plus,
   X,
-  Puzzle  // New icon for capabilities
+  Puzzle,  // New icon for capabilities
+  Save
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -125,6 +127,19 @@ export default function NewAppWizard() {
     generatedConfig: null,
     selectedCapabilities: [],
   });
+
+  // Auto-save status
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const isInitialLoad = useRef(true);
+  const lastSavedState = useRef<string>('');
+
+  // Debounce state for auto-save (1.5 second delay)
+  const debouncedProjectName = useDebounce(state.projectName, 1500);
+  const debouncedProjectDescription = useDebounce(state.projectDescription, 1500);
+  const debouncedCompanyId = useDebounce(state.companyId, 500);
+  const debouncedSystems = useDebounce(state.systems, 1000);
+  const debouncedPartners = useDebounce(state.partners, 1000);
+  const debouncedQuestionnaire = useDebounce(state.questionnaire, 1500);
 
   // Load existing project if resuming
   useEffect(() => {
@@ -240,6 +255,28 @@ export default function NewAppWizard() {
       }
     } catch (e) {
       console.log('Could not load project_implementation_partners:', e);
+    }
+
+    // Load selected capabilities
+    try {
+      const { data: capabilitiesData, error: capabilitiesError } = await supabase
+        .from('app_capability_usage')
+        .select('capability_id, capabilities(id, key, name, category)')
+        .eq('project_id', projectId);
+      
+      if (!capabilitiesError && capabilitiesData && capabilitiesData.length > 0) {
+        const loadedCapabilities = capabilitiesData.map((c: any) => ({
+          id: c.capability_id,
+          key: c.capabilities?.key || 'unknown',
+          name: c.capabilities?.name || 'Unknown',
+          category: c.capabilities?.category || 'Unknown',
+        }));
+        
+        setState(prev => ({ ...prev, selectedCapabilities: loadedCapabilities }));
+        console.log('Loaded capabilities:', loadedCapabilities);
+      }
+    } catch (e) {
+      console.log('Could not load project capabilities:', e);
     }
   };
 
@@ -463,18 +500,18 @@ export default function NewAppWizard() {
       if (!state.projectId) return;
 
       try {
-        // Delete existing capabilities for this project
+        // Delete existing capabilities for this project (use project_id)
         await supabase
           .from('app_capability_usage')
           .delete()
-          .eq('app_definition_id', state.projectId);
+          .eq('project_id', state.projectId);
 
-        // Insert new capabilities
+        // Insert new capabilities with project_id
         if (capabilities.length > 0) {
           const { error } = await supabase
             .from('app_capability_usage')
             .insert(capabilities.map(cap => ({
-              app_definition_id: state.projectId,
+              project_id: state.projectId,  // Use project_id for customer projects
               capability_id: cap.id,
               is_required: false,
               config_schema: cap.config || null,
@@ -491,31 +528,197 @@ export default function NewAppWizard() {
     },
   });
 
+  // ============================================================================
+  // AUTO-SAVE EFFECTS
+  // ============================================================================
+
+  // Mark initial load as complete after project loads
+  useEffect(() => {
+    if (state.projectId && isInitialLoad.current) {
+      // Wait a bit for all data to settle
+      const timer = setTimeout(() => {
+        isInitialLoad.current = false;
+        // Store initial state hash
+        lastSavedState.current = JSON.stringify({
+          projectName: state.projectName,
+          projectDescription: state.projectDescription,
+          companyId: state.companyId,
+          systems: state.systems,
+          partners: state.partners,
+          questionnaire: state.questionnaire,
+        });
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [state.projectId]);
+
+  // Auto-save Step 1: Project details
+  useEffect(() => {
+    if (isInitialLoad.current) return;
+    if (!state.projectId) return;
+    if (!debouncedProjectName.trim()) return;
+    if (!tenantContext?.tenant_id) return;
+    
+    // Check if anything actually changed
+    const currentHash = JSON.stringify({
+      projectName: debouncedProjectName,
+      projectDescription: debouncedProjectDescription,
+      companyId: debouncedCompanyId,
+    });
+    if (currentHash === lastSavedState.current.slice(0, currentHash.length)) return;
+    
+    const saveProject = async () => {
+      setAutoSaveStatus('saving');
+      try {
+        const { error } = await supabase
+          .from('customer_app_projects')
+          .update({
+            name: debouncedProjectName.trim(),
+            description: debouncedProjectDescription || null,
+            company_id: debouncedCompanyId || null,
+          })
+          .eq('id', state.projectId);
+        
+        if (error) throw error;
+        
+        setAutoSaveStatus('saved');
+        setTimeout(() => setAutoSaveStatus('idle'), 2000);
+      } catch (error) {
+        console.error('Auto-save project failed:', error);
+        setAutoSaveStatus('error');
+      }
+    };
+    
+    saveProject();
+  }, [debouncedProjectName, debouncedProjectDescription, debouncedCompanyId, state.projectId, tenantContext?.tenant_id]);
+
+  // Auto-save Step 1: Systems
+  useEffect(() => {
+    if (isInitialLoad.current) return;
+    if (!state.projectId) return;
+    
+    const saveSystems = async () => {
+      setAutoSaveStatus('saving');
+      try {
+        await supabase
+          .from('project_systems')
+          .delete()
+          .eq('project_id', state.projectId);
+
+        if (debouncedSystems.length > 0) {
+          const { error } = await supabase
+            .from('project_systems')
+            .insert(debouncedSystems.map(s => ({
+              project_id: state.projectId,
+              external_system_id: s.id,
+              custom_system_name: null,
+              custom_system_type: s.type,
+            })));
+          if (error) throw error;
+        }
+        
+        setAutoSaveStatus('saved');
+        setTimeout(() => setAutoSaveStatus('idle'), 2000);
+      } catch (error) {
+        console.error('Auto-save systems failed:', error);
+        setAutoSaveStatus('error');
+      }
+    };
+    
+    saveSystems();
+  }, [debouncedSystems, state.projectId]);
+
+  // Auto-save Step 1: Partners
+  useEffect(() => {
+    if (isInitialLoad.current) return;
+    if (!state.projectId) return;
+    
+    const savePartners = async () => {
+      setAutoSaveStatus('saving');
+      try {
+        await supabase
+          .from('project_implementation_partners')
+          .delete()
+          .eq('project_id', state.projectId);
+
+        if (debouncedPartners.length > 0) {
+          const { error } = await supabase
+            .from('project_implementation_partners')
+            .insert(debouncedPartners.map(p => ({
+              project_id: state.projectId,
+              company_id: p.id,
+              role: 'implementation',
+            })));
+          if (error) throw error;
+        }
+        
+        setAutoSaveStatus('saved');
+        setTimeout(() => setAutoSaveStatus('idle'), 2000);
+      } catch (error) {
+        console.error('Auto-save partners failed:', error);
+        setAutoSaveStatus('error');
+      }
+    };
+    
+    savePartners();
+  }, [debouncedPartners, state.projectId]);
+
+  // Auto-save Step 2: Questionnaire
+  useEffect(() => {
+    if (isInitialLoad.current) return;
+    if (!state.projectId) return;
+    if (Object.keys(debouncedQuestionnaire).length === 0) return;
+    
+    const saveQuestionnaire = async () => {
+      setAutoSaveStatus('saving');
+      try {
+        await supabase
+          .from('project_questionnaire_responses')
+          .delete()
+          .eq('project_id', state.projectId);
+
+        const entries = Object.entries(debouncedQuestionnaire);
+        if (entries.length > 0) {
+          const { error } = await supabase
+            .from('project_questionnaire_responses')
+            .insert(entries.map(([key, answer], index) => ({
+              project_id: state.projectId,
+              question_key: key,
+              question_text: key,
+              answer: answer,
+              sort_order: index,
+            })));
+          if (error) throw error;
+        }
+        
+        setAutoSaveStatus('saved');
+        setTimeout(() => setAutoSaveStatus('idle'), 2000);
+      } catch (error) {
+        console.error('Auto-save questionnaire failed:', error);
+        setAutoSaveStatus('error');
+      }
+    };
+    
+    saveQuestionnaire();
+  }, [debouncedQuestionnaire, state.projectId]);
+
+  // ============================================================================
+  // NAVIGATION
+  // ============================================================================
+
   // Navigation
   const goToStep = (step: number) => {
     setState(prev => ({ ...prev, step }));
   };
 
   const nextStep = async () => {
-    // Save current step data
-    if (state.step === 1) {
+    // Step 1: Need to create project first if it doesn't exist
+    if (state.step === 1 && !state.projectId) {
       await projectMutation.mutateAsync(state);
-      await saveSystemsMutation.mutateAsync(state.systems);
-      await savePartnersMutation.mutateAsync(state.partners);
     }
     
-    // Save questionnaire when leaving Step 2
-    if (state.step === 2 && Object.keys(state.questionnaire).length > 0) {
-      await saveQuestionnaireMutation.mutateAsync(state.questionnaire);
-    }
-    
-    // Save capabilities when leaving Step 4
-    if (state.step === 4 && state.selectedCapabilities.length > 0) {
-      await saveCapabilitiesMutation.mutateAsync(state.selectedCapabilities);
-      toast.success(`${state.selectedCapabilities.length} capabilities lagret`);
-    }
-    
-    // Updated to 6 steps
+    // All other saves are handled by auto-save with debounce
+    // Just navigate to next step
     setState(prev => ({ ...prev, step: Math.min(prev.step + 1, 6) }));
   };
 
@@ -551,10 +754,41 @@ export default function NewAppWizard() {
             Follow the wizard to create a custom application for your customer
           </p>
         </div>
-        <Button variant="outline" onClick={() => navigate('/admin/apps')}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Apps
-        </Button>
+        <div className="flex items-center gap-4">
+          {/* Auto-save indicator */}
+          {state.projectId && (
+            <span className="text-sm text-muted-foreground flex items-center gap-1.5">
+              {autoSaveStatus === 'saving' && (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Lagrer...
+                </>
+              )}
+              {autoSaveStatus === 'saved' && (
+                <>
+                  <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+                  Lagret
+                </>
+              )}
+              {autoSaveStatus === 'error' && (
+                <>
+                  <X className="h-3.5 w-3.5 text-destructive" />
+                  Feil ved lagring
+                </>
+              )}
+              {autoSaveStatus === 'idle' && (
+                <>
+                  <Save className="h-3.5 w-3.5" />
+                  Auto-lagring aktiv
+                </>
+              )}
+            </span>
+          )}
+          <Button variant="outline" onClick={() => navigate('/admin/apps')}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Apps
+          </Button>
+        </div>
       </div>
 
       {/* Progress Steps */}

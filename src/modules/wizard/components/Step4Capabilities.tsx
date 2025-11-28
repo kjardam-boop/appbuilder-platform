@@ -3,9 +3,10 @@
  * 
  * Fourth step of the App Creation Wizard.
  * Select reusable capabilities to include in the app.
+ * Auto-saves when capabilities are selected/deselected.
  */
 
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,7 +14,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { X, Sparkles, Check, Info } from 'lucide-react';
+import { X, Sparkles, Check, Info, Loader2, CheckCircle2 } from 'lucide-react';
 import { 
   LoadingState,
   EmptyState,
@@ -28,6 +29,9 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from '@/components/ui/hover-card';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { useDebounce } from '@/hooks/useDebounce';
 import type { WizardState } from '../types/wizard.types';
 
 interface Step4Props {
@@ -60,6 +64,8 @@ export function Step4Capabilities({
   tenantId,
 }: Step4Props) {
   const [activeCategory, setActiveCategory] = useState<string>('all');
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const isInitialMount = useRef(true);
   
   // Fetch all available capabilities
   const { data: capabilities, isLoading: loadingCaps } = useCapabilities({ is_active: true });
@@ -70,9 +76,60 @@ export function Step4Capabilities({
   // Track selected capabilities locally
   const selectedCapabilities: SelectedCapability[] = (state as any).selectedCapabilities || [];
   
+  // Debounce selected capabilities for auto-save
+  const debouncedCapabilities = useDebounce(selectedCapabilities, 1000);
+  
   const setSelectedCapabilities = (caps: SelectedCapability[]) => {
     onStateChange({ selectedCapabilities: caps } as any);
   };
+
+  // Auto-save capabilities when they change (debounced)
+  useEffect(() => {
+    // Skip initial mount to avoid saving on load
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    
+    // Only save if we have a project ID
+    if (!state.projectId) return;
+    
+    const saveCapabilities = async () => {
+      setSaveStatus('saving');
+      try {
+        // Delete existing capabilities for this project
+        // Use project_id for customer_app_projects (not app_definition_id)
+        await supabase
+          .from('app_capability_usage')
+          .delete()
+          .eq('project_id', state.projectId);
+
+        // Insert new capabilities with project_id
+        if (debouncedCapabilities.length > 0) {
+          const { error } = await supabase
+            .from('app_capability_usage')
+            .insert(debouncedCapabilities.map(cap => ({
+              project_id: state.projectId,  // Use project_id for customer projects
+              capability_id: cap.id,
+              is_required: false,
+              config_schema: null,
+            })));
+          
+          if (error) throw error;
+        }
+        
+        setSaveStatus('saved');
+        // Reset to idle after showing saved status
+        setTimeout(() => setSaveStatus('idle'), 2000);
+      } catch (error) {
+        console.error('Auto-save failed:', error);
+        toast.error('Kunne ikke lagre capabilities');
+        setSaveStatus('idle');
+      }
+    };
+    
+    saveCapabilities();
+  }, [debouncedCapabilities, state.projectId]);
 
   // Toggle capability selection
   const toggleCapability = (capability: Capability) => {
@@ -133,9 +190,26 @@ export function Step4Capabilities({
       {selectedCapabilities.length > 0 && (
         <Card className="border-primary/50">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Check className="h-4 w-4 text-primary" />
-              Valgte capabilities ({selectedCapabilities.length})
+            <CardTitle className="text-base flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-primary" />
+                Valgte capabilities ({selectedCapabilities.length})
+              </span>
+              {/* Auto-save status indicator */}
+              <span className="text-xs font-normal text-muted-foreground flex items-center gap-1">
+                {saveStatus === 'saving' && (
+                  <>
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Lagrer...
+                  </>
+                )}
+                {saveStatus === 'saved' && (
+                  <>
+                    <CheckCircle2 className="h-3 w-3 text-green-500" />
+                    Lagret
+                  </>
+                )}
+              </span>
             </CardTitle>
           </CardHeader>
           <CardContent>

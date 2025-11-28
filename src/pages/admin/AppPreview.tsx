@@ -11,13 +11,13 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useTenantContext } from "@/hooks/useTenantContext";
 import { AppShell } from "@/modules/core/capabilities/runtime";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ExternalLink, Settings, Rocket } from "lucide-react";
+import { ArrowLeft, Settings, Rocket } from "lucide-react";
 import { toast } from "sonner";
 
 export default function AppPreview() {
   const { appId } = useParams<{ appId: string }>();
   const navigate = useNavigate();
-  const { context: tenantContext } = useTenantContext();
+  const tenantContext = useTenantContext();
 
   if (!appId) {
     return (

@@ -172,21 +172,27 @@ function useAppConfig(appId: string, tenantId: string) {
     queryKey: ["app-config", appId, tenantId],
     queryFn: async (): Promise<AppConfig> => {
       // First try customer_app_projects (for wizard-created apps)
-      const { data: project } = await supabase
+      // Note: We don't filter by tenant_id here to allow preview across tenants for admins
+      const { data: project, error: projectError } = await supabase
         .from("customer_app_projects")
         .select(`
           id,
           name,
           description,
-          branding
+          tenant_id
         `)
         .eq("id", appId)
-        .eq("tenant_id", tenantId)
         .maybeSingle();
+      
+      if (projectError) {
+        console.error("[AppShell] Error fetching project:", projectError);
+      }
 
       if (project) {
-        // Fetch capabilities separately (app_capability_usage uses app_definition_id for both)
-        const { data: capabilityUsage } = await supabase
+        console.log("[AppShell] Found project:", project);
+        
+        // Fetch capabilities separately - use project_id for customer projects
+        const { data: capabilityUsage, error: capError } = await supabase
           .from("app_capability_usage")
           .select(`
             id,
@@ -200,7 +206,9 @@ function useAppConfig(appId: string, tenantId: string) {
               category
             )
           `)
-          .eq("app_definition_id", appId);
+          .eq("project_id", appId);
+
+        console.log("[AppShell] Capability usage:", { capabilityUsage, capError });
 
         // Map capabilities to slots based on category
         const capabilities: AppCapabilityConfig[] = (capabilityUsage || []).map(
@@ -223,7 +231,7 @@ function useAppConfig(appId: string, tenantId: string) {
           capabilities,
           layout: DEFAULT_LAYOUT,
           theme: DEFAULT_THEME,
-          branding: project.branding as BrandingConfig | undefined,
+          branding: undefined, // TODO: Add branding column to customer_app_projects
         };
       }
 
@@ -283,6 +291,7 @@ function useAppConfig(appId: string, tenantId: string) {
         };
       }
 
+      console.error("[AppShell] App not found in either customer_app_projects or app_definitions:", appId);
       throw new Error(`App not found: ${appId}`);
     },
     enabled: !!appId && !!tenantId,
