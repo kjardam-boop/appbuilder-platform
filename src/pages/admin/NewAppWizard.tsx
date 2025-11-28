@@ -1065,23 +1065,35 @@ function Step3Workshop({ state, setState, tenantId }: Step3Props) {
 
       if (error) throw error;
 
-      if (data?.data?.notion_url) {
+      // Check for notion URL in response (supports both naming conventions)
+      const notionUrl = data?.data?.notion_page_url || data?.data?.notion_url || data?.notion_page_url;
+      
+      if (notionUrl || data?.success) {
         setState(prev => ({
           ...prev,
-          notionUrl: data.data.notion_url,
+          notionUrl: notionUrl || prev.notionUrl,
           workshopStatus: 'processed',
         }));
 
         // Update project (cast to any for new columns not yet in TS types)
-        await supabase
-          .from('customer_app_projects')
-          .update({
-            notion_page_url: data.data.notion_url,
-            workshop_status: 'processed',
-          } as any)
-          .eq('id', state.projectId);
+        if (notionUrl) {
+          await supabase
+            .from('customer_app_projects')
+            .update({
+              notion_page_url: notionUrl,
+              workshop_status: 'processed',
+            } as any)
+            .eq('id', state.projectId);
+        } else {
+          await supabase
+            .from('customer_app_projects')
+            .update({
+              workshop_status: 'processed',
+            } as any)
+            .eq('id', state.projectId);
+        }
 
-        toast.success('Workshop results processed!');
+        toast.success('Workshop results processed! View the summary in Notion.');
       }
     } catch (error: any) {
       console.error('Failed to process results:', error);
@@ -1276,7 +1288,7 @@ function Step3Workshop({ state, setState, tenantId }: Step3Props) {
                 </Button>
               )}
               
-              {state.notionUrl && (
+              {state.notionUrl && state.workshopStatus !== 'processed' && (
                 <Button variant="outline" asChild>
                   <a href={state.notionUrl} target="_blank" rel="noopener noreferrer">
                     <ExternalLink className="mr-2 h-4 w-4" />
@@ -1286,6 +1298,29 @@ function Step3Workshop({ state, setState, tenantId }: Step3Props) {
               )}
             </div>
           </div>
+          
+          {/* Show Notion summary link prominently when processed */}
+          {state.workshopStatus === 'processed' && state.notionUrl && (
+            <div className="mt-4 p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
+              <div className="flex items-center gap-3">
+                <CheckCircle2 className="h-5 w-5 text-green-600" />
+                <div className="flex-1">
+                  <p className="font-medium text-green-800 dark:text-green-200">
+                    Workshop Summary Ready
+                  </p>
+                  <p className="text-sm text-green-600 dark:text-green-400">
+                    AI-generated insights and recommendations are available in Notion
+                  </p>
+                </div>
+                <Button asChild>
+                  <a href={state.notionUrl} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    Open Notion Summary
+                  </a>
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Skip workshop option */}
