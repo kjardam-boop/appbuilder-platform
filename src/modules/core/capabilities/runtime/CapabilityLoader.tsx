@@ -181,6 +181,89 @@ async function loadBundle(
 }
 
 /**
+ * Create a placeholder component for development
+ */
+function createDevPlaceholder(
+  capabilityData: { key: string; name: string; category: string; description?: string }
+): React.ComponentType<CapabilityProps> {
+  return function DevPlaceholder({ config, slot, onAction }: CapabilityProps) {
+    const categoryIcons: Record<string, string> = {
+      "AI": "🤖",
+      "Integration": "🔗",
+      "UI Component": "🎨",
+      "Business Logic": "⚙️",
+      "Authentication": "🔐",
+      "Data Management": "📊",
+      "Communication": "💬",
+      "Analytics": "📈",
+      "Workflow": "🔄",
+      "Security": "🛡️",
+      "Platform": "🏗️",
+    };
+    
+    return (
+      <Card className="border-dashed border-2 border-primary/30 bg-primary/5">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <span>{categoryIcons[capabilityData.category] || "📦"}</span>
+            {capabilityData.name}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {capabilityData.description && (
+            <p className="text-xs text-muted-foreground">
+              {capabilityData.description}
+            </p>
+          )}
+          <div className="flex flex-wrap gap-1">
+            <span className="text-[10px] bg-secondary px-1.5 py-0.5 rounded">
+              {capabilityData.category}
+            </span>
+            <span className="text-[10px] bg-secondary px-1.5 py-0.5 rounded">
+              slot: {slot}
+            </span>
+          </div>
+          <p className="text-[10px] text-muted-foreground italic">
+            Dev mode – bundle ikke lastet
+          </p>
+          {Object.keys(config).length > 0 && (
+            <details className="text-[10px]">
+              <summary className="cursor-pointer text-muted-foreground">Config</summary>
+              <pre className="mt-1 p-2 bg-muted rounded text-[9px] overflow-auto max-h-24">
+                {JSON.stringify(config, null, 2)}
+              </pre>
+            </details>
+          )}
+          {onAction && (
+            <Button 
+              size="sm" 
+              variant="outline" 
+              className="h-6 text-xs"
+              onClick={() => onAction("test", { source: capabilityData.key })}
+            >
+              Test Action
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
+}
+
+/**
+ * Load capability metadata from database
+ */
+async function loadCapabilityFromDb(key: string) {
+  const { data } = await supabase
+    .from("capabilities")
+    .select("id, key, name, category, description, current_version")
+    .eq("key", key)
+    .maybeSingle();
+  
+  return data;
+}
+
+/**
  * Load a complete capability with all variants
  */
 async function loadCapability(
@@ -209,7 +292,7 @@ async function loadCapability(
   capabilityCache.set(cacheKey, loading);
   
   try {
-    // Load manifest
+    // Try to load manifest from storage
     const manifest = await loadManifest(key, version);
     loading.manifest = manifest;
     
@@ -226,10 +309,48 @@ async function loadCapability(
     loading.status = "ready";
     
     return loading;
-  } catch (error) {
-    loading.status = "error";
-    loading.error = error as Error;
-    throw error;
+  } catch (storageError) {
+    // Fallback: Load metadata from DB and create dev placeholder
+    console.warn(`[CapabilityLoader] Bundle not found for ${key}, using dev placeholder`);
+    
+    try {
+      const capData = await loadCapabilityFromDb(key);
+      
+      if (!capData) {
+        throw new Error(`Capability "${key}" not found in database`);
+      }
+      
+      // Create dev placeholder manifest
+      const devManifest: CapabilityManifest = {
+        key: capData.key,
+        name: capData.name,
+        version: capData.current_version || "0.0.1",
+        description: capData.description || undefined,
+        category: capData.category,
+        defaultVariant: "default",
+        variants: {
+          default: {
+            name: "Default",
+            bundle: "./placeholder.js",
+          },
+        },
+        slots: ["main", "sidebar", "floating"],
+        defaultConfig: {},
+      };
+      
+      loading.manifest = devManifest;
+      loading.Component = createDevPlaceholder(capData);
+      loading.variants["default"] = loading.Component;
+      loading.status = "ready";
+      
+      capabilityCache.set(cacheKey, loading);
+      
+      return loading;
+    } catch (dbError) {
+      loading.status = "error";
+      loading.error = storageError as Error;
+      throw storageError;
+    }
   }
 }
 

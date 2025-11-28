@@ -139,24 +139,31 @@ export default function AppProjects() {
                     {format(new Date(project.created_at), 'PPP', { locale: nb })}
                   </div>
 
-                  <div className="flex gap-2 pt-2">
-                    {project.miro_board_url && (
-                      <Button variant="outline" size="sm" asChild>
-                        <a href={project.miro_board_url} target="_blank" rel="noopener noreferrer">
-                          <ExternalLink className="mr-1 h-3 w-3" />
-                          Miro
-                        </a>
-                      </Button>
-                    )}
-                    {project.notion_page_url && (
-                      <Button variant="outline" size="sm" asChild>
-                        <a href={project.notion_page_url} target="_blank" rel="noopener noreferrer">
-                          <ExternalLink className="mr-1 h-3 w-3" />
-                          Notion
-                        </a>
-                      </Button>
-                    )}
-                    {project.workshop_status === 'processed' && (
+                  {/* External links row */}
+                  {(project.miro_board_url || project.notion_page_url) && (
+                    <div className="flex flex-wrap gap-2">
+                      {project.miro_board_url && (
+                        <Button variant="outline" size="sm" asChild>
+                          <a href={project.miro_board_url} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="mr-1 h-3 w-3" />
+                            Miro
+                          </a>
+                        </Button>
+                      )}
+                      {project.notion_page_url && (
+                        <Button variant="outline" size="sm" asChild>
+                          <a href={project.notion_page_url} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="mr-1 h-3 w-3" />
+                            Notion
+                          </a>
+                        </Button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Action buttons row */}
+                  <div className="flex items-center justify-between pt-2 border-t">
+                    {project.workshop_status === 'processed' ? (
                       <Button 
                         variant="default" 
                         size="sm"
@@ -165,11 +172,12 @@ export default function AppProjects() {
                         <Eye className="mr-1 h-3 w-3" />
                         Preview
                       </Button>
+                    ) : (
+                      <div />
                     )}
                     <Button 
                       variant="ghost" 
-                      size="sm" 
-                      className="ml-auto"
+                      size="sm"
                       onClick={() => navigate(`/admin/apps/wizard?project=${project.id}`)}
                     >
                       Fortsett

@@ -172,14 +172,23 @@ function useAppConfig(appId: string, tenantId: string) {
     queryKey: ["app-config", appId, tenantId],
     queryFn: async (): Promise<AppConfig> => {
       // First try customer_app_projects (for wizard-created apps)
-      const { data: project, error: projectError } = await supabase
+      const { data: project } = await supabase
         .from("customer_app_projects")
         .select(`
           id,
           name,
           description,
-          branding,
-          app_capability_usage (
+          branding
+        `)
+        .eq("id", appId)
+        .eq("tenant_id", tenantId)
+        .maybeSingle();
+
+      if (project) {
+        // Fetch capabilities separately (app_capability_usage uses app_definition_id for both)
+        const { data: capabilityUsage } = await supabase
+          .from("app_capability_usage")
+          .select(`
             id,
             capability_id,
             is_required,
@@ -190,15 +199,11 @@ function useAppConfig(appId: string, tenantId: string) {
               name,
               category
             )
-          )
-        `)
-        .eq("id", appId)
-        .eq("tenant_id", tenantId)
-        .maybeSingle();
+          `)
+          .eq("app_definition_id", appId);
 
-      if (project) {
         // Map capabilities to slots based on category
-        const capabilities: AppCapabilityConfig[] = (project.app_capability_usage || []).map(
+        const capabilities: AppCapabilityConfig[] = (capabilityUsage || []).map(
           (usage: any, index: number) => ({
             capabilityId: usage.capability_id,
             capabilityKey: usage.capabilities?.key || "unknown",
@@ -223,14 +228,22 @@ function useAppConfig(appId: string, tenantId: string) {
       }
 
       // Try app_definitions (for pre-built apps)
-      const { data: appDef, error: appDefError } = await supabase
+      const { data: appDef } = await supabase
         .from("app_definitions")
         .select(`
           id,
           name,
           description,
-          default_config,
-          app_capability_usage (
+          default_config
+        `)
+        .eq("id", appId)
+        .maybeSingle();
+
+      if (appDef) {
+        // Fetch capabilities separately
+        const { data: capabilityUsage } = await supabase
+          .from("app_capability_usage")
+          .select(`
             id,
             capability_id,
             is_required,
@@ -241,13 +254,10 @@ function useAppConfig(appId: string, tenantId: string) {
               name,
               category
             )
-          )
-        `)
-        .eq("id", appId)
-        .maybeSingle();
+          `)
+          .eq("app_definition_id", appId);
 
-      if (appDef) {
-        const capabilities: AppCapabilityConfig[] = (appDef.app_capability_usage || []).map(
+        const capabilities: AppCapabilityConfig[] = (capabilityUsage || []).map(
           (usage: any, index: number) => ({
             capabilityId: usage.capability_id,
             capabilityKey: usage.capabilities?.key || "unknown",
