@@ -10,7 +10,8 @@ import {
   Building2, 
   Calendar,
   ArrowRight,
-  FileText
+  FileText,
+  Eye
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';
@@ -153,6 +154,16 @@ export default function AppProjects() {
                           <ExternalLink className="mr-1 h-3 w-3" />
                           Notion
                         </a>
+                      </Button>
+                    )}
+                    {project.workshop_status === 'processed' && (
+                      <Button 
+                        variant="default" 
+                        size="sm"
+                        onClick={() => navigate(`/admin/apps/preview/${project.id}`)}
+                      >
+                        <Eye className="mr-1 h-3 w-3" />
+                        Preview
                       </Button>
                     )}
                     <Button 

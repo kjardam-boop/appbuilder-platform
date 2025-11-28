@@ -88,6 +88,7 @@ import IntegrationGraph from "./pages/admin/IntegrationGraph";
 import IntegrationsHub from "./pages/admin/integrations/IntegrationsHub";
 import NewAppWizard from "./pages/admin/NewAppWizard";
 import AppProjects from "./pages/admin/AppProjects";
+import AppPreview from "./pages/admin/AppPreview";
 import DeliveryMethodDetail from "./pages/admin/integrations/DeliveryMethodDetail";
 import IntegrationDefinitionDetail from "./pages/admin/integrations/IntegrationDefinitionDetail";
 import { PageBuilder } from "./platform/admin/PageBuilder";
@@ -256,6 +257,7 @@ const App = () => (
               <Route path="apps/new" element={<PermissionProtectedRoute resource="app_definition" action="admin"><AppDefinitionCreate /></PermissionProtectedRoute>} />
               <Route path="apps/wizard" element={<PermissionProtectedRoute resource="application" action="admin"><NewAppWizard /></PermissionProtectedRoute>} />
               <Route path="apps/projects" element={<PermissionProtectedRoute resource="application" action="admin"><AppProjects /></PermissionProtectedRoute>} />
+              <Route path="apps/preview/:appId" element={<PermissionProtectedRoute resource="application" action="admin"><AppPreview /></PermissionProtectedRoute>} />
               <Route path="apps/:appKey" element={<PermissionProtectedRoute resource="app_definition" action="admin"><AppDefinitionDetails /></PermissionProtectedRoute>} />
               <Route path="apps/:appKey/versions" element={<PermissionProtectedRoute resource="app_definition" action="admin"><AppVersionsPage /></PermissionProtectedRoute>} />
               <Route path="tenants/:tenantId/apps" element={<PermissionProtectedRoute resource="application" action="list"><TenantAppsPage /></PermissionProtectedRoute>} />

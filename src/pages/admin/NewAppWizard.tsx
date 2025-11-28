@@ -59,6 +59,15 @@ interface WizardState {
   miroUrl: string | null;
   notionUrl: string | null;
   generatedConfig: any | null;
+  // Step 4: Selected capabilities
+  selectedCapabilities: Array<{
+    id: string;
+    key: string;
+    name: string;
+    category: string;
+    variant?: string;
+    config?: Record<string, any>;
+  }>;
 }
 
 interface Company {
@@ -114,6 +123,7 @@ export default function NewAppWizard() {
     miroUrl: null,
     notionUrl: null,
     generatedConfig: null,
+    selectedCapabilities: [],
   });
 
   // Load existing project if resuming
@@ -447,6 +457,40 @@ export default function NewAppWizard() {
     },
   });
 
+  // Save selected capabilities
+  const saveCapabilitiesMutation = useMutation({
+    mutationFn: async (capabilities: WizardState['selectedCapabilities']) => {
+      if (!state.projectId) return;
+
+      try {
+        // Delete existing capabilities for this project
+        await supabase
+          .from('app_capability_usage')
+          .delete()
+          .eq('app_definition_id', state.projectId);
+
+        // Insert new capabilities
+        if (capabilities.length > 0) {
+          const { error } = await supabase
+            .from('app_capability_usage')
+            .insert(capabilities.map(cap => ({
+              app_definition_id: state.projectId,
+              capability_id: cap.id,
+              is_required: false,
+              config_schema: cap.config || null,
+            })));
+          if (error) {
+            console.error('Error saving capabilities:', error);
+            throw error;
+          }
+        }
+        console.log('Capabilities saved:', capabilities.length);
+      } catch (e) {
+        console.error('capabilities save failed:', e);
+      }
+    },
+  });
+
   // Navigation
   const goToStep = (step: number) => {
     setState(prev => ({ ...prev, step }));
@@ -463,6 +507,12 @@ export default function NewAppWizard() {
     // Save questionnaire when leaving Step 2
     if (state.step === 2 && Object.keys(state.questionnaire).length > 0) {
       await saveQuestionnaireMutation.mutateAsync(state.questionnaire);
+    }
+    
+    // Save capabilities when leaving Step 4
+    if (state.step === 4 && state.selectedCapabilities.length > 0) {
+      await saveCapabilitiesMutation.mutateAsync(state.selectedCapabilities);
+      toast.success(`${state.selectedCapabilities.length} capabilities lagret`);
     }
     
     // Updated to 6 steps

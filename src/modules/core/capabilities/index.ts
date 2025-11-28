@@ -44,9 +44,50 @@ export { AppCapabilityDrawer } from "./components/AppCapabilityDrawer";
 // Services
 export { AppCapabilityService } from "./services/appCapabilityService";
 
+// Schemas (Micro-frontend manifest)
+export type {
+  CapabilityManifest,
+  CapabilitySlot,
+  CapabilityVariant,
+  CapabilityProps,
+  LoadedCapability,
+  ConfigSchema,
+  ConfigField,
+  ThemeOptions,
+  CapabilityExports,
+} from "./schemas/capability-manifest.schema";
+
+export {
+  CapabilityManifestSchema,
+  CapabilitySlotSchema,
+  validateManifest,
+  createManifest,
+  mergeConfigs,
+} from "./schemas/capability-manifest.schema";
+
+// Runtime (Loader, Slots & AppShell)
+export {
+  CapabilityLoader,
+  loadCapability,
+  loadManifest,
+  loadVariant,
+  CapabilitySlot,
+  SlotProvider,
+  useSlotContext,
+  AppShell,
+  type SlotCapability,
+  type CapabilitySlotProps,
+  type AppShellProps,
+  type AppConfig,
+  type AppCapabilityConfig,
+  type LayoutConfig,
+  type ThemeConfig,
+  type BrandingConfig,
+} from "./runtime";
+
 // Module metadata
 export const CAPABILITIES_MODULE = {
   name: "capabilities",
-  version: "1.0.0",
-  description: "Capability catalog for reusable platform features",
+  version: "2.0.0",
+  description: "Capability catalog with micro-frontend runtime support",
 } as const;
