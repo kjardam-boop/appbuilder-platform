@@ -191,12 +191,19 @@ function useAppConfig(appId: string, tenantId: string) {
       if (project) {
         console.log("[AppShell] Found project:", project);
         
-        // Fetch capabilities separately - use project_id for customer projects
-        const { data: capabilityUsage, error: capError } = await supabase
+        // Fetch capabilities - try the project_id and app_definition_id
+        let capabilityUsage: any[] | null = null;
+
+        console.log("[AppShell] Fetching capabilities for appId:", appId);
+
+        // First try with project_id (new schema)
+        const { data: capData1, error: capErr1 } = await supabase
           .from("app_capability_usage")
           .select(`
             id,
             capability_id,
+            project_id,
+            app_definition_id,
             is_required,
             config_schema,
             capabilities (
@@ -208,7 +215,42 @@ function useAppConfig(appId: string, tenantId: string) {
           `)
           .eq("project_id", appId);
 
-        console.log("[AppShell] Capability usage:", { capabilityUsage, capError });
+        console.log("[AppShell] Query via project_id result:", { data: capData1, error: capErr1 });
+
+        if (capData1 && capData1.length > 0) {
+          capabilityUsage = capData1;
+          console.log("[AppShell] Found capabilities via project_id:", capData1.length, capData1);
+        } else {
+          // Fallback: try with app_definition_id (old schema or before migration)
+          const { data: capData2, error: capErr2 } = await supabase
+            .from("app_capability_usage")
+            .select(`
+              id,
+              capability_id,
+              project_id,
+              app_definition_id,
+              is_required,
+              config_schema,
+              capabilities (
+                id,
+                key,
+                name,
+                category
+              )
+            `)
+            .eq("app_definition_id", appId);
+
+          console.log("[AppShell] Query via app_definition_id result:", { data: capData2, error: capErr2 });
+
+          if (capData2 && capData2.length > 0) {
+            capabilityUsage = capData2;
+            console.log("[AppShell] Found capabilities via app_definition_id:", capData2.length, capData2);
+          } else {
+            console.log("[AppShell] No capabilities found for project:", appId, "Errors:", { capErr1, capErr2 });
+          }
+        }
+
+        console.log("[AppShell] Final capability usage:", capabilityUsage);
 
         // Map capabilities to slots based on category
         const capabilities: AppCapabilityConfig[] = (capabilityUsage || []).map(
@@ -668,7 +710,7 @@ export function AppShell({
 
         {/* Floating capabilities (e.g., AI Chat bubble) */}
         {capabilitiesBySlot.floating.length > 0 && (
-          <div className="fixed bottom-4 right-4 z-50">
+          <div className="fixed bottom-24 right-12 z-50 w-80">
             <CapabilitySlot
               name="floating"
               capabilities={capabilitiesBySlot.floating}

@@ -98,28 +98,50 @@ export function Step4Capabilities({
       setSaveStatus('saving');
       try {
         // Delete existing capabilities for this project
-        // Use project_id for customer_app_projects (not app_definition_id)
+        // Try project_id first (new schema), fallback to app_definition_id
         await supabase
           .from('app_capability_usage')
           .delete()
           .eq('project_id', state.projectId);
+        
+        // Also delete any with app_definition_id (for migration compatibility)
+        await supabase
+          .from('app_capability_usage')
+          .delete()
+          .eq('app_definition_id', state.projectId);
 
-        // Insert new capabilities with project_id
+        // Insert new capabilities
         if (debouncedCapabilities.length > 0) {
-          const { error } = await supabase
+          // Try with project_id first (new schema)
+          const { error: err1 } = await supabase
             .from('app_capability_usage')
             .insert(debouncedCapabilities.map(cap => ({
-              project_id: state.projectId,  // Use project_id for customer projects
+              project_id: state.projectId,
               capability_id: cap.id,
               is_required: false,
               config_schema: null,
             })));
           
-          if (error) throw error;
+          // If project_id fails (column doesn't exist), try app_definition_id
+          if (err1 && err1.code === '42703') {
+            console.log('[Step4] project_id column not found, using app_definition_id');
+            const { error: err2 } = await supabase
+              .from('app_capability_usage')
+              .insert(debouncedCapabilities.map(cap => ({
+                app_definition_id: state.projectId,
+                capability_id: cap.id,
+                is_required: false,
+                config_schema: null,
+              })));
+            
+            if (err2) throw err2;
+          } else if (err1) {
+            throw err1;
+          }
         }
         
+        console.log('[Step4] Capabilities saved:', debouncedCapabilities.length);
         setSaveStatus('saved');
-        // Reset to idle after showing saved status
         setTimeout(() => setSaveStatus('idle'), 2000);
       } catch (error) {
         console.error('Auto-save failed:', error);
