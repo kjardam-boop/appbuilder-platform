@@ -1,0 +1,450 @@
+{
+  "name": "Process Workshop Results v2",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "process-workshop-results",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 300],
+      "webhookId": "process-workshop-results"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse input from webhook\nconst input = $input.first().json.body || $input.first().json;\n\nreturn [{\n  json: {\n    projectId: input.projectId || input.project_id,\n    boardId: input.boardId || input.board_id,\n    boardUrl: input.boardUrl || input.board_url,\n    tenantId: input.tenantId || input.tenant_id\n  }\n}];"
+      },
+      "id": "parse-input",
+      "name": "Parse Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  p.id as project_id,\n  p.name as project_name,\n  p.description as project_description,\n  p.miro_board_id,\n  p.miro_board_url,\n  c.id as company_id,\n  c.name as company_name,\n  c.org_number,\n  c.industry_description\nFROM customer_app_projects p\nLEFT JOIN companies c ON p.company_id = c.id\nWHERE p.id = '{{ $json.projectId }}'",
+        "options": {}
+      },
+      "id": "get-project-info",
+      "name": "Get Project Info",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [440, 300],
+      "credentials": {
+        "postgres": {
+          "id": "YOUR_POSTGRES_CREDENTIAL_ID",
+          "name": "Postgres Supabase"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.miro.com/v2/boards/{{ $json.miro_board_id || $('Parse Input').item.json.boardId }}/items",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "miroApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "limit",
+              "value": "50"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-miro-items",
+      "name": "Get Miro Board Items",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 300],
+      "credentials": {
+        "miroApi": {
+          "id": "YOUR_MIRO_CREDENTIAL_ID",
+          "name": "Miro Bearer Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract and categorize sticky notes from Miro board\nconst items = $input.first().json.data || [];\nconst projectInfo = $('Get Project Info').first().json;\n\n// Initialize categories\nconst categories = {\n  painPoints: [],\n  requirements: [],\n  userStories: [],\n  processSteps: [],\n  ideas: [],\n  questions: [],\n  other: []\n};\n\n// Keywords for categorization\nconst keywords = {\n  painPoints: ['problem', 'pain', 'frustration', 'difficult', 'slow', 'error', 'bug', 'issue', 'challenge', 'blocker'],\n  requirements: ['must', 'need', 'require', 'should', 'krav', 'behov', 'nødvendig'],\n  userStories: ['as a', 'i want', 'so that', 'user', 'som en', 'jeg vil', 'bruker'],\n  processSteps: ['step', 'then', 'after', 'before', 'first', 'next', 'steg', 'deretter', 'først'],\n  ideas: ['idea', 'maybe', 'could', 'suggest', 'idé', 'kanskje', 'forslag'],\n  questions: ['?', 'how', 'what', 'why', 'when', 'hvor', 'hva', 'hvorfor']\n};\n\n// Process each item\nfor (const item of items) {\n  if (item.type === 'sticky_note' || item.type === 'shape' || item.type === 'text') {\n    const content = item.data?.content || item.content || '';\n    const cleanContent = content.replace(/<[^>]*>/g, '').trim();\n    \n    if (!cleanContent) continue;\n    \n    // Determine category based on keywords\n    let categorized = false;\n    const lowerContent = cleanContent.toLowerCase();\n    \n    for (const [category, words] of Object.entries(keywords)) {\n      if (words.some(word => lowerContent.includes(word))) {\n        categories[category].push({\n          content: cleanContent,\n          color: item.style?.fillColor || 'unknown',\n          position: item.position || null\n        });\n        categorized = true;\n        break;\n      }\n    }\n    \n    if (!categorized) {\n      categories.other.push({\n        content: cleanContent,\n        color: item.style?.fillColor || 'unknown',\n        position: item.position || null\n      });\n    }\n  }\n}\n\n// Create summary stats\nconst stats = {\n  totalItems: items.length,\n  painPointsCount: categories.painPoints.length,\n  requirementsCount: categories.requirements.length,\n  userStoriesCount: categories.userStories.length,\n  ideasCount: categories.ideas.length\n};\n\nreturn [{\n  json: {\n    projectInfo,\n    categories,\n    stats,\n    rawItemCount: items.length\n  }\n}];"
+      },
+      "id": "extract-categorize",
+      "name": "Extract & Categorize Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 300]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are an expert business analyst summarizing workshop results. Create a structured summary in Norwegian that can be used for project documentation. Be concise but comprehensive."
+            },
+            {
+              "role": "user",
+              "content": "=Summarize this workshop data for project \"{{ $json.projectInfo.project_name }}\" (company: {{ $json.projectInfo.company_name }}):\n\nPAIN POINTS ({{ $json.stats.painPointsCount }}):\n{{ $json.categories.painPoints.map(p => '- ' + p.content).join('\\n') }}\n\nREQUIREMENTS ({{ $json.stats.requirementsCount }}):\n{{ $json.categories.requirements.map(r => '- ' + r.content).join('\\n') }}\n\nUSER STORIES ({{ $json.stats.userStoriesCount }}):\n{{ $json.categories.userStories.map(u => '- ' + u.content).join('\\n') }}\n\nIDEAS ({{ $json.stats.ideasCount }}):\n{{ $json.categories.ideas.map(i => '- ' + i.content).join('\\n') }}\n\nOTHER NOTES:\n{{ $json.categories.other.map(o => '- ' + o.content).join('\\n') }}\n\nProvide:\n1. Executive Summary (2-3 sentences)\n2. Top 3 Pain Points\n3. Key Requirements (prioritized)\n4. Recommended Next Steps"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "id": "ai-summarize",
+      "name": "AI Summarize Workshop",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.4,
+      "position": [1100, 300],
+      "credentials": {
+        "openAiApi": {
+          "id": "YOUR_OPENAI_CREDENTIAL_ID",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge all data for Notion and Supabase\nconst extractedData = $('Extract & Categorize Data').first().json;\nconst aiSummary = $input.first().json.message?.content || $input.first().json.text || 'No summary generated';\n\nreturn [{\n  json: {\n    ...extractedData,\n    aiSummary,\n    processedAt: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "merge-results",
+      "name": "Merge AI Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 300]
+    },
+    {
+      "parameters": {
+        "resource": "page",
+        "operation": "create",
+        "parentPageId": "={{ $env.NOTION_PARENT_PAGE_ID || 'YOUR_PARENT_PAGE_ID' }}",
+        "title": "=Workshop: {{ $json.projectInfo.project_name }} - {{ $json.projectInfo.company_name }}",
+        "blockUi": {
+          "blockValues": [
+            {
+              "type": "heading_1",
+              "richText": {
+                "text": [
+                  {
+                    "textContent": "=Workshop Oppsummering"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "paragraph",
+              "richText": {
+                "text": [
+                  {
+                    "textContent": "=Prosjekt: {{ $json.projectInfo.project_name }}"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "paragraph",
+              "richText": {
+                "text": [
+                  {
+                    "textContent": "=Selskap: {{ $json.projectInfo.company_name }} ({{ $json.projectInfo.org_number }})"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "paragraph",
+              "richText": {
+                "text": [
+                  {
+                    "textContent": "=Prosessert: {{ $json.processedAt }}"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "divider"
+            },
+            {
+              "type": "heading_2",
+              "richText": {
+                "text": [
+                  {
+                    "textContent": "AI-generert oppsummering"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "paragraph",
+              "richText": {
+                "text": [
+                  {
+                    "textContent": "={{ $json.aiSummary }}"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "divider"
+            },
+            {
+              "type": "heading_2",
+              "richText": {
+                "text": [
+                  {
+                    "textContent": "=Pain Points ({{ $json.stats.painPointsCount }})"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "bulleted_list_item",
+              "richText": {
+                "text": [
+                  {
+                    "textContent": "={{ $json.categories.painPoints.map(p => p.content).join('\\n• ') || 'Ingen registrert' }}"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "heading_2",
+              "richText": {
+                "text": [
+                  {
+                    "textContent": "=Krav ({{ $json.stats.requirementsCount }})"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "bulleted_list_item",
+              "richText": {
+                "text": [
+                  {
+                    "textContent": "={{ $json.categories.requirements.map(r => r.content).join('\\n• ') || 'Ingen registrert' }}"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "heading_2",
+              "richText": {
+                "text": [
+                  {
+                    "textContent": "=Brukerhistorier ({{ $json.stats.userStoriesCount }})"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "bulleted_list_item",
+              "richText": {
+                "text": [
+                  {
+                    "textContent": "={{ $json.categories.userStories.map(u => u.content).join('\\n• ') || 'Ingen registrert' }}"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "create-notion-page",
+      "name": "Create Notion Page",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [1540, 300],
+      "credentials": {
+        "notionApi": {
+          "id": "YOUR_NOTION_CREDENTIAL_ID",
+          "name": "Notion API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO project_workshop_results (\n  project_id,\n  pain_points,\n  requirements,\n  user_stories,\n  ai_summary,\n  notion_page_id,\n  processed_at\n) VALUES (\n  '{{ $('Parse Input').item.json.projectId }}',\n  '{{ JSON.stringify($('Merge AI Results').item.json.categories.painPoints) }}',\n  '{{ JSON.stringify($('Merge AI Results').item.json.categories.requirements) }}',\n  '{{ JSON.stringify($('Merge AI Results').item.json.categories.userStories) }}',\n  '{{ $('Merge AI Results').item.json.aiSummary.replace(/'/g, \"''\") }}',\n  '{{ $json.id }}',\n  NOW()\n)\nON CONFLICT (project_id) DO UPDATE SET\n  pain_points = EXCLUDED.pain_points,\n  requirements = EXCLUDED.requirements,\n  user_stories = EXCLUDED.user_stories,\n  ai_summary = EXCLUDED.ai_summary,\n  notion_page_id = EXCLUDED.notion_page_id,\n  processed_at = NOW()\nRETURNING *",
+        "options": {}
+      },
+      "id": "store-results",
+      "name": "Store Workshop Results",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1760, 300],
+      "credentials": {
+        "postgres": {
+          "id": "YOUR_POSTGRES_CREDENTIAL_ID",
+          "name": "Postgres Supabase"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=UPDATE customer_app_projects SET\n  workshop_status = 'processed',\n  notion_page_id = '{{ $('Create Notion Page').item.json.id }}',\n  notion_page_url = '{{ $('Create Notion Page').item.json.url }}',\n  updated_at = NOW()\nWHERE id = '{{ $('Parse Input').item.json.projectId }}'",
+        "options": {}
+      },
+      "id": "update-project",
+      "name": "Update Project Status",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1980, 300],
+      "credentials": {
+        "postgres": {
+          "id": "YOUR_POSTGRES_CREDENTIAL_ID",
+          "name": "Postgres Supabase"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"project_id\": \"{{ $('Parse Input').item.json.projectId }}\",\n  \"notion_page_id\": \"{{ $('Create Notion Page').item.json.id }}\",\n  \"notion_page_url\": \"{{ $('Create Notion Page').item.json.url }}\",\n  \"stats\": {\n    \"pain_points\": {{ $('Merge AI Results').item.json.stats.painPointsCount }},\n    \"requirements\": {{ $('Merge AI Results').item.json.stats.requirementsCount }},\n    \"user_stories\": {{ $('Merge AI Results').item.json.stats.userStoriesCount }}\n  },\n  \"status\": \"processed\"\n}",
+        "options": {}
+      },
+      "id": "respond-success",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2200, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Parse Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Input": {
+      "main": [
+        [
+          {
+            "node": "Get Project Info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Project Info": {
+      "main": [
+        [
+          {
+            "node": "Get Miro Board Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Miro Board Items": {
+      "main": [
+        [
+          {
+            "node": "Extract & Categorize Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract & Categorize Data": {
+      "main": [
+        [
+          {
+            "node": "AI Summarize Workshop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Summarize Workshop": {
+      "main": [
+        [
+          {
+            "node": "Merge AI Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge AI Results": {
+      "main": [
+        [
+          {
+            "node": "Create Notion Page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Notion Page": {
+      "main": [
+        [
+          {
+            "node": "Store Workshop Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Workshop Results": {
+      "main": [
+        [
+          {
+            "node": "Update Project Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Project Status": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "workshop",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    }
+  ],
+  "pinData": {}
+}
+

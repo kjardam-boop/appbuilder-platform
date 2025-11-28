@@ -37,6 +37,7 @@ export const adminNavigationMapping: Record<string, AdminNavigationRequirement> 
   '/admin/apps': { resource: 'application', requiredAction: 'admin' },
   '/admin/apps/new': { resource: 'application', requiredAction: 'admin' },
   '/admin/apps/wizard': { resource: 'application', requiredAction: 'admin' },
+  '/admin/apps/projects': { resource: 'application', requiredAction: 'admin' },
   '/admin/apps/:appKey': { resource: 'application', requiredAction: 'admin' },
   '/admin/apps/:appKey/versions': { resource: 'application', requiredAction: 'admin' },
   '/admin/external-systems': { resource: 'application', requiredAction: 'admin' },

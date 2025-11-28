@@ -98,9 +98,12 @@ export default function NewAppWizard() {
   const queryClient = useQueryClient();
   const tenantContext = useTenantContext();
   
+  // Get project ID from URL (support both 'project' and 'projectId' params)
+  const projectIdFromUrl = searchParams.get('project') || searchParams.get('projectId');
+  
   const [state, setState] = useState<WizardState>({
     step: 1,
-    projectId: searchParams.get('projectId'),
+    projectId: projectIdFromUrl,
     projectName: '',
     projectDescription: '',
     companyId: null,
@@ -115,10 +118,10 @@ export default function NewAppWizard() {
 
   // Load existing project if resuming
   useEffect(() => {
-    if (state.projectId) {
-      loadProject(state.projectId);
+    if (projectIdFromUrl) {
+      loadProject(projectIdFromUrl);
     }
-  }, []);
+  }, [projectIdFromUrl]);
 
   const loadProject = async (projectId: string) => {
     // Fetch basic project data (using any to avoid type issues with new columns)
@@ -130,43 +133,103 @@ export default function NewAppWizard() {
 
     if (error || !data) {
       console.error('Failed to load project:', error);
+      toast.error('Kunne ikke laste prosjekt');
       return;
     }
 
     // Cast to any to access new columns not yet in TypeScript types
     const projectData = data as any;
+    
+    // Determine which step to show based on workshop status
+    let currentStep = 1;
+    const workshopStatus = projectData.workshop_status || 'not_started';
+    
+    if (workshopStatus === 'processed') {
+      currentStep = 5; // Go to Generate step
+    } else if (workshopStatus === 'complete' || workshopStatus === 'in_progress' || workshopStatus === 'board_ready') {
+      currentStep = 3; // Stay on Workshop step
+    } else if (projectData.company_id) {
+      currentStep = 2; // Go to Discovery if company is selected
+    }
 
     setState(prev => ({
       ...prev,
+      step: currentStep,
+      projectId: projectId,
       projectName: projectData.name || '',
       projectDescription: projectData.description || '',
       companyId: projectData.company_id || null,
-      workshopStatus: projectData.workshop_status || 'not_started',
+      workshopStatus: workshopStatus,
       miroUrl: projectData.miro_board_url || null,
       notionUrl: projectData.notion_page_url || null,
       systems: [], // Will be loaded separately if project_systems table exists
       questionnaire: {},
     }));
+    
+    toast.success(`Prosjekt "${projectData.name}" lastet`);
 
-    // Try to load systems if the table exists
+    // Load systems from project_systems table
     try {
-      const { data: systemsData } = await supabase
-        .from('project_systems' as any)
-        .select('*, external_system:external_systems(*)')
+      const { data: systemsData, error: systemsError } = await supabase
+        .from('project_systems')
+        .select('*, external_system:external_systems(id, name, slug, system_types)')
         .eq('project_id', projectId);
       
-      if (systemsData) {
-        setState(prev => ({
-          ...prev,
-          systems: (systemsData as any[]).map((s: any) => ({
-            id: s.external_system_id || s.id,
-            name: s.external_system?.name || s.custom_system_name,
-            type: s.external_system?.system_types?.[0] || s.custom_system_type || 'System',
-          })),
+      if (!systemsError && systemsData && systemsData.length > 0) {
+        const loadedSystems = systemsData.map((s: any) => ({
+          id: s.external_system_id || s.id,
+          name: s.external_system?.name || s.custom_system_name || 'Unknown',
+          type: s.external_system?.system_types?.[0] || s.custom_system_type || 'System',
         }));
+        
+        setState(prev => ({ ...prev, systems: loadedSystems }));
+        console.log('Loaded systems:', loadedSystems);
       }
     } catch (e) {
-      console.log('project_systems table not available yet');
+      console.log('Could not load project_systems:', e);
+    }
+
+    // Load questionnaire responses
+    try {
+      const { data: questionnaireData, error: questionnaireError } = await supabase
+        .from('project_questionnaire_responses')
+        .select('question_key, answer')
+        .eq('project_id', projectId)
+        .order('sort_order');
+      
+      if (!questionnaireError && questionnaireData && questionnaireData.length > 0) {
+        const loadedQuestionnaire: Record<string, string> = {};
+        questionnaireData.forEach((q: any) => {
+          if (q.question_key && q.answer) {
+            loadedQuestionnaire[q.question_key] = q.answer;
+          }
+        });
+        
+        setState(prev => ({ ...prev, questionnaire: loadedQuestionnaire }));
+        console.log('Loaded questionnaire:', loadedQuestionnaire);
+      }
+    } catch (e) {
+      console.log('Could not load questionnaire responses:', e);
+    }
+
+    // Load implementation partners
+    try {
+      const { data: partnersData, error: partnersError } = await supabase
+        .from('project_implementation_partners')
+        .select('company_id, companies(id, name)')
+        .eq('project_id', projectId);
+      
+      if (!partnersError && partnersData && partnersData.length > 0) {
+        const loadedPartners = partnersData.map((p: any) => ({
+          id: p.company_id,
+          name: p.companies?.name || 'Unknown Partner',
+        }));
+        
+        setState(prev => ({ ...prev, partners: loadedPartners }));
+        console.log('Loaded partners:', loadedPartners);
+      }
+    } catch (e) {
+      console.log('Could not load project_implementation_partners:', e);
     }
   };
 
@@ -282,7 +345,7 @@ export default function NewAppWizard() {
     },
   });
 
-  // Save systems to project (using any for tables not yet in TS types)
+  // Save systems to project
   const saveSystemsMutation = useMutation({
     mutationFn: async (systems: WizardState['systems']) => {
       if (!state.projectId) return;
@@ -290,21 +353,96 @@ export default function NewAppWizard() {
       try {
         // Delete existing and insert new
         await supabase
-          .from('project_systems' as any)
+          .from('project_systems')
           .delete()
           .eq('project_id', state.projectId);
 
         if (systems.length > 0) {
           const { error } = await supabase
-            .from('project_systems' as any)
+            .from('project_systems')
             .insert(systems.map(s => ({
               project_id: state.projectId,
               external_system_id: s.id,
+              custom_system_name: null,
+              custom_system_type: s.type,
             })));
-          if (error) throw error;
+          if (error) {
+            console.error('Error saving systems:', error);
+            throw error;
+          }
         }
+        console.log('Systems saved:', systems.length);
       } catch (e) {
-        console.log('project_systems table may not exist yet:', e);
+        console.error('project_systems save failed:', e);
+      }
+    },
+  });
+
+  // Save questionnaire responses
+  const saveQuestionnaireMutation = useMutation({
+    mutationFn: async (questionnaire: Record<string, string>) => {
+      if (!state.projectId) return;
+
+      try {
+        // Delete existing responses for this project
+        await supabase
+          .from('project_questionnaire_responses')
+          .delete()
+          .eq('project_id', state.projectId);
+
+        // Insert new responses
+        const entries = Object.entries(questionnaire);
+        if (entries.length > 0) {
+          const { error } = await supabase
+            .from('project_questionnaire_responses')
+            .insert(entries.map(([key, answer], index) => ({
+              project_id: state.projectId,
+              question_key: key,
+              question_text: key, // Will be updated with actual question text
+              answer: answer,
+              sort_order: index,
+            })));
+          if (error) {
+            console.error('Error saving questionnaire:', error);
+            throw error;
+          }
+        }
+        console.log('Questionnaire saved:', entries.length, 'responses');
+      } catch (e) {
+        console.error('questionnaire save failed:', e);
+      }
+    },
+  });
+
+  // Save implementation partners
+  const savePartnersMutation = useMutation({
+    mutationFn: async (partners: WizardState['partners']) => {
+      if (!state.projectId) return;
+
+      try {
+        // Delete existing partners for this project
+        await supabase
+          .from('project_implementation_partners')
+          .delete()
+          .eq('project_id', state.projectId);
+
+        // Insert new partners
+        if (partners.length > 0) {
+          const { error } = await supabase
+            .from('project_implementation_partners')
+            .insert(partners.map(p => ({
+              project_id: state.projectId,
+              company_id: p.id,
+              role: 'implementation',
+            })));
+          if (error) {
+            console.error('Error saving partners:', error);
+            throw error;
+          }
+        }
+        console.log('Partners saved:', partners.length);
+      } catch (e) {
+        console.error('partners save failed:', e);
       }
     },
   });
@@ -319,7 +457,14 @@ export default function NewAppWizard() {
     if (state.step === 1) {
       await projectMutation.mutateAsync(state);
       await saveSystemsMutation.mutateAsync(state.systems);
+      await savePartnersMutation.mutateAsync(state.partners);
     }
+    
+    // Save questionnaire when leaving Step 2
+    if (state.step === 2 && Object.keys(state.questionnaire).length > 0) {
+      await saveQuestionnaireMutation.mutateAsync(state.questionnaire);
+    }
+    
     // Updated to 6 steps
     setState(prev => ({ ...prev, step: Math.min(prev.step + 1, 6) }));
   };

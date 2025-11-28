@@ -107,6 +107,7 @@ const adminNavItems: NavSection[] = [
     defaultOpen: true,
     items: [
       { title: "App Wizard", url: "/admin/apps/wizard", icon: Wand2, badge: "NEW" },
+      { title: "App Projects", url: "/admin/apps/projects", icon: FolderKanban },
       { title: "App Catalog", url: "/admin/apps", icon: Package },
       { title: "External Systems", url: "/admin/external-systems", icon: Server },
       { title: "Capabilities", url: "/admin/capabilities", icon: Layers },
