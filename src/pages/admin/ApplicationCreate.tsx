@@ -68,9 +68,9 @@ export default function ApplicationCreate() {
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-3xl font-bold">Ny applikasjon</h1>
+              <h1 className="text-3xl font-bold">Nytt eksternt system</h1>
               <p className="text-muted-foreground mt-2">
-                Legg til en ny applikasjon i systemet. Bruk AI-assistanse for å hente informasjon automatisk.
+                Legg til et nytt eksternt system. Bruk AI-assistanse for å hente informasjon automatisk.
               </p>
             </div>
           </div>

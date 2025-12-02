@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import Header from "@/components/Dashboard/Header";
 import { AppBreadcrumbs } from '@/components/ui/app-breadcrumbs';
 import { generateAdminBreadcrumbs } from '@/helpers/breadcrumbHelper';
+import { AISeedGenerator } from "@/components/admin/AISeedGenerator";
 
 export default function AdminSeed() {
   const [isSeeding, setIsSeeding] = useState({
@@ -214,6 +215,13 @@ export default function AdminSeed() {
               </Button>
             </CardContent>
           </Card>
+
+          {/* AI-Powered Seed Generator */}
+          <AISeedGenerator 
+            onSeedComplete={() => {
+              toast.success("AI-generated systems added!");
+            }}
+          />
 
           <Card>
             <CardHeader>

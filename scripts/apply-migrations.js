@@ -40,8 +40,8 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey, {
 // Migrations to apply (in order)
 const migrations = [
   {
-    name: '20251113073900_ai_app_content_library',
-    path: 'supabase/migrations/20251113073900_ai_app_content_library.sql',
+    name: '20251113073900_content_library',
+    path: 'supabase/migrations/20251113073900_content_library.sql',
     description: 'Create AI content library table with seed data'
   },
   {

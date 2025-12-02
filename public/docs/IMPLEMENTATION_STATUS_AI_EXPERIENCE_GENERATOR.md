@@ -7,8 +7,8 @@ The AI Experience Generator feature has been fully implemented. All components a
 ## 🎯 What Was Built
 
 ### 1. Database Layer ✅
-- **Migration 1**: `20251113073900_ai_app_content_library.sql`
-  - Created `ai_app_content_library` table
+- **Migration 1**: `20251113073900_content_library.sql`
+  - Created `content_library` table
   - Added 3 seed content examples
   - Configured RLS policies
   
@@ -58,7 +58,7 @@ Run these migrations in your Supabase project:
 
 ```bash
 # Migration 1: Create table and seed data
-supabase/migrations/20251113073900_ai_app_content_library.sql
+supabase/migrations/20251113073900_content_library.sql
 
 # Migration 2: Add file storage support
 supabase/migrations/20251113093200_enhance_content_library_storage.sql
@@ -156,7 +156,7 @@ SELECT tokens FROM tenant_themes WHERE tenant_id = '...' AND is_active = true;
 ```
 supabase/
   migrations/
-    20251113073900_ai_app_content_library.sql ✅
+    20251113073900_content_library.sql ✅
     20251113093200_enhance_content_library_storage.sql ✅
   functions/
     ai-mcp-chat/

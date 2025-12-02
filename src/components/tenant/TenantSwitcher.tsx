@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { Building2, Check, ChevronDown, Loader2 } from 'lucide-react';
+import { Building2, Check, ChevronDown, Loader2, Globe } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 interface TenantOption {
@@ -19,6 +19,7 @@ interface TenantOption {
   slug: string;
   name: string;
   domain: string | null;
+  is_platform_tenant?: boolean;
 }
 
 export function TenantSwitcher() {
@@ -33,39 +34,64 @@ export function TenantSwitcher() {
     const fetchUserTenants = async () => {
       setIsLoading(true);
       try {
-        // First, fetch all tenant scope_ids the user has access to
-        const { data: userRoles, error: rolesError } = await supabase
+        // Check if user is platform admin (has platform scope role)
+        const { data: platformRoles } = await supabase
           .from('user_roles')
-          .select('scope_id')
+          .select('role')
           .eq('user_id', user.id)
-          .eq('scope_type', 'tenant');
+          .eq('scope_type', 'platform')
+          .limit(1);
+        
+        const isPlatformAdmin = platformRoles && platformRoles.length > 0;
+        console.log('[TenantSwitcher] isPlatformAdmin:', isPlatformAdmin);
+        
+        let tenants: TenantOption[] = [];
+        
+        if (isPlatformAdmin) {
+          // Platform admins can see ALL tenants
+          const { data: allTenants, error } = await supabase
+            .from('tenants')
+            .select('id, slug, name, domain, is_platform_tenant')
+            .eq('is_active', true)
+            .order('is_platform_tenant', { ascending: false })
+            .order('name');
+          
+          if (error) {
+            console.error('[TenantSwitcher] Error fetching all tenants:', error);
+          } else {
+            tenants = allTenants || [];
+          }
+        } else {
+          // Regular users: only see tenants they have roles on
+          const { data: userRoles, error: rolesError } = await supabase
+            .from('user_roles')
+            .select('scope_id')
+            .eq('user_id', user.id)
+            .eq('scope_type', 'tenant');
 
-        if (rolesError) {
-          console.error('[TenantSwitcher] Error fetching user roles:', rolesError);
-          return;
+          if (rolesError) {
+            console.error('[TenantSwitcher] Error fetching user roles:', rolesError);
+            return;
+          }
+
+          const tenantIds = userRoles ? [...new Set(userRoles.map(role => role.scope_id))] : [];
+
+          if (tenantIds.length > 0) {
+            const { data: tenantData, error: tenantsError } = await supabase
+              .from('tenants')
+              .select('id, slug, name, domain, is_platform_tenant')
+              .in('id', tenantIds);
+
+            if (tenantsError) {
+              console.error('[TenantSwitcher] Error fetching tenants:', tenantsError);
+            } else {
+              tenants = tenantData || [];
+            }
+          }
         }
 
-        if (!userRoles || userRoles.length === 0) {
-          setAvailableTenants([]);
-          return;
-        }
-
-        // Extract unique tenant IDs
-        const tenantIds = [...new Set(userRoles.map(role => role.scope_id))];
-
-        // Then fetch the tenant details
-        const { data: tenants, error: tenantsError } = await supabase
-          .from('tenants')
-          .select('id, slug, name, domain')
-          .in('id', tenantIds);
-
-        if (tenantsError) {
-          console.error('[TenantSwitcher] Error fetching tenants:', tenantsError);
-          return;
-        }
-
-        setAvailableTenants(tenants || []);
-        console.log('[TenantSwitcher] Available tenants:', tenants);
+        setAvailableTenants(tenants);
+        console.log('[TenantSwitcher] Available tenants:', tenants.length, tenants.map(t => t.slug));
       } catch (error) {
         console.error('[TenantSwitcher] Unexpected error:', error);
       } finally {
@@ -76,20 +102,38 @@ export function TenantSwitcher() {
     fetchUserTenants();
   }, [user]);
 
-  const handleTenantSwitch = (tenantSlug: string) => {
-    console.log('[TenantSwitcher] Switching to tenant:', tenantSlug);
+  const handleTenantSwitch = (tenant: TenantOption) => {
+    console.log('[TenantSwitcher] Switching to tenant:', tenant.slug, tenant.is_platform_tenant ? '(platform)' : '');
     
-    // Persist override in all storages
-    localStorage.setItem('tenantOverride', tenantSlug);
-    sessionStorage.setItem('tenantOverride', tenantSlug);
-    document.cookie = `tenantOverride=${encodeURIComponent(tenantSlug)}; path=/; max-age=${60 * 60 * 24}; samesite=lax`;
-    
-    // Update URL with tenant parameter
-    const url = new URL(window.location.href);
-    url.searchParams.set('tenant', tenantSlug);
-    
-    // Reload to apply new tenant context
-    window.location.href = url.toString();
+    if (tenant.is_platform_tenant) {
+      // Switching to platform tenant - set flag and clear all overrides
+      sessionStorage.setItem('usePlatformTenant', 'true');
+      localStorage.removeItem('tenantOverride');
+      sessionStorage.removeItem('tenantOverride');
+      document.cookie = 'tenantOverride=; path=/; max-age=0';
+      
+      // Navigate to clean URL and force reload
+      const url = new URL(window.location.href);
+      url.searchParams.delete('tenant');
+      url.hash = '';
+      
+      // Use replace + reload to ensure full page refresh
+      window.history.replaceState(null, '', url.toString());
+      window.location.reload();
+    } else {
+      // Switching to a specific tenant - clear platform flag and set override
+      sessionStorage.removeItem('usePlatformTenant');
+      sessionStorage.setItem('tenantOverride', tenant.slug);
+      
+      // Update URL with tenant parameter in hash and force reload
+      const url = new URL(window.location.href);
+      url.searchParams.delete('tenant');
+      url.hash = `tenant=${tenant.slug}`;
+      
+      // Use replace + reload to ensure full page refresh
+      window.history.replaceState(null, '', url.toString());
+      window.location.reload();
+    }
   };
 
   const currentTenant = context?.tenant;
@@ -133,19 +177,28 @@ export function TenantSwitcher() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         {availableTenants.map((tenant) => {
-          const isActive = currentTenant?.id === tenant.id;
+          const isActive = currentTenant?.tenant_id === tenant.id;
           
           return (
             <DropdownMenuItem
               key={tenant.id}
-              onClick={() => !isActive && handleTenantSwitch(tenant.slug)}
+              onClick={() => !isActive && handleTenantSwitch(tenant)}
               className="cursor-pointer"
               disabled={isActive}
             >
               <div className="flex items-center justify-between w-full">
-                <div className="flex flex-col">
-                  <span className="font-medium">{tenant.name}</span>
-                  <span className="text-xs text-muted-foreground">{tenant.slug}</span>
+                <div className="flex items-center gap-2">
+                  {tenant.is_platform_tenant ? (
+                    <Globe className="h-4 w-4 text-primary" />
+                  ) : (
+                    <Building2 className="h-4 w-4 text-muted-foreground" />
+                  )}
+                  <div className="flex flex-col">
+                    <span className="font-medium">{tenant.name}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {tenant.is_platform_tenant ? 'Platform' : tenant.slug}
+                    </span>
+                  </div>
                 </div>
                 {isActive && <Check className="h-4 w-4 text-primary" />}
               </div>

@@ -72,7 +72,7 @@ export async function searchContentLibrary(
   
   // Build base query
   let queryBuilder = supabaseClient
-    .from('ai_app_content_library')
+    .from('content_library')
     .select('id, title, content_markdown, keywords, category')
     .eq('tenant_id', tenantId)
     .eq('is_active', true);
@@ -134,7 +134,7 @@ export async function searchContentLibrary(
     .join(',');
   
   const { data: ilikeData, error: ilikeError } = await supabaseClient
-    .from('ai_app_content_library')
+    .from('content_library')
     .select('id, title, content_markdown, keywords, category')
     .eq('tenant_id', tenantId)
     .eq('is_active', true)
@@ -170,7 +170,7 @@ export async function loadTenantContext(
   console.log(`[Load Tenant Context] Loading all documents for tenant: ${tenantId}`);
   
   const { data, error } = await supabaseClient
-    .from('ai_app_content_library')
+    .from('content_library')
     .select('title, content_markdown, category')
     .eq('tenant_id', tenantId)
     .eq('is_active', true)
@@ -212,7 +212,7 @@ export async function getExistingScrapedContent(
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   
   const { data, error } = await supabaseClient
-    .from('ai_app_content_library')
+    .from('content_library')
     .select('id, content_markdown, last_processed_at')
     .eq('tenant_id', tenantId)
     .eq('is_active', true)
@@ -364,7 +364,7 @@ export async function saveScrapedContent(
   for (const chunk of chunks) {
     try {
       const response: any = await supabaseClient
-        .from('ai_app_content_library')
+        .from('content_library')
         .insert({
           tenant_id: tenantId,
           title: chunk.title,
@@ -500,7 +500,7 @@ export async function proactiveScrapeIfNeeded(
 ): Promise<boolean> {
   // Check if tenant has any documents
   const { count } = await supabaseClient
-    .from('ai_app_content_library')
+    .from('content_library')
     .select('id', { count: 'exact', head: true })
     .eq('tenant_id', tenantId)
     .eq('is_active', true);

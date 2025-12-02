@@ -1,5 +1,5 @@
 /**
- * Step 4: Capabilities Selection
+ * Step 4: Capaotilities Selection
  * 
  * Fourth step of the App Creation Wizard.
  * Select reusable capabilities to include in the app.

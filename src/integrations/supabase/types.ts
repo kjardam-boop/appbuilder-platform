@@ -14,80 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      ai_app_content_library: {
-        Row: {
-          category: string
-          chunk_index: number
-          content_markdown: string
-          created_at: string | null
-          created_by: string | null
-          extracted_text: string | null
-          file_size_bytes: number | null
-          file_storage_path: string | null
-          file_type: string | null
-          id: string
-          is_active: boolean | null
-          keywords: string[] | null
-          last_processed_at: string | null
-          metadata: Json | null
-          original_filename: string | null
-          parent_doc_id: string | null
-          tenant_id: string | null
-          title: string
-          updated_at: string | null
-        }
-        Insert: {
-          category: string
-          chunk_index?: number
-          content_markdown: string
-          created_at?: string | null
-          created_by?: string | null
-          extracted_text?: string | null
-          file_size_bytes?: number | null
-          file_storage_path?: string | null
-          file_type?: string | null
-          id?: string
-          is_active?: boolean | null
-          keywords?: string[] | null
-          last_processed_at?: string | null
-          metadata?: Json | null
-          original_filename?: string | null
-          parent_doc_id?: string | null
-          tenant_id?: string | null
-          title: string
-          updated_at?: string | null
-        }
-        Update: {
-          category?: string
-          chunk_index?: number
-          content_markdown?: string
-          created_at?: string | null
-          created_by?: string | null
-          extracted_text?: string | null
-          file_size_bytes?: number | null
-          file_storage_path?: string | null
-          file_type?: string | null
-          id?: string
-          is_active?: boolean | null
-          keywords?: string[] | null
-          last_processed_at?: string | null
-          metadata?: Json | null
-          original_filename?: string | null
-          parent_doc_id?: string | null
-          tenant_id?: string | null
-          title?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ai_app_content_library_parent_doc_id_fkey"
-            columns: ["parent_doc_id"]
-            isOneToOne: false
-            referencedRelation: "ai_app_content_library"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       ai_chat_messages: {
         Row: {
           content: string
@@ -308,30 +234,33 @@ export type Database = {
       }
       app_capability_usage: {
         Row: {
-          app_definition_id: string
+          app_definition_id: string | null
           capability_id: string
           config_schema: Json | null
           created_at: string
           id: string
           is_required: boolean
+          project_id: string | null
           updated_at: string
         }
         Insert: {
-          app_definition_id: string
+          app_definition_id?: string | null
           capability_id: string
           config_schema?: Json | null
           created_at?: string
           id?: string
           is_required?: boolean
+          project_id?: string | null
           updated_at?: string
         }
         Update: {
-          app_definition_id?: string
+          app_definition_id?: string | null
           capability_id?: string
           config_schema?: Json | null
           created_at?: string
           id?: string
           is_required?: boolean
+          project_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -347,6 +276,13 @@ export type Database = {
             columns: ["capability_id"]
             isOneToOne: false
             referencedRelation: "capabilities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "app_capability_usage_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "customer_app_projects"
             referencedColumns: ["id"]
           },
         ]
@@ -817,6 +753,8 @@ export type Database = {
           last_fetched_at: string | null
           last_interaction_date: string | null
           name: string
+          odoo_partner_id: number | null
+          odoo_synced_at: string | null
           org_form: string | null
           org_number: string | null
           segment: string | null
@@ -845,6 +783,8 @@ export type Database = {
           last_fetched_at?: string | null
           last_interaction_date?: string | null
           name: string
+          odoo_partner_id?: number | null
+          odoo_synced_at?: string | null
           org_form?: string | null
           org_number?: string | null
           segment?: string | null
@@ -873,6 +813,8 @@ export type Database = {
           last_fetched_at?: string | null
           last_interaction_date?: string | null
           name?: string
+          odoo_partner_id?: number | null
+          odoo_synced_at?: string | null
           org_form?: string | null
           org_number?: string | null
           segment?: string | null
@@ -1071,6 +1013,116 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: true
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_library: {
+        Row: {
+          capability_id: string | null
+          category: string
+          chunk_index: number
+          company_id: string | null
+          content_markdown: string
+          created_at: string | null
+          created_by: string | null
+          extracted_text: string | null
+          file_size_bytes: number | null
+          file_storage_path: string | null
+          file_type: string | null
+          id: string
+          is_active: boolean | null
+          keywords: string[] | null
+          last_processed_at: string | null
+          metadata: Json | null
+          original_filename: string | null
+          parent_doc_id: string | null
+          project_id: string | null
+          source_type: string | null
+          tenant_id: string | null
+          title: string
+          updated_at: string | null
+          visibility: string | null
+        }
+        Insert: {
+          capability_id?: string | null
+          category: string
+          chunk_index?: number
+          company_id?: string | null
+          content_markdown: string
+          created_at?: string | null
+          created_by?: string | null
+          extracted_text?: string | null
+          file_size_bytes?: number | null
+          file_storage_path?: string | null
+          file_type?: string | null
+          id?: string
+          is_active?: boolean | null
+          keywords?: string[] | null
+          last_processed_at?: string | null
+          metadata?: Json | null
+          original_filename?: string | null
+          parent_doc_id?: string | null
+          project_id?: string | null
+          source_type?: string | null
+          tenant_id?: string | null
+          title: string
+          updated_at?: string | null
+          visibility?: string | null
+        }
+        Update: {
+          capability_id?: string | null
+          category?: string
+          chunk_index?: number
+          company_id?: string | null
+          content_markdown?: string
+          created_at?: string | null
+          created_by?: string | null
+          extracted_text?: string | null
+          file_size_bytes?: number | null
+          file_storage_path?: string | null
+          file_type?: string | null
+          id?: string
+          is_active?: boolean | null
+          keywords?: string[] | null
+          last_processed_at?: string | null
+          metadata?: Json | null
+          original_filename?: string | null
+          parent_doc_id?: string | null
+          project_id?: string | null
+          source_type?: string | null
+          tenant_id?: string | null
+          title?: string
+          updated_at?: string | null
+          visibility?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_app_content_library_capability_id_fkey"
+            columns: ["capability_id"]
+            isOneToOne: false
+            referencedRelation: "capabilities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_app_content_library_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_app_content_library_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "customer_app_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_library_parent_doc_id_fkey"
+            columns: ["parent_doc_id"]
+            isOneToOne: false
+            referencedRelation: "content_library"
             referencedColumns: ["id"]
           },
         ]
@@ -3617,6 +3669,7 @@ export type Database = {
       }
       project_workshop_results: {
         Row: {
+          ai_summary: string | null
           architecture_mermaid: string | null
           attendees: Json | null
           created_at: string | null
@@ -3629,8 +3682,10 @@ export type Database = {
           integrations_needed: Json | null
           miro_board_id: string | null
           notion_page_id: string | null
+          notion_page_url: string | null
           pain_points: Json | null
           process_flows: Json | null
+          processed_at: string | null
           project_id: string
           raw_miro_export: Json | null
           requirements: Json | null
@@ -3641,6 +3696,7 @@ export type Database = {
           workshop_date: string | null
         }
         Insert: {
+          ai_summary?: string | null
           architecture_mermaid?: string | null
           attendees?: Json | null
           created_at?: string | null
@@ -3653,8 +3709,10 @@ export type Database = {
           integrations_needed?: Json | null
           miro_board_id?: string | null
           notion_page_id?: string | null
+          notion_page_url?: string | null
           pain_points?: Json | null
           process_flows?: Json | null
+          processed_at?: string | null
           project_id: string
           raw_miro_export?: Json | null
           requirements?: Json | null
@@ -3665,6 +3723,7 @@ export type Database = {
           workshop_date?: string | null
         }
         Update: {
+          ai_summary?: string | null
           architecture_mermaid?: string | null
           attendees?: Json | null
           created_at?: string | null
@@ -3677,8 +3736,10 @@ export type Database = {
           integrations_needed?: Json | null
           miro_board_id?: string | null
           notion_page_id?: string | null
+          notion_page_url?: string | null
           pain_points?: Json | null
           process_flows?: Json | null
+          processed_at?: string | null
           project_id?: string
           raw_miro_export?: Json | null
           requirements?: Json | null

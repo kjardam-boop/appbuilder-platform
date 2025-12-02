@@ -82,32 +82,53 @@ export const useTenantContext = (): RequestContext | null => {
       try {
         const host = window.location.hostname;
         
-        // Check for tenant override (for multi-tenant on same domain)
+        // Check for explicit "use platform" flag (set by TenantSwitcher)
+        const usePlatform = sessionStorage.getItem('usePlatformTenant') === 'true';
+        if (usePlatform) {
+          console.info('[TenantContext] Using platform tenant (explicit switch)');
+          sessionStorage.removeItem('usePlatformTenant');
+          // Clear any stored overrides
+          localStorage.removeItem('tenantOverride');
+          sessionStorage.removeItem('tenantOverride');
+          document.cookie = 'tenantOverride=; path=/; max-age=0';
+          // Continue to dev mode logic which will use platform tenant
+        }
+        
+        // Check for tenant override from URL only
         const urlParams = new URLSearchParams(window.location.search);
         let tenantSlugOverride: string | null = urlParams.get('tenant');
         let overrideSource: string | null = tenantSlugOverride ? 'query' : null;
         
         // Fallback: allow #tenant=slug in hash
-        if (!tenantSlugOverride) {
-          const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+        if (!tenantSlugOverride && !usePlatform) {
+          const rawHash = window.location.hash;
+          const hashParams = new URLSearchParams(rawHash.replace(/^#/, ''));
           const hashTenant = hashParams.get('tenant');
+          console.log('[TenantContext] Hash check:', { rawHash, hashTenant });
           if (hashTenant) {
             tenantSlugOverride = hashTenant;
             overrideSource = 'hash';
           }
         }
         
-        // Fallback: storage (persist across tabs and redirects)
-        if (!tenantSlugOverride) {
-          const ls = localStorage.getItem('tenantOverride');
-          const ss = sessionStorage.getItem('tenantOverride');
-          const ck = getCookie('tenantOverride');
-          tenantSlugOverride = ls || ss || ck || null;
-          if (tenantSlugOverride) overrideSource = ls ? 'localStorage' : ss ? 'sessionStorage' : 'cookie';
+        // In DEV mode: Only use storage fallback if NOT explicitly switching to platform
+        // In PROD mode: Always check storage for cross-tab persistence
+        const isDev = host === 'localhost' || host.startsWith('127.0.0.1');
+        
+        if (!tenantSlugOverride && !usePlatform) {
+          if (!isDev) {
+            // Production: use storage for cross-tab persistence
+            const ls = localStorage.getItem('tenantOverride');
+            const ss = sessionStorage.getItem('tenantOverride');
+            const ck = getCookie('tenantOverride');
+            tenantSlugOverride = ls || ss || ck || null;
+            if (tenantSlugOverride) overrideSource = ls ? 'localStorage' : ss ? 'sessionStorage' : 'cookie';
+          }
+          // Dev mode: Don't auto-read from storage - require explicit URL param
         }
         
         // Fallback for Lovable editor: read from parent page referrer query (?tenant=slug)
-        if (!tenantSlugOverride && document.referrer) {
+        if (!tenantSlugOverride && !usePlatform && document.referrer) {
           try {
             const refUrl = new URL(document.referrer);
             const refTenant = refUrl.searchParams.get('tenant');
@@ -121,23 +142,25 @@ export const useTenantContext = (): RequestContext | null => {
           }
         }
         
-        // If override exists, store for persistence and add to hash to survive some redirects
-        if (tenantSlugOverride) {
+        // If override exists from URL, persist it for this session
+        if (tenantSlugOverride && overrideSource && ['query', 'hash'].includes(overrideSource)) {
           try {
-            localStorage.setItem('tenantOverride', tenantSlugOverride);
             sessionStorage.setItem('tenantOverride', tenantSlugOverride);
-            setCookie('tenantOverride', tenantSlugOverride);
-            const url = new URL(window.location.href);
-            const hashParams = new URLSearchParams(url.hash.replace(/^#/, ''));
-            if (!hashParams.get('tenant')) {
-              hashParams.set('tenant', tenantSlugOverride);
-              history.replaceState(null, '', `${url.pathname}${url.search}#${hashParams.toString()}`);
+            // In production, also use localStorage for cross-tab
+            if (!isDev) {
+              localStorage.setItem('tenantOverride', tenantSlugOverride);
+              setCookie('tenantOverride', tenantSlugOverride);
             }
           } catch {}
         }
         
-        // Dev mode: fallback to platform tenant from database
-        const isDev = host === 'localhost' || host.startsWith('127.0.0.1');
+        // Dev mode: handle tenant context (isDev already defined above)
+        console.log('[TenantContext] Pre-resolve state:', { 
+          isDev, 
+          usePlatform, 
+          tenantSlugOverride, 
+          overrideSource 
+        });
         
         if (isDev) {
           // Check for specific tenant paths (static configs)
@@ -161,8 +184,54 @@ export const useTenantContext = (): RequestContext | null => {
             return;
           }
           
-          // For admin/wizard: use actual platform tenant from database
-          // This ensures we have a valid UUID for database operations
+          // If tenant override exists, use it (same as production)
+          if (tenantSlugOverride) {
+            console.log('[TenantContext] Dev mode: looking up tenant slug:', tenantSlugOverride);
+            const { data: overrideTenant, error } = await supabase
+              .from('tenants')
+              .select('*')
+              .eq('slug', tenantSlugOverride)
+              .single();
+            
+            console.log('[TenantContext] Dev mode: lookup result:', { 
+              found: !!overrideTenant, 
+              error: error?.message,
+              tenant: overrideTenant?.name 
+            });
+            
+            if (overrideTenant && !error) {
+              console.info('[TenantContext] Dev mode: using tenant override', { 
+                slug: tenantSlugOverride, 
+                name: overrideTenant.name 
+              });
+              const ctx: RequestContext = {
+                tenant_id: overrideTenant.id,
+                tenant: {
+                  tenant_id: overrideTenant.id,
+                  id: overrideTenant.id,
+                  name: overrideTenant.name,
+                  slug: overrideTenant.slug,
+                  host,
+                  enabled_modules: [],
+                  custom_config: overrideTenant.settings || {},
+                  is_platform_tenant: overrideTenant.is_platform_tenant || false,
+                } as any,
+                user_id: user.id,
+                user_role: overrideTenant.is_platform_tenant ? 'platform_owner' : 'tenant_owner',
+                request_id: crypto.randomUUID(),
+                timestamp: new Date().toISOString(),
+              };
+              setContext(ctx);
+              return;
+            } else {
+              console.warn('[TenantContext] Dev mode: override slug not found:', tenantSlugOverride);
+              // Clear invalid override
+              localStorage.removeItem('tenantOverride');
+              sessionStorage.removeItem('tenantOverride');
+            }
+          }
+          
+          // No override: use platform tenant from database
           const { data: platformTenant } = await supabase
             .from('tenants')
             .select('*')
@@ -173,14 +242,30 @@ export const useTenantContext = (): RequestContext | null => {
           
           if (platformTenant) {
             console.info('[TenantContext] Dev mode: using platform tenant', platformTenant.name);
+            
+            // Clear any stale tenant override when falling back to platform
+            // This prevents mismatch between URL hash and actual context
+            const currentHash = window.location.hash;
+            if (currentHash.includes('tenant=') && !currentHash.includes(`tenant=${platformTenant.slug}`)) {
+              const hashParams = new URLSearchParams(currentHash.replace(/^#/, ''));
+              hashParams.delete('tenant');
+              const newHash = hashParams.toString();
+              history.replaceState(null, '', `${window.location.pathname}${window.location.search}${newHash ? '#' + newHash : ''}`);
+              localStorage.removeItem('tenantOverride');
+              sessionStorage.removeItem('tenantOverride');
+            }
+            
             const ctx: RequestContext = {
               tenant_id: platformTenant.id,
               tenant: {
                 tenant_id: platformTenant.id,
+                id: platformTenant.id,
                 name: platformTenant.name,
+                slug: platformTenant.slug,
                 host,
                 enabled_modules: [],
                 custom_config: platformTenant.settings || {},
+                is_platform_tenant: true,
               } as any,
               user_id: user.id,
               user_role: 'platform_owner',

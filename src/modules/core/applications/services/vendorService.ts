@@ -114,6 +114,104 @@ export class VendorService {
     if (error) throw error;
   }
 
+  /**
+   * Upsert vendor by slug/name - creates if not exists, updates if exists
+   * Used by seed functions
+   * Note: external_system_vendors doesn't have slug, so we use name for lookup
+   */
+  static async upsertBySlug(
+    ctx: RequestContext, 
+    slug: string, 
+    input: Partial<ExternalSystemVendorInput> & { name: string; slug: string }
+  ): Promise<{ id: string; slug: string }> {
+    // First try to find existing vendor by name (vendors don't have slug column)
+    const { data: existing, error: findError } = await supabase
+      .from("external_system_vendors")
+      .select("id, name")
+      .eq("name", input.name)
+      .maybeSingle();
+
+    if (findError) throw findError;
+
+    if (existing) {
+      // Update existing vendor
+      const { data: updated, error: updateError } = await supabase
+        .from("external_system_vendors")
+        .update({
+          website: input.website ?? null,
+          org_number: input.org_number ?? null,
+          country: input.country ?? null,
+          contact_url: input.contact_url ?? null,
+        })
+        .eq("id", existing.id)
+        .select("id, name")
+        .single();
+
+      if (updateError) throw updateError;
+      // Return slug based on input for compatibility
+      return { id: updated.id, slug: slug };
+    } else {
+      // Create new vendor - need a company_id first
+      // Create a minimal company for the vendor
+      const { data: company, error: companyError } = await supabase
+        .from("companies")
+        .insert({
+          name: input.name,
+          website: input.website ?? null,
+          org_number: input.org_number ?? null,
+          company_roles: ['external_system_vendor'],
+          source: 'seed',
+        })
+        .select("id")
+        .single();
+
+      if (companyError) {
+        // Company might already exist, try to find it
+        const { data: existingCompany } = await supabase
+          .from("companies")
+          .select("id")
+          .eq("name", input.name)
+          .maybeSingle();
+        
+        if (!existingCompany) throw companyError;
+        
+        // Use existing company
+        const { data: created, error: createError } = await supabase
+          .from("external_system_vendors")
+          .insert({
+            name: input.name,
+            company_id: existingCompany.id,
+            website: input.website ?? null,
+            org_number: input.org_number ?? null,
+            country: input.country ?? null,
+            contact_url: input.contact_url ?? null,
+          })
+          .select("id, name")
+          .single();
+
+        if (createError) throw createError;
+        return { id: created.id, slug: slug };
+      }
+
+      // Create vendor with new company
+      const { data: created, error: createError } = await supabase
+        .from("external_system_vendors")
+        .insert({
+          name: input.name,
+          company_id: company.id,
+          website: input.website ?? null,
+          org_number: input.org_number ?? null,
+          country: input.country ?? null,
+          contact_url: input.contact_url ?? null,
+        })
+        .select("id, name")
+        .single();
+
+      if (createError) throw createError;
+      return { id: created.id, slug: slug };
+    }
+  }
+
   static async getArchivedVendors(): Promise<ExternalSystemVendor[]> {
     const { data, error } = await supabase
       .from("external_system_vendors")

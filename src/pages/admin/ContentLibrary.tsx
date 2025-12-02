@@ -63,7 +63,7 @@ export default function ContentLibrary() {
     queryKey: ['content-library', searchQuery, selectedCategory],
     queryFn: async () => {
       let query = supabase
-        .from('ai_app_content_library')
+        .from('content_library')
         .select('*')
         .order('created_at', { ascending: false });
 
@@ -98,7 +98,7 @@ export default function ContentLibrary() {
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from('ai_app_content_library')
+        .from('content_library')
         .delete()
         .eq('id', id);
       if (error) throw error;
@@ -352,7 +352,7 @@ function UploadContentDialog({
       const content = await file.text();
 
       // Insert into database
-      const { error } = await supabase.from('ai_app_content_library').insert({
+      const { error } = await supabase.from('content_library').insert({
         tenant_id: tenantId === 'platform' ? null : tenantId,
         category,
         title,
@@ -506,7 +506,7 @@ function EditContentDialog({
     setSaving(true);
     try {
       const { error } = await supabase
-        .from('ai_app_content_library')
+        .from('content_library')
         .update({
           title,
           category,

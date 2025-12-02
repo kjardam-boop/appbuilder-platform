@@ -42,7 +42,7 @@
   "actions": [
     {
       "name": "search_content_library",
-      "description": "Search the tenant's Knowledge Base (ai_app_content_library) for information",
+      "description": "Search the tenant's Knowledge Base (content_library) for information",
       "inputSchema": {
         "type": "object",
         "properties": {

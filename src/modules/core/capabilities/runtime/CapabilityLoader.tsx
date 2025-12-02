@@ -40,6 +40,7 @@ import type {
   LoadedCapability,
 } from "../schemas/capability-manifest.schema";
 import { mergeConfigs, validateManifest } from "../schemas/capability-manifest.schema";
+import { hasLocalBundle, getLocalBundle } from "../bundles";
 
 // ============================================================================
 // TYPES
@@ -310,7 +311,56 @@ async function loadCapability(
     
     return loading;
   } catch (storageError) {
-    // Fallback: Load metadata from DB and create dev placeholder
+    // Fallback 1: Check for local bundle
+    if (hasLocalBundle(key)) {
+      console.log(`[CapabilityLoader] Using local bundle for ${key}`);
+      
+      try {
+        const capData = await loadCapabilityFromDb(key);
+        const LocalBundle = getLocalBundle(key);
+        
+        if (LocalBundle && capData) {
+          const devManifest: CapabilityManifest = {
+            key: capData.key,
+            name: capData.name,
+            version: capData.current_version || "0.0.1",
+            description: capData.description || undefined,
+            category: capData.category,
+            defaultVariant: "default",
+            variants: {
+              default: { name: "Default", bundle: "./local.js" },
+              compact: { name: "Compact", bundle: "./local.js" },
+            },
+            slots: ["main", "sidebar", "floating"],
+            defaultConfig: {},
+          };
+          
+          loading.manifest = devManifest;
+          
+          // Create wrapper component that handles Suspense internally
+          const WrappedComponent: React.ComponentType<CapabilityProps> = (props) => {
+            return (
+              <React.Suspense fallback={<LoadingFallback capabilityKey={key} />}>
+                <LocalBundle {...props} />
+              </React.Suspense>
+            );
+          };
+          WrappedComponent.displayName = `LocalBundle(${key})`;
+          
+          loading.Component = WrappedComponent;
+          loading.variants["default"] = WrappedComponent;
+          loading.variants["compact"] = WrappedComponent;
+          loading.status = "ready";
+          
+          capabilityCache.set(cacheKey, loading);
+          return loading;
+        }
+      } catch (localError) {
+        console.warn(`[CapabilityLoader] Local bundle failed for ${key}:`, localError);
+      }
+    }
+    
+    // Fallback 2: Load metadata from DB and create dev placeholder
     console.warn(`[CapabilityLoader] Bundle not found for ${key}, using dev placeholder`);
     
     try {

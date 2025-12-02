@@ -20,7 +20,7 @@ User Question
 [AIMcpChatInterface] - Branded chat window
     ↓
 [generate_experience MCP tool]
-    ├─ Search ai_app_content_library (markdown)
+    ├─ Search content_library (markdown)
     ├─ Get tenant_themes (branding)
     └─ Extract brand from company URL (if needed)
     ↓
@@ -34,7 +34,7 @@ User Question
 ### **Components**
 
 **1. Database**
-- `ai_app_content_library` - Markdown content templates
+- `content_library` - Markdown content templates
   - Searchable by keywords
   - Categorized (faq, help, integration, etc)
   - Tenant-specific or platform-wide
@@ -66,13 +66,13 @@ User Question
 ### Step 1: Run Migration
 ```bash
 # Apply database migration
-# File: supabase/migrations/20251113073900_ai_app_content_library.sql
-# Creates ai_app_content_library table with seed content
+# File: supabase/migrations/20251113073900_content_library.sql
+# Creates content_library table with seed content
 ```
 
 ### Step 2: Add Content
 ```sql
-INSERT INTO ai_app_content_library (
+INSERT INTO content_library (
   tenant_id,
   category,
   title,
@@ -110,7 +110,7 @@ AI automatically:
 
 ## 📊 Data Model
 
-### ai_app_content_library
+### content_library
 ```typescript
 {
   id: UUID

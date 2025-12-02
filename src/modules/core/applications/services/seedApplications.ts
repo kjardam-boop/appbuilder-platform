@@ -228,3 +228,82 @@ export async function seedApplications(tenantId?: string): Promise<void> {
 
   console.log(`[seed] applications done • tenant=${ctx.tenant_id}`);
 }
+
+/**
+ * Seed applications from dynamic data (e.g., AI-generated)
+ * This is a wrapper that allows seeding from runtime data instead of static SEED_PRODUCTS
+ */
+export async function seedApplicationsFromData(seedData: SeedData[]): Promise<void> {
+  const ctx = buildClientContextSync();
+  const limit = pLimit(2);
+
+  // Cache for vendors (indexed by slug)
+  const vendorBySlug = new Map<string, { id: string; slug: string }>();
+  const productBySlug = new Map<string, { id: string; slug: string }>();
+
+  await Promise.all(
+    seedData.map((entry) =>
+      limit(async () => {
+        try {
+          // 1) Vendor (upsert by slug)
+          let vendor = vendorBySlug.get(entry.vendor.slug);
+          if (!vendor) {
+            vendor = await VendorService.upsertBySlug(ctx, entry.vendor.slug, {
+              name: entry.vendor.name,
+              slug: entry.vendor.slug,
+              website: entry.vendor.website ?? null,
+              org_number: entry.vendor.org_number ?? null,
+              country: entry.vendor.country ?? null,
+              contact_url: entry.vendor.contact_url ?? null,
+            });
+            vendorBySlug.set(vendor.slug, vendor);
+          }
+
+          // 2) Product (upsert by slug)
+          const productData = entry.product;
+          
+          const normalized: ExternalSystemInput = {
+            name: productData.name,
+            slug: productData.slug,
+            short_name: productData.short_name ?? productData.name,
+            description: (productData as any).description ?? null,
+            deployment_models: (productData.deployment_models ?? []) as any,
+            target_industries: (productData.target_industries ?? []) as any,
+            market_segments: (productData.market_segments ?? []) as any,
+            system_types: ((productData as any).system_types ?? productData.app_types ?? []) as any,
+            localizations: (productData.localizations ?? []) as any,
+            pricing_model: productData.pricing_model as any,
+            website: productData.website ?? null,
+            status: productData.status ?? "Active",
+            vendor_id: vendor.id,
+          };
+
+          const product = await ApplicationService.upsertBySlug(ctx, productData.slug, normalized);
+          productBySlug.set(product.slug, product);
+
+          // 3) SKUs
+          if (entry.skus?.length) {
+            const existingSkus = await ApplicationService.getSkus(ctx, product.id) || [];
+            for (const sku of entry.skus) {
+              const found = existingSkus.find(s => s.edition_name === sku.edition_name);
+              if (!found) {
+                await ApplicationService.createSku(ctx, product.id, {
+                  edition_name: sku.edition_name,
+                  code: sku.code ?? genSkuCode(sku.edition_name),
+                  notes: sku.notes,
+                });
+              }
+            }
+          }
+
+          console.log(`✓ AI Seed: ${entry.product.name} (${vendor.name})`);
+        } catch (error) {
+          console.error(`✗ AI Seed failed for ${entry.product.name}:`, error);
+          throw error;
+        }
+      })
+    )
+  );
+
+  console.log(`[ai-seed] Completed ${seedData.length} systems`);
+}

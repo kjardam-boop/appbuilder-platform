@@ -256,7 +256,7 @@ export function ApplicationForm({ initialData, onSubmit, isLoading }: Applicatio
         <CardHeader>
           <CardTitle>Nettside og AI-assistanse</CardTitle>
           <CardDescription>
-            Skriv inn applikasjonens nettside for å automatisk hente informasjon med AI
+            Skriv inn systemets nettside for å automatisk hente informasjon med AI
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

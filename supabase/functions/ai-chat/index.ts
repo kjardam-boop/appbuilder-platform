@@ -2,7 +2,7 @@
  * @deprecated This edge function is deprecated and should not be used for new implementations.
  * Use 'ai-mcp-chat' instead which provides:
  * - MCP tools for platform integration
- * - Content library support (ai_app_content_library)
+ * - Content library support (content_library)
  * - ExperienceJSON generation with rich UI components
  * - generate_experience tool for dynamic page generation
  * 

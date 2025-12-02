@@ -151,7 +151,7 @@ Configured via:
 - Defines rate limits per tenant
 - Controls AI provider settings
 
-#### `ai_app_content_library`
+#### `content_library`
 - Stores content for experience generation
 - Tenant-specific or platform-wide content
 

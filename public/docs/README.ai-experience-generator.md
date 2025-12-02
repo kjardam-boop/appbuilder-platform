@@ -7,7 +7,7 @@ You now have a **Chat-to-Webpage** system! Users ask questions in a branded chat
 ## 🚀 What Was Built
 
 ### 1. **Database & Content Library**
-- ✅ New table: `ai_app_content_library` (with 3 seed examples)
+- ✅ New table: `content_library` (with 3 seed examples)
 - ✅ Stores markdown content templates
 - ✅ Keyword-searchable for AI matching
 - ✅ Multi-tenant with RLS policies
@@ -37,7 +37,7 @@ You now have a **Chat-to-Webpage** system! Users ask questions in a branded chat
 ### Step 1: Apply Migration
 ```bash
 # The migration is already created at:
-# supabase/migrations/20251113073900_ai_app_content_library.sql
+# supabase/migrations/20251113073900_content_library.sql
 
 # Run it in your Supabase project
 # It will create the table + insert 3 seed examples
@@ -48,7 +48,7 @@ You mentioned you have 2 example markdown files. When you're ready:
 
 ```sql
 -- Add your content like this:
-INSERT INTO ai_app_content_library (
+INSERT INTO content_library (
   tenant_id,
   category,
   title,
@@ -143,7 +143,7 @@ import { AIMcpChatInterface } from '@/components/AI/AIMcpChatInterface';
 ## 📁 Files Created
 
 ### Database
-- `supabase/migrations/20251113073900_ai_app_content_library.sql`
+- `supabase/migrations/20251113073900_content_library.sql`
 
 ### Frontend Components
 - `src/renderer/components/HeroBlock.tsx`
@@ -166,7 +166,7 @@ When you're ready to add your 2 example markdown files:
 1. **Open Supabase SQL Editor**
 2. **Insert like this**:
 ```sql
-INSERT INTO ai_app_content_library (
+INSERT INTO content_library (
   tenant_id,
   category,
   title,

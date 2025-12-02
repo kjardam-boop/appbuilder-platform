@@ -25,9 +25,9 @@ export default function RunMigrations() {
       addLog('Starting migration process...');
 
       // Step 1: Check if table already exists
-      addLog('Checking if ai_app_content_library table exists...');
+      addLog('Checking if content_library table exists...');
       const { data: existingData, error: checkError } = await supabase
-        .from('ai_app_content_library')
+        .from('content_library')
         .select('id')
         .limit(1);
 
@@ -42,7 +42,7 @@ export default function RunMigrations() {
       addLog('Table does not exist. Creating via SQL migration...');
       
       // Read the migration file content
-      const migration1 = await fetch('/migrations/20251113073900_ai_app_content_library.sql').then(r => r.text());
+      const migration1 = await fetch('/migrations/20251113073900_content_library.sql').then(r => r.text());
       const migration2 = await fetch('/migrations/20251113093200_enhance_content_library_storage.sql').then(r => r.text());
 
       // For Lovable/Supabase, we need to execute this through an Edge Function
@@ -62,7 +62,7 @@ export default function RunMigrations() {
       // Step 3: Verify table was created
       addLog('Verifying table creation...');
       const { data: verifyData, error: verifyError } = await supabase
-        .from('ai_app_content_library')
+        .from('content_library')
         .select('count')
         .limit(1);
 
@@ -74,7 +74,7 @@ export default function RunMigrations() {
       
       // Step 4: Check seed data
       const { data: seedData, error: seedError } = await supabase
-        .from('ai_app_content_library')
+        .from('content_library')
         .select('id, title')
         .limit(10);
 
@@ -113,7 +113,7 @@ export default function RunMigrations() {
         <CardContent className="space-y-4">
           <Alert>
             <AlertDescription>
-              This will create the <code className="bg-muted px-1 py-0.5 rounded">ai_app_content_library</code> table
+              This will create the <code className="bg-muted px-1 py-0.5 rounded">content_library</code> table
               and insert 3 seed content examples for testing.
             </AlertDescription>
           </Alert>
@@ -169,7 +169,7 @@ export default function RunMigrations() {
           <div className="text-sm text-muted-foreground pt-4 border-t">
             <p className="font-semibold mb-2">What this migration does:</p>
             <ul className="list-disc list-inside space-y-1">
-              <li>Creates the <code>ai_app_content_library</code> table</li>
+              <li>Creates the <code>content_library</code> table</li>
               <li>Adds file storage columns for markdown/PDF/DOCX support</li>
               <li>Sets up indexes for fast keyword search</li>
               <li>Configures Row Level Security (RLS) policies</li>

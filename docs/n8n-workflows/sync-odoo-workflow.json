@@ -1,0 +1,238 @@
+{
+  "name": "Sync Companies to Odoo",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sync-odoo",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract companies from webhook payload\nconst companies = $input.first().json.body.companies || [];\nconst action = $input.first().json.body.action || 'sync';\n\nreturn companies.map(company => ({\n  json: {\n    ...company,\n    action\n  }\n}));"
+      },
+      "id": "code-parse",
+      "name": "Parse Companies",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://jarconsult.odoo.com/jsonrpc",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"jsonrpc\": \"2.0\",\n  \"id\": {{ Date.now() }},\n  \"method\": \"call\",\n  \"params\": {\n    \"service\": \"common\",\n    \"method\": \"authenticate\",\n    \"args\": [\n      \"jarconsult\",\n      \"kjetil@jardam.no\",\n      \"{{ $credentials.apiKey }}\",\n      {}\n    ]\n  }\n}",
+        "options": {}
+      },
+      "id": "auth-odoo",
+      "name": "Authenticate Odoo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [650, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "ODOO_CREDENTIAL_ID",
+          "name": "Odoo API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get authentication result\nconst authResult = $input.first().json;\nconst uid = authResult.result;\n\nif (!uid || uid === false) {\n  throw new Error('Odoo authentication failed');\n}\n\n// Get all companies from the split input\nconst companies = $('Parse Companies').all();\n\nreturn companies.map(item => ({\n  json: {\n    ...item.json,\n    odoo_uid: uid\n  }\n}));"
+      },
+      "id": "code-merge",
+      "name": "Merge Auth with Companies",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://jarconsult.odoo.com/jsonrpc",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"jsonrpc\": \"2.0\",\n  \"id\": {{ Date.now() }},\n  \"method\": \"call\",\n  \"params\": {\n    \"service\": \"object\",\n    \"method\": \"execute_kw\",\n    \"args\": [\n      \"jarconsult\",\n      {{ $json.odoo_uid }},\n      \"{{ $credentials.apiKey }}\",\n      \"res.partner\",\n      \"search\",\n      [[\"|\", [\"name\", \"=\", \"{{ $json.name }}\"], [\"email\", \"=\", \"{{ $json.email || '' }}\"]]],\n      { \"limit\": 1 }\n    ]\n  }\n}",
+        "options": {}
+      },
+      "id": "search-partner",
+      "name": "Search Existing Partner",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1050, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "ODOO_CREDENTIAL_ID",
+          "name": "Odoo API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-exists",
+              "leftValue": "={{ $json.result.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-exists",
+      "name": "Partner Exists?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://jarconsult.odoo.com/jsonrpc",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"jsonrpc\": \"2.0\",\n  \"id\": {{ Date.now() }},\n  \"method\": \"call\",\n  \"params\": {\n    \"service\": \"object\",\n    \"method\": \"execute_kw\",\n    \"args\": [\n      \"jarconsult\",\n      {{ $('Merge Auth with Companies').item.json.odoo_uid }},\n      \"{{ $credentials.apiKey }}\",\n      \"res.partner\",\n      \"write\",\n      [\n        {{ $json.result }},\n        {\n          \"name\": \"{{ $('Merge Auth with Companies').item.json.name }}\",\n          \"is_company\": true,\n          \"email\": \"{{ $('Merge Auth with Companies').item.json.email || false }}\",\n          \"phone\": \"{{ $('Merge Auth with Companies').item.json.phone || false }}\",\n          \"street\": \"{{ $('Merge Auth with Companies').item.json.address || false }}\",\n          \"city\": \"{{ $('Merge Auth with Companies').item.json.city || false }}\",\n          \"zip\": \"{{ $('Merge Auth with Companies').item.json.postal_code || false }}\",\n          \"website\": \"{{ $('Merge Auth with Companies').item.json.website || false }}\",\n          \"comment\": \"Org.nr: {{ $('Merge Auth with Companies').item.json.org_number || '' }}\"\n        }\n      ]\n    ]\n  }\n}",
+        "options": {}
+      },
+      "id": "update-partner",
+      "name": "Update Partner",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1450, 200],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "ODOO_CREDENTIAL_ID",
+          "name": "Odoo API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://jarconsult.odoo.com/jsonrpc",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"jsonrpc\": \"2.0\",\n  \"id\": {{ Date.now() }},\n  \"method\": \"call\",\n  \"params\": {\n    \"service\": \"object\",\n    \"method\": \"execute_kw\",\n    \"args\": [\n      \"jarconsult\",\n      {{ $('Merge Auth with Companies').item.json.odoo_uid }},\n      \"{{ $credentials.apiKey }}\",\n      \"res.partner\",\n      \"create\",\n      [{\n        \"name\": \"{{ $('Merge Auth with Companies').item.json.name }}\",\n        \"is_company\": true,\n        \"email\": \"{{ $('Merge Auth with Companies').item.json.email || false }}\",\n        \"phone\": \"{{ $('Merge Auth with Companies').item.json.phone || false }}\",\n        \"street\": \"{{ $('Merge Auth with Companies').item.json.address || false }}\",\n        \"city\": \"{{ $('Merge Auth with Companies').item.json.city || false }}\",\n        \"zip\": \"{{ $('Merge Auth with Companies').item.json.postal_code || false }}\",\n        \"website\": \"{{ $('Merge Auth with Companies').item.json.website || false }}\",\n        \"comment\": \"Org.nr: {{ $('Merge Auth with Companies').item.json.org_number || '' }}\"\n      }]\n    ]\n  }\n}",
+        "options": {}
+      },
+      "id": "create-partner",
+      "name": "Create Partner",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1450, 400],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "ODOO_CREDENTIAL_ID",
+          "name": "Odoo API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Collect all results\nconst updateResults = $('Update Partner').all();\nconst createResults = $('Create Partner').all();\nconst companies = $('Merge Auth with Companies').all();\n\nconst results = companies.map((company, index) => {\n  // Check if this company was updated or created\n  const updateResult = updateResults[index];\n  const createResult = createResults[index];\n  \n  let odooId = null;\n  let action = 'failed';\n  let success = false;\n  let error = null;\n\n  if (updateResult && updateResult.json.result === true) {\n    // Updated existing partner - get the ID from search\n    const searchResult = $('Search Existing Partner').all()[index];\n    odooId = searchResult?.json?.result?.[0] || null;\n    action = 'updated';\n    success = true;\n  } else if (createResult && createResult.json.result) {\n    // Created new partner\n    odooId = createResult.json.result;\n    action = 'created';\n    success = true;\n  } else {\n    error = 'Unknown error';\n  }\n\n  return {\n    companyId: company.json.id,\n    companyName: company.json.name,\n    odooId,\n    action,\n    success,\n    error\n  };\n});\n\nconst successCount = results.filter(r => r.success).length;\nconst failCount = results.filter(r => !r.success).length;\n\nreturn [{\n  json: {\n    success: true,\n    message: `Synced ${successCount} companies, ${failCount} failed`,\n    synced: successCount,\n    failed: failCount,\n    results\n  }\n}];"
+      },
+      "id": "code-results",
+      "name": "Collect Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1650, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond-success",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1850, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [{ "node": "Parse Companies", "type": "main", "index": 0 }]
+      ]
+    },
+    "Parse Companies": {
+      "main": [
+        [{ "node": "Authenticate Odoo", "type": "main", "index": 0 }]
+      ]
+    },
+    "Authenticate Odoo": {
+      "main": [
+        [{ "node": "Merge Auth with Companies", "type": "main", "index": 0 }]
+      ]
+    },
+    "Merge Auth with Companies": {
+      "main": [
+        [{ "node": "Search Existing Partner", "type": "main", "index": 0 }]
+      ]
+    },
+    "Search Existing Partner": {
+      "main": [
+        [{ "node": "Partner Exists?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Partner Exists?": {
+      "main": [
+        [{ "node": "Update Partner", "type": "main", "index": 0 }],
+        [{ "node": "Create Partner", "type": "main", "index": 0 }]
+      ]
+    },
+    "Update Partner": {
+      "main": [
+        [{ "node": "Collect Results", "type": "main", "index": 0 }]
+      ]
+    },
+    "Create Partner": {
+      "main": [
+        [{ "node": "Collect Results", "type": "main", "index": 0 }]
+      ]
+    },
+    "Collect Results": {
+      "main": [
+        [{ "node": "Respond Success", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2024-11-28T00:00:00.000Z",
+  "versionId": "1"
+}
+

@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
         app_type: 'platform',
         icon_name: 'Bot',
         description: 'Intelligent AI-assistent med tilgang til plattformens data via MCP-verktøy. Kan hjelpe med selskaper, prosjekter, oppgaver og mer.',
-        domain_tables: ['ai_usage_logs', 'ai_policies', 'ai_app_content_library'],
+        domain_tables: ['ai_usage_logs', 'ai_policies', 'content_library'],
         shared_tables: ['companies', 'projects', 'tasks', 'external_systems'],
         capabilities: ['ai-chat', 'mcp-tools', 'context-aware'],
         modules: ['ai', 'company', 'project', 'tasks', 'integrations'],

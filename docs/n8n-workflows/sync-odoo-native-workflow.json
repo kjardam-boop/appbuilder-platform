@@ -1,0 +1,216 @@
+{
+  "name": "Sync Companies to Odoo (Native)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sync-odoo",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Prepare company data for Odoo\nconst company = $input.item.json;\n\nreturn {\n  json: {\n    id: company.id,\n    name: company.name,\n    email: company.email || '',\n    phone: company.phone || '',\n    street: company.address || '',\n    city: company.city || '',\n    zip: company.postal_code || '',\n    website: company.website || '',\n    comment: company.org_number ? `Org.nr: ${company.org_number}` : '',\n    is_company: true,\n    odoo_partner_id: company.odoo_partner_id || null\n  }\n};"
+      },
+      "id": "code-prepare",
+      "name": "Prepare Company Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "resource": "contact",
+        "returnAll": false,
+        "limit": 1,
+        "options": {
+          "fieldsList": ["id", "name", "email"]
+        },
+        "filterType": "manual",
+        "filters": {
+          "filter": [
+            {
+              "fieldName": "name",
+              "operator": "=",
+              "value": "={{ $json.name }}"
+            }
+          ]
+        }
+      },
+      "id": "odoo-search",
+      "name": "Search Partner in Odoo",
+      "type": "n8n-nodes-base.odoo",
+      "typeVersion": 1,
+      "position": [650, 300],
+      "credentials": {
+        "odooApi": {
+          "id": "YOUR_ODOO_CREDENTIAL_ID",
+          "name": "Odoo jarconsult"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "has-results",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-exists",
+      "name": "Partner Exists?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "resource": "contact",
+        "contactId": "={{ $json.id }}",
+        "fieldsToCreateOrUpdate": {
+          "fieldValues": [
+            { "fieldName": "name", "fieldValue": "={{ $('Prepare Company Data').item.json.name }}" },
+            { "fieldName": "email", "fieldValue": "={{ $('Prepare Company Data').item.json.email }}" },
+            { "fieldName": "phone", "fieldValue": "={{ $('Prepare Company Data').item.json.phone }}" },
+            { "fieldName": "street", "fieldValue": "={{ $('Prepare Company Data').item.json.street }}" },
+            { "fieldName": "city", "fieldValue": "={{ $('Prepare Company Data').item.json.city }}" },
+            { "fieldName": "zip", "fieldValue": "={{ $('Prepare Company Data').item.json.zip }}" },
+            { "fieldName": "website", "fieldValue": "={{ $('Prepare Company Data').item.json.website }}" },
+            { "fieldName": "comment", "fieldValue": "={{ $('Prepare Company Data').item.json.comment }}" },
+            { "fieldName": "is_company", "fieldValue": "={{ true }}" }
+          ]
+        }
+      },
+      "id": "odoo-update",
+      "name": "Update Partner",
+      "type": "n8n-nodes-base.odoo",
+      "typeVersion": 1,
+      "position": [1050, 200],
+      "credentials": {
+        "odooApi": {
+          "id": "YOUR_ODOO_CREDENTIAL_ID",
+          "name": "Odoo jarconsult"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "resource": "contact",
+        "fieldsToCreateOrUpdate": {
+          "fieldValues": [
+            { "fieldName": "name", "fieldValue": "={{ $('Prepare Company Data').item.json.name }}" },
+            { "fieldName": "email", "fieldValue": "={{ $('Prepare Company Data').item.json.email }}" },
+            { "fieldName": "phone", "fieldValue": "={{ $('Prepare Company Data').item.json.phone }}" },
+            { "fieldName": "street", "fieldValue": "={{ $('Prepare Company Data').item.json.street }}" },
+            { "fieldName": "city", "fieldValue": "={{ $('Prepare Company Data').item.json.city }}" },
+            { "fieldName": "zip", "fieldValue": "={{ $('Prepare Company Data').item.json.zip }}" },
+            { "fieldName": "website", "fieldValue": "={{ $('Prepare Company Data').item.json.website }}" },
+            { "fieldName": "comment", "fieldValue": "={{ $('Prepare Company Data').item.json.comment }}" },
+            { "fieldName": "is_company", "fieldValue": "={{ true }}" }
+          ]
+        }
+      },
+      "id": "odoo-create",
+      "name": "Create Partner",
+      "type": "n8n-nodes-base.odoo",
+      "typeVersion": 1,
+      "position": [1050, 400],
+      "credentials": {
+        "odooApi": {
+          "id": "YOUR_ODOO_CREDENTIAL_ID",
+          "name": "Odoo jarconsult"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Collect all results from both branches\nconst preparedData = $('Prepare Company Data').all();\nconst updateResults = $('Update Partner').all();\nconst createResults = $('Create Partner').all();\n\nconst results = preparedData.map((item, index) => {\n  const companyId = item.json.id;\n  const companyName = item.json.name;\n  \n  // Check if updated\n  const updated = updateResults.find(r => r.json && r.json.id);\n  const created = createResults.find(r => r.json && r.json.id);\n  \n  if (updated) {\n    return {\n      companyId,\n      companyName,\n      odooId: updated.json.id,\n      action: 'updated',\n      success: true\n    };\n  } else if (created) {\n    return {\n      companyId,\n      companyName,\n      odooId: created.json.id,\n      action: 'created',\n      success: true\n    };\n  }\n  \n  return {\n    companyId,\n    companyName,\n    odooId: null,\n    action: 'failed',\n    success: false,\n    error: 'Unknown error'\n  };\n});\n\nconst successCount = results.filter(r => r.success).length;\nconst failCount = results.filter(r => !r.success).length;\n\nreturn [{\n  json: {\n    success: true,\n    message: `Synced ${successCount} companies, ${failCount} failed`,\n    synced: successCount,\n    failed: failCount,\n    results\n  }\n}];"
+      },
+      "id": "code-results",
+      "name": "Collect Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1450, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [{ "node": "Prepare Company Data", "type": "main", "index": 0 }]
+      ]
+    },
+    "Prepare Company Data": {
+      "main": [
+        [{ "node": "Search Partner in Odoo", "type": "main", "index": 0 }]
+      ]
+    },
+    "Search Partner in Odoo": {
+      "main": [
+        [{ "node": "Partner Exists?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Partner Exists?": {
+      "main": [
+        [{ "node": "Update Partner", "type": "main", "index": 0 }],
+        [{ "node": "Create Partner", "type": "main", "index": 0 }]
+      ]
+    },
+    "Update Partner": {
+      "main": [
+        [{ "node": "Collect Results", "type": "main", "index": 0 }]
+      ]
+    },
+    "Create Partner": {
+      "main": [
+        [{ "node": "Collect Results", "type": "main", "index": 0 }]
+      ]
+    },
+    "Collect Results": {
+      "main": [
+        [{ "node": "Respond", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
+

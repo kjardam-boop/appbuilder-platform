@@ -39,16 +39,16 @@ export default function ApplicationsPage() {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <Database className="h-8 w-8" />
-            Applikasjoner
+            Eksterne forretningssystemer
           </h1>
           <p className="text-muted-foreground">
-            Oversikt over forretningssystemer og applikasjoner
+            Oversikt over eksterneforretningssystemer
           </p>
         </div>
         <Button asChild>
           <Link to="/admin/applications/new">
             <Plus className="mr-2 h-4 w-4" />
-            Legg til ny applikasjon
+            Legg til nytt eksternt system
           </Link>
         </Button>
       </div>

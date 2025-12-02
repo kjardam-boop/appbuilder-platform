@@ -18,7 +18,7 @@ AI-chatten i Lovenest returnerer ren tekst i stedet for ExperienceJSON, og Edge 
 
 - **Frontend**: `AIChatApp.tsx` → `AIMcpChatInterface.tsx` → `useAIMcpChat.ts`
 - **Backend**: `supabase/functions/ai-mcp-chat/index.ts`
-- **Database**: `tenants`, `companies`, `projects`, `ai_app_content_library`
+- **Database**: `tenants`, `companies`, `projects`, `content_library`
 - **AI Gateway**: Lovable AI (Google Gemini 2.5 Flash)
 
 ### Dataflyt: Forventet vs Faktisk
@@ -108,7 +108,7 @@ sequenceDiagram
 | ---------------------- | -------------------------------------------------- | ---------------------------------- |
 | **AI Response Format** | Alltid ExperienceJSON                              | Ren tekst                          |
 | **UI Presentation**    | ExperienceRenderer (branded)                       | Bare tekst i chat-boble            |
-| **Tool Usage**         | `generate_experience` fra `ai_app_content_library` | Tool blir aldri kalt               |
+| **Tool Usage**         | `generate_experience` fra `content_library` | Tool blir aldri kalt               |
 | **Edge Function Logs** | Logger alle requests med debug-info                | Ingen logs i Supabase              |
 | **Tenant Isolation**   | Alle queries filtrer på tenant_id                  | Noen queries mangler tenant-filter |
 
@@ -206,7 +206,7 @@ const defaultSystemPrompt = `Du er en intelligent AI-assistent for ${tenantId}.
 1. Du MÅ ALLTID returnere svar i ExperienceJSON-format inni en \`\`\`experience-json kodeblokk
 2. Dette gjelder ALLE svar - enkle og komplekse
 3. Velg beste presentasjon basert på spørsmålet (card, table, cards.list, flow)
-4. Bruk generate_experience for å hente markdown fra ai_app_content_library når relevant
+4. Bruk generate_experience for å hente markdown fra content_library når relevant
 5. Inkluder alltid branding (primary color, logo fra tenant theme)
 
 **Tilgjengelige blokk-typer:**
@@ -496,7 +496,7 @@ Hvis dette fungerer → System prompt er problemet.
 
 ### Database
 
-- `ai_app_content_library` - Markdown content for `generate_experience`
+- `content_library` - Markdown content for `generate_experience`
 - `tenants` - Tenant config and theme
 - `companies` - Company data
 - `projects` - Project data

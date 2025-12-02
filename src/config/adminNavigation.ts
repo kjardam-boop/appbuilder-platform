@@ -72,6 +72,7 @@ export const adminNavigationMapping: Record<string, AdminNavigationRequirement> 
   // INTEGRATIONS - External connections
   // ============================================================
   '/admin/integrations': { resource: 'integration', requiredAction: 'admin' },
+  '/admin/integrations/odoo': { resource: 'integration', requiredAction: 'admin' },
   '/admin/integrations/delivery-methods/:id': { resource: 'integration', requiredAction: 'admin' },
   '/admin/integrations/definitions/:id': { resource: 'integration', requiredAction: 'admin' },
   '/admin/credentials': { resource: 'integration', requiredAction: 'admin' },

@@ -16,11 +16,11 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Migration 1: Create ai_app_content_library table
-    console.log('Creating ai_app_content_library table...');
+    // Migration 1: Create content_library table
+    console.log('Creating content_library table...');
     
     const createTableSQL = `
-      CREATE TABLE IF NOT EXISTS public.ai_app_content_library (
+      CREATE TABLE IF NOT EXISTS public.content_library (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         tenant_id UUID REFERENCES public.tenants(id) ON DELETE CASCADE,
         category TEXT NOT NULL,
@@ -41,12 +41,12 @@ serve(async (req) => {
         CONSTRAINT reasonable_file_size CHECK (file_size_bytes IS NULL OR file_size_bytes <= 10485760)
       );
       
-      CREATE INDEX IF NOT EXISTS idx_ai_content_tenant ON public.ai_app_content_library(tenant_id);
-      CREATE INDEX IF NOT EXISTS idx_ai_content_category ON public.ai_app_content_library(category);
-      CREATE INDEX IF NOT EXISTS idx_ai_content_keywords ON public.ai_app_content_library USING GIN(keywords);
-      CREATE INDEX IF NOT EXISTS idx_ai_content_active ON public.ai_app_content_library(is_active);
-      CREATE INDEX IF NOT EXISTS idx_ai_content_file_path ON public.ai_app_content_library(file_storage_path);
-      CREATE INDEX IF NOT EXISTS idx_ai_content_file_type ON public.ai_app_content_library(file_type);
+      CREATE INDEX IF NOT EXISTS idx_ai_content_tenant ON public.content_library(tenant_id);
+      CREATE INDEX IF NOT EXISTS idx_ai_content_category ON public.content_library(category);
+      CREATE INDEX IF NOT EXISTS idx_ai_content_keywords ON public.content_library USING GIN(keywords);
+      CREATE INDEX IF NOT EXISTS idx_ai_content_active ON public.content_library(is_active);
+      CREATE INDEX IF NOT EXISTS idx_ai_content_file_path ON public.content_library(file_storage_path);
+      CREATE INDEX IF NOT EXISTS idx_ai_content_file_type ON public.content_library(file_type);
     `;
 
     // Execute via raw SQL
@@ -59,13 +59,13 @@ serve(async (req) => {
 
     // Enable RLS
     await supabase.rpc('exec_sql', { 
-      query: 'ALTER TABLE public.ai_app_content_library ENABLE ROW LEVEL SECURITY;' 
+      query: 'ALTER TABLE public.content_library ENABLE ROW LEVEL SECURITY;' 
     });
 
     // Insert seed data
     console.log('Inserting seed data...');
     const { error: insertError } = await supabase
-      .from('ai_app_content_library')
+      .from('content_library')
       .insert([
         {
           tenant_id: null,
