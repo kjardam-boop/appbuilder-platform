@@ -29,7 +29,7 @@ export async function resolveWebhook(
 ): Promise<string | null> {
   // 1. Fetch webhook_path from workflow mapping
   const { data: mapping, error: mappingError } = await supabase
-    .from('mcp_tenant_workflow_map')
+    .from('n8n_workflow_mappings')
     .select('webhook_path')
     .eq('tenant_id', tenantId)
     .eq('provider', provider)
@@ -106,7 +106,7 @@ export async function resolveWebhook(
  */
 export async function listWorkflows(tenantId: string): Promise<WorkflowMappingRow[]> {
   const { data, error } = await supabase
-    .from('mcp_tenant_workflow_map')
+    .from('n8n_workflow_mappings')
     .select('*')
     .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false });
@@ -137,7 +137,7 @@ export async function upsertWorkflowMap(
 
   // Fetch the most recent mapping for this key (regardless of active state)
   const { data: existing } = await supabase
-    .from('mcp_tenant_workflow_map')
+    .from('n8n_workflow_mappings')
     .select('id')
     .eq('tenant_id', tenantId)
     .eq('provider', provider)
@@ -149,7 +149,7 @@ export async function upsertWorkflowMap(
   if (existing) {
     // Update existing
     const { data, error } = await supabase
-      .from('mcp_tenant_workflow_map')
+      .from('n8n_workflow_mappings')
       .update({
         webhook_path: payload.webhook_path,
         description: payload.description,
@@ -165,7 +165,7 @@ export async function upsertWorkflowMap(
   } else {
     // Insert new
     const { data, error } = await supabase
-      .from('mcp_tenant_workflow_map')
+      .from('n8n_workflow_mappings')
       .insert({
         tenant_id: tenantId,
         provider,
@@ -188,7 +188,7 @@ export async function upsertWorkflowMap(
  */
 export async function deactivateWorkflowMap(id: string, tenantId: string): Promise<void> {
   const { error } = await supabase
-    .from('mcp_tenant_workflow_map')
+    .from('n8n_workflow_mappings')
     .update({ is_active: false })
     .eq('id', id)
     .eq('tenant_id', tenantId);
@@ -208,7 +208,7 @@ export async function updateWorkflowMap(
   patch: Partial<Pick<WorkflowMappingRow, 'webhook_path' | 'description' | 'is_active'>>
 ): Promise<WorkflowMappingRow> {
   const { data, error } = await supabase
-    .from('mcp_tenant_workflow_map')
+    .from('n8n_workflow_mappings')
     .update({ ...patch, updated_at: new Date().toISOString() })
     .eq('id', id)
     .eq('tenant_id', tenantId)
@@ -224,7 +224,7 @@ export async function updateWorkflowMap(
  */
 export async function deleteWorkflowMap(id: string, tenantId: string): Promise<void> {
   const { error } = await supabase
-    .from('mcp_tenant_workflow_map')
+    .from('n8n_workflow_mappings')
     .delete()
     .eq('id', id)
     .eq('tenant_id', tenantId);

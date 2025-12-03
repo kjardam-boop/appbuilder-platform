@@ -2,156 +2,102 @@ import { supabase } from "@/integrations/supabase/client";
 import type { IntegrationDefinition, IntegrationDefinitionInput, IntegrationDefinitionWithRelations } from "../types/integrationDefinition.types";
 import { transformExternalSystemToDefinition } from "../utils/seedMappingLogic";
 
+/**
+ * Integration Definition Service
+ * 
+ * VIKTIG: Denne servicen leser KUN fra integration_definitions.
+ * Ingen fallback til external_systems - det er en katalog, ikke runtime-data.
+ * 
+ * For å populere integration_definitions fra external_systems, bruk:
+ * - bulkSyncFromExternalSystems() (admin-funksjon)
+ */
 export class IntegrationDefinitionService {
   static async list(): Promise<IntegrationDefinitionWithRelations[]> {
-    try {
-      const { data, error } = await supabase
-        .from("integration_definitions" as any)
-        .select(`
-          *,
-          category:app_categories(name),
-          vendor:external_system_vendors(name),
-          external_system:external_systems(name)
-        `)
-        .eq("is_active", true)
-        .order("name");
+    console.log('[IntegrationDefinitionService] Starting list query...');
+    
+    // Simple query - avoiding type issues
+    const { data, error } = await supabase
+      .from("integration_definitions" as any)
+      .select("*")
+      .eq("is_active", true)
+      .order("name");
 
-      if (error) throw error;
-      
-      return ((data || []) as any[]).map(item => ({
-        ...item,
-        category_name: item.category?.name,
-        vendor_name: item.vendor?.name,
-        external_system_name: item.external_system?.name,
-      }));
-    } catch (e) {
-      // Fallback to external_systems mapping
-      const { data, error } = await supabase
-        .from("external_systems" as any)
-        .select(`*, vendor:external_system_vendors(name), category:app_categories(name)`) 
-        .eq("status", "Active")
-        .order("name");
-      if (error) throw error;
-      return (data || []).map((sys: any) => {
-        const mapped = transformExternalSystemToDefinition(sys) as any;
-        return {
-          id: sys.id,
-          ...mapped,
-          category_name: sys.category?.name,
-          vendor_name: sys.vendor?.name,
-          external_system_name: sys.name,
-        } as IntegrationDefinitionWithRelations;
-      });
+    if (error) {
+      console.error('[IntegrationDefinitionService] Query error:', error);
+      throw error;
     }
+    
+    console.log('[IntegrationDefinitionService] Got', data?.length, 'rows');
+    
+    // Return data with empty relation names for now
+    return ((data || []) as any[]).map(item => ({
+      ...item,
+      category_name: null,
+      vendor_name: null,
+      external_system_name: null,
+    }));
   }
 
   static async getById(id: string): Promise<IntegrationDefinitionWithRelations | null> {
-    try {
-      const { data, error } = await supabase
-        .from("integration_definitions" as any)
-        .select(`
-          *,
-          category:app_categories(name),
-          vendor:external_system_vendors(name),
-          external_system:external_systems(name)
-        `)
-        .eq("id", id)
-        .maybeSingle();
+    console.log('[IntegrationDefinitionService] getById:', id);
+    
+    const { data, error } = await supabase
+      .from("integration_definitions" as any)
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
 
-      if (error) throw error;
-      if (!data) return null;
-
-      const record = data as any;
-      return {
-        ...record,
-        category_name: record.category?.name,
-        vendor_name: record.vendor?.name,
-        external_system_name: record.external_system?.name,
-      };
-    } catch (e) {
-      // Fallback by external system id
-      const { data, error } = await supabase
-        .from("external_systems" as any)
-        .select(`*, vendor:external_system_vendors(name), category:app_categories(name)`) 
-        .eq("id", id)
-        .maybeSingle();
-      if (error || !data) return null;
-      const sys: any = data;
-      const mapped = transformExternalSystemToDefinition(sys) as any;
-      return {
-        id: sys.id,
-        ...mapped,
-        category_name: sys.category?.name,
-        vendor_name: sys.vendor?.name,
-        external_system_name: sys.name,
-      } as IntegrationDefinitionWithRelations;
+    if (error) {
+      console.error('[IntegrationDefinitionService] getById error:', error);
+      throw error;
     }
+    
+    if (!data) {
+      console.log('[IntegrationDefinitionService] getById: not found');
+      return null;
+    }
+
+    console.log('[IntegrationDefinitionService] getById: found', data.name);
+    return {
+      ...data,
+      category_name: null,
+      vendor_name: null,
+      external_system_name: null,
+    } as IntegrationDefinitionWithRelations;
   }
 
   static async getByKey(key: string): Promise<IntegrationDefinition | null> {
-    try {
-      const { data, error } = await supabase
-        .from("integration_definitions" as any)
-        .select("*")
-        .eq("key", key)
-        .maybeSingle();
+    const { data, error } = await supabase
+      .from("integration_definitions")
+      .select("*")
+      .eq("key", key)
+      .maybeSingle();
 
-      if (error) throw error;
-      return data as unknown as IntegrationDefinition | null;
-    } catch (e) {
-      const { data } = await supabase
-        .from("external_systems" as any)
-        .select("*")
-        .eq("slug", key)
-        .maybeSingle();
-      if (!data) return null;
-      return {
-        id: (data as any).id,
-        ...(transformExternalSystemToDefinition(data as any) as any),
-      } as unknown as IntegrationDefinition;
-    }
+    if (error) throw error;
+    return data as unknown as IntegrationDefinition | null;
   }
 
   static async filterByCategory(categoryId: string): Promise<IntegrationDefinitionWithRelations[]> {
-    try {
-      const { data, error } = await supabase
-        .from("integration_definitions" as any)
-        .select(`
-          *,
-          category:app_categories(name),
-          vendor:external_system_vendors(name),
-          external_system:external_systems(name)
-        `)
-        .eq("category_id", categoryId)
-        .eq("is_active", true)
-        .order("name");
+    const { data, error } = await supabase
+      .from("integration_definitions")
+      .select(`
+        *,
+        category:app_categories(name),
+        vendor:external_system_vendors(name),
+        external_system:external_systems(name)
+      `)
+      .eq("category_id", categoryId)
+      .eq("is_active", true)
+      .order("name");
 
-      if (error) throw error;
-      
-      return ((data || []) as any[]).map(item => ({
-        ...item,
-        category_name: item.category?.name,
-        vendor_name: item.vendor?.name,
-        external_system_name: item.external_system?.name,
-      }));
-    } catch (e) {
-      const { data, error } = await supabase
-        .from("external_systems" as any)
-        .select(`*, vendor:external_system_vendors(name), category:app_categories(name)`) 
-        .eq("category_id", categoryId)
-        .order("name");
-      if (error) throw error;
-      return (data || []).map((sys: any) => {
-        const mapped = transformExternalSystemToDefinition(sys) as any;
-        return {
-          id: sys.id,
-          ...mapped,
-          category_name: sys.category?.name,
-          vendor_name: sys.vendor?.name,
-          external_system_name: sys.name,
-        } as IntegrationDefinitionWithRelations;
-      });
-    }
+    if (error) throw error;
+    
+    return ((data || []) as any[]).map(item => ({
+      ...item,
+      category_name: item.category?.name,
+      vendor_name: item.vendor?.name,
+      external_system_name: item.external_system?.name,
+    }));
   }
 
   static async create(input: IntegrationDefinitionInput): Promise<IntegrationDefinition> {

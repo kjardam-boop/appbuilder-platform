@@ -322,7 +322,7 @@ Deno.serve(async (req) => {
     // Save workflow mappings to database
     if (workflowMappings.length > 0) {
       const { error: mappingError } = await supabaseClient
-        .from('mcp_tenant_workflow_map')
+        .from('n8n_workflow_mappings')
         .upsert(workflowMappings, {
           onConflict: 'tenant_id,provider,workflow_key',
         });

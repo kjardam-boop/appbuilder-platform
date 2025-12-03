@@ -92,6 +92,9 @@ interface CapabilityLoaderProps {
   
   /** Additional class names */
   className?: string;
+  
+  /** Preview mode - shows a demo/preview version with disabled actions */
+  previewMode?: boolean;
 }
 
 // ============================================================================
@@ -245,6 +248,65 @@ function createDevPlaceholder(
               Test Action
             </Button>
           )}
+        </CardContent>
+      </Card>
+    );
+  };
+}
+
+/**
+ * Create a preview placeholder component for wizard/selection
+ * Shows a rich preview of what the capability offers
+ */
+function createPreviewPlaceholder(
+  capabilityData: { key: string; name: string; category: string; description?: string }
+): React.ComponentType<CapabilityProps> {
+  return function PreviewPlaceholder({ config, slot }: CapabilityProps) {
+    const categoryIcons: Record<string, string> = {
+      "AI": "🤖",
+      "Integration": "🔗",
+      "UI Component": "🎨",
+      "Business Logic": "⚙️",
+      "Authentication": "🔐",
+      "Data Management": "📊",
+      "Communication": "💬",
+      "Analytics": "📈",
+      "Workflow": "🔄",
+      "Security": "🛡️",
+      "Platform": "🏗️",
+      "Core Auth": "🔑",
+    };
+    
+    return (
+      <Card className="border border-blue-200 bg-blue-50/50 dark:bg-blue-950/20">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <span className="text-lg">{categoryIcons[capabilityData.category] || "📦"}</span>
+              {capabilityData.name}
+            </CardTitle>
+            <span className="text-[10px] uppercase tracking-wider text-blue-600 dark:text-blue-400 font-medium bg-blue-100 dark:bg-blue-900/50 px-2 py-0.5 rounded">
+              Forhåndsvisning
+            </span>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {capabilityData.description && (
+            <p className="text-sm text-muted-foreground">
+              {capabilityData.description}
+            </p>
+          )}
+          <div className="flex flex-wrap gap-1">
+            <span className="text-xs bg-secondary px-2 py-1 rounded-full">
+              {capabilityData.category}
+            </span>
+          </div>
+          <div className="pt-2 border-t text-xs text-muted-foreground italic flex items-center gap-2">
+            <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Interaktiv forhåndsvisning kommer snart
+          </div>
         </CardContent>
       </Card>
     );
@@ -613,6 +675,7 @@ export function CapabilityLoader({
   loadingComponent,
   errorComponent,
   className,
+  previewMode = false,
 }: CapabilityLoaderProps) {
   const [capability, setCapability] = useState<LoadedCapability | null>(null);
   const [error, setError] = useState<Error | null>(null);
@@ -627,6 +690,39 @@ export function CapabilityLoader({
       setError(null);
       
       try {
+        // In preview mode, just load metadata and use preview placeholder
+        if (previewMode) {
+          const capData = await loadCapabilityFromDb(capabilityKey);
+          if (capData && mounted) {
+            const previewManifest: CapabilityManifest = {
+              key: capData.key,
+              name: capData.name,
+              version: capData.current_version || "0.0.1",
+              description: capData.description || undefined,
+              category: capData.category,
+              defaultVariant: "preview",
+              variants: {
+                preview: { name: "Preview", bundle: "./preview.js" },
+              },
+              slots: ["main", "sidebar"],
+              defaultConfig: {},
+            };
+            
+            const previewLoaded: LoadedCapability = {
+              manifest: previewManifest,
+              Component: createPreviewPlaceholder(capData),
+              variants: { preview: createPreviewPlaceholder(capData) },
+              exports: { components: {}, hooks: {}, utils: {} },
+              status: "ready",
+            };
+            
+            setCapability(previewLoaded);
+            onLoad?.(previewManifest);
+          }
+          setLoading(false);
+          return;
+        }
+        
         const cap = await loadCapability(capabilityKey, version);
         if (mounted) {
           setCapability(cap);

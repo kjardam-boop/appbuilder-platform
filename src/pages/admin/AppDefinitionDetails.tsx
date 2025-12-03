@@ -54,7 +54,7 @@ export default function AppDefinitionDetails() {
         .maybeSingle();
 
       let query = supabase
-        .from('mcp_tenant_workflow_map')
+        .from('n8n_workflow_mappings')
         .select('*')
         .eq('is_active', true)
         .ilike('workflow_key', `${appKey}%`);
@@ -332,7 +332,7 @@ export default function AppDefinitionDetails() {
                       size="sm"
                       asChild
                     >
-                      <Link to="/admin/mcp/workflows">
+                      <Link to="/admin/n8n/workflows">
                         <ExternalLink className="h-4 w-4" />
                       </Link>
                     </Button>

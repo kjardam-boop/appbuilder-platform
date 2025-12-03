@@ -22,7 +22,7 @@ export async function checkRateLimit(
 
   // Try to get existing rate limit entry
   const { data, error } = await supabase
-    .from('mcp_rate_limits')
+    .from('api_rate_limits')
     .select('*')
     .eq('tenant_id', tenantId)
     .eq('user_id', userId)
@@ -37,7 +37,7 @@ export async function checkRateLimit(
 
   if (!data) {
     // Create new rate limit entry
-    const { error: insertError } = await supabase.from('mcp_rate_limits').insert({
+    const { error: insertError } = await supabase.from('api_rate_limits').insert({
       tenant_id: tenantId,
       user_id: userId,
       action,
@@ -60,7 +60,7 @@ export async function checkRateLimit(
 
   // Increment count
   const { error: updateError } = await supabase
-    .from('mcp_rate_limits')
+    .from('api_rate_limits')
     .update({
       request_count: data.request_count + 1,
       updated_at: new Date().toISOString(),

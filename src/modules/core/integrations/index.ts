@@ -17,6 +17,29 @@ export type {
   WebhookHandler,
 } from './types/webhook.types';
 
+// Integration Registry Types (v2)
+export type {
+  IntegrationType,
+  IntegrationScopeType,
+  IntegrationDefinition,
+  CredentialField,
+  TenantIntegrationWithScope,
+  RateLimitConfig,
+  EffectiveIntegration,
+  N8nWorkflow,
+  N8nNode,
+  N8nSyncResult,
+  IntegrationDefinitionInput,
+  TenantIntegrationInput,
+  IntegrationFilters,
+  TenantIntegrationFilters,
+} from './types/integrationRegistry.types';
+
+export {
+  integrationDefinitionInputSchema,
+  tenantIntegrationInputSchema,
+} from './types/integrationRegistry.types';
+
 // Base Adapter
 export { BaseAdapter } from './adapters/base/BaseAdapter';
 
@@ -32,6 +55,17 @@ export { getTenantSecrets, setTenantSecrets } from './services/tenantSecrets';
 export { sendMail } from './services/mcpMailService';
 export type { SendMailParams, SendMailResult } from './services/mcpMailService';
 
+// n8n Sync Service
+export { 
+  N8nSyncService,
+  pushWorkflowToN8n,
+  pullWorkflowFromN8n,
+  syncWorkflowToDatabase,
+  syncAllWorkflowsFromN8n,
+  listN8nWorkflows,
+  generateWorkflowJson,
+} from './services/n8nSyncService';
+
 // MCP Client & Adapters
 export { McpClient } from './adapters/mcp/mcpClient';
 export { createN8nMcpAdapter } from './adapters/mcp/n8n-mcp';
@@ -46,6 +80,6 @@ export { BrregWebhookHandler } from './webhooks/handlers/BrregWebhookHandler';
 // Module metadata
 export const INTEGRATION_MODULE = {
   name: 'integrations',
-  version: '1.0.0',
-  description: 'Standardized third-party integration module with webhooks and adapters',
+  version: '2.0.0',
+  description: 'Standardized third-party integration module with n8n sync, webhooks and adapters',
 } as const;

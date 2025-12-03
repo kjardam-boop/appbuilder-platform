@@ -12,7 +12,7 @@ import { getActiveSecret } from '@/modules/core/mcp/services/mcpTenantSecretServ
 export interface TenantSecrets {
   N8N_MCP_BASE_URL?: string;
   N8N_MCP_API_KEY?: string;
-  N8N_MCP_SIGNING_SECRET?: string; // Retrieved from mcp_tenant_secret
+  N8N_MCP_SIGNING_SECRET?: string; // Retrieved from integration_secrets
   [key: string]: string | undefined;
 }
 
@@ -40,7 +40,7 @@ export async function getTenantSecrets(
 
     const secrets = ((data?.credentials as any) || {}) as TenantSecrets;
 
-    // Try to fetch HMAC signing secret from mcp_tenant_secret
+    // Try to fetch HMAC signing secret from integration_secrets
     try {
       const signingSecret = await getActiveSecret(tenantId, namespace);
       if (signingSecret) {

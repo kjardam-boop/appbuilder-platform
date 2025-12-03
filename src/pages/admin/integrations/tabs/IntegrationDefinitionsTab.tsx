@@ -16,10 +16,25 @@ export default function IntegrationDefinitionsTab() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
 
-  const { data: definitions, isLoading, refetch } = useQuery({
+  const { data: definitions, isLoading, error, refetch } = useQuery({
     queryKey: ["integration-definitions"],
-    queryFn: () => IntegrationDefinitionService.list(),
+    queryFn: async () => {
+      console.log('[IntegrationDefinitionsTab] Fetching definitions...');
+      try {
+        const result = await IntegrationDefinitionService.list();
+        console.log('[IntegrationDefinitionsTab] Got', result?.length, 'definitions');
+        return result;
+      } catch (err) {
+        console.error('[IntegrationDefinitionsTab] Error:', err);
+        throw err;
+      }
+    },
   });
+
+  // Log error if any
+  if (error) {
+    console.error('[IntegrationDefinitionsTab] Query error:', error);
+  }
 
   const handleBulkSync = async () => {
     setIsSyncing(true);
@@ -175,7 +190,7 @@ export default function IntegrationDefinitionsTab() {
             disabled={isSyncing}
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
-            {isSyncing ? 'Synkroniserer...' : 'Synkroniser fra External Systems'}
+            {isSyncing ? 'Synkroniserer...' : 'Importer fra systemkatalog'}
           </Button>
           <Button onClick={() => setIsCreateOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
@@ -195,6 +210,15 @@ export default function IntegrationDefinitionsTab() {
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            </div>
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center py-12 text-destructive">
+              <Plug className="h-12 w-12 mb-4" />
+              <p className="text-lg font-medium mb-2">Feil ved lasting av definisjoner</p>
+              <p className="text-sm">{(error as Error).message}</p>
+              <Button variant="outline" className="mt-4" onClick={() => refetch()}>
+                Prøv igjen
+              </Button>
             </div>
           ) : definitions && definitions.length > 0 ? (
             <SmartDataTable

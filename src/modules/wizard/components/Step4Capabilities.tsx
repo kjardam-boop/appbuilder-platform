@@ -49,11 +49,14 @@ interface SelectedCapability {
 
 // Category icons/colors for visual grouping
 const CATEGORY_STYLES: Record<string, { color: string; bg: string }> = {
+  'Core Auth': { color: 'text-emerald-600', bg: 'bg-emerald-100' },
   AI: { color: 'text-purple-600', bg: 'bg-purple-100' },
   Integration: { color: 'text-blue-600', bg: 'bg-blue-100' },
-  Storage: { color: 'text-green-600', bg: 'bg-green-100' },
-  Communication: { color: 'text-orange-600', bg: 'bg-orange-100' },
-  Authentication: { color: 'text-red-600', bg: 'bg-red-100' },
+  'Business Logic': { color: 'text-indigo-600', bg: 'bg-indigo-100' },
+  'UI Component': { color: 'text-pink-600', bg: 'bg-pink-100' },
+  'Data Management': { color: 'text-green-600', bg: 'bg-green-100' },
+  Security: { color: 'text-red-600', bg: 'bg-red-100' },
+  Authentication: { color: 'text-orange-600', bg: 'bg-orange-100' },
   Analytics: { color: 'text-cyan-600', bg: 'bg-cyan-100' },
   Workflow: { color: 'text-yellow-600', bg: 'bg-yellow-100' },
 };
@@ -67,17 +70,35 @@ export function Step4Capabilities({
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const isInitialMount = useRef(true);
   
-  // Fetch all available capabilities
-  const { data: capabilities, isLoading: loadingCaps } = useCapabilities({ is_active: true });
+  // Fetch all available capabilities - only public ones for customer wizard
+  const { data: allCapabilities, isLoading: loadingCaps } = useCapabilities({ is_active: true });
+  
+  // Filter to only show public capabilities (hide internal and partner-only)
+  const capabilities = allCapabilities?.filter(c => 
+    (c as any).visibility === 'public' || !(c as any).visibility
+  ) || [];
+  
+  // Separate core capabilities (always included)
+  const coreCapabilities = capabilities.filter(c => (c as any).is_core === true);
+  const optionalCapabilities = capabilities.filter(c => (c as any).is_core !== true);
   
   // Fetch tenant's enabled capabilities
   const { data: tenantCaps, isLoading: loadingTenantCaps } = useTenantCapabilities(tenantId);
 
-  // Track selected capabilities locally
+  // Track selected capabilities locally (not including core - those are always added)
   const selectedCapabilities: SelectedCapability[] = (state as any).selectedCapabilities || [];
   
-  // Debounce selected capabilities for auto-save
-  const debouncedCapabilities = useDebounce(selectedCapabilities, 1000);
+  // Debounce selected capabilities for auto-save (include core capabilities)
+  const allSelectedForSave = [
+    ...coreCapabilities.map(c => ({
+      id: c.id,
+      key: c.key,
+      name: c.name,
+      category: c.category,
+    })),
+    ...selectedCapabilities,
+  ];
+  const debouncedCapabilities = useDebounce(allSelectedForSave, 1000);
   
   const setSelectedCapabilities = (caps: SelectedCapability[]) => {
     onStateChange({ selectedCapabilities: caps } as any);
@@ -153,8 +174,13 @@ export function Step4Capabilities({
     saveCapabilities();
   }, [debouncedCapabilities, state.projectId]);
 
-  // Toggle capability selection
+  // Toggle capability selection (core capabilities cannot be toggled)
   const toggleCapability = (capability: Capability) => {
+    // Core capabilities are always included - can't toggle
+    if ((capability as any).is_core) {
+      return;
+    }
+    
     const isSelected = selectedCapabilities.some(c => c.id === capability.id);
     if (isSelected) {
       setSelectedCapabilities(selectedCapabilities.filter(c => c.id !== capability.id));
@@ -170,23 +196,26 @@ export function Step4Capabilities({
       ]);
     }
   };
+  
+  // Check if capability is core (always included)
+  const isCore = (capability: Capability) => (capability as any).is_core === true;
 
   // Check if capability is enabled for tenant
   const isEnabledForTenant = (capabilityId: string) => {
     return tenantCaps?.some(tc => tc.capability_id === capabilityId && tc.is_enabled);
   };
 
-  // Get unique categories
-  const categories = capabilities 
-    ? ['all', ...Array.from(new Set(capabilities.map(c => c.category)))]
+  // Get unique categories from optional capabilities (core shown separately)
+  const categories = optionalCapabilities.length > 0
+    ? ['all', ...Array.from(new Set(optionalCapabilities.map(c => c.category)))]
     : ['all'];
 
-  // Filter capabilities by category
-  const filteredCapabilities = capabilities?.filter(c => 
+  // Filter optional capabilities by category
+  const filteredCapabilities = optionalCapabilities.filter(c => 
     activeCategory === 'all' || c.category === activeCategory
-  ) || [];
+  );
 
-  // Group capabilities by category
+  // Group optional capabilities by category
   const groupedCapabilities = filteredCapabilities.reduce((acc, cap) => {
     if (!acc[cap.category]) acc[cap.category] = [];
     acc[cap.category].push(cap);
@@ -208,14 +237,46 @@ export function Step4Capabilities({
 
   return (
     <div className="space-y-6">
-      {/* Selected Capabilities Summary */}
+      {/* Core Capabilities (Always Included) */}
+      {coreCapabilities.length > 0 && (
+        <Card className="border-emerald-200 bg-emerald-50/50">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+              Inkludert i alle apper ({coreCapabilities.length})
+            </CardTitle>
+            <CardDescription>
+              Disse grunnleggende funksjonene er alltid inkludert og kan ikke fjernes.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {coreCapabilities.map((cap) => {
+                const style = CATEGORY_STYLES[cap.category] || { color: 'text-gray-600', bg: 'bg-gray-100' };
+                return (
+                  <Badge 
+                    key={cap.id} 
+                    variant="secondary"
+                    className="bg-emerald-100 text-emerald-800 border-emerald-200"
+                  >
+                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                    {cap.name}
+                  </Badge>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Selected Optional Capabilities Summary */}
       {selectedCapabilities.length > 0 && (
         <Card className="border-primary/50">
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center justify-between">
               <span className="flex items-center gap-2">
                 <Check className="h-4 w-4 text-primary" />
-                Valgte capabilities ({selectedCapabilities.length})
+                Valgte tilleggsfunksjoner ({selectedCapabilities.length})
               </span>
               {/* Auto-save status indicator */}
               <span className="text-xs font-normal text-muted-foreground flex items-center gap-1">
@@ -266,11 +327,11 @@ export function Step4Capabilities({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5" />
-            Velg capabilities
+            Velg tilleggsfunksjoner
           </CardTitle>
           <CardDescription>
-            Capabilities er gjenbrukbare funksjoner som AI, integrasjoner, og workflows.
-            Velg hvilke capabilities denne applikasjonen skal ha tilgang til.
+            I tillegg til grunnfunksjonene kan du velge ekstra capabilities som AI, 
+            integrasjoner, prosjekthåndtering og mer. Disse kan legges til eller fjernes senere.
           </CardDescription>
         </CardHeader>
         <CardContent>

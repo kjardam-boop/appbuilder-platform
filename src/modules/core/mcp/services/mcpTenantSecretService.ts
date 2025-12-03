@@ -36,7 +36,7 @@ export async function getActiveSecret(
   provider: string
 ): Promise<McpTenantSecret> {
   const { data, error } = await supabase
-    .from('mcp_tenant_secret')
+    .from('integration_secrets')
     .select('*')
     .eq('tenant_id', tenantId)
     .eq('provider', provider)
@@ -63,7 +63,7 @@ export async function listSecrets(
   provider?: string
 ): Promise<McpTenantSecret[]> {
   let query = supabase
-    .from('mcp_tenant_secret')
+    .from('integration_secrets')
     .select('*')
     .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false });
@@ -95,7 +95,7 @@ export async function createSecret(
 
   // Deactivate old secrets for this tenant/provider
   const { error: deactivateError } = await supabase
-    .from('mcp_tenant_secret')
+    .from('integration_secrets')
     .update({ is_active: false, rotated_at: new Date().toISOString() })
     .eq('tenant_id', tenantId)
     .eq('provider', provider)
@@ -107,7 +107,7 @@ export async function createSecret(
 
   // Insert new secret
   const { data, error } = await supabase
-    .from('mcp_tenant_secret')
+    .from('integration_secrets')
     .insert({
       tenant_id: tenantId,
       provider,
@@ -149,7 +149,7 @@ export async function rotateSecret(
 
   // Deactivate old secret with expiration
   const { error: deactivateError } = await supabase
-    .from('mcp_tenant_secret')
+    .from('integration_secrets')
     .update({
       is_active: false,
       rotated_at: new Date().toISOString(),
@@ -187,7 +187,7 @@ export async function deactivateSecret(
   tenantId: string
 ): Promise<void> {
   const { error } = await supabase
-    .from('mcp_tenant_secret')
+    .from('integration_secrets')
     .update({ is_active: false, rotated_at: new Date().toISOString() })
     .eq('id', id)
     .eq('tenant_id', tenantId);

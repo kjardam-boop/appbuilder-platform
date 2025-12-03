@@ -7,11 +7,133 @@ import { CapabilityService } from "./capabilityService";
 import type { CapabilityInput } from "../types/capability.types";
 
 const initialCapabilities: CapabilityInput[] = [
+  // ============================================================================
+  // CORE AUTH CAPABILITIES (is_core = true, always included in customer apps)
+  // ============================================================================
+  {
+    key: "auth-core",
+    name: "Authentication Core",
+    category: "Core Auth",
+    scope: "platform",
+    visibility: "public",
+    is_core: true,
+    description: "Sign-up, sign-in, password reset, email verification, and session management",
+    estimated_dev_hours: 0,
+    price_per_month: 0, // Included
+    dependencies: [],
+    tags: ["auth", "sign-in", "sign-up", "password", "session"],
+    icon_name: "LogIn",
+    frontend_files: [
+      "src/modules/core/auth/services/authService.ts",
+      "src/modules/core/user/hooks/useAuth.tsx",
+    ],
+    backend_files: [
+      "supabase/functions/send-user-invitation/index.ts",
+    ],
+    domain_tables: ["profiles"],
+    hooks: ["useAuth"],
+    database_migrations: [],
+  },
+  {
+    key: "user-profile",
+    name: "User Profile",
+    category: "Core Auth",
+    scope: "platform",
+    visibility: "public",
+    is_core: true,
+    description: "User can view and edit their own profile information",
+    estimated_dev_hours: 0,
+    price_per_month: 0, // Included
+    dependencies: ["auth-core"],
+    tags: ["user", "profile", "account"],
+    icon_name: "User",
+    frontend_files: [
+      "src/modules/core/user/components/ProfilePage.tsx",
+      "src/modules/core/user/hooks/useCurrentUser.ts",
+    ],
+    backend_files: [],
+    domain_tables: ["profiles"],
+    hooks: ["useCurrentUser"],
+    database_migrations: [],
+  },
+  {
+    key: "user-account-settings",
+    name: "Account Settings",
+    category: "Core Auth",
+    scope: "platform",
+    visibility: "public",
+    is_core: true,
+    description: "Change password, enable 2FA, manage notification preferences, and privacy settings",
+    estimated_dev_hours: 0,
+    price_per_month: 0, // Included
+    dependencies: ["auth-core", "user-profile"],
+    tags: ["settings", "password", "2fa", "notifications", "privacy"],
+    icon_name: "Settings",
+    frontend_files: [
+      "src/modules/core/user/components/AccountSettings.tsx",
+    ],
+    backend_files: [],
+    domain_tables: ["profiles", "user_preferences"],
+    hooks: [],
+    database_migrations: [],
+  },
+  {
+    key: "basic-authorization",
+    name: "Basic Authorization",
+    category: "Core Auth",
+    scope: "platform",
+    visibility: "public",
+    is_core: true,
+    description: "Simplified role-based access control for customer apps (admin, member, viewer)",
+    estimated_dev_hours: 0,
+    price_per_month: 0, // Included
+    dependencies: ["auth-core"],
+    tags: ["authorization", "roles", "access", "rbac-lite"],
+    icon_name: "ShieldCheck",
+    frontend_files: [
+      "src/modules/core/permissions/hooks/usePermissions.ts",
+    ],
+    backend_files: [],
+    domain_tables: ["user_roles"],
+    hooks: ["usePermissions"],
+    database_migrations: [],
+  },
+
+  // ============================================================================
+  // N8N INTEGRATION (connector for all external integrations)
+  // ============================================================================
+  {
+    key: "n8n-connector",
+    name: "n8n Integration Connector",
+    category: "Integration",
+    scope: "platform",
+    visibility: "public",
+    description: "Connect to n8n for workflow automation and external system integrations (Odoo, Tripletex, MS365, etc.)",
+    estimated_dev_hours: 0,
+    price_per_month: 49,
+    dependencies: [],
+    tags: ["n8n", "integration", "automation", "workflow", "connector"],
+    icon_name: "Workflow",
+    frontend_files: [
+      "src/modules/core/integrations/services/n8nService.ts",
+    ],
+    backend_files: [
+      "supabase/functions/trigger-n8n-workflow/index.ts",
+    ],
+    domain_tables: ["n8n_workflow_templates", "tenant_n8n_workflows"],
+    hooks: [],
+    database_migrations: [],
+  },
+
+  // ============================================================================
+  // PUBLIC CAPABILITIES (visible to all customers)
+  // ============================================================================
   {
     key: "ai-text-generation",
     name: "AI Text Generation",
     category: "AI",
     scope: "platform",
+    visibility: "public",
     description: "Generate text with Lovable AI (Gemini/GPT models) for company descriptions, project summaries, and custom content",
     estimated_dev_hours: 0,
     price_per_month: 99,
@@ -41,6 +163,7 @@ const initialCapabilities: CapabilityInput[] = [
     name: "Task Management",
     category: "Business Logic",
     scope: "platform",
+    visibility: "public",
     description: "Complete task management system with checklists, priorities, assignments, categories, and due dates",
     estimated_dev_hours: 0,
     price_per_month: 49,
@@ -66,6 +189,7 @@ const initialCapabilities: CapabilityInput[] = [
     name: "Company Management",
     category: "Business Logic",
     scope: "platform",
+    visibility: "public",
     description: "Manage companies, contact persons, roles, and organizational metadata",
     estimated_dev_hours: 0,
     price_per_month: 79,
@@ -92,6 +216,7 @@ const initialCapabilities: CapabilityInput[] = [
     name: "Invitation System",
     category: "Authentication",
     scope: "platform",
+    visibility: "public",
     description: "Send email invitations with token-based registration and onboarding flow",
     estimated_dev_hours: 0,
     price_per_month: 29,
@@ -115,6 +240,7 @@ const initialCapabilities: CapabilityInput[] = [
     name: "Brønnøysund Integration",
     category: "Integration",
     scope: "platform",
+    visibility: "public",
     description: "Fetch company information from Brønnøysundregisteret (Norwegian Business Registry)",
     estimated_dev_hours: 0,
     price_per_month: 149,
@@ -142,6 +268,7 @@ const initialCapabilities: CapabilityInput[] = [
     name: "Project Management",
     category: "Business Logic",
     scope: "platform",
+    visibility: "public",
     description: "Create and manage projects with timelines, milestones, and team collaboration",
     estimated_dev_hours: 0,
     price_per_month: 89,
@@ -164,6 +291,7 @@ const initialCapabilities: CapabilityInput[] = [
     name: "Opportunity Pipeline",
     category: "Business Logic",
     scope: "platform",
+    visibility: "public",
     description: "Sales CRM with opportunity tracking, forecasting, and conversion metrics",
     estimated_dev_hours: 0,
     price_per_month: 129,
@@ -187,6 +315,7 @@ const initialCapabilities: CapabilityInput[] = [
     name: "Document Management",
     category: "Data Management",
     scope: "platform",
+    visibility: "public",
     description: "Upload, categorize, and manage documents with metadata and search",
     estimated_dev_hours: 0,
     price_per_month: 59,
@@ -208,6 +337,7 @@ const initialCapabilities: CapabilityInput[] = [
     name: "Calendar View Component",
     category: "UI Component",
     scope: "platform",
+    visibility: "public",
     description: "Visual calendar for displaying events, presence, and timelines",
     estimated_dev_hours: 8,
     price_per_month: 39,
@@ -227,6 +357,7 @@ const initialCapabilities: CapabilityInput[] = [
     name: "Presence Tracking",
     category: "Business Logic",
     scope: "platform",
+    visibility: "public",
     description: "Track when users arrive and depart with date/time management",
     estimated_dev_hours: 4,
     price_per_month: 29,
@@ -247,6 +378,7 @@ const initialCapabilities: CapabilityInput[] = [
     name: "Christmas Theme",
     category: "UI Component",
     scope: "platform",
+    visibility: "public",
     description: "Festive Christmas theme with holiday colors, styling, and decorative elements",
     estimated_dev_hours: 6,
     price_per_month: 19,
@@ -267,6 +399,7 @@ const initialCapabilities: CapabilityInput[] = [
     name: "Supplier Evaluation",
     category: "Business Logic",
     scope: "platform",
+    visibility: "partner",  // Partner-only: advanced feature
     description: "Score and evaluate suppliers with AI-powered analysis, questionnaires, and comparison matrices",
     estimated_dev_hours: 0,
     price_per_month: 149,
@@ -294,6 +427,7 @@ const initialCapabilities: CapabilityInput[] = [
     name: "ERP System Management",
     category: "Business Logic",
     scope: "platform",
+    visibility: "partner",  // Partner-only: ERP consulting feature
     description: "Manage ERP systems, vendors, certifications, and implementation partners",
     estimated_dev_hours: 0,
     price_per_month: 99,
@@ -317,6 +451,7 @@ const initialCapabilities: CapabilityInput[] = [
     name: "Industry Classification",
     category: "Data Management",
     scope: "platform",
+    visibility: "public",
     description: "Manage industries with NACE codes and automatic company classification via Brønnøysund",
     estimated_dev_hours: 0,
     price_per_month: 39,
@@ -339,6 +474,7 @@ const initialCapabilities: CapabilityInput[] = [
     name: "Permissions & RBAC",
     category: "Security",
     scope: "platform",
+    visibility: "internal",  // Platform internal: full RBAC system
     description: "Role-based access control with resources, actions, and role permission matrix",
     estimated_dev_hours: 0,
     price_per_month: 79,
@@ -363,6 +499,7 @@ const initialCapabilities: CapabilityInput[] = [
     name: "Compliance & GDPR",
     category: "Security",
     scope: "platform",
+    visibility: "partner",  // Partner: enterprise compliance
     description: "Audit logging, data subject requests (export/delete), and GDPR compliance tools",
     estimated_dev_hours: 0,
     price_per_month: 129,
@@ -387,6 +524,7 @@ const initialCapabilities: CapabilityInput[] = [
     name: "Tenant Management",
     category: "Platform",
     scope: "platform",
+    visibility: "internal",  // Platform internal only
     description: "Multi-tenant architecture with tenant isolation, domain routing, and configuration",
     estimated_dev_hours: 0,
     price_per_month: 0,
@@ -412,6 +550,7 @@ const initialCapabilities: CapabilityInput[] = [
     name: "Application Registry",
     category: "Platform",
     scope: "platform",
+    visibility: "internal",  // Platform internal only
     description: "Catalog of business applications (ERP, CRM, etc.) with vendors, products, SKUs, and integrations",
     estimated_dev_hours: 0,
     price_per_month: 0,
@@ -436,6 +575,7 @@ const initialCapabilities: CapabilityInput[] = [
     name: "User & Roles Management",
     category: "Security",
     scope: "platform",
+    visibility: "partner",  // Partner: advanced user management
     description: "User profiles, role assignments across scopes (platform/tenant/company/project), and access management",
     estimated_dev_hours: 0,
     price_per_month: 0,
@@ -465,6 +605,7 @@ const initialCapabilities: CapabilityInput[] = [
     name: "App Builder Platform",
     category: "Platform",
     scope: "platform",
+    visibility: "internal",  // Platform internal only
     description: "Complete app generation system with definitions, versions, deployments, and capability composition",
     estimated_dev_hours: 0,
     price_per_month: 0,
@@ -489,6 +630,7 @@ const initialCapabilities: CapabilityInput[] = [
     name: "Capabilities Catalog",
     category: "Platform",
     scope: "platform",
+    visibility: "internal",  // Platform internal only
     description: "This capability catalog system itself - reusable features, versions, and tenant activation",
     estimated_dev_hours: 0,
     price_per_month: 0,

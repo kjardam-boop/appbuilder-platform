@@ -1,10 +1,10 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSearchParams } from "react-router-dom";
-import ProviderTypesTab from "./tabs/ProviderTypesTab";
 import DeliveryMethodsTab from "./tabs/DeliveryMethodsTab";
 import IntegrationDefinitionsTab from "./tabs/IntegrationDefinitionsTab";
 import WorkflowsTab from "./tabs/WorkflowsTab";
 import ObservabilityTab from "./tabs/ObservabilityTab";
+import AIProvidersTab from "./tabs/AIProvidersTab";
 
 export default function IntegrationsHub() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -19,16 +19,16 @@ export default function IntegrationsHub() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Integrasjoner</h1>
         <p className="text-muted-foreground">
-          Administrer integrasjonsdefinisjoner, leveringsmetoder og konfigurasjoner
+          Administrer integrasjonsdefinisjoner, AI providers, workflows og mer
         </p>
       </div>
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
         <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="definitions">Definisjoner</TabsTrigger>
-          <TabsTrigger value="provider-types">Provider Types</TabsTrigger>
-          <TabsTrigger value="delivery-methods">Leveringsmetoder</TabsTrigger>
+          <TabsTrigger value="ai-providers">AI Providers</TabsTrigger>
           <TabsTrigger value="workflows">Workflows</TabsTrigger>
+          <TabsTrigger value="delivery-methods">Leveringsmetoder</TabsTrigger>
           <TabsTrigger value="observability">Observability</TabsTrigger>
         </TabsList>
 
@@ -36,16 +36,16 @@ export default function IntegrationsHub() {
           <IntegrationDefinitionsTab />
         </TabsContent>
 
-        <TabsContent value="provider-types">
-          <ProviderTypesTab />
-        </TabsContent>
-
-        <TabsContent value="delivery-methods">
-          <DeliveryMethodsTab />
+        <TabsContent value="ai-providers">
+          <AIProvidersTab />
         </TabsContent>
 
         <TabsContent value="workflows">
           <WorkflowsTab />
+        </TabsContent>
+
+        <TabsContent value="delivery-methods">
+          <DeliveryMethodsTab />
         </TabsContent>
 
         <TabsContent value="observability">

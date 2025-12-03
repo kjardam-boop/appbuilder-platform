@@ -32,7 +32,7 @@ export async function createRevealToken(
   const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 min
 
   const { error } = await supabase
-    .from('mcp_reveal_tokens')
+    .from('secret_reveal_tokens')
     .insert({
       token_hash: tokenHash,
       tenant_id: tenantId,
@@ -66,7 +66,7 @@ export async function consumeRevealToken(
 
   // Fetch token from DB with secret (by token + user only)
   const { data: revealToken, error } = await supabase
-    .from('mcp_reveal_tokens')
+    .from('secret_reveal_tokens')
     .select('*, mcp_tenant_secret!inner(secret, provider)')
     .eq('token_hash', tokenHash)
     .eq('user_id', userId)
@@ -80,20 +80,20 @@ export async function consumeRevealToken(
   // Check TTL
   if (new Date(revealToken.expires_at) < new Date()) {
     console.log('[RevealToken] Token expired');
-    await supabase.from('mcp_reveal_tokens').delete().eq('id', revealToken.id);
+    await supabase.from('secret_reveal_tokens').delete().eq('id', revealToken.id);
     return null;
   }
 
   // Check max uses
   if (revealToken.uses_count >= revealToken.max_uses) {
     console.log('[RevealToken] Token already consumed');
-    await supabase.from('mcp_reveal_tokens').delete().eq('id', revealToken.id);
+    await supabase.from('secret_reveal_tokens').delete().eq('id', revealToken.id);
     return null;
   }
 
   // Increment usage count
   await supabase
-    .from('mcp_reveal_tokens')
+    .from('secret_reveal_tokens')
     .update({
       uses_count: revealToken.uses_count + 1,
       last_used_at: new Date().toISOString(),
@@ -102,7 +102,7 @@ export async function consumeRevealToken(
 
   // Delete token if consumed
   if (revealToken.uses_count + 1 >= revealToken.max_uses) {
-    await supabase.from('mcp_reveal_tokens').delete().eq('id', revealToken.id);
+    await supabase.from('secret_reveal_tokens').delete().eq('id', revealToken.id);
   }
 
   return revealToken.mcp_tenant_secret.secret;

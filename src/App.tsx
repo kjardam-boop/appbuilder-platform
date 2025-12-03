@@ -38,6 +38,7 @@ import DocumentationDetail from "./pages/admin/DocumentationDetail";
 import AdminCompanies from "./pages/admin/AdminCompanies";
 import CapabilityCatalog from "./pages/CapabilityCatalog";
 import CapabilityDetailsPage from "./pages/admin/CapabilityDetailsPage";
+import CapabilityBundlesPage from "./pages/admin/CapabilityBundlesPage";
 import IndustryAdmin from "./pages/IndustryAdmin";
 import ApplicationsPage from "./pages/ApplicationsPage";
 import ExternalSystemDetails from "./pages/ExternalSystemDetails";
@@ -241,6 +242,7 @@ const App = () => (
               <Route path="external-systems/new" element={<PermissionProtectedRoute resource="application" action="admin"><ApplicationCreate /></PermissionProtectedRoute>} />
               <Route path="capabilities" element={<PermissionProtectedRoute resource="capability" action="admin"><CapabilityCatalog /></PermissionProtectedRoute>} />
               <Route path="capabilities/:capabilityId" element={<PermissionProtectedRoute resource="capability" action="admin"><CapabilityDetailsPage /></PermissionProtectedRoute>} />
+              <Route path="capability-bundles" element={<PermissionProtectedRoute resource="capability" action="admin"><CapabilityBundlesPage /></PermissionProtectedRoute>} />
               <Route path="documentation" element={<PermissionProtectedRoute resource="tenant" action="admin"><PlatformDocumentation /></PermissionProtectedRoute>} />
               <Route path="documentation/:docId" element={<PermissionProtectedRoute resource="tenant" action="admin"><DocumentationDetail /></PermissionProtectedRoute>} />
               <Route path="database" element={<PermissionProtectedRoute resource="tenant" action="admin"><AdminSeed /></PermissionProtectedRoute>} />
@@ -250,7 +252,8 @@ const App = () => (
               <Route path="integrations/delivery-methods/:id" element={<PermissionProtectedRoute resource="integration" action="admin"><DeliveryMethodDetail /></PermissionProtectedRoute>} />
               <Route path="integrations/definitions/:id" element={<PermissionProtectedRoute resource="integration" action="admin"><IntegrationDefinitionDetail /></PermissionProtectedRoute>} />
               <Route path="integrations-old" element={<PermissionProtectedRoute resource="integration" action="admin"><PlatformIntegrations /></PermissionProtectedRoute>} />
-              <Route path="ai-providers" element={<PermissionProtectedRoute resource="tenant" action="admin"><AIProviderSettings /></PermissionProtectedRoute>} />
+              {/* AI Providers is now a tab under integrations */}
+              <Route path="ai-providers" element={<Navigate to="/admin/integrations?tab=ai-providers" replace />} />
               <Route path="credentials" element={<PermissionProtectedRoute resource="integration" action="admin"><CredentialsPage /></PermissionProtectedRoute>} />
               <Route path="content-library" element={<PermissionProtectedRoute resource="tenant" action="admin"><ContentLibrary /></PermissionProtectedRoute>} />
               <Route path="run-migrations" element={<PermissionProtectedRoute resource="tenant" action="admin"><RunMigrations /></PermissionProtectedRoute>} />
@@ -264,15 +267,24 @@ const App = () => (
               <Route path="apps/:appKey/versions" element={<PermissionProtectedRoute resource="app_definition" action="admin"><AppVersionsPage /></PermissionProtectedRoute>} />
               <Route path="tenants/:tenantId/apps" element={<PermissionProtectedRoute resource="application" action="list"><TenantAppsPage /></PermissionProtectedRoute>} />
               <Route path="tenants/:tenantId/apps/catalog" element={<PermissionProtectedRoute resource="application" action="list"><TenantAppCatalog /></PermissionProtectedRoute>} />
+              {/* MCP routes - only keep actual MCP functionality */}
               <Route path="mcp/policy" element={<PermissionProtectedRoute resource="mcp_secret" action="admin"><McpPolicy /></PermissionProtectedRoute>} />
-              <Route path="mcp/workflows" element={<PermissionProtectedRoute resource="integration" action="admin"><McpWorkflows /></PermissionProtectedRoute>} />
-              <Route path="mcp/secrets" element={<PermissionProtectedRoute resource="mcp_secret" action="admin"><McpSecrets /></PermissionProtectedRoute>} />
-              <Route path="mcp/observability" element={<PermissionProtectedRoute resource="mcp_audit_log" action="list"><McpObservability /></PermissionProtectedRoute>} />
               <Route path="ai/mcp-demo" element={<PermissionProtectedRoute resource="integration" action="admin"><AIMcpDemo /></PermissionProtectedRoute>} />
+              
+              {/* n8n Workflows - renamed from mcp/workflows */}
+              <Route path="n8n/workflows" element={<PermissionProtectedRoute resource="integration" action="admin"><McpWorkflows /></PermissionProtectedRoute>} />
+              
+              {/* Redirects from old MCP URLs */}
+              <Route path="mcp/workflows" element={<Navigate to="/admin/integrations?tab=workflows" replace />} />
+              <Route path="mcp/secrets" element={<Navigate to="/admin/credentials" replace />} />
+              <Route path="mcp/observability" element={<Navigate to="/admin/integrations?tab=observability" replace />} />
+              
               <Route path="compatibility" element={<PermissionProtectedRoute resource="capability" action="admin"><Compatibility /></PermissionProtectedRoute>} />
               <Route path="categories" element={<PermissionProtectedRoute resource="capability" action="admin"><Categories /></PermissionProtectedRoute>} />
               <Route path="tenant-systems" element={<PermissionProtectedRoute resource="application" action="list"><TenantSystems /></PermissionProtectedRoute>} />
               <Route path="performance-test" element={<PermissionProtectedRoute resource="application" action="admin"><PerformanceTest /></PermissionProtectedRoute>} />
+              
+              {/* Integration tools - keep for now but accessible from IntegrationsHub */}
               <Route path="integration-recommendations" element={<PermissionProtectedRoute resource="integration" action="list"><IntegrationRecommendations /></PermissionProtectedRoute>} />
               <Route path="integration-graph" element={<PermissionProtectedRoute resource="integration" action="list"><IntegrationGraph /></PermissionProtectedRoute>} />
             </Route>

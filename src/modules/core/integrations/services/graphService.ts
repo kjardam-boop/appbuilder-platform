@@ -186,7 +186,7 @@ export class IntegrationGraphService {
       }
     }
 
-    // Add SECRET nodes (mock - would query mcp_tenant_secret if available)
+    // Add SECRET nodes (mock - would query integration_secrets if available)
     for (const provider of providerSet) {
       const nodeId = `SECRET:${provider}`;
       

@@ -8,12 +8,13 @@ import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Shield, Building2, Workflow, Puzzle } from "lucide-react";
+import { Plus, Shield, Building2, Workflow, Puzzle, KeyRound } from "lucide-react";
 import { useTenantContext } from "@/hooks/useTenantContext";
 import { useIsPlatformTenant } from "@/hooks/useIsPlatformTenant";
 import { CredentialsList } from "@/components/admin/credentials/CredentialsList";
 import { CredentialManagementDialog } from "@/components/admin/credentials/CredentialManagementDialog";
 import { CredentialAuditLog } from "@/components/admin/credentials/CredentialAuditLog";
+import { IntegrationSecretsTab } from "@/components/admin/credentials/IntegrationSecretsTab";
 import { supabase } from "@/integrations/supabase/client";
 import { AppBreadcrumbs } from '@/components/ui/app-breadcrumbs';
 import { generateAdminBreadcrumbs } from '@/helpers/breadcrumbHelper';
@@ -22,7 +23,7 @@ export default function CredentialsPage() {
   const context = useTenantContext();
   const { isPlatformTenant, isLoading: isPlatformLoading } = useIsPlatformTenant();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [selectedTab, setSelectedTab] = useState<"tenant" | "company" | "app">("tenant");
+  const [selectedTab, setSelectedTab] = useState<"tenant" | "company" | "app" | "secrets">("tenant");
 
   const { data: tenantCredentials, refetch: refetchTenantCredentials } = useQuery({
     queryKey: ["tenant-credentials", context?.tenant_id],
@@ -121,19 +122,23 @@ export default function CredentialsPage() {
         </Button>
       </div>
 
-      <Tabs value={selectedTab} onValueChange={(v) => setSelectedTab(v as "tenant" | "company" | "app")}>
-        <TabsList className="grid w-full max-w-2xl grid-cols-3">
+      <Tabs value={selectedTab} onValueChange={(v) => setSelectedTab(v as "tenant" | "company" | "app" | "secrets")}>
+        <TabsList className="grid w-full max-w-3xl grid-cols-4">
           <TabsTrigger value="tenant" className="flex items-center gap-2">
             <Workflow className="h-4 w-4" />
-            Tenant Integrations
+            Tenant
           </TabsTrigger>
           <TabsTrigger value="company" className="flex items-center gap-2">
             <Building2 className="h-4 w-4" />
-            Company Systems
+            Company
           </TabsTrigger>
           <TabsTrigger value="app" className="flex items-center gap-2">
             <Puzzle className="h-4 w-4" />
-            App Integrations
+            App
+          </TabsTrigger>
+          <TabsTrigger value="secrets" className="flex items-center gap-2">
+            <KeyRound className="h-4 w-4" />
+            Integration Secrets
           </TabsTrigger>
         </TabsList>
 
@@ -192,6 +197,10 @@ export default function CredentialsPage() {
               onCredentialChanged={() => refetchAppCredentials()}
             />
           </Card>
+        </TabsContent>
+
+        <TabsContent value="secrets" className="space-y-6 mt-6">
+          <IntegrationSecretsTab tenantId={context.tenant_id} />
         </TabsContent>
       </Tabs>
 

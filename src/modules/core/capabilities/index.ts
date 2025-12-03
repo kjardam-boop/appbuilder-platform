@@ -10,14 +10,24 @@ export type {
   TenantCapability,
   CustomerAppProject,
   CapabilityCategory,
+  CapabilityScope,
+  CapabilityVisibility,
   CapabilityFilters,
   CapabilityInput,
+  // Bundles
+  CapabilityBundle,
+  CapabilityBundleInput,
+  // Workflows (uses existing workflow_templates table)
+  WorkflowTemplate,
+  WorkflowCategory,
+  TenantWorkflow,
 } from "./types/capability.types";
 
 // Services
 export { CapabilityService } from "./services/capabilityService";
 export { TenantCapabilityService } from "./services/tenantCapabilityService";
 export { seedCapabilities } from "./services/seedCapabilities";
+export { syncCapabilityToNotion, syncAllCapabilitiesToNotion } from "./services/notionSyncService";
 
 // Hooks
 export {

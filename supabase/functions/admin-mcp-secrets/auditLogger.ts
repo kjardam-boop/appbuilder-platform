@@ -26,7 +26,7 @@ export async function logSecretAction(
   supabase: any,
   entry: AuditLogEntry
 ): Promise<void> {
-  const { error } = await supabase.from('mcp_secret_audit').insert({
+  const { error } = await supabase.from('secret_audit_log').insert({
     tenant_id: entry.tenantId,
     user_id: entry.userId,
     action: entry.action,

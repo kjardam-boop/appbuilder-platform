@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,6 +11,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { toast } from 'sonner';
 import { 
   ArrowLeft, 
@@ -29,7 +31,10 @@ import {
   Plus,
   X,
   Puzzle,  // New icon for capabilities
-  Save
+  Save,
+  ChevronsUpDown,
+  Check,
+  Search
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -78,6 +83,7 @@ interface Company {
   org_number: string | null;
   industry_description: string | null;
   company_roles: string[] | null;
+  hasTenant?: boolean;
 }
 
 interface ExternalSystem {
@@ -132,6 +138,15 @@ export default function NewAppWizard() {
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const isInitialLoad = useRef(true);
   const lastSavedState = useRef<string>('');
+
+  // Combobox states for searchable selectors
+  const [companyOpen, setCompanyOpen] = useState(false);
+  const [companySearch, setCompanySearch] = useState('');
+  const [systemOpen, setSystemOpen] = useState(false);
+  const [systemSearch, setSystemSearch] = useState('');
+  const [systemTypeFilter, setSystemTypeFilter] = useState<string>('all');
+  const [partnerOpen, setPartnerOpen] = useState(false);
+  const [partnerSearch, setPartnerSearch] = useState('');
 
   // Debounce state for auto-save (1.5 second delay)
   const debouncedProjectName = useDebounce(state.projectName, 1500);
@@ -280,22 +295,28 @@ export default function NewAppWizard() {
     }
   };
 
-  // Fetch customer/prospect companies for selector (only companies with 'customer' or 'prospect' role)
+  // Fetch ALL companies for selector (tenant will be created when app is ready for deploy)
   const { data: companies } = useQuery({
-    queryKey: ['customer-companies', tenantContext?.tenant_id],
+    queryKey: ['all-companies-for-wizard'],
     queryFn: async () => {
-      // Fetch companies with 'customer' or 'prospect' role
+      // Fetch all companies - we can create tenant later when app is ready
       const { data, error } = await supabase
         .from('companies')
-        .select('id, name, org_number, industry_description, company_roles')
+        .select(`
+          id, 
+          name, 
+          org_number, 
+          industry_description, 
+          company_roles,
+          tenants:tenants(id)
+        `)
         .order('name');
       if (error) throw error;
-      // Filter to only include customers and prospects
-      return (data || []).filter(c => 
-        c.company_roles?.includes('customer') || c.company_roles?.includes('prospect')
-      ) as Company[];
+      return (data || []).map(c => ({
+        ...c,
+        hasTenant: Array.isArray(c.tenants) ? c.tenants.length > 0 : !!c.tenants,
+      })) as (Company & { hasTenant: boolean })[];
     },
-    enabled: !!tenantContext?.tenant_id,
   });
 
   // Fetch external systems catalog
@@ -335,6 +356,57 @@ export default function NewAppWizard() {
       return data as ImplementationPartner[];
     },
   });
+
+  // Filtered companies based on search
+  const filteredCompanies = useMemo(() => {
+    if (!companies) return [];
+    if (!companySearch.trim()) return companies;
+    const search = companySearch.toLowerCase();
+    return companies.filter(c => 
+      c.name.toLowerCase().includes(search) ||
+      c.org_number?.toLowerCase().includes(search) ||
+      c.industry_description?.toLowerCase().includes(search)
+    );
+  }, [companies, companySearch]);
+
+  // Get unique system types for filter
+  const systemTypes = useMemo(() => {
+    if (!externalSystems) return [];
+    const types = new Set(externalSystems.map(s => s.systemType));
+    return Array.from(types).sort();
+  }, [externalSystems]);
+
+  // Filtered systems based on search and type filter
+  const filteredSystems = useMemo(() => {
+    if (!externalSystems) return [];
+    let filtered = externalSystems.filter(s => !state.systems.find(ss => ss.id === s.id));
+    
+    if (systemTypeFilter !== 'all') {
+      filtered = filtered.filter(s => s.systemType === systemTypeFilter);
+    }
+    
+    if (systemSearch.trim()) {
+      const search = systemSearch.toLowerCase();
+      filtered = filtered.filter(s => 
+        s.name.toLowerCase().includes(search) ||
+        s.systemType.toLowerCase().includes(search)
+      );
+    }
+    
+    return filtered;
+  }, [externalSystems, state.systems, systemSearch, systemTypeFilter]);
+
+  // Filtered partners based on search
+  const filteredPartners = useMemo(() => {
+    if (!implementationPartners) return [];
+    const available = implementationPartners.filter(p => !state.partners.find(sp => sp.id === p.id));
+    if (!partnerSearch.trim()) return available;
+    const search = partnerSearch.toLowerCase();
+    return available.filter(p => 
+      p.name.toLowerCase().includes(search) ||
+      p.industry_description?.toLowerCase().includes(search)
+    );
+  }, [implementationPartners, state.partners, partnerSearch]);
 
   // Create or update project mutation
   const projectMutation = useMutation({
@@ -920,6 +992,66 @@ interface Step1Props {
 }
 
 function Step1Company({ state, setState, companies, externalSystems, implementationPartners }: Step1Props) {
+  // Combobox states for searchable selectors
+  const [companyOpen, setCompanyOpen] = useState(false);
+  const [companySearch, setCompanySearch] = useState('');
+  const [systemOpen, setSystemOpen] = useState(false);
+  const [systemSearch, setSystemSearch] = useState('');
+  const [systemTypeFilter, setSystemTypeFilter] = useState<string>('all');
+  const [partnerOpen, setPartnerOpen] = useState(false);
+  const [partnerSearch, setPartnerSearch] = useState('');
+
+  // Filtered companies based on search
+  const filteredCompanies = useMemo(() => {
+    if (!companies) return [];
+    if (!companySearch.trim()) return companies;
+    const search = companySearch.toLowerCase();
+    return companies.filter(c => 
+      c.name.toLowerCase().includes(search) ||
+      c.org_number?.toLowerCase().includes(search) ||
+      c.industry_description?.toLowerCase().includes(search)
+    );
+  }, [companies, companySearch]);
+
+  // Get unique system types for filter
+  const systemTypes = useMemo(() => {
+    if (!externalSystems) return [];
+    const types = new Set(externalSystems.map(s => s.systemType));
+    return Array.from(types).sort();
+  }, [externalSystems]);
+
+  // Filtered systems based on search and type filter
+  const filteredSystems = useMemo(() => {
+    if (!externalSystems) return [];
+    let filtered = externalSystems.filter(s => !state.systems.find(ss => ss.id === s.id));
+    
+    if (systemTypeFilter !== 'all') {
+      filtered = filtered.filter(s => s.systemType === systemTypeFilter);
+    }
+    
+    if (systemSearch.trim()) {
+      const search = systemSearch.toLowerCase();
+      filtered = filtered.filter(s => 
+        s.name.toLowerCase().includes(search) ||
+        s.systemType.toLowerCase().includes(search)
+      );
+    }
+    
+    return filtered;
+  }, [externalSystems, state.systems, systemSearch, systemTypeFilter]);
+
+  // Filtered partners based on search
+  const filteredPartners = useMemo(() => {
+    if (!implementationPartners) return [];
+    const available = implementationPartners.filter(p => !state.partners.find(sp => sp.id === p.id));
+    if (!partnerSearch.trim()) return available;
+    const search = partnerSearch.toLowerCase();
+    return available.filter(p => 
+      p.name.toLowerCase().includes(search) ||
+      p.industry_description?.toLowerCase().includes(search)
+    );
+  }, [implementationPartners, state.partners, partnerSearch]);
+
   const addSystem = (systemId: string) => {
     const system = externalSystems.find(s => s.id === systemId);
     if (system && !state.systems.find(s => s.id === systemId)) {
@@ -991,39 +1123,87 @@ function Step1Company({ state, setState, companies, externalSystems, implementat
         <CardHeader>
           <CardTitle>Customer Company</CardTitle>
           <CardDescription>
-            Select the company this application is being built for (customers and prospects only)
+            Select the company this application is being built for
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label>Select Company *</Label>
-            <Select
-              value={state.companyId || ''}
-              onValueChange={(value) => setState(prev => ({ ...prev, companyId: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select a company..." />
-              </SelectTrigger>
-              <SelectContent>
-                {companies.map((company) => (
-                  <SelectItem key={company.id} value={company.id}>
-                    <div className="flex flex-col">
-                      <span>{company.name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {company.company_roles?.join(', ')}
-                        {company.industry_description && ` • ${company.industry_description}`}
-                      </span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {companies.length === 0 && (
+            <Popover open={companyOpen} onOpenChange={setCompanyOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={companyOpen}
+                  className="w-full justify-between font-normal"
+                >
+                  {state.companyId ? (
+                    <span className="flex items-center gap-2">
+                      {companies?.find(c => c.id === state.companyId)?.name || 'Select company...'}
+                      {companies?.find(c => c.id === state.companyId)?.hasTenant && (
+                        <Badge variant="secondary" className="text-[10px] px-1 py-0">Tenant</Badge>
+                      )}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">Search for company...</span>
+                  )}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[400px] p-0" align="start">
+                <Command shouldFilter={false}>
+                  <CommandInput 
+                    placeholder="Search company name, org number..." 
+                    value={companySearch}
+                    onValueChange={setCompanySearch}
+                  />
+                  <CommandList>
+                    <CommandEmpty>No company found.</CommandEmpty>
+                    <CommandGroup>
+                      {filteredCompanies.slice(0, 50).map((company) => (
+                        <CommandItem
+                          key={company.id}
+                          value={company.id}
+                          onSelect={() => {
+                            setState(prev => ({ ...prev, companyId: company.id }));
+                            setCompanyOpen(false);
+                            setCompanySearch('');
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              state.companyId === company.id ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          <div className="flex flex-col">
+                            <span className="flex items-center gap-2">
+                              {company.name}
+                              {company.hasTenant && (
+                                <Badge variant="secondary" className="text-[10px] px-1 py-0">Tenant</Badge>
+                              )}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {company.org_number && `Org: ${company.org_number}`}
+                              {company.industry_description && ` • ${company.industry_description}`}
+                            </span>
+                          </div>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+            {(!companies || companies.length === 0) && (
               <p className="text-sm text-muted-foreground">
-                No customers or prospects found. Companies need the 'customer' or 'prospect' role.{' '}
-                <a href="/customers" className="text-primary underline">Manage customers →</a>
+                No companies found.{' '}
+                <a href="/admin/companies" className="text-primary underline">Manage companies →</a>
               </p>
             )}
+            <p className="text-xs text-muted-foreground">
+              Tenant will be created automatically when the app is ready for deployment.
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -1054,29 +1234,74 @@ function Step1Company({ state, setState, companies, externalSystems, implementat
             </div>
           )}
 
-          {/* System selector */}
-          <div className="space-y-2">
-            <Label>Add System</Label>
-            <Select onValueChange={addSystem}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a system to add..." />
-              </SelectTrigger>
-              <SelectContent>
-                {externalSystems
-                  .filter(s => !state.systems.find(ss => ss.id === s.id))
-                  .map((system) => (
-                    <SelectItem key={system.id} value={system.id}>
-                      <div className="flex items-center gap-2">
-                        <span>{system.name}</span>
-                        <span className="text-xs text-muted-foreground">
-                          ({system.systemType})
-                        </span>
-                      </div>
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-            {externalSystems.length === 0 && (
+          {/* System selector with type filter */}
+          <div className="space-y-3">
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <Label className="mb-2 block">Add System</Label>
+                <Popover open={systemOpen} onOpenChange={setSystemOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={systemOpen}
+                      className="w-full justify-between font-normal"
+                    >
+                      <span className="text-muted-foreground">Search for system...</span>
+                      <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[400px] p-0" align="start">
+                    <Command shouldFilter={false}>
+                      <CommandInput 
+                        placeholder="Search system name..." 
+                        value={systemSearch}
+                        onValueChange={setSystemSearch}
+                      />
+                      <CommandList>
+                        <CommandEmpty>No system found.</CommandEmpty>
+                        <CommandGroup heading={`${filteredSystems.length} systems available`}>
+                          {filteredSystems.slice(0, 50).map((system) => (
+                            <CommandItem
+                              key={system.id}
+                              value={system.id}
+                              onSelect={() => {
+                                addSystem(system.id);
+                                setSystemOpen(false);
+                                setSystemSearch('');
+                              }}
+                            >
+                              <Plus className="mr-2 h-4 w-4 text-muted-foreground" />
+                              <div className="flex flex-col">
+                                <span>{system.name}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {system.systemType}
+                                </span>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="w-48">
+                <Label className="mb-2 block">Filter by Type</Label>
+                <Select value={systemTypeFilter} onValueChange={setSystemTypeFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All types" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All types</SelectItem>
+                    {systemTypes.map((type) => (
+                      <SelectItem key={type} value={type}>{type}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            {(!externalSystems || externalSystems.length === 0) && (
               <p className="text-sm text-muted-foreground">
                 No external systems found.{' '}
                 <a href="/admin/external-systems" className="text-primary underline">Add systems →</a>
@@ -1114,28 +1339,55 @@ function Step1Company({ state, setState, companies, externalSystems, implementat
           {/* Partner selector */}
           <div className="space-y-2">
             <Label>Add Partner</Label>
-            <Select onValueChange={addPartner}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a partner..." />
-              </SelectTrigger>
-              <SelectContent>
-                {implementationPartners
-                  .filter(p => !state.partners.find(sp => sp.id === p.id))
-                  .map((partner) => (
-                    <SelectItem key={partner.id} value={partner.id}>
-                      <div className="flex flex-col">
-                        <span>{partner.name}</span>
-                        {partner.industry_description && (
-                          <span className="text-xs text-muted-foreground">
-                            {partner.industry_description}
-                          </span>
-                        )}
-                      </div>
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-            {implementationPartners.length === 0 && (
+            <Popover open={partnerOpen} onOpenChange={setPartnerOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={partnerOpen}
+                  className="w-full justify-between font-normal"
+                >
+                  <span className="text-muted-foreground">Search for partner...</span>
+                  <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[400px] p-0" align="start">
+                <Command shouldFilter={false}>
+                  <CommandInput 
+                    placeholder="Search partner name..." 
+                    value={partnerSearch}
+                    onValueChange={setPartnerSearch}
+                  />
+                  <CommandList>
+                    <CommandEmpty>No partner found.</CommandEmpty>
+                    <CommandGroup heading={`${filteredPartners.length} partners available`}>
+                      {filteredPartners.slice(0, 50).map((partner) => (
+                        <CommandItem
+                          key={partner.id}
+                          value={partner.id}
+                          onSelect={() => {
+                            addPartner(partner.id);
+                            setPartnerOpen(false);
+                            setPartnerSearch('');
+                          }}
+                        >
+                          <Plus className="mr-2 h-4 w-4 text-muted-foreground" />
+                          <div className="flex flex-col">
+                            <span>{partner.name}</span>
+                            {partner.industry_description && (
+                              <span className="text-xs text-muted-foreground">
+                                {partner.industry_description}
+                              </span>
+                            )}
+                          </div>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+            {(!implementationPartners || implementationPartners.length === 0) && (
               <p className="text-sm text-muted-foreground">
                 No implementation partners found. Companies need the 'partner' role.{' '}
                 <a href="/implementation-partners" className="text-primary underline">Manage partners →</a>
@@ -1159,14 +1411,12 @@ interface Step2Props {
 }
 
 function Step2Discovery({ state, setState, tenantId }: Step2Props) {
-  const [questions, setQuestions] = useState<Array<{ key: string; text: string }>>([]);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [questions, setQuestions] = useState<Array<{ key: string; text: string; placeholder?: string }>>([]);
+  const [isGenerating, setIsGenerating] = useState(true);
 
   // Generate questions when entering step
   useEffect(() => {
-    if (questions.length === 0) {
-      generateQuestions();
-    }
+    generateQuestions();
   }, []);
 
   const generateQuestions = async () => {
@@ -1183,9 +1433,10 @@ function Step2Discovery({ state, setState, tenantId }: Step2Props) {
       if (error) throw error;
 
       if (data?.questions) {
-        setQuestions(data.questions.map((q: string, i: number) => ({
+        setQuestions(data.questions.map((q: any, i: number) => ({
           key: `q${i}`,
-          text: q,
+          text: typeof q === 'string' ? q : q.question_text || q.text || 'Question',
+          placeholder: typeof q === 'object' ? q.placeholder : undefined,
         })));
       }
     } catch (error) {
@@ -1242,17 +1493,17 @@ function Step2Discovery({ state, setState, tenantId }: Step2Props) {
 
             <div className="space-y-6">
               {questions.map((q, i) => (
-                <div key={q.key} className="space-y-2">
-                  <Label className="flex items-start gap-2">
+                <div key={q.key || `question-${i}`} className="space-y-2">
+                  <div className="flex items-start gap-2 text-sm font-medium">
                     <span className="bg-primary/10 text-primary rounded-full w-6 h-6 flex items-center justify-center text-sm shrink-0">
                       {i + 1}
                     </span>
-                    <span>{q.text}</span>
-                  </Label>
+                    <span>{q.text || 'Question not available'}</span>
+                  </div>
                   <Textarea
                     value={state.questionnaire[q.key] || ''}
                     onChange={(e) => updateAnswer(q.key, e.target.value)}
-                    placeholder="Enter your answer..."
+                    placeholder={q.placeholder || "Enter your answer..."}
                     rows={3}
                     className="ml-8"
                   />

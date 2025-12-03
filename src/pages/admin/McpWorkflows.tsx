@@ -41,6 +41,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function McpWorkflows() {
   const { isPlatformAdmin, isLoading: isLoadingRole } = usePlatformAdmin();
@@ -425,9 +426,9 @@ export default function McpWorkflows() {
   return (
     <div className="w-full px-4 lg:px-6 xl:px-8 py-8 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">n8n Workflow Mappings</h1>
+        <h1 className="text-3xl font-bold">n8n Workflows</h1>
         <p className="text-muted-foreground">
-          Configure workflow routing for integration triggers
+          Administrer n8n workflow mappings og se integration runs
         </p>
       </div>
 
@@ -442,10 +443,20 @@ export default function McpWorkflows() {
         </Alert>
       )}
 
-      {/* Integration Runs Log */}
-      <Card>
-        <McpIntegrationRunsView tenantId={tenantId} />
-      </Card>
+      <Tabs defaultValue="mappings" className="space-y-6">
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="mappings">Workflow Mappings</TabsTrigger>
+          <TabsTrigger value="runs">Integration Runs</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="runs">
+          {/* Integration Runs Log */}
+          <Card>
+            <McpIntegrationRunsView tenantId={tenantId} />
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="mappings" className="space-y-6">
 
       {/* n8n Secrets Configuration */}
       {canManage && (
@@ -779,6 +790,8 @@ export default function McpWorkflows() {
           )}
         </CardContent>
       </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

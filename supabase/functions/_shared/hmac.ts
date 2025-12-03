@@ -76,7 +76,7 @@ export async function validateWebhookSignature(
 
   // Fetch active secret for tenant/provider
   const { data: secretData, error: secretError } = await supabaseClient
-    .from('mcp_tenant_secret')
+    .from('integration_secrets')
     .select('secret, is_active, expires_at')
     .eq('tenant_id', tenantId)
     .eq('provider', provider)

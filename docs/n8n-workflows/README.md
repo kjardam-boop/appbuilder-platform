@@ -1,8 +1,54 @@
-# n8n Workshop Workflows
+# n8n Workflow Templates
 
-This folder contains n8n workflow templates for the App Creation Wizard's Miro/Notion integration.
+This folder contains n8n workflow templates for the App Builder Platform's integrations.
 
 ## Workflows
+
+### Capability Management
+
+#### `sync-capability-to-notion.json`
+Syncs capability specifications to Notion, generating AI-powered documentation.
+
+**Webhook:** `POST /webhook/capability-to-notion`
+
+**Input:**
+```json
+{
+  "capability_id": "uuid"
+}
+```
+
+**Output:**
+```json
+{
+  "success": true,
+  "notion_url": "https://notion.so/..."
+}
+```
+
+**What it does:**
+1. Fetches capability details from Supabase
+2. Generates a requirements specification using GPT-4
+3. Creates a Notion page with:
+   - Overview and description
+   - Functional requirements
+   - Technical requirements
+   - User stories
+   - Acceptance criteria
+4. Updates capability with the Notion URL
+
+**Required Credentials:**
+- Supabase API Key (HTTP Header Auth)
+- OpenAI API
+- Notion API
+
+**Environment Variables:**
+- `SUPABASE_URL` - Your Supabase URL
+- `NOTION_CAPABILITIES_DB_ID` - Notion database for capabilities
+
+---
+
+### Workshop Integration
 
 ### 1. `prepare-miro-workshop.json`
 Creates a pre-populated Miro board for discovery workshops.

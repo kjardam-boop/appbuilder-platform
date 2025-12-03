@@ -44,6 +44,7 @@ export default function AIProviderSettings() {
   const [modalOpen, setModalOpen] = useState(false);
 
   // Fetch AI integration definitions from structured hierarchy
+  // Uses type='ai_provider' from migration 20251203100000
   const { data: aiProviders, isLoading: isLoadingProviders } = useQuery({
     queryKey: ['ai-integration-definitions'],
     queryFn: async () => {
@@ -61,7 +62,7 @@ export default function AIProviderSettings() {
             )
           )
         `)
-        .like('key', 'ai-%')
+        .eq('type', 'ai_provider')
         .eq('is_active', true)
         .order('name');
       

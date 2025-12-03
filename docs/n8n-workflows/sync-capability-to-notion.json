@@ -1,0 +1,237 @@
+{
+  "name": "Sync Capability to Notion",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "capability-to-notion",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.SUPABASE_URL}}/rest/v1/capabilities?id=eq.{{$json.capability_id}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false
+            }
+          }
+        }
+      },
+      "id": "fetch-capability",
+      "name": "Fetch Capability from Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [470, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "supabase-api-key",
+          "name": "Supabase API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "Du er en teknisk skribent som lager dokumentasjon for software capabilities. Skriv kortfattet og teknisk, men forståelig for utviklere og prosjektledere."
+            },
+            {
+              "role": "user",
+              "content": "Lag en kravspesifikasjon for følgende capability:\n\nNavn: {{$json[0].name}}\nKategori: {{$json[0].category}}\nBeskrivelse: {{$json[0].description}}\nAvhengigheter: {{$json[0].dependencies}}\nFrontend-filer: {{$json[0].frontend_files}}\nBackend-filer: {{$json[0].backend_files}}\nDatabase-tabeller: {{$json[0].domain_tables}}\nHooks: {{$json[0].hooks}}\n\nInkluder:\n1. Oversikt\n2. Funksjonelle krav\n3. Tekniske krav\n4. Brukerhistorier (3-5 stk)\n5. Akseptansekriterier\n6. Avhengigheter og integrasjoner"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "generate-spec",
+      "name": "Generate Spec with AI",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1,
+      "position": [690, 300],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-api",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "page",
+        "operation": "create",
+        "parentPageId": "={{$env.NOTION_CAPABILITIES_DB_ID}}",
+        "title": "={{$node['Fetch Capability from Supabase'].json[0].name}}",
+        "blockUi": {
+          "blockValues": [
+            {
+              "type": "heading_1",
+              "text": "={{$node['Fetch Capability from Supabase'].json[0].name}}"
+            },
+            {
+              "type": "paragraph",
+              "text": "={{$node['Fetch Capability from Supabase'].json[0].description}}"
+            },
+            {
+              "type": "divider"
+            },
+            {
+              "type": "heading_2",
+              "text": "Kravspesifikasjon"
+            },
+            {
+              "type": "paragraph",
+              "text": "={{$node['Generate Spec with AI'].json.message.content}}"
+            },
+            {
+              "type": "divider"
+            },
+            {
+              "type": "heading_2",
+              "text": "Teknisk informasjon"
+            },
+            {
+              "type": "paragraph",
+              "text": "Kategori: {{$node['Fetch Capability from Supabase'].json[0].category}}\nScope: {{$node['Fetch Capability from Supabase'].json[0].scope}}\nVersjon: {{$node['Fetch Capability from Supabase'].json[0].current_version}}"
+            }
+          ]
+        }
+      },
+      "id": "create-notion-page",
+      "name": "Create Notion Page",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [910, 300],
+      "credentials": {
+        "notionApi": {
+          "id": "notion-api",
+          "name": "Notion API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{$env.SUPABASE_URL}}/rest/v1/capabilities?id=eq.{{$node['Webhook Trigger'].json.capability_id}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "documentation_url",
+              "value": "={{$json.url}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "update-capability",
+      "name": "Update Capability with Notion URL",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1130, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "supabase-api-key",
+          "name": "Supabase API Key"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "respond-webhook",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1350, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch Capability from Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Capability from Supabase": {
+      "main": [
+        [
+          {
+            "node": "Generate Spec with AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Spec with AI": {
+      "main": [
+        [
+          {
+            "node": "Create Notion Page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Notion Page": {
+      "main": [
+        [
+          {
+            "node": "Update Capability with Notion URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Capability with Notion URL": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "capability",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    },
+    {
+      "name": "notion",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    }
+  ],
+  "meta": {
+    "instanceId": "placeholder"
+  }
+}
+

@@ -138,18 +138,9 @@ const adminNavItems: NavSection[] = [
     icon: Plug,
     items: [
       { title: "Integrations Hub", url: "/admin/integrations", icon: Plug },
+      { title: "n8n Workflows", url: "/admin/n8n/workflows", icon: Workflow },
       { title: "Odoo CRM", url: "/admin/integrations/odoo", icon: Building2 },
-      { title: "Workflows (n8n)", url: "/admin/mcp/workflows", icon: Workflow },
       { title: "Credentials", url: "/admin/credentials", icon: Key },
-      { title: "Observability", url: "/admin/mcp/observability", icon: Eye },
-      { 
-        title: "Integration Tools", 
-        icon: Wrench,
-        children: [
-          { title: "Recommendations", url: "/admin/integration-recommendations", icon: Sparkles },
-          { title: "Integration Graph", url: "/admin/integration-graph", icon: Network },
-        ]
-      },
     ],
   },
   {

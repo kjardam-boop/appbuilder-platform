@@ -530,7 +530,7 @@ export class RecommendationService {
       .eq("tenant_id", tenantId)
       .limit(100);
 
-    // Get secrets (mock - would query mcp_tenant_secret if exists)
+    // Get secrets (mock - would query integration_secrets if exists)
     const secrets: any[] = [];
 
     // Get tenant info

@@ -1,0 +1,315 @@
+# AppBuilder Platform - Cursor Rules
+
+## 🚨 KRITISK: Database & Migrasjoner
+
+**FØR du oppretter nye database-tabeller:**
+
+1. ALLTID kjør: `grep -r "CREATE TABLE" supabase/migrations/`
+2. Sjekk om lignende tabell allerede finnes
+3. Gjenbruk eksisterende tabeller fremfor å lage nye
+
+**Eksisterende tabeller du MÅ kjenne til:**
+
+| Tabell | Migrasjon | Beskrivelse |
+|--------|-----------|-------------|
+| `workflow_templates` | 20251126000001 | n8n workflow-maler |
+| `tenant_workflows` | 20251126000001 | Aktiverte workflows per tenant |
+| `integration_definitions` | 20251110200947 | Unified integrasjonskatalog (type-kolonne) |
+| `tenant_integrations` | 20251023133841 | Per-tenant integrasjonsconfig med scope |
+| `integration_secrets` | 20251203130000 | API-nøkler for integrasjoner (tidligere mcp_tenant_secret) |
+| `n8n_workflow_mappings` | 20251203130000 | n8n webhook mappings (tidligere mcp_tenant_workflow_map) |
+| `capabilities` | Tidligere | Capability-katalog |
+| `capability_bundles` | 20251202120000 | Capability-pakker |
+| `tenant_capabilities` | Tidligere | Aktiverte capabilities |
+| `tenants` | Tidligere | Multi-tenant config |
+| `user_roles` | Tidligere | RBAC roller |
+
+**MCP (Model Context Protocol) - Riktig bruk:**
+
+MCP er Anthropics protokoll for AI-verktøy. Bruk BARE "mcp_" prefiks for:
+- `mcp_tool_registry` - AI verktøy
+- `mcp_action_registry` - AI aksjoner
+- `mcp_action_log` - AI aksjon-logger
+- `mcp_tenant_policy` - MCP policy
+
+IKKE bruk "mcp_" for generelle integrasjoner, webhooks eller API-nøkler!
+
+**Migrasjonsregler:**
+
+- Bruk `IF NOT EXISTS` for CREATE TABLE
+- Bruk `ON CONFLICT DO UPDATE` for INSERT
+- ALLTID legg til RLS policies
+- Legg til COMMENT ON TABLE/COLUMN
+
+---
+
+## 📁 Modulstruktur
+
+Alle moduler følger denne strukturen under `src/modules/core/<modul>/`:
+
+```
+├── components/    # React komponenter
+├── hooks/         # Custom hooks (useX)
+├── services/      # Business logic
+├── types/         # TypeScript types
+└── index.ts       # Public API (eksporter alt her)
+```
+
+**Når du lager ny funksjonalitet:**
+
+1. Finn riktig modul først (`company`, `project`, `capabilities`, etc.)
+2. Sjekk `index.ts` for eksisterende exports
+3. Følg samme pattern som eksisterende filer
+
+---
+
+## 🔑 Viktige systemer som finnes
+
+### Integrasjoner
+
+- **n8n**: Primær integrasjons-hub, bruk `workflow_templates`
+- **Adapter pattern**: `src/modules/core/integrations/adapters/`
+- **Webhook support**: `src/modules/core/integrations/webhooks/`
+
+### Capabilities
+
+- **Registry**: `src/modules/core/capabilities/`
+- **Runtime**: `CapabilityLoader.tsx` for micro-frontends
+- **Bundles**: Forhåndskonfigurerte pakker
+
+### Permissions
+
+- **RBAC**: `src/modules/core/permissions/`
+- **Roller**: `platform_owner`, `platform_admin`, `tenant_owner`, `tenant_admin`, `tenant_member`
+- **RLS**: Alle tabeller har Row Level Security
+
+---
+
+## 🎨 Frontend Patterns
+
+### UI Components
+
+- Bruk shadcn/ui komponenter fra `src/components/ui/`
+- Følg eksisterende styling (Tailwind)
+- Lucide icons
+
+### Hooks
+
+- `useTenant()` - Nåværende tenant context
+- `useUserRole()` - Brukerens roller
+- `useCapabilities()` - Tilgjengelige capabilities
+- `useSupabase()` - Database client
+
+### State Management
+
+- React Query for server state
+- Context for global client state
+- Lokale hooks for komponent-state
+
+---
+
+## 📝 Kodekonvensjoner
+
+### Naming
+
+- Filer: `kebab-case.ts` eller `PascalCase.tsx` for komponenter
+- Types: `PascalCase` med `.types.ts` suffix
+- Services: `camelCaseService.ts`
+- Hooks: `useX.ts`
+
+### TypeScript
+
+- Strict mode aktivert
+- Eksporter types fra `index.ts`
+- Interface over type for objekter
+- Bruk `Record<string, T>` for dictionaries
+
+### Database
+
+- snake_case for kolonner
+- Plural for tabellnavn
+- UUID som primary keys
+- `created_at`, `updated_at` på alle tabeller
+
+---
+
+## ⚡ Supabase Edge Functions
+
+Lokasjon: `supabase/functions/`
+
+**Eksisterende funksjoner å kjenne til:**
+
+- `n8n-sync` - Bi-direktional sync med n8n (list, pull, push, update, activate)
+- `trigger-n8n-workflow` - Starter n8n workflows via webhook
+- `n8n-proxy` - Proxy for webhook-kall til n8n
+- `generate-questions` - AI-genererte spørsmål
+- `brreg-*` - Brønnøysund integrasjon
+- `ai-mcp-chat` - AI-chat med MCP tools
+
+**Før ny funksjon:**
+
+1. Sjekk om eksisterende kan utvides
+2. Følg samme struktur
+3. Husk CORS og auth
+4. Bruk `_shared/cors.ts` for CORS headers
+
+---
+
+## 🔍 Før du starter
+
+**Sjekkliste for nye features:**
+
+- [ ] Søk i kodebasen først (`grep`, `codebase_search`)
+- [ ] Les relevante `index.ts` filer
+- [ ] Sjekk migrations for database-schema
+- [ ] Les docs/ for arkitektur-beslutninger
+- [ ] Forstå tenant-isolation
+
+**Ved database-endringer:**
+
+- [ ] Kjør `grep -r "CREATE TABLE" supabase/migrations/`
+- [ ] Sjekk eksisterende tabeller som kan gjenbrukes
+- [ ] Planlegg RLS policies
+- [ ] Vurder indekser
+
+---
+
+## 📚 Dokumentasjon
+
+- `docs/architecture.md` - Overordnet arkitektur
+- `docs/capabilities/` - Capability-spesifikasjoner
+- `docs/n8n-workflows/` - Workflow-dokumentasjon
+- `docs/roles-and-permissions.md` - RBAC system
+- [ ] Oppdater alltid dokumentasjonen når du lager nye funksjoner, inkludert sequence og flytdiagrammer
+
+---
+
+## 🔌 Integrasjonsarkitektur (v2)
+
+### Fire integrasjonstyper
+
+| Type | Beskrivelse | Eksempler |
+|------|-------------|-----------|
+| `ai_provider` | AI-tjenester (BYOK) | OpenAI, Anthropic, Google AI |
+| `workflow` | n8n workflows | Sync Odoo, Export Notion |
+| `direct_api` | Direkte API-kall | Brønnøysund, valutakurser |
+| `mcp_tool` | MCP-protokoll tools | AI-assisterte handlinger |
+
+### Hierarkisk scope for AI providers
+
+```
+Capability > App > Tenant > Platform default
+```
+
+Bruk `get_effective_ai_provider()` for å finne riktig provider.
+
+### n8n bi-direktional sync
+
+**Flyt:**
+1. Generer workflow JSON på platform (AI-assistert eller manuelt)
+2. Push til n8n via `n8n-sync` edge function
+3. Juster workflow i n8n editor
+4. Sync tilbake til platform med `N8nSyncService.syncToDatabase()`
+5. Knytt workflow til apps/capabilities
+
+**Tjenester:**
+- `N8nSyncService` - Push/pull mellom platform og n8n
+- `n8n-sync` edge function - API-kommunikasjon
+- `integration_definitions` med type='workflow' - Lagrer workflow metadata
+
+### Admin UI
+
+- `/admin/integrations?tab=workflows` - Workflow-administrasjon med n8n sync
+- `/admin/integrations?tab=definitions` - Integrasjonskatalog
+
+**Unntak:** Brønnøysund (brreg) kjører som edge function pga. ytelse.
+- Spør alltid om du mener det er best med en direkte integrasjon
+
+---
+
+## 🧩 Capability Design
+
+### Visibility (hvem ser capability)
+
+| Visibility | Beskrivelse | Eksempler |
+|------------|-------------|-----------|
+| `internal` | Kun platform-team | tenant-management, app-builder |
+| `partner` | Partnere + internt | erp-system-management |
+| `public` | Alle kunder | task-management, calendar-view |
+
+### Core Capabilities (alltid inkludert)
+
+Disse har `is_core = true` og kan ikke fjernes fra kundeapper:
+
+- `auth-core` - Sign-up, sign-in, password reset
+- `user-profile` - Se/redigere egen profil
+- `user-account-settings` - Passord, 2FA, notifikasjoner
+- `basic-authorization` - Forenklet rolle-basert tilgang
+
+---
+
+## 🛡️ Defensiv TypeScript
+
+### API-responser
+
+API-er kan returnere uventede strukturer. ALLTID:
+
+```typescript
+// ❌ Farlig - antar array
+data.items.length
+
+// ✅ Sikkert - sjekk først
+Array.isArray(data.items) ? data.items.length : 0
+```
+
+### Objekter vs primitiver
+
+```typescript
+// API kan returnere { question_text: "..." } i stedet for "..."
+const text = typeof question === 'string' 
+  ? question 
+  : question?.question_text ?? '';
+```
+
+### Loading states
+
+```typescript
+// ✅ Start med loading=true når data hentes ved mount
+const [isLoading, setIsLoading] = useState(true);
+```
+
+---
+
+## ⚛️ React Patterns
+
+### State plassering
+
+- Flytt state til komponenten som bruker den
+- Foreldre skal ikke holde state som bare barn trenger
+- Props drilling = signal om at state er feil plassert
+
+### UI-komponenter
+
+```tsx
+// ❌ <Label> uten htmlFor som flex-container
+<Label className="flex items-center gap-2">
+  <span>Tekst</span>
+</Label>
+
+// ✅ Bruk <div> for layout uten form-assosiasjoner
+<div className="flex items-center gap-2">
+  <span>Tekst</span>
+</div>
+```
+
+---
+
+## 🚫 Unngå
+
+- Duplisering av eksisterende tabeller/funksjonalitet
+- Hardkodede tenant IDs (bruk context)
+- Direkte database queries uten RLS
+- Nye UI-komponenter når shadcn har tilsvarende
+- Lange AI-genererte kommentarer
+- Egne integrasjonsadaptere (bruk n8n)
+- Anta datatyper fra API uten sjekk

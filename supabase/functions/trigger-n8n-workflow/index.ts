@@ -56,7 +56,7 @@ async function resolveWebhook(
 ): Promise<string | null> {
   // 1. Fetch webhook_path from workflow mapping
   const { data: mapping, error: mappingError } = await supabase
-    .from('mcp_tenant_workflow_map')
+    .from('n8n_workflow_mappings')
     .select('webhook_path')
     .eq('tenant_id', tenantId)
     .eq('provider', provider)

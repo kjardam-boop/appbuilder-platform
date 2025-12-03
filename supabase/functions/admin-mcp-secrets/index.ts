@@ -72,7 +72,7 @@ Deno.serve(async (req) => {
       const provider = url.searchParams.get('provider') || 'n8n';
 
       const { data: secrets, error } = await supabaseClient
-        .from('mcp_tenant_secret')
+        .from('integration_secrets')
         .select('id, tenant_id, provider, is_active, created_at, rotated_at, expires_at, created_by')
         .eq('tenant_id', tenantId)
         .eq('provider', provider)
@@ -113,7 +113,7 @@ Deno.serve(async (req) => {
 
       // Deactivate old secrets
       await supabaseClient
-        .from('mcp_tenant_secret')
+        .from('integration_secrets')
         .update({ 
           is_active: false,
           rotated_at: new Date().toISOString(),
@@ -125,7 +125,7 @@ Deno.serve(async (req) => {
 
       const secret = generateSecret();
       const { data: newSecret, error } = await supabaseClient
-        .from('mcp_tenant_secret')
+        .from('integration_secrets')
         .insert({
           tenant_id: tenantId,
           provider,
@@ -216,7 +216,7 @@ Deno.serve(async (req) => {
 
       // Mark old secret as rotated
       await supabaseClient
-        .from('mcp_tenant_secret')
+        .from('integration_secrets')
         .update({ 
           is_active: false,
           rotated_at: new Date().toISOString(),
@@ -228,7 +228,7 @@ Deno.serve(async (req) => {
 
       const secret = generateSecret();
       const { data: newSecret, error } = await supabaseClient
-        .from('mcp_tenant_secret')
+        .from('integration_secrets')
         .insert({
           tenant_id: tenantId,
           provider,
@@ -301,7 +301,7 @@ Deno.serve(async (req) => {
       const secretId = pathParts[pathParts.length - 2];
 
       const { error } = await supabaseClient
-        .from('mcp_tenant_secret')
+        .from('integration_secrets')
         .update({ is_active: false })
         .eq('id', secretId)
         .eq('tenant_id', tenantId);
@@ -413,7 +413,7 @@ Deno.serve(async (req) => {
 
       // Get active secret
       const { data: secretData, error: secretError } = await supabaseClient
-        .from('mcp_tenant_secret')
+        .from('integration_secrets')
         .select('secret')
         .eq('tenant_id', tenantId)
         .eq('provider', provider)
@@ -483,7 +483,7 @@ Deno.serve(async (req) => {
       const { payload, signature, provider = 'n8n' } = await req.json();
 
       const { data: secretData } = await supabaseClient
-        .from('mcp_tenant_secret')
+        .from('integration_secrets')
         .select('secret')
         .eq('tenant_id', tenantId)
         .eq('provider', provider)
@@ -520,7 +520,7 @@ Deno.serve(async (req) => {
       const provider = url.searchParams.get('provider') || 'n8n';
 
       const { data: activeSecret } = await supabaseClient
-        .from('mcp_tenant_secret')
+        .from('integration_secrets')
         .select('expires_at, created_at')
         .eq('tenant_id', tenantId)
         .eq('provider', provider)

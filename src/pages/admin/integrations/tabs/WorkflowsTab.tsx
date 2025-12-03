@@ -1,42 +1,605 @@
+/**
+ * Workflows Tab
+ * Manages n8n workflows with bi-directional sync
+ */
+
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useTenantContext } from "@/hooks/useTenantContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Workflow, ExternalLink } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Label } from "@/components/ui/label";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Workflow,
+  ExternalLink,
+  RefreshCw,
+  Download,
+  Upload,
+  Plus,
+  MoreVertical,
+  Settings,
+  Check,
+  X,
+  Search,
+  Clock,
+} from "lucide-react";
+import { N8nSyncService } from "@/modules/core/integrations/services/n8nSyncService";
+import type { IntegrationDefinition } from "@/modules/core/integrations/types/integrationRegistry.types";
 
 export default function WorkflowsTab() {
-  const navigate = useNavigate();
+  const tenantContext = useTenantContext();
+  const tenantId = tenantContext?.tenant_id;
+  const queryClient = useQueryClient();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [syncDialogOpen, setSyncDialogOpen] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [selectedWorkflow, setSelectedWorkflow] = useState<IntegrationDefinition | null>(null);
+
+  // Fetch workflows from integration_definitions
+  // Note: 'type' column is added by migration 20251203100000
+  // Falls back to workflow_templates if type column doesn't exist
+  const { data: workflows, isLoading, error: workflowsError } = useQuery({
+    queryKey: ['integration-definitions', 'workflow'],
+    queryFn: async () => {
+      // First try with type filter (new schema)
+      const { data, error } = await supabase
+        .from('integration_definitions')
+        .select('*')
+        .eq('type', 'workflow')
+        .order('name');
+      
+      // If error (likely column doesn't exist), try without filter
+      if (error) {
+        console.warn('[WorkflowsTab] type column not found, trying without filter:', error.message);
+        
+        // Fallback: get from workflow_templates instead
+        const { data: templates, error: templatesError } = await supabase
+          .from('workflow_templates')
+          .select('*')
+          .order('name');
+        
+        if (templatesError) {
+          console.error('[WorkflowsTab] workflow_templates query failed:', templatesError);
+          return [];
+        }
+        
+        // Map workflow_templates to IntegrationDefinition-like structure
+        return (templates || []).map(t => ({
+          id: t.id,
+          key: t.key,
+          name: t.name,
+          description: t.description,
+          type: 'workflow' as const,
+          n8n_workflow_id: t.n8n_workflow_id,
+          n8n_webhook_path: t.n8n_webhook_path,
+          is_active: t.is_active,
+          created_at: t.created_at,
+          updated_at: t.updated_at,
+          // Fill in missing fields
+          category_id: null,
+          vendor_id: null,
+          external_system_id: null,
+          supported_delivery_methods: [],
+          default_delivery_method: null,
+          icon_name: 'Workflow',
+          documentation_url: null,
+          setup_guide_url: null,
+          requires_credentials: true,
+          credential_fields: [],
+          default_config: {},
+          capabilities: {},
+          tags: [],
+          workflow_json: null,
+          last_synced_at: null,
+        })) as IntegrationDefinition[];
+      }
+      
+      return (data || []) as IntegrationDefinition[];
+    },
+  });
+
+  // Fetch n8n workflows directly (for comparison)
+  const { data: n8nWorkflows, refetch: refetchN8n } = useQuery({
+    queryKey: ['n8n-workflows', tenantId],
+    queryFn: async () => {
+      if (!tenantId) return [];
+      return N8nSyncService.listWorkflows(tenantId);
+    },
+    enabled: !!tenantId,
+  });
+
+  // Sync all from n8n
+  const syncAllMutation = useMutation({
+    mutationFn: async () => {
+      if (!tenantId) throw new Error('No tenant');
+      setIsSyncing(true);
+      return N8nSyncService.syncAllFromN8n(tenantId);
+    },
+    onSuccess: (result) => {
+      setIsSyncing(false);
+      setSyncDialogOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['integration-definitions', 'workflow'] });
+      refetchN8n();
+      
+      if (result.synced > 0) {
+        toast.success(`Synkronisert ${result.synced} workflows fra n8n`);
+      }
+      if (result.failed > 0) {
+        toast.error(`${result.failed} workflows feilet`, {
+          description: result.errors.slice(0, 3).join('\n'),
+        });
+      }
+      if (result.synced === 0 && result.failed === 0) {
+        toast.info('Ingen nye workflows å synkronisere');
+      }
+    },
+    onError: (error) => {
+      setIsSyncing(false);
+      toast.error('Sync feilet', { description: (error as Error).message });
+    },
+  });
+
+  // Sync single workflow
+  const syncSingleMutation = useMutation({
+    mutationFn: async (n8nWorkflowId: string) => {
+      if (!tenantId) throw new Error('No tenant');
+      return N8nSyncService.syncToDatabase(tenantId, n8nWorkflowId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['integration-definitions', 'workflow'] });
+      toast.success('Workflow synkronisert');
+    },
+    onError: (error) => {
+      toast.error('Sync feilet', { description: (error as Error).message });
+    },
+  });
+
+  // Filter workflows
+  const filteredWorkflows = (workflows || []).filter(w => 
+    w.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    w.key.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    w.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Find workflows in n8n not yet in platform
+  const platformKeys = new Set((workflows || []).map(w => w.n8n_workflow_id).filter(Boolean));
+  const unsyncedN8nWorkflows = (n8nWorkflows || []).filter(w => !platformKeys.has(w.id));
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold">Workflows</h2>
-        <p className="text-muted-foreground">
-          MCP workflows og automatiseringer
-        </p>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Workflows</h2>
+          <p className="text-muted-foreground">
+            n8n workflows med bi-direktional sync
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Dialog open={syncDialogOpen} onOpenChange={setSyncDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <Download className="h-4 w-4 mr-2" />
+                Sync fra n8n
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Synkroniser fra n8n</DialogTitle>
+                <DialogDescription>
+                  Henter alle workflows fra n8n og oppdaterer integrasjonskatalogen.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 pt-4">
+                {unsyncedN8nWorkflows.length > 0 && (
+                  <div className="p-3 bg-muted rounded-lg">
+                    <p className="text-sm font-medium">
+                      {unsyncedN8nWorkflows.length} nye workflows funnet i n8n:
+                    </p>
+                    <ul className="text-sm text-muted-foreground mt-1">
+                      {unsyncedN8nWorkflows.slice(0, 5).map(w => (
+                        <li key={w.id}>• {w.name}</li>
+                      ))}
+                      {unsyncedN8nWorkflows.length > 5 && (
+                        <li>• ... og {unsyncedN8nWorkflows.length - 5} flere</li>
+                      )}
+                    </ul>
+                  </div>
+                )}
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setSyncDialogOpen(false)}>
+                    Avbryt
+                  </Button>
+                  <Button onClick={() => syncAllMutation.mutate()} disabled={isSyncing}>
+                    {isSyncing ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        Synkroniserer...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="h-4 w-4 mr-2" />
+                        Sync alle
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+          <Button>
+            <Plus className="h-4 w-4 mr-2" />
+            Opprett workflow
+          </Button>
+        </div>
       </div>
 
+      {/* Search */}
+      <div className="relative max-w-sm">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Søk workflows..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
+      {/* Stats */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Workflow Templates
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{workflows?.length || 0}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              n8n workflows
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{n8nWorkflows?.length || 0}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Ikke synkronisert
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-500">{unsyncedN8nWorkflows.length}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Workflows table */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Workflow className="h-5 w-5" />
-            MCP Workflows
+            Registrerte workflows
           </CardTitle>
           <CardDescription>
-            Administrer MCP-baserte workflows og integrasjoner
+            Workflows synkronisert fra n8n
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col items-center gap-4 py-8">
-            <p className="text-sm text-muted-foreground text-center max-w-md">
-              Denne seksjonen vil inneholde MCP workflows når de er migrert til den nye integrasjonsmodellen.
-            </p>
-            <Button onClick={() => navigate("/admin/mcp/workflows")} variant="outline">
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Gå til MCP Workflows (gammel side)
-            </Button>
-          </div>
+          {isLoading ? (
+            <div className="space-y-2">
+              {[1, 2, 3].map(i => <Skeleton key={i} className="h-12" />)}
+            </div>
+          ) : filteredWorkflows.length === 0 ? (
+            <div className="text-center py-8">
+              <Workflow className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">Ingen workflows funnet</p>
+              <Button 
+                variant="outline" 
+                className="mt-4"
+                onClick={() => setSyncDialogOpen(true)}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Sync fra n8n
+              </Button>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Navn</TableHead>
+                  <TableHead>Key</TableHead>
+                  <TableHead>Webhook</TableHead>
+                  <TableHead>Sist synket</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="w-[50px]"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredWorkflows.map(workflow => (
+                  <TableRow key={workflow.id}>
+                    <TableCell className="font-medium">{workflow.name}</TableCell>
+                    <TableCell>
+                      <code className="text-xs bg-muted px-2 py-1 rounded">
+                        {workflow.key}
+                      </code>
+                    </TableCell>
+                    <TableCell>
+                      {workflow.n8n_webhook_path ? (
+                        <code className="text-xs bg-muted px-2 py-1 rounded">
+                          {workflow.n8n_webhook_path}
+                        </code>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {workflow.last_synced_at ? (
+                        <div className="flex items-center gap-1 text-sm">
+                          <Clock className="h-3 w-3" />
+                          {new Date(workflow.last_synced_at).toLocaleDateString('nb-NO')}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">Aldri</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {workflow.is_active ? (
+                        <Badge className="bg-green-100 text-green-800">
+                          <Check className="h-3 w-3 mr-1" />
+                          Aktiv
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary">
+                          <X className="h-3 w-3 mr-1" />
+                          Inaktiv
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => setSelectedWorkflow(workflow)}>
+                            <Settings className="h-4 w-4 mr-2" />
+                            Detaljer
+                          </DropdownMenuItem>
+                          {workflow.n8n_workflow_id && (
+                            <>
+                              <DropdownMenuItem asChild>
+                                <a 
+                                  href={`https://jardam.app.n8n.cloud/workflow/${workflow.n8n_workflow_id}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  <ExternalLink className="h-4 w-4 mr-2" />
+                                  Åpne i n8n
+                                </a>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => syncSingleMutation.mutate(workflow.n8n_workflow_id!)}
+                                disabled={syncSingleMutation.isPending}
+                              >
+                                <RefreshCw className="h-4 w-4 mr-2" />
+                                Sync fra n8n
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
+
+      {/* Unsynced workflows from n8n */}
+      {unsyncedN8nWorkflows.length > 0 && (
+        <Card className="border-orange-200 bg-orange-50/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-orange-800">
+              <Download className="h-5 w-5" />
+              Nye workflows i n8n
+            </CardTitle>
+            <CardDescription>
+              Disse workflows finnes i n8n men er ikke synkronisert til plattformen ennå
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {unsyncedN8nWorkflows.map(workflow => (
+                <div 
+                  key={workflow.id}
+                  className="flex items-center justify-between p-3 bg-white rounded-lg border"
+                >
+                  <div>
+                    <p className="font-medium">{workflow.name}</p>
+                    <p className="text-sm text-muted-foreground">ID: {workflow.id}</p>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => syncSingleMutation.mutate(workflow.id)}
+                    disabled={syncSingleMutation.isPending}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Sync
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Workflow Details Sheet */}
+      <Sheet open={!!selectedWorkflow} onOpenChange={(open) => !open && setSelectedWorkflow(null)}>
+        <SheetContent className="sm:max-w-lg">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              <Workflow className="h-5 w-5" />
+              {selectedWorkflow?.name}
+            </SheetTitle>
+            <SheetDescription>
+              Workflow detaljer og konfigurasjon
+            </SheetDescription>
+          </SheetHeader>
+          
+          {selectedWorkflow && (
+            <ScrollArea className="h-[calc(100vh-180px)] mt-6">
+              <div className="space-y-6 pr-4">
+                {/* Basic Info */}
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Key</Label>
+                    <p className="font-mono text-sm bg-muted px-2 py-1 rounded mt-1">
+                      {selectedWorkflow.key}
+                    </p>
+                  </div>
+                  
+                  {selectedWorkflow.description && (
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Beskrivelse</Label>
+                      <p className="text-sm mt-1">{selectedWorkflow.description}</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* n8n Info */}
+                {selectedWorkflow.n8n_workflow_id && (
+                  <div className="space-y-3 pt-4 border-t">
+                    <h4 className="font-medium text-sm">n8n Konfigurasjon</h4>
+                    
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Workflow ID</Label>
+                      <p className="font-mono text-sm bg-muted px-2 py-1 rounded mt-1">
+                        {selectedWorkflow.n8n_workflow_id}
+                      </p>
+                    </div>
+                    
+                    {selectedWorkflow.n8n_webhook_path && (
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Webhook Path</Label>
+                        <p className="font-mono text-sm bg-muted px-2 py-1 rounded mt-1">
+                          {selectedWorkflow.n8n_webhook_path}
+                        </p>
+                      </div>
+                    )}
+                    
+                    <Button 
+                      variant="outline" 
+                      className="w-full"
+                      asChild
+                    >
+                      <a 
+                        href={`https://jardam.app.n8n.cloud/workflow/${selectedWorkflow.n8n_workflow_id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        Åpne i n8n Editor
+                      </a>
+                    </Button>
+                  </div>
+                )}
+
+                {/* Status */}
+                <div className="space-y-3 pt-4 border-t">
+                  <h4 className="font-medium text-sm">Status</h4>
+                  
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Aktiv</span>
+                    <Badge variant={selectedWorkflow.is_active ? "default" : "secondary"}>
+                      {selectedWorkflow.is_active ? "Ja" : "Nei"}
+                    </Badge>
+                  </div>
+                  
+                  {selectedWorkflow.last_synced_at && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Sist synkronisert</span>
+                      <span className="text-sm text-muted-foreground">
+                        {new Date(selectedWorkflow.last_synced_at).toLocaleString('nb-NO')}
+                      </span>
+                    </div>
+                  )}
+                  
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Opprettet</span>
+                    <span className="text-sm text-muted-foreground">
+                      {new Date(selectedWorkflow.created_at).toLocaleDateString('nb-NO')}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="space-y-2 pt-4 border-t">
+                  {selectedWorkflow.n8n_workflow_id && (
+                    <Button 
+                      variant="outline" 
+                      className="w-full"
+                      onClick={() => {
+                        syncSingleMutation.mutate(selectedWorkflow.n8n_workflow_id!);
+                        setSelectedWorkflow(null);
+                      }}
+                      disabled={syncSingleMutation.isPending}
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Sync fra n8n
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </ScrollArea>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

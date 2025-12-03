@@ -11,9 +11,18 @@ export type CapabilityCategory =
   | "Authentication"
   | "Data Management"
   | "Security"
-  | "Platform";
+  | "Platform"
+  | "Core Auth";  // New category for required auth capabilities
 
 export type CapabilityScope = "platform" | "app-specific";
+
+/**
+ * Visibility determines who can see and use a capability
+ * - internal: Only platform team (tenant-management, permissions-rbac, etc.)
+ * - partner: Partners and internal team (erp-system-management, supplier-evaluation)
+ * - public: All customers (task-management, document-management, etc.)
+ */
+export type CapabilityVisibility = "internal" | "partner" | "public";
 
 export interface Capability {
   id: string;
@@ -22,9 +31,11 @@ export interface Capability {
   description: string | null;
   category: CapabilityCategory;
   
-  // Scope
+  // Scope & Visibility
   scope: CapabilityScope;
   app_definition_id: string | null; // Only for app-specific capabilities
+  visibility: CapabilityVisibility; // Who can see/use this capability
+  is_core: boolean; // If true, always included in customer apps
   
   // Versioning
   current_version: string;
@@ -35,11 +46,13 @@ export interface Capability {
   price_per_month: number | null;
   dependencies: string[]; // Array of capability keys
   
-  // Demo
+  // Demo & Preview
   demo_url: string | null;
   documentation_url: string | null;
   documentation_path: string | null; // Path to markdown file (e.g., "docs/capabilities/ai-generation.md")
   icon_name: string | null;
+  preview_bundle_url: string | null; // URL to preview/demo bundle
+  config_schema: Record<string, any> | null; // JSON Schema for configuration
   
   // Tags for search
   tags: string[];
@@ -156,6 +169,8 @@ export interface CapabilityFilters {
   tags?: string[];
   isActive?: boolean;
   scope?: CapabilityScope;
+  visibility?: CapabilityVisibility;
+  isCore?: boolean;
   appDefinitionId?: string;
 }
 
@@ -165,6 +180,8 @@ export interface CapabilityInput {
   description?: string;
   category: CapabilityCategory;
   scope?: CapabilityScope;
+  visibility?: CapabilityVisibility;
+  is_core?: boolean;
   app_definition_id?: string | null;
   current_version?: string;
   estimated_dev_hours?: number;
@@ -174,6 +191,8 @@ export interface CapabilityInput {
   documentation_url?: string;
   documentation_path?: string; // Path to markdown documentation file
   icon_name?: string;
+  preview_bundle_url?: string;
+  config_schema?: Record<string, any>;
   tags?: string[];
   code_reference?: string;
   frontend_files?: string[];
@@ -181,4 +200,85 @@ export interface CapabilityInput {
   hooks?: string[];
   domain_tables?: string[];
   database_migrations?: string[];
+}
+
+// ============================================================================
+// Capability Bundles - Pre-configured groups of capabilities
+// ============================================================================
+
+export interface CapabilityBundle {
+  id: string;
+  key: string;
+  name: string;
+  description: string | null;
+  capabilities: string[]; // Array of capability keys
+  suggested_config: Record<string, any>;
+  target_industries: string[];
+  price_per_month: number | null;
+  icon_name: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CapabilityBundleInput {
+  key: string;
+  name: string;
+  description?: string;
+  capabilities: string[];
+  suggested_config?: Record<string, any>;
+  target_industries?: string[];
+  price_per_month?: number;
+  icon_name?: string;
+}
+
+// ============================================================================
+// Workflow Templates (uses existing workflow_templates table)
+// See: supabase/migrations/20251126000001_workshop_integration.sql
+// ============================================================================
+
+export type WorkflowCategory = 'workshop' | 'crm_sync' | 'erp_sync' | 'alerts' | 'custom';
+
+export interface WorkflowTemplate {
+  id: string;
+  key: string;
+  name: string;
+  description: string | null;
+  category: WorkflowCategory;
+  n8n_workflow_id: string | null;
+  n8n_webhook_path: string | null;
+  required_systems: string[];
+  required_credentials: string[];
+  input_schema: Record<string, any> | null;
+  output_schema: Record<string, any> | null;
+  default_mapping: Record<string, any> | null;
+  schedule_options: string[];
+  documentation_url: string | null;
+  example_output: Record<string, any> | null;
+  is_active: boolean;
+  is_system: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TenantWorkflow {
+  id: string;
+  tenant_id: string;
+  template_id: string | null;
+  name: string;
+  description: string | null;
+  credentials_config: Record<string, any> | null;
+  schedule: string | null;
+  custom_mapping: Record<string, any> | null;
+  webhook_secret: string | null;
+  is_active: boolean;
+  last_run_at: string | null;
+  last_status: string | null;
+  last_error: string | null;
+  run_count: number;
+  created_at: string;
+  updated_at: string;
+  
+  // Populated
+  template?: WorkflowTemplate;
 }

@@ -87,7 +87,7 @@ async function computeFit(
 
   // Fetch active secrets
   const { data: secrets } = await supabaseClient
-    .from('mcp_tenant_secret')
+    .from('integration_secrets')
     .select('provider')
     .eq('tenant_id', tenantId)
     .eq('is_active', true);

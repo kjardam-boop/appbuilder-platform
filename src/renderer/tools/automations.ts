@@ -18,7 +18,7 @@ export async function executeAutomations(
 
 /**
  * Enqueue a job to n8n workflow
- * Uses tenant's n8n integration from tenant_integrations + mcp_tenant_workflow_map
+ * Uses tenant's n8n integration from tenant_integrations + n8n_workflow_mappings
  */
 export async function automationsEnqueueJob(
   tenantId: string,
@@ -47,7 +47,7 @@ export async function automationsEnqueueJob(
 
     // 2. Get workflow mapping
     const { data: workflow, error: workflowError } = await supabase
-      .from('mcp_tenant_workflow_map')
+      .from('n8n_workflow_mappings')
       .select('webhook_path')
       .eq('tenant_id', tenantId)
       .eq('provider', 'n8n')
