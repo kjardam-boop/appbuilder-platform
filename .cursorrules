@@ -16,7 +16,7 @@
 | `tenant_workflows` | 20251126000001 | Aktiverte workflows per tenant |
 | `integration_definitions` | 20251110200947 | Unified integrasjonskatalog (type-kolonne) |
 | `tenant_integrations` | 20251023133841 | Per-tenant integrasjonsconfig med scope |
-| `integration_secrets` | 20251203130000 | API-nøkler for integrasjoner (tidligere mcp_tenant_secret) |
+| `vault_credentials` | Tidligere | Krypterte credentials (Vault) for alle integrasjoner |
 | `n8n_workflow_mappings` | 20251203130000 | n8n webhook mappings (tidligere mcp_tenant_workflow_map) |
 | `capabilities` | Tidligere | Capability-katalog |
 | `capability_bundles` | 20251202120000 | Capability-pakker |
@@ -33,6 +33,24 @@ MCP er Anthropics protokoll for AI-verktøy. Bruk BARE "mcp_" prefiks for:
 - `mcp_tenant_policy` - MCP policy
 
 IKKE bruk "mcp_" for generelle integrasjoner, webhooks eller API-nøkler!
+
+**Secrets & API-nøkler - Tre lagringsmetoder:**
+
+| Metode | Hvor | Når brukes | Eksempel |
+|--------|------|------------|----------|
+| **1. Functions Secrets** | Supabase Dashboard → Functions → Secrets | Platform-nivå secrets for Edge Functions | `N8N_API_KEY_APPBUILDER_PLATFORM` |
+| **2. vault_credentials** | Vår egen tabell i public schema | Tenant-spesifikke credentials med UI-admin | n8n MCP token per tenant |
+| **3. Supabase Vault** | Supabase → Integrations → Vault | Ekte kryptering med nøkkelhåndtering (BETA) | Sensitiv data som krever audit |
+
+**BESLUTNING - Hva bruker vi:**
+- **Platform-secrets** → Functions Secrets (env vars i Deno)
+- **Tenant-secrets** → `vault_credentials` tabell (admin UI på `/admin/credentials`)
+- **Supabase Vault** → Ikke i bruk (BETA, mer kompleks)
+
+**VIKTIG:** `vault_credentials.encrypted_value` er pt. IKKE kryptert (TODO). 
+For ekte kryptering, migrer til Supabase Vault eller implementer pg_crypto.
+
+Edge functions må deployes på nytt (`npx supabase functions deploy <name>`) for å laste nye Functions Secrets.
 
 **Migrasjonsregler:**
 
@@ -84,6 +102,19 @@ Alle moduler følger denne strukturen under `src/modules/core/<modul>/`:
 - **RLS**: Alle tabeller har Row Level Security
 
 ---
+## Autolagring
+- Bruk alltid den eksisterende useAutoSave hooken som har:
+
+1.5 sekunder delay (konfigurerbart)
+Status-indikator (pending/saving/saved/error)
+Retry-logikk ved nettverksfeil
+Hindrer lagring hvis innhold ikke har endret seg
+const { status, trigger } = useAutoSave({
+  onSave: async () => { await updateTestPayload(workflowId, tenantId, payload); },
+  delay: 1500,
+  enabled: !!tenantId && !!workflowId
+});
+
 
 ## 🎨 Frontend Patterns
 

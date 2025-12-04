@@ -76,7 +76,7 @@ import Jul25MemberEdit from "./pages/apps/Jul25MemberEdit";
 import InviteMembersPage from "./pages/apps/jul25/InviteMembersPage";
 import AIChatApp from "./pages/apps/AIChatApp";
 import McpPolicy from "./pages/admin/McpPolicy";
-import McpWorkflows from "./pages/admin/McpWorkflows";
+import N8nWorkflows from "./pages/admin/N8nWorkflows";
 import McpSecrets from "./pages/admin/McpSecrets";
 import McpObservability from "./pages/admin/McpObservability";
 import AIMcpDemo from "./pages/admin/AIMcpDemo";
@@ -93,6 +93,7 @@ import AppProjects from "./pages/admin/AppProjects";
 import AppPreview from "./pages/admin/AppPreview";
 import DeliveryMethodDetail from "./pages/admin/integrations/DeliveryMethodDetail";
 import IntegrationDefinitionDetail from "./pages/admin/integrations/IntegrationDefinitionDetail";
+import WorkflowDetailPage from "./pages/admin/integrations/WorkflowDetailPage";
 import { PageBuilder } from "./platform/admin/PageBuilder";
 import { DynamicPage } from "./pages/DynamicPage";
 import { AkseleraDemoPage } from "./tenants/akselera/pages/DemoPage";
@@ -251,6 +252,7 @@ const App = () => (
               <Route path="integrations/odoo" element={<PermissionProtectedRoute resource="integration" action="admin"><OdooSync /></PermissionProtectedRoute>} />
               <Route path="integrations/delivery-methods/:id" element={<PermissionProtectedRoute resource="integration" action="admin"><DeliveryMethodDetail /></PermissionProtectedRoute>} />
               <Route path="integrations/definitions/:id" element={<PermissionProtectedRoute resource="integration" action="admin"><IntegrationDefinitionDetail /></PermissionProtectedRoute>} />
+              <Route path="integrations/workflows/:workflowId" element={<PermissionProtectedRoute resource="integration" action="admin"><WorkflowDetailPage /></PermissionProtectedRoute>} />
               <Route path="integrations-old" element={<PermissionProtectedRoute resource="integration" action="admin"><PlatformIntegrations /></PermissionProtectedRoute>} />
               {/* AI Providers is now a tab under integrations */}
               <Route path="ai-providers" element={<Navigate to="/admin/integrations?tab=ai-providers" replace />} />
@@ -272,7 +274,7 @@ const App = () => (
               <Route path="ai/mcp-demo" element={<PermissionProtectedRoute resource="integration" action="admin"><AIMcpDemo /></PermissionProtectedRoute>} />
               
               {/* n8n Workflows - renamed from mcp/workflows */}
-              <Route path="n8n/workflows" element={<PermissionProtectedRoute resource="integration" action="admin"><McpWorkflows /></PermissionProtectedRoute>} />
+              <Route path="n8n/workflows" element={<PermissionProtectedRoute resource="integration" action="admin"><N8nWorkflows /></PermissionProtectedRoute>} />
               
               {/* Redirects from old MCP URLs */}
               <Route path="mcp/workflows" element={<Navigate to="/admin/integrations?tab=workflows" replace />} />

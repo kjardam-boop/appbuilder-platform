@@ -72,7 +72,7 @@ function generateExampleFromSchema(schema: any): Record<string, unknown> {
   return example;
 }
 
-export default function McpWorkflows() {
+export default function N8nWorkflows() {
   const { isPlatformAdmin, isLoading: isLoadingRole } = usePlatformAdmin();
   const tenantContext = useTenantContext();
   const queryClient = useQueryClient();

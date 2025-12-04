@@ -11,26 +11,32 @@ export interface WorkflowMappingRow {
   provider: string;
   workflow_key: string;
   webhook_path: string;
+  webhook_path_test: string | null;
+  use_test_mode: boolean;
   description: string | null;
   is_active: boolean;
   created_at: string;
   created_by: string | null;
   updated_at: string;
+  test_payload: Record<string, unknown> | null;
+  template_key: string | null;
 }
 
 /**
  * Resolve webhook URL for a workflow
  * Checks tenant-specific mapping first, falls back to static config
+ * Respects use_test_mode flag for test vs production URLs
  */
 export async function resolveWebhook(
   tenantId: string,
   provider: string,
-  workflowKey: string
+  workflowKey: string,
+  forceTestMode?: boolean
 ): Promise<string | null> {
-  // 1. Fetch webhook_path from workflow mapping
+  // 1. Fetch webhook_path from workflow mapping (including test path)
   const { data: mapping, error: mappingError } = await supabase
     .from('n8n_workflow_mappings')
-    .select('webhook_path')
+    .select('webhook_path, webhook_path_test, use_test_mode')
     .eq('tenant_id', tenantId)
     .eq('provider', provider)
     .eq('workflow_key', workflowKey)
@@ -91,13 +97,19 @@ export async function resolveWebhook(
     return null;
   }
 
-  // 4. Combine base URL with webhook path (normalize slashes)
+  // 4. Determine which path to use (test or production)
+  const useTestMode = forceTestMode ?? (mapping as any).use_test_mode ?? false;
+  const webhookPath = useTestMode && (mapping as any).webhook_path_test 
+    ? (mapping as any).webhook_path_test 
+    : mapping.webhook_path;
+
+  // 5. Combine base URL with webhook path (normalize slashes)
   const normalizedBase = String(baseUrl).replace(/\/+$/, '');
-  const path = String(mapping.webhook_path || '');
+  const path = String(webhookPath || '');
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
 
   const fullUrl = `${normalizedBase}${normalizedPath}`;
-  console.log(`[tenantWorkflowService] Resolved webhook URL: ${fullUrl}`);
+  console.log(`[tenantWorkflowService] Resolved webhook URL: ${fullUrl} (testMode: ${useTestMode})`);
   return fullUrl;
 }
 
@@ -107,7 +119,7 @@ export async function resolveWebhook(
 export async function listWorkflows(tenantId: string): Promise<WorkflowMappingRow[]> {
   const { data, error } = await supabase
     .from('n8n_workflow_mappings')
-    .select('*')
+    .select('id, tenant_id, provider, workflow_key, webhook_path, webhook_path_test, use_test_mode, description, is_active, created_at, created_by, updated_at, test_payload, template_key')
     .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false });
 
@@ -116,7 +128,8 @@ export async function listWorkflows(tenantId: string): Promise<WorkflowMappingRo
     throw error;
   }
 
-  return data || [];
+  // Cast to our interface since Supabase types may be out of date
+  return (data || []) as unknown as WorkflowMappingRow[];
 }
 
 /**
@@ -205,7 +218,7 @@ export async function deactivateWorkflowMap(id: string, tenantId: string): Promi
 export async function updateWorkflowMap(
   id: string,
   tenantId: string,
-  patch: Partial<Pick<WorkflowMappingRow, 'webhook_path' | 'description' | 'is_active'>>
+  patch: Partial<Pick<WorkflowMappingRow, 'webhook_path' | 'webhook_path_test' | 'use_test_mode' | 'description' | 'is_active' | 'test_payload' | 'template_key'>>
 ): Promise<WorkflowMappingRow> {
   const { data, error } = await supabase
     .from('n8n_workflow_mappings')
@@ -217,6 +230,31 @@ export async function updateWorkflowMap(
 
   if (error) throw error;
   return data;
+}
+
+/**
+ * Update test payload for a workflow mapping
+ */
+export async function updateTestPayload(
+  id: string,
+  tenantId: string,
+  testPayload: Record<string, unknown>
+): Promise<void> {
+  console.log(`[tenantWorkflowService] updateTestPayload called for id=${id}, tenantId=${tenantId}`, testPayload);
+  
+  const { data, error } = await supabase
+    .from('n8n_workflow_mappings')
+    .update({ test_payload: testPayload, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .eq('tenant_id', tenantId)
+    .select('id, test_payload');
+
+  if (error) {
+    console.error('[tenantWorkflowService] updateTestPayload error:', error);
+    throw error;
+  }
+  
+  console.log('[tenantWorkflowService] updateTestPayload result:', data);
 }
 
 /**

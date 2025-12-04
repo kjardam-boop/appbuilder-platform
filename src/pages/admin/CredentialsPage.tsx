@@ -5,16 +5,15 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Shield, Building2, Workflow, Puzzle, KeyRound } from "lucide-react";
+import { Plus, Shield, Building2, Workflow, Puzzle } from "lucide-react";
 import { useTenantContext } from "@/hooks/useTenantContext";
 import { useIsPlatformTenant } from "@/hooks/useIsPlatformTenant";
 import { CredentialsList } from "@/components/admin/credentials/CredentialsList";
 import { CredentialManagementDialog } from "@/components/admin/credentials/CredentialManagementDialog";
 import { CredentialAuditLog } from "@/components/admin/credentials/CredentialAuditLog";
-import { IntegrationSecretsTab } from "@/components/admin/credentials/IntegrationSecretsTab";
 import { supabase } from "@/integrations/supabase/client";
 import { AppBreadcrumbs } from '@/components/ui/app-breadcrumbs';
 import { generateAdminBreadcrumbs } from '@/helpers/breadcrumbHelper';
@@ -23,7 +22,7 @@ export default function CredentialsPage() {
   const context = useTenantContext();
   const { isPlatformTenant, isLoading: isPlatformLoading } = useIsPlatformTenant();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [selectedTab, setSelectedTab] = useState<"tenant" | "company" | "app" | "secrets">("tenant");
+  const [selectedTab, setSelectedTab] = useState<"tenant" | "company" | "app">("tenant");
 
   const { data: tenantCredentials, refetch: refetchTenantCredentials } = useQuery({
     queryKey: ["tenant-credentials", context?.tenant_id],
@@ -112,7 +111,7 @@ export default function CredentialsPage() {
             Encrypted Credentials
           </h1>
           <p className="text-muted-foreground mt-2">
-            Manage API keys and secrets stored securely in Vault
+            Administrer API-nøkler og secrets for integrasjoner
           </p>
         </div>
 
@@ -122,8 +121,30 @@ export default function CredentialsPage() {
         </Button>
       </div>
 
-      <Tabs value={selectedTab} onValueChange={(v) => setSelectedTab(v as "tenant" | "company" | "app" | "secrets")}>
-        <TabsList className="grid w-full max-w-3xl grid-cols-4">
+      {/* Architecture explanation */}
+      <Card className="bg-slate-50 border-slate-200">
+        <CardContent className="pt-4">
+          <div className="grid md:grid-cols-2 gap-4 text-sm">
+            <div>
+              <p className="font-medium text-slate-700 mb-1">🔐 Vault-krypterte credentials</p>
+              <p className="text-slate-600 text-xs">
+                Alle credentials lagres kryptert med Supabase Vault. Brukes for OAuth tokens, 
+                API-nøkler, database-passord, og tredjepartsintegrasjoner.
+              </p>
+            </div>
+            <div>
+              <p className="font-medium text-slate-700 mb-1">🏗️ Platform-secrets</p>
+              <p className="text-slate-600 text-xs">
+                For secrets som gjelder hele plattformen (ikke tenant-spesifikke), 
+                bruk <strong>Supabase Dashboard → Settings → Functions → Secrets</strong>.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Tabs value={selectedTab} onValueChange={(v) => setSelectedTab(v as "tenant" | "company" | "app")}>
+        <TabsList className="grid w-full max-w-2xl grid-cols-3">
           <TabsTrigger value="tenant" className="flex items-center gap-2">
             <Workflow className="h-4 w-4" />
             Tenant
@@ -136,18 +157,20 @@ export default function CredentialsPage() {
             <Puzzle className="h-4 w-4" />
             App
           </TabsTrigger>
-          <TabsTrigger value="secrets" className="flex items-center gap-2">
-            <KeyRound className="h-4 w-4" />
-            Integration Secrets
-          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="tenant" className="space-y-6 mt-6">
           <Card className="p-6">
             <h2 className="text-xl font-semibold mb-4">Tenant Integration Credentials</h2>
-            <p className="text-sm text-muted-foreground mb-6">
-              Credentials for tenant-wide integrations (available to all users in this tenant)
+            <p className="text-sm text-muted-foreground mb-4">
+              Krypterte credentials for tenant-brede integrasjoner. Tilgjengelig for alle brukere i denne tenant.
             </p>
+            <div className="bg-blue-50 border border-blue-200 rounded-md p-3 text-sm mb-6">
+              <p className="text-blue-800">
+                <strong>Når brukes dette?</strong> For sensitive credentials som krever Vault-kryptering, 
+                f.eks. OAuth tokens, database-passord, eller tredjepartsintegrasjoner som deles på tvers av hele tenant.
+              </p>
+            </div>
 
             <CredentialsList
               credentials={tenantCredentials || []}
@@ -164,9 +187,15 @@ export default function CredentialsPage() {
         <TabsContent value="company" className="space-y-6 mt-6">
           <Card className="p-6">
             <h2 className="text-xl font-semibold mb-4">Company System Credentials</h2>
-            <p className="text-sm text-muted-foreground mb-6">
-              Credentials for company-specific external systems
+            <p className="text-sm text-muted-foreground mb-4">
+              Krypterte credentials for bedriftsspesifikke eksterne systemer.
             </p>
+            <div className="bg-amber-50 border border-amber-200 rounded-md p-3 text-sm mb-6">
+              <p className="text-amber-800">
+                <strong>Når brukes dette?</strong> For credentials som er spesifikke for én bedrift/selskap, 
+                f.eks. ERP-tilgang (Odoo, SAP), regnskapssystem, eller andre bedriftsspesifikke integrasjoner.
+              </p>
+            </div>
 
             <CredentialsList
               credentials={companyCredentials || []}
@@ -183,9 +212,15 @@ export default function CredentialsPage() {
         <TabsContent value="app" className="space-y-6 mt-6">
           <Card className="p-6">
             <h2 className="text-xl font-semibold mb-4">App Integration Credentials</h2>
-            <p className="text-sm text-muted-foreground mb-6">
-              Credentials for application-specific integrations
+            <p className="text-sm text-muted-foreground mb-4">
+              Krypterte credentials for applikasjonsspesifikke integrasjoner.
             </p>
+            <div className="bg-purple-50 border border-purple-200 rounded-md p-3 text-sm mb-6">
+              <p className="text-purple-800">
+                <strong>Når brukes dette?</strong> For credentials som er knyttet til én spesifikk app, 
+                f.eks. API-nøkler for en bestemt capability eller app-spesifikk tredjepartstjeneste.
+              </p>
+            </div>
 
             <CredentialsList
               credentials={appCredentials || []}
@@ -199,9 +234,6 @@ export default function CredentialsPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="secrets" className="space-y-6 mt-6">
-          <IntegrationSecretsTab tenantId={context.tenant_id} />
-        </TabsContent>
       </Tabs>
 
       <CredentialAuditLog tenantId={context.tenant_id} />

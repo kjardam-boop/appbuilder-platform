@@ -133,6 +133,8 @@ export class N8nSyncService {
    */
   static async listWorkflows(tenantId: string): Promise<N8nWorkflow[]> {
     try {
+      console.log('[n8nSyncService] Listing workflows for tenant:', tenantId);
+      
       const { data, error } = await supabase.functions.invoke('n8n-sync', {
         body: {
           action: 'list',
@@ -140,15 +142,26 @@ export class N8nSyncService {
         },
       });
 
+      console.log('[n8nSyncService] Response:', { data, error });
+
       if (error) {
         console.error('[n8nSyncService] List failed:', error);
-        return [];
+        // Throw error instead of silently returning empty array
+        throw new Error(error.message || 'Failed to list workflows from n8n');
+      }
+
+      if (data?.error) {
+        console.error('[n8nSyncService] API error:', data.error, data.debug);
+        const debugMsg = data.debug 
+          ? ` (envVars: N8N_API_KEY_APPBUILDER_PLATFORM=${data.debug.envVars?.hasN8N_API_KEY_APPBUILDER_PLATFORM})` 
+          : '';
+        throw new Error(data.error + debugMsg);
       }
 
       return data?.workflows || [];
     } catch (err) {
       console.error('[n8nSyncService] List error:', err);
-      return [];
+      throw err; // Re-throw to propagate error
     }
   }
 
@@ -182,6 +195,7 @@ export class N8nSyncService {
         n8n_webhook_path: this.extractWebhookPath(workflow),
         workflow_json: workflow as any,
         last_synced_at: new Date().toISOString(),
+        sync_status: 'synced',
         requires_credentials: true,
         is_active: workflow.active,
       }, { onConflict: 'key' });
@@ -200,28 +214,114 @@ export class N8nSyncService {
 
   /**
    * Sync all workflows from n8n to platform
+   * Matches by webhook path to existing integration_definitions
    */
   static async syncAllFromN8n(tenantId: string): Promise<{ 
     synced: number; 
     failed: number; 
-    errors: string[] 
+    errors: string[];
+    matched: string[];
   }> {
+    console.log('[n8nSyncService] syncAllFromN8n starting for tenant:', tenantId);
+    
     const workflows = await this.listWorkflows(tenantId);
+    console.log('[n8nSyncService] Found workflows:', workflows.length);
     let synced = 0;
     let failed = 0;
     const errors: string[] = [];
+    const matched: string[] = [];
+
+    // Get existing integration_definitions with type='workflow'
+    const { data: existingDefs } = await supabase
+      .from('integration_definitions')
+      .select('id, key, n8n_webhook_path')
+      .eq('type', 'workflow');
 
     for (const workflow of workflows) {
-      const result = await this.syncToDatabase(tenantId, workflow.id);
-      if (result.success) {
-        synced++;
+      const webhookPath = this.extractWebhookPath(workflow);
+      
+      // Try to match by webhook path first
+      const matchingDef = existingDefs?.find(def => 
+        def.n8n_webhook_path && webhookPath && 
+        (def.n8n_webhook_path === webhookPath || 
+         webhookPath.includes(def.n8n_webhook_path.replace('/webhook/', '')) ||
+         def.n8n_webhook_path.includes(workflow.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')))
+      );
+
+      if (matchingDef) {
+        // Update existing definition with n8n data
+        const { error } = await supabase
+          .from('integration_definitions')
+          .update({
+            n8n_workflow_id: workflow.id,
+            workflow_json: workflow as any,
+            last_synced_at: new Date().toISOString(),
+            is_active: workflow.active,
+          })
+          .eq('id', matchingDef.id);
+
+        if (error) {
+          failed++;
+          errors.push(`${workflow.name}: ${error.message}`);
+        } else {
+          synced++;
+          matched.push(`${workflow.name} → ${matchingDef.key}`);
+        }
       } else {
-        failed++;
-        errors.push(`${workflow.name}: ${result.error}`);
+        // Create new definition
+        const result = await this.syncToDatabase(tenantId, workflow.id);
+        if (result.success) {
+          synced++;
+          matched.push(`${workflow.name} (ny)`);
+        } else {
+          failed++;
+          errors.push(`${workflow.name}: ${result.error}`);
+        }
       }
     }
 
-    return { synced, failed, errors };
+    return { synced, failed, errors, matched };
+  }
+
+  /**
+   * Sync a specific workflow by updating existing integration_definition
+   */
+  static async syncWorkflowToExistingDef(
+    tenantId: string,
+    n8nWorkflowId: string,
+    integrationDefId: string
+  ): Promise<N8nSyncResult> {
+    // 1. Pull from n8n
+    const pullResult = await this.pullWorkflow(tenantId, n8nWorkflowId);
+    if (!pullResult.success || !pullResult.workflow) {
+      return pullResult;
+    }
+
+    const workflow = pullResult.workflow;
+
+    // 2. Update existing integration_definition
+    const { error } = await supabase
+      .from('integration_definitions')
+      .update({
+        n8n_workflow_id: workflow.id,
+        n8n_webhook_path: this.extractWebhookPath(workflow),
+        workflow_json: workflow as any,
+        last_synced_at: new Date().toISOString(),
+        sync_status: 'synced',
+        is_active: workflow.active,
+      })
+      .eq('id', integrationDefId);
+
+    if (error) {
+      console.error('[n8nSyncService] Sync to existing def failed:', error);
+      return { success: false, error: error.message };
+    }
+
+    return {
+      success: true,
+      workflow_id: workflow.id,
+      webhook_path: this.extractWebhookPath(workflow),
+    };
   }
 
   /**
@@ -322,6 +422,7 @@ export const pushWorkflowToN8n = N8nSyncService.pushWorkflow.bind(N8nSyncService
 export const pullWorkflowFromN8n = N8nSyncService.pullWorkflow.bind(N8nSyncService);
 export const syncWorkflowToDatabase = N8nSyncService.syncToDatabase.bind(N8nSyncService);
 export const syncAllWorkflowsFromN8n = N8nSyncService.syncAllFromN8n.bind(N8nSyncService);
+export const syncWorkflowToExistingDef = N8nSyncService.syncWorkflowToExistingDef.bind(N8nSyncService);
 export const listN8nWorkflows = N8nSyncService.listWorkflows.bind(N8nSyncService);
 export const generateWorkflowJson = N8nSyncService.generateWorkflowJson.bind(N8nSyncService);
 

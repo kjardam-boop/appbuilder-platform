@@ -2,30 +2,29 @@
  * Tenant Secrets Service
  * Manages tenant-specific secret values for integrations
  * 
- * NOTE: This manages API keys/URLs stored in tenant_integrations.credentials
- * For HMAC signing secrets, see mcpTenantSecretService.ts
+ * All secrets are stored in tenant_integrations.credentials (encrypted via vault)
+ * Platform-level secrets use Supabase Functions Secrets (env vars)
  */
 
 import { supabase } from "@/integrations/supabase/client";
-import { getActiveSecret } from '@/modules/core/mcp/services/mcpTenantSecretService';
 
 export interface TenantSecrets {
   N8N_MCP_BASE_URL?: string;
   N8N_MCP_API_KEY?: string;
-  N8N_MCP_SIGNING_SECRET?: string; // Retrieved from integration_secrets
+  N8N_MCP_SIGNING_SECRET?: string;
   [key: string]: string | undefined;
 }
 
 /**
  * Get tenant secrets for a specific namespace
- * Includes API keys/URLs from tenant_integrations + HMAC signing secret
+ * Fetches from tenant_integrations.credentials
  */
 export async function getTenantSecrets(
   tenantId: string,
   namespace: string = "n8n"
 ): Promise<TenantSecrets> {
   try {
-    // Fetch from tenant_integrations table
+    // Fetch from tenant_integrations table (vault-encrypted)
     const { data, error } = await supabase
       .from("tenant_integrations")
       .select("credentials")
@@ -38,20 +37,7 @@ export async function getTenantSecrets(
       return {};
     }
 
-    const secrets = ((data?.credentials as any) || {}) as TenantSecrets;
-
-    // Try to fetch HMAC signing secret from integration_secrets
-    try {
-      const signingSecret = await getActiveSecret(tenantId, namespace);
-      if (signingSecret) {
-        secrets.N8N_MCP_SIGNING_SECRET = signingSecret.secret;
-      }
-    } catch (err) {
-      // No signing secret configured - that's OK, signing is optional
-      console.log(`[TenantSecrets] No signing secret for tenant ${tenantId}, namespace ${namespace}`);
-    }
-
-    return secrets;
+    return ((data?.credentials as any) || {}) as TenantSecrets;
   } catch (error) {
     console.error('[TenantSecrets] Error fetching secrets:', error);
     return {};

@@ -4,6 +4,7 @@
  */
 
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantContext } from "@/hooks/useTenantContext";
@@ -27,14 +28,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 import {
   Table,
@@ -52,14 +45,85 @@ import {
   Upload,
   Plus,
   MoreVertical,
-  Settings,
   Check,
   X,
   Search,
   Clock,
+  FileJson,
+  CircleDot,
+  ArrowUpCircle,
+  CheckCircle2,
+  AlertCircle,
+  Webhook,
+  Bot,
 } from "lucide-react";
 import { N8nSyncService } from "@/modules/core/integrations/services/n8nSyncService";
+import { Textarea } from "@/components/ui/textarea";
 import type { IntegrationDefinition } from "@/modules/core/integrations/types/integrationRegistry.types";
+
+// Sync status type
+type SyncStatus = 'draft' | 'pushed' | 'synced' | 'outdated';
+
+// Status badge component
+function SyncStatusBadge({ status }: { status: SyncStatus | null | undefined }) {
+  const statusConfig: Record<SyncStatus, { label: string; className: string; icon: React.ReactNode }> = {
+    draft: { 
+      label: 'Utkast', 
+      className: 'bg-gray-100 text-gray-700 border-gray-200',
+      icon: <CircleDot className="h-3 w-3" />
+    },
+    pushed: { 
+      label: 'Sendt til n8n', 
+      className: 'bg-amber-100 text-amber-700 border-amber-200',
+      icon: <ArrowUpCircle className="h-3 w-3" />
+    },
+    synced: { 
+      label: 'Synkronisert', 
+      className: 'bg-green-100 text-green-700 border-green-200',
+      icon: <CheckCircle2 className="h-3 w-3" />
+    },
+    outdated: { 
+      label: 'Utdatert', 
+      className: 'bg-orange-100 text-orange-700 border-orange-200',
+      icon: <AlertCircle className="h-3 w-3" />
+    },
+  };
+
+  const config = statusConfig[status || 'draft'];
+  
+  return (
+    <Badge variant="outline" className={`${config.className} flex items-center gap-1`}>
+      {config.icon}
+      {config.label}
+    </Badge>
+  );
+}
+
+// Trigger method badges
+function TriggerBadges({ workflow }: { workflow: IntegrationDefinition }) {
+  const mcpEnabled = (workflow as any).mcp_enabled || false;
+  const hasWebhook = !!workflow.n8n_webhook_path;
+  
+  return (
+    <div className="flex gap-1">
+      {hasWebhook && (
+        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
+          <Webhook className="h-2.5 w-2.5 mr-1" />
+          Webhook
+        </Badge>
+      )}
+      {mcpEnabled && (
+        <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-xs">
+          <Bot className="h-2.5 w-2.5 mr-1" />
+          MCP
+        </Badge>
+      )}
+      {!hasWebhook && !mcpEnabled && (
+        <span className="text-muted-foreground text-xs">-</span>
+      )}
+    </div>
+  );
+}
 
 export default function WorkflowsTab() {
   const tenantContext = useTenantContext();
@@ -67,8 +131,10 @@ export default function WorkflowsTab() {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [syncDialogOpen, setSyncDialogOpen] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [selectedWorkflow, setSelectedWorkflow] = useState<IntegrationDefinition | null>(null);
+  const [newWorkflowJson, setNewWorkflowJson] = useState("");
+  const [newWorkflowName, setNewWorkflowName] = useState("");
 
   // Fetch workflows from integration_definitions
   // Note: 'type' column is added by migration 20251203100000
@@ -189,6 +255,56 @@ export default function WorkflowsTab() {
     },
   });
 
+  // Push workflow to n8n
+  const pushToN8nMutation = useMutation({
+    mutationFn: async ({ name, workflowJson }: { name: string; workflowJson: any }) => {
+      if (!tenantId) throw new Error('No tenant');
+      
+      // Push to n8n
+      const result = await N8nSyncService.pushWorkflow(tenantId, {
+        name,
+        ...workflowJson,
+      });
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Push failed');
+      }
+      
+      // Save to integration_definitions with status 'pushed'
+      const key = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const { error } = await supabase
+        .from('integration_definitions')
+        .upsert({
+          key,
+          name,
+          description: workflowJson.description || `Workflow: ${name}`,
+          type: 'workflow',
+          icon_name: 'Workflow',
+          n8n_workflow_id: result.workflow_id,
+          n8n_webhook_path: result.webhook_path,
+          workflow_json: workflowJson,
+          sync_status: 'pushed',
+          requires_credentials: true,
+          is_active: true,
+        }, { onConflict: 'key' });
+      
+      if (error) throw error;
+      
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['integration-definitions', 'workflow'] });
+      refetchN8n();
+      setCreateDialogOpen(false);
+      setNewWorkflowJson("");
+      setNewWorkflowName("");
+      toast.success('Workflow opprettet og pushet til n8n');
+    },
+    onError: (error) => {
+      toast.error('Push feilet', { description: (error as Error).message });
+    },
+  });
+
   // Filter workflows
   const filteredWorkflows = (workflows || []).filter(w => 
     w.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -211,6 +327,28 @@ export default function WorkflowsTab() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={async () => {
+              if (!tenantId) {
+                toast.error('Ingen tenant valgt');
+                return;
+              }
+              toast.info('Tester n8n-tilkobling...');
+              try {
+                const workflows = await N8nSyncService.listWorkflows(tenantId);
+                toast.success(`Tilkobling OK! Fant ${workflows.length} workflows i n8n`);
+              } catch (err) {
+                toast.error('Tilkobling feilet', { 
+                  description: (err as Error).message,
+                  duration: 10000 
+                });
+              }
+            }}
+          >
+            Test tilkobling
+          </Button>
           <Dialog open={syncDialogOpen} onOpenChange={setSyncDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="outline">
@@ -262,10 +400,75 @@ export default function WorkflowsTab() {
               </div>
             </DialogContent>
           </Dialog>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Opprett workflow
-          </Button>
+          <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Opprett workflow
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Opprett ny workflow</DialogTitle>
+                <DialogDescription>
+                  Opprett en workflow og push den til n8n
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 pt-4">
+                <div>
+                  <Label htmlFor="workflow-name">Workflow navn</Label>
+                  <Input
+                    id="workflow-name"
+                    placeholder="Min nye workflow"
+                    value={newWorkflowName}
+                    onChange={(e) => setNewWorkflowName(e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="workflow-json">Workflow JSON</Label>
+                  <Textarea
+                    id="workflow-json"
+                    placeholder='{"nodes": [...], "connections": {...}}'
+                    value={newWorkflowJson}
+                    onChange={(e) => setNewWorkflowJson(e.target.value)}
+                    className="mt-1 font-mono text-xs h-64"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Lim inn n8n workflow JSON, eller opprett en enkel mal
+                  </p>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
+                    Avbryt
+                  </Button>
+                  <Button 
+                    onClick={() => {
+                      try {
+                        const json = JSON.parse(newWorkflowJson);
+                        pushToN8nMutation.mutate({ name: newWorkflowName, workflowJson: json });
+                      } catch {
+                        toast.error('Ugyldig JSON format');
+                      }
+                    }}
+                    disabled={pushToN8nMutation.isPending || !newWorkflowName || !newWorkflowJson}
+                  >
+                    {pushToN8nMutation.isPending ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        Pusher...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Push til n8n
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -281,11 +484,11 @@ export default function WorkflowsTab() {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Workflow Templates
+              Totalt
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -295,7 +498,19 @@ export default function WorkflowsTab() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              n8n workflows
+              Synkronisert
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">
+              {(workflows || []).filter(w => w.sync_status === 'synced' || w.workflow_json).length}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              n8n Workflows
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -349,16 +564,28 @@ export default function WorkflowsTab() {
                 <TableRow>
                   <TableHead>Navn</TableHead>
                   <TableHead>Key</TableHead>
-                  <TableHead>Webhook</TableHead>
+                  <TableHead>Path</TableHead>
+                  <TableHead>Trigger</TableHead>
                   <TableHead>Sist synket</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Aktiv</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredWorkflows.map(workflow => (
                   <TableRow key={workflow.id}>
-                    <TableCell className="font-medium">{workflow.name}</TableCell>
+                    <TableCell className="font-medium">
+                      <Link 
+                        to={`/admin/integrations/workflows/${workflow.id}`}
+                        className="flex items-center gap-2 hover:underline text-primary"
+                      >
+                        {workflow.name}
+                        {workflow.workflow_json && (
+                          <FileJson className="h-3 w-3 text-muted-foreground" title="Har workflow JSON" />
+                        )}
+                      </Link>
+                    </TableCell>
                     <TableCell>
                       <code className="text-xs bg-muted px-2 py-1 rounded">
                         {workflow.key}
@@ -366,34 +593,34 @@ export default function WorkflowsTab() {
                     </TableCell>
                     <TableCell>
                       {workflow.n8n_webhook_path ? (
-                        <code className="text-xs bg-muted px-2 py-1 rounded">
+                        <code className="text-xs bg-muted px-2 py-1 rounded max-w-[200px] truncate block">
                           {workflow.n8n_webhook_path}
                         </code>
                       ) : (
-                        <span className="text-muted-foreground">-</span>
+                        <span className="text-muted-foreground text-xs">-</span>
                       )}
                     </TableCell>
                     <TableCell>
+                      <TriggerBadges workflow={workflow} />
+                    </TableCell>
+                    <TableCell>
                       {workflow.last_synced_at ? (
-                        <div className="flex items-center gap-1 text-sm">
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
                           <Clock className="h-3 w-3" />
                           {new Date(workflow.last_synced_at).toLocaleDateString('nb-NO')}
                         </div>
                       ) : (
-                        <span className="text-muted-foreground">Aldri</span>
+                        <span className="text-muted-foreground text-xs">Aldri</span>
                       )}
                     </TableCell>
                     <TableCell>
+                      <SyncStatusBadge status={workflow.sync_status} />
+                    </TableCell>
+                    <TableCell>
                       {workflow.is_active ? (
-                        <Badge className="bg-green-100 text-green-800">
-                          <Check className="h-3 w-3 mr-1" />
-                          Aktiv
-                        </Badge>
+                        <Check className="h-4 w-4 text-green-600" />
                       ) : (
-                        <Badge variant="secondary">
-                          <X className="h-3 w-3 mr-1" />
-                          Inaktiv
-                        </Badge>
+                        <X className="h-4 w-4 text-gray-400" />
                       )}
                     </TableCell>
                     <TableCell>
@@ -404,9 +631,11 @@ export default function WorkflowsTab() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => setSelectedWorkflow(workflow)}>
-                            <Settings className="h-4 w-4 mr-2" />
-                            Detaljer
+                          <DropdownMenuItem asChild>
+                            <Link to={`/admin/integrations/workflows/${workflow.id}`}>
+                              <Workflow className="h-4 w-4 mr-2" />
+                              Åpne detaljer
+                            </Link>
                           </DropdownMenuItem>
                           {workflow.n8n_workflow_id && (
                             <>
@@ -479,127 +708,6 @@ export default function WorkflowsTab() {
         </Card>
       )}
 
-      {/* Workflow Details Sheet */}
-      <Sheet open={!!selectedWorkflow} onOpenChange={(open) => !open && setSelectedWorkflow(null)}>
-        <SheetContent className="sm:max-w-lg">
-          <SheetHeader>
-            <SheetTitle className="flex items-center gap-2">
-              <Workflow className="h-5 w-5" />
-              {selectedWorkflow?.name}
-            </SheetTitle>
-            <SheetDescription>
-              Workflow detaljer og konfigurasjon
-            </SheetDescription>
-          </SheetHeader>
-          
-          {selectedWorkflow && (
-            <ScrollArea className="h-[calc(100vh-180px)] mt-6">
-              <div className="space-y-6 pr-4">
-                {/* Basic Info */}
-                <div className="space-y-3">
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Key</Label>
-                    <p className="font-mono text-sm bg-muted px-2 py-1 rounded mt-1">
-                      {selectedWorkflow.key}
-                    </p>
-                  </div>
-                  
-                  {selectedWorkflow.description && (
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Beskrivelse</Label>
-                      <p className="text-sm mt-1">{selectedWorkflow.description}</p>
-                    </div>
-                  )}
-                </div>
-
-                {/* n8n Info */}
-                {selectedWorkflow.n8n_workflow_id && (
-                  <div className="space-y-3 pt-4 border-t">
-                    <h4 className="font-medium text-sm">n8n Konfigurasjon</h4>
-                    
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Workflow ID</Label>
-                      <p className="font-mono text-sm bg-muted px-2 py-1 rounded mt-1">
-                        {selectedWorkflow.n8n_workflow_id}
-                      </p>
-                    </div>
-                    
-                    {selectedWorkflow.n8n_webhook_path && (
-                      <div>
-                        <Label className="text-xs text-muted-foreground">Webhook Path</Label>
-                        <p className="font-mono text-sm bg-muted px-2 py-1 rounded mt-1">
-                          {selectedWorkflow.n8n_webhook_path}
-                        </p>
-                      </div>
-                    )}
-                    
-                    <Button 
-                      variant="outline" 
-                      className="w-full"
-                      asChild
-                    >
-                      <a 
-                        href={`https://jardam.app.n8n.cloud/workflow/${selectedWorkflow.n8n_workflow_id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <ExternalLink className="h-4 w-4 mr-2" />
-                        Åpne i n8n Editor
-                      </a>
-                    </Button>
-                  </div>
-                )}
-
-                {/* Status */}
-                <div className="space-y-3 pt-4 border-t">
-                  <h4 className="font-medium text-sm">Status</h4>
-                  
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Aktiv</span>
-                    <Badge variant={selectedWorkflow.is_active ? "default" : "secondary"}>
-                      {selectedWorkflow.is_active ? "Ja" : "Nei"}
-                    </Badge>
-                  </div>
-                  
-                  {selectedWorkflow.last_synced_at && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Sist synkronisert</span>
-                      <span className="text-sm text-muted-foreground">
-                        {new Date(selectedWorkflow.last_synced_at).toLocaleString('nb-NO')}
-                      </span>
-                    </div>
-                  )}
-                  
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Opprettet</span>
-                    <span className="text-sm text-muted-foreground">
-                      {new Date(selectedWorkflow.created_at).toLocaleDateString('nb-NO')}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="space-y-2 pt-4 border-t">
-                  {selectedWorkflow.n8n_workflow_id && (
-                    <Button 
-                      variant="outline" 
-                      className="w-full"
-                      onClick={() => {
-                        syncSingleMutation.mutate(selectedWorkflow.n8n_workflow_id!);
-                        setSelectedWorkflow(null);
-                      }}
-                      disabled={syncSingleMutation.isPending}
-                    >
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      Sync fra n8n
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </ScrollArea>
-          )}
-        </SheetContent>
-      </Sheet>
     </div>
   );
 }

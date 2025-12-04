@@ -1,6 +1,10 @@
 /**
  * MCP Tenant Secret Service
- * Manages HMAC signing secrets for tenant integrations
+ * 
+ * DEPRECATED: This service previously used integration_secrets table which has been removed.
+ * HMAC signing secrets should now be stored in vault_credentials.
+ * 
+ * TODO: Migrate to vault_credentials if HMAC signing is needed.
  */
 
 import { supabase } from '@/integrations/supabase/client';

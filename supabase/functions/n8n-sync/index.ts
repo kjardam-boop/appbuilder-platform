@@ -25,8 +25,10 @@ interface N8nConfig {
 }
 
 async function getN8nConfig(supabase: any, tenantId: string): Promise<N8nConfig | null> {
-  // First try tenant-specific config
-  const { data: tenantConfig } = await supabase
+  console.log('[n8n-sync] Getting config for tenant:', tenantId);
+  
+  // Priority 1: Check tenant-specific config from tenant_integrations (vault_credentials)
+  const { data: tenantConfig, error: tenantError } = await supabase
     .from('tenant_integrations')
     .select('config, credentials')
     .eq('tenant_id', tenantId)
@@ -34,40 +36,33 @@ async function getN8nConfig(supabase: any, tenantId: string): Promise<N8nConfig 
     .eq('is_active', true)
     .maybeSingle();
 
+  console.log('[n8n-sync] tenant_integrations check:', { found: !!tenantConfig, error: tenantError?.message });
+
   if (tenantConfig?.credentials?.api_key || tenantConfig?.credentials?.N8N_API_KEY) {
+    console.log('[n8n-sync] Using tenant_integrations config');
     return {
       baseUrl: tenantConfig.config?.base_url || tenantConfig.config?.n8n_base_url || 'https://jardam.app.n8n.cloud',
       apiKey: tenantConfig.credentials?.api_key || tenantConfig.credentials?.N8N_API_KEY,
     };
   }
 
-  // Fallback to MCP secrets (check multiple key names)
-  const { data: secrets } = await supabase
-    .from('integration_secrets')
-    .select('key, value')
-    .eq('tenant_id', tenantId)
-    .in('key', ['N8N_API_KEY_APPBUILDER_PLATFORM', 'N8N_API_KEY', 'N8N_MCP_BASE_URL', 'N8N_BASE_URL']);
-
-  if (secrets?.length) {
-    const secretMap = Object.fromEntries(secrets.map((s: any) => [s.key, s.value]));
-    const apiKey = secretMap.N8N_API_KEY_APPBUILDER_PLATFORM || secretMap.N8N_API_KEY;
-    if (apiKey) {
-      return {
-        baseUrl: secretMap.N8N_MCP_BASE_URL || secretMap.N8N_BASE_URL || 'https://jardam.app.n8n.cloud',
-        apiKey,
-      };
-    }
-  }
-
-  // Final fallback to env var
+  // Priority 2: Platform-level secrets from Supabase Functions Secrets (env vars)
   const envApiKey = Deno.env.get('N8N_API_KEY_APPBUILDER_PLATFORM') || Deno.env.get('N8N_API_KEY');
+  console.log('[n8n-sync] env var check:', { 
+    hasN8N_API_KEY_APPBUILDER_PLATFORM: !!Deno.env.get('N8N_API_KEY_APPBUILDER_PLATFORM'),
+    hasN8N_API_KEY: !!Deno.env.get('N8N_API_KEY'),
+    envApiKeyLength: envApiKey?.length || 0
+  });
+  
   if (envApiKey) {
+    console.log('[n8n-sync] Using platform env var config');
     return {
       baseUrl: Deno.env.get('N8N_BASE_URL') || 'https://jardam.app.n8n.cloud',
       apiKey: envApiKey,
     };
   }
 
+  console.log('[n8n-sync] No n8n config found!');
   return null;
 }
 
@@ -134,8 +129,22 @@ serve(async (req) => {
     // Get n8n config
     const n8nConfig = await getN8nConfig(supabase, tenantId);
     if (!n8nConfig) {
+      // Detailed error info for debugging
+      const debugInfo = {
+        tenantId,
+        envVars: {
+          hasN8N_API_KEY_APPBUILDER_PLATFORM: !!Deno.env.get('N8N_API_KEY_APPBUILDER_PLATFORM'),
+          hasN8N_API_KEY: !!Deno.env.get('N8N_API_KEY'),
+          hasSUPABASE_URL: !!Deno.env.get('SUPABASE_URL'),
+        }
+      };
+      console.error('[n8n-sync] No config found. Debug info:', debugInfo);
+      
       return new Response(
-        JSON.stringify({ error: "n8n not configured for this tenant. Please add N8N_API_KEY_APPBUILDER_PLATFORM to MCP secrets." }),
+        JSON.stringify({ 
+          error: "n8n not configured. Check Supabase Secrets for N8N_API_KEY_APPBUILDER_PLATFORM.",
+          debug: debugInfo
+        }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

@@ -46,7 +46,7 @@ const ACTION_LABELS: Record<string, string> = {
 };
 
 export function CredentialAuditLog({ tenantId, resourceId, limit = 50 }: CredentialAuditLogProps) {
-  const { data: logs, isLoading } = useQuery({
+  const { data: logs, isLoading, error } = useQuery({
     queryKey: ['credential-audit-log', tenantId, resourceId],
     queryFn: async () => {
       let query = supabase
@@ -61,10 +61,25 @@ export function CredentialAuditLog({ tenantId, resourceId, limit = 50 }: Credent
       }
 
       const { data, error } = await query;
+      // Table might not exist yet - that's OK
+      if (error?.code === '42P01' || error?.message?.includes('does not exist')) {
+        return [];
+      }
       if (error) throw error;
       return data as AuditLogEntry[];
     },
+    retry: false, // Don't retry if table doesn't exist
   });
+
+  // If table doesn't exist, show placeholder
+  if (error) {
+    return (
+      <Card className="p-6 text-center bg-muted/30">
+        <Shield className="h-10 w-10 mx-auto mb-3 text-muted-foreground/50" />
+        <p className="text-sm text-muted-foreground">Audit logging ikke aktivert</p>
+      </Card>
+    );
+  }
 
   if (isLoading) {
     return (

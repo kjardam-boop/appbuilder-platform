@@ -41,6 +41,11 @@ export interface IntegrationDefinition {
   n8n_webhook_path: string | null;
   workflow_json: Record<string, any> | null;
   last_synced_at: string | null;
+  sync_status: 'draft' | 'pushed' | 'synced' | 'outdated' | null;
+  // MCP-specific
+  mcp_enabled: boolean;
+  available_trigger_methods: ('webhook' | 'mcp' | 'schedule' | 'form' | 'chat')[];
+  mcp_description: string | null;
   // Status
   is_active: boolean;
   created_at: string;
@@ -149,6 +154,9 @@ export const integrationDefinitionInputSchema = z.object({
   n8n_workflow_id: z.string().optional(),
   n8n_webhook_path: z.string().optional(),
   workflow_json: z.record(z.any()).optional(),
+  mcp_enabled: z.boolean().default(false),
+  available_trigger_methods: z.array(z.enum(['webhook', 'mcp', 'schedule', 'form', 'chat'])).default(['webhook']),
+  mcp_description: z.string().optional(),
 });
 
 export type IntegrationDefinitionInput = z.infer<typeof integrationDefinitionInputSchema>;

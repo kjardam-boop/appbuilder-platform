@@ -17,11 +17,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Key, RefreshCw, Trash2, TestTube2, Shield, CheckCircle2, XCircle } from "lucide-react";
+import { Key, RefreshCw, Trash2, TestTube2, Shield, CheckCircle2, XCircle, Eye, Pencil, Loader2 } from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { toast } from "sonner";
 import {
   deleteVaultCredential,
-  rotateVaultCredential,
   type CredentialMetadata,
 } from "@/modules/core/integrations/services/vaultCredentialService";
 import { CredentialManagementDialog } from "./CredentialManagementDialog";
@@ -51,6 +57,7 @@ export function CredentialsList({
 }: CredentialsListProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [rotateDialogOpen, setRotateDialogOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedCredential, setSelectedCredential] = useState<Credential | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [testingCredentialId, setTestingCredentialId] = useState<string | null>(null);
@@ -72,41 +79,56 @@ export function CredentialsList({
     }
   };
 
-  const handleRotate = async (newSecret: string) => {
-    if (!selectedCredential) return;
-
-    setIsProcessing(true);
-    try {
-      await rotateVaultCredential(selectedCredential.id, newSecret, metadata);
-      toast.success("Credential rotated successfully");
-      onCredentialChanged();
-      setRotateDialogOpen(false);
-    } catch (error) {
-      console.error("Failed to rotate credential:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to rotate credential");
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
   const handleTest = async (credential: Credential) => {
-    if (!onTestConnection) {
-      toast.info("Connection testing not available for this integration");
-      return;
-    }
-
     setTestingCredentialId(credential.id);
     try {
-      const success = await onTestConnection(credential.id);
-      if (success) {
-        toast.success("Connection test successful");
+      const { supabase } = await import("@/integrations/supabase/client");
+      
+      // Check credential type from description
+      const isMcp = credential.description?.includes('[n8n-mcp]');
+      const isN8nApi = credential.description?.includes('[n8n-api]') || 
+                       credential.name.toLowerCase().includes('n8n');
+      
+      if (onTestConnection) {
+        const success = await onTestConnection(credential.id);
+        if (success) {
+          toast.success("Tilkobling vellykket!");
+        } else {
+          toast.error("Tilkobling feilet");
+        }
+        onCredentialChanged();
+      } else if (isMcp) {
+        // Test MCP connection via dedicated edge function
+        const { data, error } = await supabase.functions.invoke('n8n-mcp-test', {
+          body: { 
+            credentialId: credential.id,
+            tenantId: metadata.tenant_id,
+          },
+        });
+        
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+        
+        const mcpWorkflows = data?.mcp_workflows || 0;
+        toast.success(`MCP tilkobling vellykket! ${mcpWorkflows} MCP-aktiverte workflows`);
+        onCredentialChanged();
+      } else if (isN8nApi) {
+        // For n8n API credentials, test via n8n-sync edge function
+        const { data, error } = await supabase.functions.invoke('n8n-sync', {
+          body: { action: 'list', tenantId: metadata.tenant_id },
+        });
+        
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+        
+        toast.success(`API tilkobling vellykket! Fant ${data?.workflows?.length || 0} workflows`);
+        onCredentialChanged();
       } else {
-        toast.error("Connection test failed");
+        toast.info("Test av tilkobling er ikke tilgjengelig for denne integrasjonen");
       }
-      onCredentialChanged();
     } catch (error) {
       console.error("Failed to test connection:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to test connection");
+      toast.error(error instanceof Error ? error.message : "Tilkobling feilet");
     } finally {
       setTestingCredentialId(null);
     }
@@ -165,17 +187,31 @@ export function CredentialsList({
               </div>
 
               <div className="flex items-center gap-2 flex-shrink-0">
-                {onTestConnection && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleTest(credential)}
-                    disabled={testingCredentialId === credential.id}
-                  >
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleTest(credential)}
+                  disabled={testingCredentialId === credential.id}
+                  title="Test tilkobling"
+                >
+                  {testingCredentialId === credential.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
                     <TestTube2 className="h-4 w-4" />
-                    {testingCredentialId === credential.id ? 'Testing...' : 'Test'}
-                  </Button>
-                )}
+                  )}
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedCredential(credential);
+                    setDetailsOpen(true);
+                  }}
+                  title="Vis detaljer"
+                >
+                  <Eye className="h-4 w-4" />
+                </Button>
 
                 <Button
                   variant="outline"
@@ -185,9 +221,9 @@ export function CredentialsList({
                     setRotateDialogOpen(true);
                   }}
                   disabled={isProcessing}
+                  title="Roter/oppdater secret"
                 >
-                  <RefreshCw className="h-4 w-4" />
-                  Rotate
+                  <Pencil className="h-4 w-4" />
                 </Button>
 
                 <Button
@@ -198,6 +234,7 @@ export function CredentialsList({
                     setDeleteDialogOpen(true);
                   }}
                   disabled={isProcessing}
+                  title="Slett"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -239,6 +276,126 @@ export function CredentialsList({
           }}
         />
       )}
+
+      {/* Details Sheet */}
+      <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              <Key className="h-5 w-5 text-primary" />
+              {selectedCredential?.name}
+            </SheetTitle>
+            <SheetDescription>
+              Detaljer for denne credential
+            </SheetDescription>
+          </SheetHeader>
+
+          {selectedCredential && (
+            <div className="mt-6 space-y-6">
+              {/* Status */}
+              <div>
+                <h4 className="text-sm font-medium mb-2">Status</h4>
+                {selectedCredential.test_status ? (
+                  <Badge
+                    variant={selectedCredential.test_status === 'success' ? 'default' : 'destructive'}
+                    className="flex items-center gap-1 w-fit"
+                  >
+                    {selectedCredential.test_status === 'success' ? (
+                      <CheckCircle2 className="h-3 w-3" />
+                    ) : (
+                      <XCircle className="h-3 w-3" />
+                    )}
+                    {selectedCredential.test_status === 'success' ? 'Fungerer' : 'Feilet'}
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary">Ikke testet</Badge>
+                )}
+              </div>
+
+              {/* Description */}
+              {selectedCredential.description && (
+                <div>
+                  <h4 className="text-sm font-medium mb-2">Beskrivelse</h4>
+                  <p className="text-sm text-muted-foreground">{selectedCredential.description}</p>
+                </div>
+              )}
+
+              {/* Parse description for template info */}
+              {selectedCredential.description?.startsWith('[n8n-mcp]') && (
+                <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                  <h4 className="text-sm font-medium text-blue-800 mb-1">n8n MCP Credential</h4>
+                  <p className="text-xs text-blue-700">
+                    Denne credential brukes for å trigge n8n workflows via Model Context Protocol.
+                  </p>
+                </div>
+              )}
+
+              {/* Dates */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h4 className="text-sm font-medium mb-1">Opprettet</h4>
+                  <p className="text-sm text-muted-foreground">
+                    {new Date(selectedCredential.created_at).toLocaleString('nb-NO')}
+                  </p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium mb-1">Sist oppdatert</h4>
+                  <p className="text-sm text-muted-foreground">
+                    {new Date(selectedCredential.updated_at).toLocaleString('nb-NO')}
+                  </p>
+                </div>
+                {selectedCredential.last_tested_at && (
+                  <div>
+                    <h4 className="text-sm font-medium mb-1">Sist testet</h4>
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(selectedCredential.last_tested_at).toLocaleString('nb-NO')}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* ID (for debugging) */}
+              <div>
+                <h4 className="text-sm font-medium mb-1">Credential ID</h4>
+                <code className="text-xs bg-muted px-2 py-1 rounded block overflow-x-auto">
+                  {selectedCredential.id}
+                </code>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-2 pt-4 border-t">
+                <Button
+                  onClick={() => handleTest(selectedCredential)}
+                  disabled={testingCredentialId === selectedCredential.id}
+                  className="flex-1"
+                >
+                  {testingCredentialId === selectedCredential.id ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Tester...
+                    </>
+                  ) : (
+                    <>
+                      <TestTube2 className="h-4 w-4 mr-2" />
+                      Test tilkobling
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setDetailsOpen(false);
+                    setRotateDialogOpen(true);
+                  }}
+                >
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Oppdater
+                </Button>
+              </div>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
     </>
   );
 }
