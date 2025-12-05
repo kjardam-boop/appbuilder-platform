@@ -34,21 +34,24 @@ MCP er Anthropics protokoll for AI-verktøy. Bruk BARE "mcp_" prefiks for:
 
 IKKE bruk "mcp_" for generelle integrasjoner, webhooks eller API-nøkler!
 
-**Secrets & API-nøkler - Tre lagringsmetoder:**
+**Secrets & API-nøkler - Arkitektur:**
 
 | Metode | Hvor | Når brukes | Eksempel |
 |--------|------|------------|----------|
 | **1. Functions Secrets** | Supabase Dashboard → Functions → Secrets | Platform-nivå secrets for Edge Functions | `N8N_API_KEY_APPBUILDER_PLATFORM` |
-| **2. vault_credentials** | Vår egen tabell i public schema | Tenant-spesifikke credentials med UI-admin | n8n MCP token per tenant |
-| **3. Supabase Vault** | Supabase → Integrations → Vault | Ekte kryptering med nøkkelhåndtering (BETA) | Sensitiv data som krever audit |
+| **2. Supabase Vault** | Supabase → Integrations → Vault | Tenant-spesifikke credentials (kryptert!) | n8n MCP token, OAuth tokens |
+| **3. vault_credentials** | Vår tabell i public schema | Metadata/referanser til Vault secrets | Backup, legacy support |
 
 **BESLUTNING - Hva bruker vi:**
 - **Platform-secrets** → Functions Secrets (env vars i Deno)
-- **Tenant-secrets** → `vault_credentials` tabell (admin UI på `/admin/credentials`)
-- **Supabase Vault** → Ikke i bruk (BETA, mer kompleks)
+- **Tenant-secrets** → **Supabase Vault** via `vault-manage` edge function
+- **UI-admin** → `/admin/credentials` (bruker Vault via vaultCredentialService)
 
-**VIKTIG:** `vault_credentials.encrypted_value` er pt. IKKE kryptert (TODO). 
-For ekte kryptering, migrer til Supabase Vault eller implementer pg_crypto.
+**Arkitektur:**
+1. Frontend kaller `vaultCredentialService.ts`
+2. Service kaller `vault-manage` edge function
+3. Edge function bruker `_shared/vaultService.ts`
+4. VaultService lagrer i Supabase Vault + referanse i `vault_credentials`
 
 Edge functions må deployes på nytt (`npx supabase functions deploy <name>`) for å laste nye Functions Secrets.
 

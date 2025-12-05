@@ -1,9 +1,9 @@
 /**
  * MCP Integration Runs Viewer
- * View integration run logs and webhook callbacks
+ * View integration run logs and webhook callbacks with expandable response details
  */
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, Fragment } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -11,8 +11,22 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { format, parseISO } from "date-fns";
-import { RefreshCw, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { format, parseISO, formatDistanceToNow } from "date-fns";
+import { nb } from "date-fns/locale";
+import { 
+  RefreshCw, 
+  ArrowUpDown, 
+  ChevronLeft, 
+  ChevronRight, 
+  ChevronDown, 
+  ChevronUp,
+  Copy,
+  Check,
+  AlertCircle,
+  Clock,
+  ExternalLink
+} from "lucide-react";
+import { toast } from "sonner";
 
 interface McpIntegrationRunsViewProps {
   tenantId: string;
@@ -36,6 +50,29 @@ export function McpIntegrationRunsView({ tenantId }: McpIntegrationRunsViewProps
   // Pagination
   const [pageSize, setPageSize] = useState(25);
   const [currentPage, setCurrentPage] = useState(1);
+  
+  // Expanded rows
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  
+  const toggleRow = (id: string) => {
+    setExpandedRows(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+  
+  const copyToClipboard = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    toast.success('Kopiert til utklippstavle');
+    setTimeout(() => setCopiedId(null), 2000);
+  };
 
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -215,6 +252,7 @@ export function McpIntegrationRunsView({ tenantId }: McpIntegrationRunsViewProps
             <Table>
               <TableHeader>
                 <TableRow className="border-b-2">
+                  <TableHead className="w-8"></TableHead>
                   <TableHead className="cursor-pointer select-none" onClick={() => handleSort('time')}>
                     <div className="flex items-center gap-1">
                       Time
@@ -245,9 +283,10 @@ export function McpIntegrationRunsView({ tenantId }: McpIntegrationRunsViewProps
                       <ArrowUpDown className="h-3 w-3" />
                     </div>
                   </TableHead>
-                  <TableHead>Request ID</TableHead>
+                  <TableHead>Varighet</TableHead>
                 </TableRow>
                 <TableRow>
+                  <TableHead className="py-2"></TableHead>
                   <TableHead className="py-2">
                     <Input
                       placeholder="Filter tid..."
@@ -301,23 +340,205 @@ export function McpIntegrationRunsView({ tenantId }: McpIntegrationRunsViewProps
               <TableBody>
                 {paginatedRuns.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                       Ingen kjøringer matcher filtrene
                     </TableCell>
                   </TableRow>
                 ) : (
-                  paginatedRuns.map((run: any) => (
-                    <TableRow key={run.id}>
-                      <TableCell className="font-mono text-xs">
-                        {format(parseISO(run.started_at), "dd.MM.yyyy HH:mm:ss")}
-                      </TableCell>
-                      <TableCell>{run.provider}</TableCell>
-                      <TableCell className="font-mono text-xs">{run.workflow_key}</TableCell>
-                      <TableCell>{getStatusBadge(run.status)}</TableCell>
-                      <TableCell>{run.http_status || "-"}</TableCell>
-                      <TableCell className="font-mono text-xs">{run.request_id?.slice(0, 8)}...</TableCell>
-                    </TableRow>
-                  ))
+                  paginatedRuns.map((run: any) => {
+                    const isExpanded = expandedRows.has(run.id);
+                    const hasResponse = run.response_json && Object.keys(run.response_json).length > 0;
+                    const hasError = run.error_message;
+                    const duration = run.finished_at 
+                      ? new Date(run.finished_at).getTime() - new Date(run.started_at).getTime()
+                      : null;
+                    
+                    return (
+                      <Fragment key={run.id}>
+                        <TableRow 
+                          className={`cursor-pointer hover:bg-muted/50 ${isExpanded ? 'bg-muted/30' : ''}`}
+                          onClick={() => toggleRow(run.id)}
+                        >
+                          <TableCell className="w-8 p-2">
+                            <Button variant="ghost" size="icon" className="h-6 w-6">
+                              {isExpanded ? (
+                                <ChevronUp className="h-4 w-4" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </TableCell>
+                          <TableCell className="font-mono text-xs">
+                            <div className="flex flex-col">
+                              <span>{format(parseISO(run.started_at), "dd.MM.yyyy HH:mm:ss")}</span>
+                              <span className="text-muted-foreground text-[10px]">
+                                {formatDistanceToNow(parseISO(run.started_at), { addSuffix: true, locale: nb })}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>{run.provider}</TableCell>
+                          <TableCell className="font-mono text-xs">
+                            <div className="flex items-center gap-1">
+                              {run.workflow_key}
+                              {(hasResponse || hasError) && (
+                                <Badge variant="outline" className="text-[9px] px-1 py-0 ml-1">
+                                  {hasResponse ? 'data' : 'feil'}
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>{getStatusBadge(run.status)}</TableCell>
+                          <TableCell>{run.http_status || "-"}</TableCell>
+                          <TableCell className="font-mono text-xs">
+                            {duration !== null ? (
+                              <span className="flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                {duration < 1000 
+                                  ? `${duration}ms` 
+                                  : `${(duration / 1000).toFixed(1)}s`
+                                }
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                        
+                        {/* Expanded details row */}
+                        {isExpanded && (
+                          <TableRow className="bg-muted/20">
+                            <TableCell colSpan={7} className="p-4">
+                              <div className="space-y-4">
+                                {/* Metadata */}
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                  <div>
+                                    <span className="text-muted-foreground">Request ID:</span>
+                                    <div className="flex items-center gap-1 mt-1">
+                                      <code className="text-xs bg-muted px-2 py-1 rounded">
+                                        {run.request_id || '-'}
+                                      </code>
+                                      {run.request_id && (
+                                        <Button 
+                                          variant="ghost" 
+                                          size="icon" 
+                                          className="h-6 w-6"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            copyToClipboard(run.request_id, `req-${run.id}`);
+                                          }}
+                                        >
+                                          {copiedId === `req-${run.id}` ? (
+                                            <Check className="h-3 w-3 text-green-500" />
+                                          ) : (
+                                            <Copy className="h-3 w-3" />
+                                          )}
+                                        </Button>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <span className="text-muted-foreground">External Run ID:</span>
+                                    <div className="flex items-center gap-1 mt-1">
+                                      <code className="text-xs bg-muted px-2 py-1 rounded">
+                                        {run.external_run_id || '-'}
+                                      </code>
+                                      {run.external_run_id && (
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-6 w-6"
+                                          asChild
+                                          onClick={(e) => e.stopPropagation()}
+                                        >
+                                          <a 
+                                            href={`https://jardam.app.n8n.cloud/execution/${run.external_run_id}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                          >
+                                            <ExternalLink className="h-3 w-3" />
+                                          </a>
+                                        </Button>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <span className="text-muted-foreground">Action:</span>
+                                    <code className="block text-xs bg-muted px-2 py-1 rounded mt-1">
+                                      {run.action_name || '-'}
+                                    </code>
+                                  </div>
+                                  <div>
+                                    <span className="text-muted-foreground">Idempotency Key:</span>
+                                    <code className="block text-xs bg-muted px-2 py-1 rounded mt-1 truncate">
+                                      {run.idempotency_key || '-'}
+                                    </code>
+                                  </div>
+                                </div>
+                                
+                                {/* Error message */}
+                                {hasError && (
+                                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                                    <div className="flex items-start gap-2">
+                                      <AlertCircle className="h-4 w-4 text-red-500 mt-0.5" />
+                                      <div>
+                                        <p className="text-sm font-medium text-red-700">Feilmelding</p>
+                                        <pre className="text-xs text-red-600 mt-1 whitespace-pre-wrap font-mono">
+                                          {run.error_message}
+                                        </pre>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {/* Response JSON */}
+                                {hasResponse && (
+                                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <p className="text-sm font-medium text-green-700">Respons fra n8n</p>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-7 text-xs"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          copyToClipboard(
+                                            JSON.stringify(run.response_json, null, 2),
+                                            `json-${run.id}`
+                                          );
+                                        }}
+                                      >
+                                        {copiedId === `json-${run.id}` ? (
+                                          <>
+                                            <Check className="h-3 w-3 mr-1 text-green-500" />
+                                            Kopiert!
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Copy className="h-3 w-3 mr-1" />
+                                            Kopier JSON
+                                          </>
+                                        )}
+                                      </Button>
+                                    </div>
+                                    <pre className="text-xs text-green-800 whitespace-pre-wrap font-mono bg-green-100/50 p-2 rounded max-h-64 overflow-auto">
+                                      {JSON.stringify(run.response_json, null, 2)}
+                                    </pre>
+                                  </div>
+                                )}
+                                
+                                {/* No data */}
+                                {!hasResponse && !hasError && (
+                                  <div className="text-center py-4 text-muted-foreground text-sm">
+                                    Ingen respons-data tilgjengelig
+                                  </div>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </Fragment>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
