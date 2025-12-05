@@ -147,11 +147,230 @@ export class WizardService {
         id: s.external_system_id || s.id,
         name: s.external_system?.name || s.custom_system_name || 'Unknown',
         type: s.external_system?.system_types?.[0] || s.custom_system_type || 'System',
-      }));
+      })).filter(s => s.id);
     } catch (e) {
       console.warn('project_systems table may not exist:', e);
       return [];
     }
+  }
+
+  // ===========================================================================
+  // PROJECT QUESTIONNAIRE
+  // ===========================================================================
+
+  /**
+   * Load project questionnaire (questions and answers)
+   */
+  static async loadProjectQuestionnaire(projectId: string): Promise<{
+    questions: Array<{ key: string; question: string; category: string }>;
+    answers: Record<string, string>;
+  }> {
+    try {
+      const { data, error } = await supabase
+        .from('project_questionnaire_responses')
+        .select('question_key, question_text, answer, category, sort_order')
+        .eq('project_id', projectId)
+        .order('sort_order');
+
+      if (error) {
+        console.error('Failed to load questionnaire:', error);
+        return { questions: [], answers: {} };
+      }
+
+      const questions: Array<{ key: string; question: string; category: string }> = [];
+      const answers: Record<string, string> = {};
+
+      (data || []).forEach((row: any) => {
+        if (row.question_key) {
+          questions.push({
+            key: row.question_key,
+            question: row.question_text || row.question_key,
+            category: row.category || 'general',
+          });
+          if (row.answer) {
+            answers[row.question_key] = row.answer;
+          }
+        }
+      });
+
+      return { questions, answers };
+    } catch (e) {
+      console.error('Error loading questionnaire:', e);
+      return { questions: [], answers: {} };
+    }
+  }
+
+  /**
+   * Save questionnaire answer
+   */
+  static async saveQuestionnaireAnswer(
+    projectId: string,
+    questionKey: string,
+    questionText: string,
+    answer: string,
+    category: string = 'general'
+  ): Promise<void> {
+    const { error } = await supabase
+      .from('project_questionnaire_responses')
+      .upsert({
+        project_id: projectId,
+        question_key: questionKey,
+        question_text: questionText,
+        answer,
+        category,
+      }, {
+        onConflict: 'project_id,question_key',
+      });
+
+    if (error) {
+      console.error('Failed to save answer:', error);
+      throw error;
+    }
+  }
+
+  // ===========================================================================
+  // PROJECT PARTNERS
+  // ===========================================================================
+
+  /**
+   * Load project implementation partners
+   */
+  static async loadProjectPartners(projectId: string): Promise<{ id: string; name: string }[]> {
+    try {
+      const { data, error } = await supabase
+        .from('project_implementation_partners')
+        .select('company_id, companies(id, name)')
+        .eq('project_id', projectId);
+
+      if (error) {
+        console.error('Failed to load partners:', error);
+        return [];
+      }
+
+      return (data || []).map((p: any) => ({
+        id: p.company_id,
+        name: p.companies?.name || 'Unknown Partner',
+      })).filter(p => p.id);
+    } catch (e) {
+      console.error('Error loading partners:', e);
+      return [];
+    }
+  }
+
+  /**
+   * Save project partners
+   */
+  static async saveProjectPartners(projectId: string, partnerIds: string[]): Promise<void> {
+    try {
+      // Delete existing
+      await supabase
+        .from('project_implementation_partners')
+        .delete()
+        .eq('project_id', projectId);
+
+      // Insert new
+      if (partnerIds.length > 0) {
+        const { error } = await supabase
+          .from('project_implementation_partners')
+          .insert(partnerIds.map(id => ({
+            project_id: projectId,
+            company_id: id,
+          })));
+
+        if (error) throw error;
+      }
+    } catch (e) {
+      console.error('Failed to save partners:', e);
+    }
+  }
+
+  // ===========================================================================
+  // PROJECT CAPABILITIES
+  // ===========================================================================
+
+  /**
+   * Load project capabilities
+   */
+  static async loadProjectCapabilities(projectId: string): Promise<Array<{
+    id: string;
+    key: string;
+    name: string;
+    category: string;
+  }>> {
+    try {
+      const { data, error } = await supabase
+        .from('app_capability_usage')
+        .select('capability_id, capabilities(id, key, name, category)')
+        .eq('project_id', projectId);
+
+      if (error) {
+        console.error('Failed to load capabilities:', error);
+        return [];
+      }
+
+      return (data || []).map((c: any) => ({
+        id: c.capability_id,
+        key: c.capabilities?.key || 'unknown',
+        name: c.capabilities?.name || 'Unknown',
+        category: c.capabilities?.category || 'Unknown',
+      })).filter(c => c.id);
+    } catch (e) {
+      console.error('Error loading capabilities:', e);
+      return [];
+    }
+  }
+
+  // ===========================================================================
+  // FULL PROJECT LOADING
+  // ===========================================================================
+
+  /**
+   * Load full project with all related data in parallel
+   * This is the main method to use for loading a project
+   */
+  static async loadFullProject(projectId: string): Promise<WizardState | null> {
+    // Load project base data first
+    const projectData = await this.loadProject(projectId);
+    if (!projectData) {
+      return null;
+    }
+
+    // Load all related data in parallel
+    const [systems, questionnaire, partners, capabilities] = await Promise.all([
+      this.loadProjectSystems(projectId),
+      this.loadProjectQuestionnaire(projectId),
+      this.loadProjectPartners(projectId),
+      this.loadProjectCapabilities(projectId),
+    ]);
+
+    // Determine step based on workshop status
+    let step = 1;
+    const workshopStatus = projectData.workshopStatus || 'not_started';
+    if (workshopStatus === 'processed') {
+      step = 5;
+    } else if (['complete', 'in_progress', 'board_ready'].includes(workshopStatus)) {
+      step = 3;
+    } else if (projectData.companyId) {
+      step = 2;
+    }
+
+    return {
+      step,
+      highestStepReached: step,
+      projectId,
+      projectName: projectData.projectName || '',
+      projectDescription: projectData.projectDescription || '',
+      companyId: projectData.companyId || null,
+      systems,
+      partners,
+      questionnaire: questionnaire.answers,
+      questions: questionnaire.questions,
+      workshopStatus,
+      miroUrl: projectData.miroUrl || null,
+      notionUrl: projectData.notionUrl || null,
+      generatedConfig: null,
+      selectedCapabilities: capabilities,
+    };
   }
 
   // ===========================================================================

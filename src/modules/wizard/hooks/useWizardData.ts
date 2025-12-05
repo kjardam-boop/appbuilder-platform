@@ -65,14 +65,15 @@ export function useExternalSystems() {
 }
 
 /**
- * Hook to load existing project
+ * Hook to load existing project with all related data
+ * Uses loadFullProject to fetch everything in parallel
  */
 export function useProject(projectId: string | null) {
   return useQuery({
     queryKey: wizardKeys.project(projectId || 'new'),
-    queryFn: () => projectId ? WizardService.loadProject(projectId) : null,
+    queryFn: () => projectId ? WizardService.loadFullProject(projectId) : null,
     enabled: !!projectId,
-    staleTime: 0, // Always refetch
+    staleTime: 0, // Always refetch to get latest data
   });
 }
 
@@ -229,6 +230,63 @@ export function useProcessWorkshopMutation() {
       tenantId: string;
     }) => {
       return WizardService.processWorkshopResults(projectId, tenantId);
+    },
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: wizardKeys.project(projectId) });
+    },
+  });
+}
+
+/**
+ * Hook to save questionnaire answer
+ */
+export function useQuestionnaireMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      projectId,
+      questionKey,
+      questionText,
+      answer,
+      category,
+    }: {
+      projectId: string;
+      questionKey: string;
+      questionText: string;
+      answer: string;
+      category?: string;
+    }) => {
+      await WizardService.saveQuestionnaireAnswer(
+        projectId,
+        questionKey,
+        questionText,
+        answer,
+        category
+      );
+    },
+    onSuccess: (_, { projectId }) => {
+      // Don't invalidate the whole project query to avoid re-render
+      // The local state will already be updated
+    },
+  });
+}
+
+/**
+ * Hook to save project partners
+ */
+export function usePartnersMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      projectId,
+      partnerIds,
+    }: {
+      projectId: string;
+      partnerIds: string[];
+    }) => {
+      await WizardService.saveProjectPartners(projectId, partnerIds);
     },
     onSuccess: (_, { projectId }) => {
       queryClient.invalidateQueries({ queryKey: wizardKeys.project(projectId) });

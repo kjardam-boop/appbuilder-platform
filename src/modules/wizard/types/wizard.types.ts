@@ -44,9 +44,29 @@ export interface SelectedPartner {
   name: string;
 }
 
+// Discovery question definition
+export interface DiscoveryQuestion {
+  key: string;
+  question: string;
+  category: string;
+  suggestedAnswer?: string;
+  context?: string;
+}
+
+// Selected capability
+export interface SelectedCapability {
+  id: string;
+  key: string;
+  name: string;
+  category: string;
+  variant?: string;
+  config?: Record<string, unknown>;
+}
+
 // Main wizard state
 export interface WizardState {
   step: number;
+  highestStepReached: number;
   projectId: string | null;
   projectName: string;
   projectDescription: string;
@@ -54,10 +74,12 @@ export interface WizardState {
   systems: SelectedSystem[];
   partners: SelectedPartner[];
   questionnaire: Record<string, string>;
+  questions?: DiscoveryQuestion[];
   workshopStatus: WorkshopStatus;
   miroUrl: string | null;
   notionUrl: string | null;
   generatedConfig: unknown | null;
+  selectedCapabilities: SelectedCapability[];
 }
 
 // Step definition
