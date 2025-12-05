@@ -58,6 +58,7 @@ import { PageHeader } from '@/components/shared';
 // Types
 interface WizardState {
   step: number;
+  highestStepReached: number; // Track highest step for free navigation
   projectId: string | null;
   projectName: string;
   projectDescription: string;
@@ -123,6 +124,7 @@ export default function NewAppWizard() {
   
   const [state, setState] = useState<WizardState>({
     step: 1,
+    highestStepReached: 1,
     projectId: projectIdFromUrl,
     projectName: '',
     projectDescription: '',
@@ -195,9 +197,78 @@ export default function NewAppWizard() {
       currentStep = 2; // Go to Discovery if company is selected
     }
 
+    // Load all related data in PARALLEL
+    console.log('[LoadProject] Starting parallel data loading for project:', projectId);
+    
+    const [systemsResult, questionnaireResult, partnersResult] = await Promise.allSettled([
+      supabase
+        .from('project_systems')
+        .select('id, external_system_id, custom_system_name, custom_system_type, external_system:external_systems(id, name, slug, system_types)')
+        .eq('project_id', projectId),
+      supabase
+        .from('project_questionnaire_responses')
+        .select('question_key, answer')
+        .eq('project_id', projectId)
+        .order('sort_order'),
+      supabase
+        .from('project_implementation_partners')
+        .select('company_id, companies(id, name)')
+        .eq('project_id', projectId),
+    ]);
+
+    // Process all results
+    let loadedSystems: Array<{ id: string; name: string; type: string }> = [];
+    let loadedQuestionnaire: Record<string, string> = {};
+    let loadedPartners: Array<{ id: string; name: string }> = [];
+
+    if (systemsResult.status === 'fulfilled') {
+      const { data, error } = systemsResult.value;
+      console.log('[LoadProject] Systems query result:', { data, error });
+      
+      if (!error && data && data.length > 0) {
+        loadedSystems = data.map((s: any) => ({
+          id: s.external_system_id || s.external_system?.id || s.id,
+          name: s.external_system?.name || s.custom_system_name || 'Unknown System',
+          type: s.external_system?.system_types?.[0] || s.custom_system_type || 'System',
+        })).filter((s: any) => s.id);
+        console.log('[LoadProject] Systems mapped:', loadedSystems);
+      } else {
+        console.log('[LoadProject] No systems found or error');
+      }
+    } else {
+      console.error('[LoadProject] Systems query failed:', systemsResult);
+    }
+
+    if (questionnaireResult.status === 'fulfilled') {
+      const { data, error } = questionnaireResult.value;
+      console.log('[LoadProject] Questionnaire query result:', { data, error });
+      
+      if (!error && data) {
+        data.forEach((q: any) => {
+          if (q.question_key) {
+            // Include answer even if empty string (but not null)
+            loadedQuestionnaire[q.question_key] = q.answer || '';
+          }
+        });
+        console.log('[LoadProject] Questionnaire mapped:', loadedQuestionnaire);
+      }
+    } else {
+      console.error('[LoadProject] Questionnaire query failed:', questionnaireResult);
+    }
+
+    if (partnersResult.status === 'fulfilled' && !partnersResult.value.error && partnersResult.value.data) {
+      loadedPartners = partnersResult.value.data.map((p: any) => ({
+        id: p.company_id,
+        name: p.companies?.name || 'Unknown Partner',
+      }));
+      console.log('[LoadProject] Partners loaded:', loadedPartners.length);
+    }
+
+    // Update state ONCE with all loaded data
     setState(prev => ({
       ...prev,
       step: currentStep,
+      highestStepReached: currentStep,
       projectId: projectId,
       projectName: projectData.name || '',
       projectDescription: projectData.description || '',
@@ -205,75 +276,13 @@ export default function NewAppWizard() {
       workshopStatus: workshopStatus,
       miroUrl: projectData.miro_board_url || null,
       notionUrl: projectData.notion_page_url || null,
-      systems: [], // Will be loaded separately if project_systems table exists
-      questionnaire: {},
+      systems: loadedSystems,
+      questionnaire: loadedQuestionnaire,
+      partners: loadedPartners,
     }));
     
     toast.success(`Prosjekt "${projectData.name}" lastet`);
-
-    // Load systems from project_systems table
-    try {
-      const { data: systemsData, error: systemsError } = await supabase
-        .from('project_systems')
-        .select('*, external_system:external_systems(id, name, slug, system_types)')
-        .eq('project_id', projectId);
-      
-      if (!systemsError && systemsData && systemsData.length > 0) {
-        const loadedSystems = systemsData.map((s: any) => ({
-          id: s.external_system_id || s.id,
-          name: s.external_system?.name || s.custom_system_name || 'Unknown',
-          type: s.external_system?.system_types?.[0] || s.custom_system_type || 'System',
-        }));
-        
-        setState(prev => ({ ...prev, systems: loadedSystems }));
-        console.log('Loaded systems:', loadedSystems);
-      }
-    } catch (e) {
-      console.log('Could not load project_systems:', e);
-    }
-
-    // Load questionnaire responses
-    try {
-      const { data: questionnaireData, error: questionnaireError } = await supabase
-        .from('project_questionnaire_responses')
-        .select('question_key, answer')
-        .eq('project_id', projectId)
-        .order('sort_order');
-      
-      if (!questionnaireError && questionnaireData && questionnaireData.length > 0) {
-        const loadedQuestionnaire: Record<string, string> = {};
-        questionnaireData.forEach((q: any) => {
-          if (q.question_key && q.answer) {
-            loadedQuestionnaire[q.question_key] = q.answer;
-          }
-        });
-        
-        setState(prev => ({ ...prev, questionnaire: loadedQuestionnaire }));
-        console.log('Loaded questionnaire:', loadedQuestionnaire);
-      }
-    } catch (e) {
-      console.log('Could not load questionnaire responses:', e);
-    }
-
-    // Load implementation partners
-    try {
-      const { data: partnersData, error: partnersError } = await supabase
-        .from('project_implementation_partners')
-        .select('company_id, companies(id, name)')
-        .eq('project_id', projectId);
-      
-      if (!partnersError && partnersData && partnersData.length > 0) {
-        const loadedPartners = partnersData.map((p: any) => ({
-          id: p.company_id,
-          name: p.companies?.name || 'Unknown Partner',
-        }));
-        
-        setState(prev => ({ ...prev, partners: loadedPartners }));
-        console.log('Loaded partners:', loadedPartners);
-      }
-    } catch (e) {
-      console.log('Could not load project_implementation_partners:', e);
-    }
+    console.log('[LoadProject] State updated with all data');
 
     // Load selected capabilities
     try {
@@ -681,9 +690,16 @@ export default function NewAppWizard() {
           .eq('project_id', state.projectId);
 
         if (debouncedSystems.length > 0) {
+          // Deduplicate systems by ID
+          const uniqueSystems = debouncedSystems.filter((s, i, arr) => 
+            arr.findIndex(x => x.id === s.id) === i
+          );
+          
+          console.log('[AutoSave] Saving systems:', uniqueSystems.length, 'unique from', debouncedSystems.length);
+          
           const { error } = await supabase
             .from('project_systems')
-            .insert(debouncedSystems.map(s => ({
+            .insert(uniqueSystems.map(s => ({
               project_id: state.projectId,
               external_system_id: s.id,
               custom_system_name: null,
@@ -783,7 +799,12 @@ export default function NewAppWizard() {
 
   // Navigation
   const goToStep = (step: number) => {
-    setState(prev => ({ ...prev, step }));
+    setState(prev => ({ 
+      ...prev, 
+      step,
+      // Update highest step if going forward
+      highestStepReached: Math.max(prev.highestStepReached, step)
+    }));
   };
 
   const nextStep = async () => {
@@ -869,36 +890,65 @@ export default function NewAppWizard() {
       {/* Progress Steps */}
       <div className="mb-8">
         <div className="flex items-center justify-between relative">
-          {/* Progress line */}
+          {/* Progress line - shows highest reached step */}
           <div className="absolute top-4 left-0 right-0 h-0.5 bg-muted -z-10" />
+          <div 
+            className="absolute top-4 left-0 h-0.5 bg-primary/30 -z-10 transition-all duration-300"
+            style={{ width: `${((state.highestStepReached - 1) / (WIZARD_STEPS.length - 1)) * 100}%` }}
+          />
+          {/* Current step indicator */}
           <div 
             className="absolute top-4 left-0 h-0.5 bg-primary -z-10 transition-all duration-300"
             style={{ width: `${((state.step - 1) / (WIZARD_STEPS.length - 1)) * 100}%` }}
           />
           
-          {WIZARD_STEPS.map((step, i) => (
-            <button
-              key={step.key}
-              onClick={() => i + 1 <= state.step && goToStep(i + 1)}
-              disabled={i + 1 > state.step}
-              className={cn(
-                "flex flex-col items-center transition-colors",
-                i + 1 <= state.step ? "text-primary cursor-pointer" : "text-muted-foreground cursor-not-allowed"
-              )}
-            >
-              <div className={cn(
-                "w-8 h-8 rounded-full flex items-center justify-center transition-colors",
-                i + 1 === state.step 
-                  ? "bg-primary text-primary-foreground" 
-                  : i + 1 < state.step 
-                    ? "bg-primary/20 text-primary" 
-                    : "bg-muted text-muted-foreground"
-              )}>
-                <step.icon className="h-4 w-4" />
-              </div>
-              <span className="text-xs mt-1 font-medium">{step.label}</span>
-            </button>
-          ))}
+          {WIZARD_STEPS.map((step, i) => {
+            const stepNum = i + 1;
+            const isReachable = stepNum <= state.highestStepReached;
+            const isCurrent = stepNum === state.step;
+            // A step is "visited" if we can reach it AND we're currently past it
+            const isVisited = isReachable && stepNum < state.step;
+            // A step is "ahead" if we can reach it but haven't visited it yet (we're behind it)
+            const isAhead = isReachable && stepNum > state.step;
+            
+            return (
+              <button
+                key={step.key}
+                onClick={() => {
+                  if (isReachable) {
+                    console.log(`[ProgressBar] Navigating to step ${stepNum}, highestReached: ${state.highestStepReached}`);
+                    goToStep(stepNum);
+                  }
+                }}
+                disabled={!isReachable}
+                className={cn(
+                  "flex flex-col items-center transition-colors",
+                  isReachable ? "text-primary cursor-pointer hover:opacity-80" : "text-muted-foreground cursor-not-allowed"
+                )}
+              >
+                <div className={cn(
+                  "w-8 h-8 rounded-full flex items-center justify-center transition-all",
+                  isCurrent 
+                    ? "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2" 
+                    : isVisited
+                      ? "bg-primary text-primary-foreground" 
+                      : isAhead
+                        ? "bg-primary/40 text-primary-foreground border-2 border-primary"
+                        : "bg-muted text-muted-foreground"
+                )}>
+                  {isVisited ? (
+                    <CheckCircle2 className="h-4 w-4" />
+                  ) : (
+                    <step.icon className="h-4 w-4" />
+                  )}
+                </div>
+                <span className={cn(
+                  "text-xs mt-1 font-medium",
+                  isReachable && !isCurrent && "underline decoration-dotted underline-offset-2"
+                )}>{step.label}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -1255,14 +1305,19 @@ function Step1Company({ state, setState, companies, externalSystems, implementat
 
       <Card>
         <CardHeader>
-          <CardTitle>Current Systems</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            Current Systems
+            {state.systems.length > 0 && (
+              <Badge variant="outline" className="ml-2">{state.systems.length}</Badge>
+            )}
+          </CardTitle>
           <CardDescription>
             What systems does this company currently use? This helps us understand integration needs.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Selected systems */}
-          {state.systems.length > 0 && (
+          {state.systems.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {state.systems.map((system) => (
                 <Badge key={system.id} variant="secondary" className="pl-2 pr-1 py-1">
@@ -1277,6 +1332,8 @@ function Step1Company({ state, setState, companies, externalSystems, implementat
                 </Badge>
               ))}
             </div>
+          ) : (
+            <p className="text-sm text-muted-foreground italic">Ingen systemer valgt ennå</p>
           )}
 
           {/* System selector with type filter */}
@@ -1547,18 +1604,115 @@ interface Step2Props {
 
 function Step2Discovery({ state, setState, tenantId }: Step2Props) {
   const [questions, setQuestions] = useState<DiscoveryQuestion[]>([]);
-  const [isGenerating, setIsGenerating] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [improvingQuestion, setImprovingQuestion] = useState<string | null>(null);
   const [acceptedSuggestions, setAcceptedSuggestions] = useState<Set<string>>(new Set());
+  const hasLoadedExisting = useRef(false);
 
-  // Generate questions when entering step - using all Step 1 context
+  // Load existing questions - wait for questionnaire to be loaded first
+  const questionnaireRef = useRef(state.questionnaire);
+  questionnaireRef.current = state.questionnaire;
+  
   useEffect(() => {
-    generateQuestions();
+    // Wait a tick for state to settle, then load questions
+    const timer = setTimeout(() => {
+      if (!hasLoadedExisting.current) {
+        hasLoadedExisting.current = true;
+        console.log('[Step2] Starting load, questionnaire has', Object.keys(questionnaireRef.current).length, 'answers');
+        loadExistingQuestions();
+      }
+    }, 100);
+    return () => clearTimeout(timer);
   }, []);
+
+  // Load existing questions from database
+  const loadExistingQuestions = async () => {
+    setIsLoading(true);
+    try {
+      // Use ref for latest questionnaire value (avoids stale closure)
+      const currentQuestionnaire = questionnaireRef.current;
+      const answerCount = Object.keys(currentQuestionnaire).length;
+      console.log('[Step2] Loading questions. Answers in state:', answerCount, currentQuestionnaire);
+      
+      // Fetch existing question texts from database
+      const { data: existingResponses, error } = await supabase
+        .from('project_questionnaire_responses')
+        .select('question_key, question_text, category, sort_order')
+        .eq('project_id', state.projectId)
+        .order('sort_order');
+      
+      if (error) {
+        console.error('[Step2] Error:', error);
+      }
+      
+      // PRIORITY 1: If we have answers in state, create questions from those keys
+      if (answerCount > 0) {
+        console.log('[Step2] Using keys from existing answers');
+        
+        // Create a map of question texts from DB
+        const questionTexts: Record<string, { text: string; category: string }> = {};
+        existingResponses?.forEach((r: any) => {
+          if (r.question_key && r.question_text && r.question_text.length > 10) {
+            questionTexts[r.question_key] = { 
+              text: r.question_text, 
+              category: r.category || 'general' 
+            };
+          }
+        });
+        
+        // Create questions using the answer keys
+        const keys = Object.keys(currentQuestionnaire);
+        const loadedQuestions: DiscoveryQuestion[] = keys.map((key, i) => ({
+          key,
+          question: questionTexts[key]?.text || `Spørsmål ${i + 1}`,
+          suggestedAnswer: '',
+          context: '',
+          category: questionTexts[key]?.category || 'general',
+        }));
+        
+        setQuestions(loadedQuestions);
+        console.log('[Step2] Created', loadedQuestions.length, 'questions from answer keys');
+        return;
+      }
+      
+      // PRIORITY 2: Use questions from DB if they have proper text
+      if (existingResponses && existingResponses.length > 0) {
+        const hasProperTexts = existingResponses.some((r: any) => 
+          r.question_text && r.question_text.length > 15
+        );
+        
+        if (hasProperTexts) {
+          const loadedQuestions: DiscoveryQuestion[] = existingResponses.map((r: any) => ({
+            key: r.question_key,
+            question: r.question_text || r.question_key,
+            suggestedAnswer: '',
+            context: '',
+            category: r.category || 'general',
+          }));
+          
+          setQuestions(loadedQuestions);
+          console.log('[Step2] Loaded', loadedQuestions.length, 'questions from DB');
+          return;
+        }
+      }
+      
+      // PRIORITY 3: No existing data - generate new questions
+      console.log('[Step2] No existing data, generating new questions');
+      await generateQuestions();
+      
+    } catch (e) {
+      console.error('[Step2] Exception:', e);
+      await generateQuestions();
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const generateQuestions = async () => {
     setIsGenerating(true);
     try {
+      console.log('[Step2] Generating new questions with context');
       const { data, error } = await supabase.functions.invoke('generate-discovery-questions', {
         body: {
           projectId: state.projectId,
@@ -1573,37 +1727,123 @@ function Step2Discovery({ state, setState, tenantId }: Step2Props) {
       if (error) throw error;
 
       if (data?.questions && Array.isArray(data.questions)) {
-        setQuestions(data.questions);
+        // If we have existing questions, add new ones (don't replace)
+        let questionsToSave: DiscoveryQuestion[] = [];
+        if (questions.length > 0) {
+          const existingKeys = new Set(questions.map(q => q.key));
+          const newQuestions = data.questions.filter((q: DiscoveryQuestion) => !existingKeys.has(q.key));
+          setQuestions(prev => [...prev, ...newQuestions]);
+          questionsToSave = newQuestions;
+          toast.success(`${newQuestions.length} nye spørsmål generert`);
+        } else {
+          setQuestions(data.questions);
+          questionsToSave = data.questions;
+        }
         
-        // Pre-fill questionnaire with suggested answers if not already answered
-        const newQuestionnaire = { ...state.questionnaire };
-        data.questions.forEach((q: DiscoveryQuestion) => {
-          if (!newQuestionnaire[q.key] && q.suggestedAnswer) {
-            // Don't auto-fill, but store suggestion for display
-          }
-        });
+        // Save question metadata to database so question text is preserved
+        if (questionsToSave.length > 0) {
+          await saveQuestionMetadata(questionsToSave);
+        }
       }
     } catch (error) {
       console.error('Failed to generate questions:', error);
       toast.error('Kunne ikke generere spørsmål');
-      // Fallback questions without suggestions
-      setQuestions([
-        { key: 'pain_points', question: 'Hva er de største utfordringene i dagens arbeidsflyt?', suggestedAnswer: '', context: 'Viktig for å forstå hvor applikasjonen kan gi mest verdi', category: 'pain_points' },
-        { key: 'manual_tasks', question: 'Hvilke oppgaver gjøres manuelt som kunne vært automatisert?', suggestedAnswer: '', context: 'Identifiserer potensial for effektivisering', category: 'processes' },
-        { key: 'integrations', question: 'Hvilke systemer må dele data med hverandre?', suggestedAnswer: '', context: 'Viktig for integrasjonsdesign', category: 'integrations' },
-        { key: 'goals', question: 'Hva er hovedmålene med den nye løsningen?', suggestedAnswer: '', context: 'Definerer suksesskriterier', category: 'goals' },
-        { key: 'users', question: 'Hvem er hovedbrukerne og hva er deres behov?', suggestedAnswer: '', context: 'Viktig for brukeropplevelse', category: 'users' },
-      ]);
+      
+      // Only set fallback if no existing questions
+      if (questions.length === 0) {
+        setQuestions([
+          { key: 'pain_points', question: 'Hva er de største utfordringene i dagens arbeidsflyt?', suggestedAnswer: '', context: 'Viktig for å forstå hvor applikasjonen kan gi mest verdi', category: 'pain_points' },
+          { key: 'manual_tasks', question: 'Hvilke oppgaver gjøres manuelt som kunne vært automatisert?', suggestedAnswer: '', context: 'Identifiserer potensial for effektivisering', category: 'processes' },
+          { key: 'integrations', question: 'Hvilke systemer må dele data med hverandre?', suggestedAnswer: '', context: 'Viktig for integrasjonsdesign', category: 'integrations' },
+          { key: 'goals', question: 'Hva er hovedmålene med den nye løsningen?', suggestedAnswer: '', context: 'Definerer suksesskriterier', category: 'goals' },
+          { key: 'users', question: 'Hvem er hovedbrukerne og hva er deres behov?', suggestedAnswer: '', context: 'Viktig for brukeropplevelse', category: 'users' },
+        ]);
+      }
     } finally {
       setIsGenerating(false);
     }
   };
 
+  // Save question metadata (text, category) to database - WITHOUT overwriting existing answers
+  const saveQuestionMetadata = async (questionsToSave: DiscoveryQuestion[]) => {
+    if (!state.projectId) return;
+    
+    try {
+      console.log('[Step2] Saving question metadata (preserving answers):', questionsToSave.length);
+      
+      // Only INSERT new questions, don't update existing ones
+      for (const q of questionsToSave) {
+        // First check if this question already exists
+        const { data: existing } = await supabase
+          .from('project_questionnaire_responses')
+          .select('question_key, answer')
+          .eq('project_id', state.projectId)
+          .eq('question_key', q.key)
+          .single();
+        
+        if (existing) {
+          // Question exists - only update question_text if it's just the key (not a real question)
+          if (existing.question_key === q.key && (!existing.question_key.includes(' '))) {
+            // Update only the question text, preserve the answer
+            const { error } = await supabase
+              .from('project_questionnaire_responses')
+              .update({
+                question_text: q.question,
+                category: q.category,
+              })
+              .eq('project_id', state.projectId)
+              .eq('question_key', q.key);
+            
+            if (error) console.error('[Step2] Error updating question text:', error);
+          }
+          // If it exists with a proper question text, don't touch it
+        } else {
+          // New question - insert it
+          const { error } = await supabase
+            .from('project_questionnaire_responses')
+            .insert({
+              project_id: state.projectId,
+              question_key: q.key,
+              question_text: q.question,
+              category: q.category,
+              answer: '',
+              sort_order: questionsToSave.indexOf(q),
+            });
+          
+          if (error) console.error('[Step2] Error inserting question:', error);
+        }
+      }
+    } catch (e) {
+      console.error('[Step2] Exception saving question metadata:', e);
+    }
+  };
+
   const updateAnswer = (key: string, value: string) => {
+    // Find the question to get the text
+    const question = questions.find(q => q.key === key);
+    
     setState(prev => ({
       ...prev,
       questionnaire: { ...prev.questionnaire, [key]: value },
     }));
+    
+    // Also update the database directly with correct question text
+    if (state.projectId && question) {
+      supabase
+        .from('project_questionnaire_responses')
+        .upsert({
+          project_id: state.projectId,
+          question_key: key,
+          question_text: question.question,
+          answer: value,
+          category: question.category,
+        }, {
+          onConflict: 'project_id,question_key',
+        })
+        .then(({ error }) => {
+          if (error) console.error('[Step2] Error updating answer:', error);
+        });
+    }
   };
 
   const acceptSuggestion = (key: string, suggestion: string) => {
@@ -1689,10 +1929,15 @@ function Step2Discovery({ state, setState, tenantId }: Step2Props) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {isGenerating ? (
+        {isLoading ? (
           <div className="flex flex-col items-center justify-center py-12">
             <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
-            <span className="text-muted-foreground">Genererer spørsmål basert på all kontekst fra steg 1...</span>
+            <span className="text-muted-foreground">Laster eksisterende spørsmål...</span>
+          </div>
+        ) : isGenerating ? (
+          <div className="flex flex-col items-center justify-center py-12">
+            <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
+            <span className="text-muted-foreground">Genererer nye spørsmål basert på kontekst fra steg 1...</span>
             <span className="text-xs text-muted-foreground mt-2">
               Inkluderer: selskap, systemer, partnere, beskrivelse og dokumenter
             </span>
@@ -1704,12 +1949,17 @@ function Step2Discovery({ state, setState, tenantId }: Step2Props) {
                 variant="outline" 
                 size="sm"
                 onClick={generateQuestions}
+                disabled={isGenerating}
               >
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Generer nye spørsmål
+                {isGenerating ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Plus className="mr-2 h-4 w-4" />
+                )}
+                Generer flere spørsmål
               </Button>
               <span className="text-xs text-muted-foreground">
-                {questions.length} spørsmål generert
+                {questions.length} spørsmål • {Object.keys(state.questionnaire).length} besvart
               </span>
             </div>
 
@@ -1862,13 +2112,26 @@ function Step3Workshop({ state, setState, tenantId }: Step3Props) {
       // Step 2: Create Miro board with AI-generated elements
       setGenerationProgress('Oppretter Miro-tavle...');
       
+      // Get company name for the workflow
+      let companyName = 'Unknown Company';
+      if (state.companyId) {
+        const { data: companyData } = await supabase
+          .from('companies')
+          .select('name')
+          .eq('id', state.companyId)
+          .single();
+        if (companyData?.name) companyName = companyData.name;
+      }
+
       const { data, error } = await supabase.functions.invoke('trigger-n8n-workflow', {
         body: {
           workflowKey: 'prepare-miro-workshop',
           action: 'prepare',
           input: {
             project_id: state.projectId,
+            project_name: state.projectName,
             company_id: state.companyId,
+            company_name: companyName,
             systems: state.systems,
             questionnaire: state.questionnaire,
             // Pass AI-generated elements to n8n

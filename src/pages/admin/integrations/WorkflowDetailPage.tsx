@@ -32,6 +32,7 @@ import {
   Check,
   FileJson,
   Save,
+  Layers,
 } from "lucide-react";
 import {
   Dialog,
@@ -45,6 +46,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { N8nSyncService } from "@/modules/core/integrations/services/n8nSyncService";
 import { WorkflowJsonViewer } from "@/components/admin/n8n/WorkflowJsonViewer";
+import { WorkflowTemplatePicker } from "@/components/admin/n8n/WorkflowTemplatePicker";
 import type { IntegrationDefinition } from "@/modules/core/integrations/types/integrationRegistry.types";
 import { useState } from "react";
 
@@ -663,6 +665,33 @@ export default function WorkflowDetailPage() {
                   </>
                 )}
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Template Picker */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <FileJson className="h-4 w-4" />
+                Workflow Maler
+              </CardTitle>
+              <CardDescription>
+                Velg en mal for å oppdatere workflowen
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <WorkflowTemplatePicker
+                workflowKey={workflow.key}
+                currentWorkflowJson={workflow.workflow_json}
+                onApplyTemplate={(templateJson) => {
+                  if (workflow.n8n_workflow_id) {
+                    updateN8nMutation.mutate(templateJson);
+                  } else {
+                    saveJsonLocallyMutation.mutate(templateJson);
+                  }
+                }}
+                isApplying={updateN8nMutation.isPending || saveJsonLocallyMutation.isPending}
+              />
             </CardContent>
           </Card>
 

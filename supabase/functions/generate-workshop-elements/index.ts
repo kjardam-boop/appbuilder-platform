@@ -168,6 +168,9 @@ serve(async (req) => {
     const fullContext = contextParts.join('\n\n');
 
     // 6. Generate workshop elements with AI
+    // IMPORTANT: Miro only accepts these colors: gray, light_yellow, yellow, orange, light_green, green, dark_green, cyan, light_pink, pink, violet, red, light_blue, blue, dark_blue, black
+    const validMiroColors = ['gray', 'light_yellow', 'yellow', 'orange', 'light_green', 'green', 'dark_green', 'cyan', 'light_pink', 'pink', 'violet', 'red', 'light_blue', 'blue', 'dark_blue', 'black'];
+    
     const systemPrompt = `Du er en erfaren workshop-fasilitator og prosessrådgiver.
 Basert på kontekst om et kundeprosjekt, generer strukturerte workshop-elementer for en Miro-tavle.
 
@@ -185,12 +188,22 @@ Returner ALLTID gyldig JSON i dette formatet:
       "type": "sticky_note|card|frame|text",
       "title": "Kort tittel",
       "content": "Beskrivelse eller innhold",
-      "color": "yellow|blue|green|red|purple|orange",
+      "color": "yellow|light_blue|green|red|violet|orange|pink|cyan|gray",
       "category": "process_map|pain_point|solution|user_story|moscow_must|moscow_should|moscow_could|moscow_wont"
     }
   ],
   "summary": "Kort oppsummering av de genererte elementene"
 }
+
+VIKTIG for farger - bruk KUN disse Miro-fargene:
+- pain_point: red
+- solution: green eller light_green
+- user_story: light_blue eller blue
+- moscow_must: red
+- moscow_should: yellow
+- moscow_could: light_green
+- moscow_wont: gray
+- process_map: cyan eller light_blue
 
 Generer 5-10 relevante elementer per kategori. Vær spesifikk og bruk konteksten.`;
 
@@ -242,8 +255,79 @@ Generer relevante og spesifikke workshop-elementer som vil hjelpe teamet med å 
 
     console.log(`[AI] Generated ${parsed.elements?.length || 0} elements`);
 
+    // Sanitize colors to ensure they're valid Miro colors
+    const colorMapping: Record<string, string> = {
+      'purple': 'violet',
+      'blue': 'light_blue',
+      'light-blue': 'light_blue',
+      'lightblue': 'light_blue',
+      'light-green': 'light_green',
+      'lightgreen': 'light_green',
+      'light-yellow': 'light_yellow',
+      'lightyellow': 'light_yellow',
+      'light-pink': 'light_pink',
+      'lightpink': 'light_pink',
+      'dark-green': 'dark_green',
+      'darkgreen': 'dark_green',
+      'dark-blue': 'dark_blue',
+      'darkblue': 'dark_blue',
+    };
+
+    // Position tracking per category/frame
+    const categoryPositions: Record<string, { count: number }> = {};
+    
+    // Frame configuration - each category maps to a frame with offset
+    const frameConfig: Record<string, { baseX: number; baseY: number; cols: number; itemWidth: number; itemHeight: number }> = {
+      'pain_point': { baseX: 1600, baseY: 100, cols: 3, itemWidth: 420, itemHeight: 220 },
+      'solution': { baseX: 100, baseY: 1100, cols: 3, itemWidth: 420, itemHeight: 220 },
+      'user_story': { baseX: 100, baseY: 1100, cols: 3, itemWidth: 420, itemHeight: 220 },
+      'moscow_must': { baseX: 1700, baseY: 1150, cols: 1, itemWidth: 380, itemHeight: 200 },
+      'moscow_should': { baseX: 2150, baseY: 1150, cols: 1, itemWidth: 380, itemHeight: 200 },
+      'moscow_could': { baseX: 2600, baseY: 1150, cols: 1, itemWidth: 380, itemHeight: 200 },
+      'moscow_wont': { baseX: 3050, baseY: 1150, cols: 1, itemWidth: 380, itemHeight: 200 },
+      'process_map': { baseX: 600, baseY: 100, cols: 3, itemWidth: 350, itemHeight: 200 },
+      'default': { baseX: 100, baseY: 100, cols: 3, itemWidth: 420, itemHeight: 220 },
+    };
+
+    const sanitizedElements = (parsed.elements || []).map((element: any) => {
+      let color = element.color?.toLowerCase() || 'yellow';
+      
+      // Map common color names to Miro-valid colors
+      if (colorMapping[color]) {
+        color = colorMapping[color];
+      }
+      
+      // Final validation - if still not valid, default to yellow
+      if (!validMiroColors.includes(color)) {
+        console.warn(`[Color] Invalid color "${element.color}" for element "${element.title}", defaulting to yellow`);
+        color = 'yellow';
+      }
+
+      // Calculate position based on category
+      const category = element.category || 'default';
+      if (!categoryPositions[category]) {
+        categoryPositions[category] = { count: 0 };
+      }
+      
+      const config = frameConfig[category] || frameConfig['default'];
+      const pos = categoryPositions[category];
+      const col = pos.count % config.cols;
+      const row = Math.floor(pos.count / config.cols);
+      
+      const x = config.baseX + col * config.itemWidth;
+      const y = config.baseY + row * config.itemHeight;
+      
+      pos.count++;
+      
+      return {
+        ...element,
+        color,
+        position: { x, y },
+      };
+    });
+
     const output: GeneratedOutput = {
-      elements: parsed.elements || [],
+      elements: sanitizedElements,
       summary: parsed.summary || '',
       metadata: {
         projectId,

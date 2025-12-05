@@ -42,6 +42,7 @@ interface UploadedDocument {
   source_type: string;
   created_at: string;
   original_filename: string | null;
+  tenant_id?: string;
 }
 
 interface UploadProgress {
@@ -73,23 +74,42 @@ export function ProjectDocumentUpload({
   const [uploadProgress, setUploadProgress] = useState<UploadProgress[]>([]);
 
   // Fetch existing documents for this project
-  const { data: documents, isLoading } = useQuery({
-    queryKey: ['project-documents', projectId],
+  const { data: documents, isLoading, error: documentsError } = useQuery({
+    queryKey: ['project-documents', projectId, tenantId],
     queryFn: async () => {
       if (!projectId) return [];
       
-      const { data, error } = await supabase
+      console.log('[ProjectDocuments] Fetching documents:', { projectId, tenantId });
+      
+      // First try with tenant_id filter
+      let query = supabase
         .from('content_library')
-        .select('id, title, file_type, file_size_bytes, source_type, created_at, original_filename')
+        .select('id, title, file_type, file_size_bytes, source_type, created_at, original_filename, tenant_id')
         .eq('project_id', projectId)
-        .eq('tenant_id', tenantId)
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
+      // Only filter by tenant if provided
+      if (tenantId) {
+        query = query.eq('tenant_id', tenantId);
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) {
+        console.error('[ProjectDocuments] Error fetching:', error);
+        throw error;
+      }
+      
+      console.log('[ProjectDocuments] Fetched documents:', data?.length || 0, data);
       return data as UploadedDocument[];
     },
     enabled: !!projectId,
   });
+  
+  // Log if there's an error
+  if (documentsError) {
+    console.error('[ProjectDocuments] Query error:', documentsError);
+  }
 
   // Extract text from file (simple approach for text files, edge function for PDFs)
   const extractText = async (file: File): Promise<string> => {
