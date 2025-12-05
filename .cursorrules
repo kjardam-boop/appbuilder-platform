@@ -127,6 +127,29 @@ const { status, trigger } = useAutoSave({
 - Følg eksisterende styling (Tailwind)
 - Lucide icons
 
+### Textarea - Auto-resize
+
+**ALLTID** bruk den innebygde `<Textarea>` komponenten fra `@/components/ui/textarea` som har:
+
+- `autoResize={true}` (default) - Tilpasser høyde automatisk til innhold
+- `maxHeight={400}` (default) - Maks høyde før kollaps/scroll aktiveres
+- `collapsible={true}` (default) - Viser "Minimer"/"Vis alt" knapp ved lang tekst
+
+```tsx
+// ✅ Standard bruk (auto-resize aktivert automatisk)
+<Textarea value={text} onChange={(e) => setText(e.target.value)} />
+
+// ✅ Med custom maxHeight
+<Textarea maxHeight={300} value={text} onChange={...} />
+
+// ❌ IKKE bruk vanlig <textarea> element
+<textarea value={text} onChange={...} />
+```
+
+**For spesielle tilfeller:**
+- `autoResize={false}` - Deaktiver auto-resize (f.eks. i chat-input)
+- `collapsible={false}` - Ingen kollaps-knapp, bare scroll
+
 ### Hooks
 
 - `useTenant()` - Nåværende tenant context

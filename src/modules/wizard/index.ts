@@ -29,4 +29,5 @@ export {
 export { WizardStepIndicator } from './components/WizardStepIndicator';
 export { Step1Company } from './components/Step1Company';
 export { Step4Capabilities } from './components/Step4Capabilities';
+export { ProjectDocumentUpload } from './components/ProjectDocumentUpload';
 

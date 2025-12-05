@@ -34,7 +34,9 @@ import {
   Save,
   ChevronsUpDown,
   Check,
-  Search
+  Search,
+  Globe,
+  FileText
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -43,6 +45,7 @@ import {
   WizardStepIndicator,
   Step1Company as Step1CompanyNew,
   Step4Capabilities,
+  ProjectDocumentUpload,
   useCustomerCompanies,
   usePartners,
   useExternalSystems,
@@ -1000,6 +1003,78 @@ function Step1Company({ state, setState, companies, externalSystems, implementat
   const [systemTypeFilter, setSystemTypeFilter] = useState<string>('all');
   const [partnerOpen, setPartnerOpen] = useState(false);
   const [partnerSearch, setPartnerSearch] = useState('');
+  
+  // AI generation states
+  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
+  const [isImprovingDescription, setIsImprovingDescription] = useState(false);
+  
+  // Get tenant context for AI functions
+  const tenantContext = useTenantContext();
+  
+  // Generate description from company website + RAG
+  const generateDescription = async () => {
+    if (!state.companyId) {
+      toast.error('Velg et selskap først');
+      return;
+    }
+    
+    setIsGeneratingDescription(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-project-description', {
+        body: {
+          projectId: state.projectId,
+          companyId: state.companyId,
+          tenantId: tenantContext?.tenant_id,
+          action: 'generate',
+        },
+      });
+      
+      if (error) throw error;
+      
+      if (data?.description) {
+        setState(prev => ({ ...prev, projectDescription: data.description }));
+        toast.success(`Beskrivelse generert${data.metadata?.websiteFetched ? ' fra nettside' : ''}${data.metadata?.documentCount > 0 ? ` + ${data.metadata.documentCount} dokumenter` : ''}`);
+      }
+    } catch (error) {
+      console.error('Failed to generate description:', error);
+      toast.error('Kunne ikke generere beskrivelse');
+    } finally {
+      setIsGeneratingDescription(false);
+    }
+  };
+  
+  // Improve existing description with AI + RAG
+  const improveDescription = async () => {
+    if (!state.projectDescription.trim()) {
+      toast.error('Skriv inn en beskrivelse først');
+      return;
+    }
+    
+    setIsImprovingDescription(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-project-description', {
+        body: {
+          projectId: state.projectId,
+          companyId: state.companyId,
+          tenantId: tenantContext?.tenant_id,
+          existingDescription: state.projectDescription,
+          action: 'improve',
+        },
+      });
+      
+      if (error) throw error;
+      
+      if (data?.description) {
+        setState(prev => ({ ...prev, projectDescription: data.description }));
+        toast.success('Beskrivelse forbedret med AI');
+      }
+    } catch (error) {
+      console.error('Failed to improve description:', error);
+      toast.error('Kunne ikke forbedre beskrivelse');
+    } finally {
+      setIsImprovingDescription(false);
+    }
+  };
 
   // Filtered companies based on search
   const filteredCompanies = useMemo(() => {
@@ -1088,37 +1163,7 @@ function Step1Company({ state, setState, companies, externalSystems, implementat
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Project Details</CardTitle>
-          <CardDescription>
-            Basic information about the application you're creating
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="projectName">Project Name *</Label>
-            <Input
-              id="projectName"
-              value={state.projectName}
-              onChange={(e) => setState(prev => ({ ...prev, projectName: e.target.value }))}
-              placeholder="e.g., Acme Corp Dashboard"
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="projectDescription">Description</Label>
-            <Textarea
-              id="projectDescription"
-              value={state.projectDescription}
-              onChange={(e) => setState(prev => ({ ...prev, projectDescription: e.target.value }))}
-              placeholder="Brief description of the application..."
-              rows={3}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
+      {/* 1. Customer Company - First, for context */}
       <Card>
         <CardHeader>
           <CardTitle>Customer Company</CardTitle>
@@ -1396,13 +1441,103 @@ function Step1Company({ state, setState, companies, externalSystems, implementat
           </div>
         </CardContent>
       </Card>
+
+      {/* 4. Document Upload for RAG - Before project details for better AI context */}
+      <ProjectDocumentUpload
+        projectId={state.projectId}
+        tenantId={tenantContext?.tenant_id || ''}
+        companyId={state.companyId}
+      />
+
+      {/* 5. Project Details - Last, after all context is gathered */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Project Details</CardTitle>
+          <CardDescription>
+            Prosjektnavn og beskrivelse. AI kan generere forslag basert på valgt selskap, systemer og opplastede dokumenter.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="projectName">Project Name *</Label>
+            <Input
+              id="projectName"
+              value={state.projectName}
+              onChange={(e) => setState(prev => ({ ...prev, projectName: e.target.value }))}
+              placeholder="f.eks. Acme Corp Dashboard"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="projectDescription">Description</Label>
+              <div className="flex gap-2">
+                {state.companyId && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={generateDescription}
+                    disabled={isGeneratingDescription || isImprovingDescription}
+                    className="h-7 text-xs"
+                  >
+                    {isGeneratingDescription ? (
+                      <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                    ) : (
+                      <Globe className="h-3 w-3 mr-1" />
+                    )}
+                    Generer forslag
+                  </Button>
+                )}
+                {state.projectDescription.trim() && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={improveDescription}
+                    disabled={isGeneratingDescription || isImprovingDescription}
+                    className="h-7 text-xs"
+                  >
+                    {isImprovingDescription ? (
+                      <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                    ) : (
+                      <Sparkles className="h-3 w-3 mr-1" />
+                    )}
+                    Forbedre med AI
+                  </Button>
+                )}
+              </div>
+            </div>
+            <Textarea
+              id="projectDescription"
+              value={state.projectDescription}
+              onChange={(e) => setState(prev => ({ ...prev, projectDescription: e.target.value }))}
+              placeholder="Beskriv applikasjonen som skal bygges... Skriv direkte eller bruk AI-knappene for å generere/forbedre."
+              rows={6}
+            />
+            {state.companyId && !state.projectDescription && (
+              <p className="text-xs text-muted-foreground">
+                Tips: Trykk "Generer forslag" for å lage en beskrivelse basert på selskapets nettside, systemer og opplastede dokumenter.
+              </p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
 
 // ============================================================================
-// Step 2: Discovery Questions
+// Step 2: Discovery Questions (Enhanced with AI suggestions)
 // ============================================================================
+
+interface DiscoveryQuestion {
+  key: string;
+  question: string;
+  suggestedAnswer: string;
+  context: string;
+  category: string;
+}
 
 interface Step2Props {
   state: WizardState;
@@ -1411,10 +1546,12 @@ interface Step2Props {
 }
 
 function Step2Discovery({ state, setState, tenantId }: Step2Props) {
-  const [questions, setQuestions] = useState<Array<{ key: string; text: string; placeholder?: string }>>([]);
+  const [questions, setQuestions] = useState<DiscoveryQuestion[]>([]);
   const [isGenerating, setIsGenerating] = useState(true);
+  const [improvingQuestion, setImprovingQuestion] = useState<string | null>(null);
+  const [acceptedSuggestions, setAcceptedSuggestions] = useState<Set<string>>(new Set());
 
-  // Generate questions when entering step
+  // Generate questions when entering step - using all Step 1 context
   useEffect(() => {
     generateQuestions();
   }, []);
@@ -1422,33 +1559,40 @@ function Step2Discovery({ state, setState, tenantId }: Step2Props) {
   const generateQuestions = async () => {
     setIsGenerating(true);
     try {
-      const { data, error } = await supabase.functions.invoke('generate-company-questions', {
+      const { data, error } = await supabase.functions.invoke('generate-discovery-questions', {
         body: {
+          projectId: state.projectId,
           companyId: state.companyId,
-          systems: state.systems.map(s => s.name),
-          context: 'app_creation_discovery',
+          tenantId,
+          systems: state.systems,
+          projectDescription: state.projectDescription,
+          partners: state.partners,
         },
       });
 
       if (error) throw error;
 
-      if (data?.questions) {
-        setQuestions(data.questions.map((q: any, i: number) => ({
-          key: `q${i}`,
-          text: typeof q === 'string' ? q : q.question_text || q.text || 'Question',
-          placeholder: typeof q === 'object' ? q.placeholder : undefined,
-        })));
+      if (data?.questions && Array.isArray(data.questions)) {
+        setQuestions(data.questions);
+        
+        // Pre-fill questionnaire with suggested answers if not already answered
+        const newQuestionnaire = { ...state.questionnaire };
+        data.questions.forEach((q: DiscoveryQuestion) => {
+          if (!newQuestionnaire[q.key] && q.suggestedAnswer) {
+            // Don't auto-fill, but store suggestion for display
+          }
+        });
       }
     } catch (error) {
       console.error('Failed to generate questions:', error);
-      // Fallback questions
+      toast.error('Kunne ikke generere spørsmål');
+      // Fallback questions without suggestions
       setQuestions([
-        { key: 'pain_points', text: 'What are the biggest pain points in your current workflow?' },
-        { key: 'manual_tasks', text: 'What tasks are currently done manually that could be automated?' },
-        { key: 'data_sources', text: 'What are your main data sources and how are they connected?' },
-        { key: 'reporting_needs', text: 'What reports or dashboards do you need but don\'t have?' },
-        { key: 'integrations', text: 'Which systems need to share data with each other?' },
-        { key: 'success_metrics', text: 'How would you measure success of a new application?' },
+        { key: 'pain_points', question: 'Hva er de største utfordringene i dagens arbeidsflyt?', suggestedAnswer: '', context: 'Viktig for å forstå hvor applikasjonen kan gi mest verdi', category: 'pain_points' },
+        { key: 'manual_tasks', question: 'Hvilke oppgaver gjøres manuelt som kunne vært automatisert?', suggestedAnswer: '', context: 'Identifiserer potensial for effektivisering', category: 'processes' },
+        { key: 'integrations', question: 'Hvilke systemer må dele data med hverandre?', suggestedAnswer: '', context: 'Viktig for integrasjonsdesign', category: 'integrations' },
+        { key: 'goals', question: 'Hva er hovedmålene med den nye løsningen?', suggestedAnswer: '', context: 'Definerer suksesskriterier', category: 'goals' },
+        { key: 'users', question: 'Hvem er hovedbrukerne og hva er deres behov?', suggestedAnswer: '', context: 'Viktig for brukeropplevelse', category: 'users' },
       ]);
     } finally {
       setIsGenerating(false);
@@ -1462,53 +1606,209 @@ function Step2Discovery({ state, setState, tenantId }: Step2Props) {
     }));
   };
 
+  const acceptSuggestion = (key: string, suggestion: string) => {
+    updateAnswer(key, suggestion);
+    setAcceptedSuggestions(prev => new Set(prev).add(key));
+    toast.success('Forslag akseptert');
+  };
+
+  const improveAnswer = async (questionKey: string, questionText: string, category: string) => {
+    setImprovingQuestion(questionKey);
+    try {
+      const currentAnswer = state.questionnaire[questionKey] || '';
+      
+      const { data, error } = await supabase.functions.invoke('improve-discovery-answer', {
+        body: {
+          questionText,
+          currentAnswer,
+          projectId: state.projectId,
+          companyId: state.companyId,
+          tenantId,
+          category,
+          otherAnswers: state.questionnaire,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.improvedAnswer) {
+        updateAnswer(questionKey, data.improvedAnswer);
+        
+        // Show added perspectives as a toast
+        if (data.addedPerspectives?.length > 0) {
+          toast.success(`Forbedret med ${data.addedPerspectives.length} nye perspektiver`);
+        } else {
+          toast.success('Svar forbedret med AI');
+        }
+
+        // If there are follow-up questions, we could add them
+        if (data.followUpQuestions?.length > 0) {
+          console.log('Follow-up questions:', data.followUpQuestions);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to improve answer:', error);
+      toast.error('Kunne ikke forbedre svaret');
+    } finally {
+      setImprovingQuestion(null);
+    }
+  };
+
+  const getCategoryBadge = (category: string) => {
+    const colors: Record<string, string> = {
+      pain_points: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+      processes: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+      integrations: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
+      goals: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+      users: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
+    };
+    const labels: Record<string, string> = {
+      pain_points: 'Utfordringer',
+      processes: 'Prosesser',
+      integrations: 'Integrasjoner',
+      goals: 'Mål',
+      users: 'Brukere',
+    };
+    return (
+      <span className={cn('text-[10px] px-1.5 py-0.5 rounded-full font-medium', colors[category] || 'bg-gray-100 text-gray-800')}>
+        {labels[category] || category}
+      </span>
+    );
+  };
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Sparkles className="h-5 w-5 text-primary" />
-          Discovery Questions
+          Discovery-spørsmål
         </CardTitle>
         <CardDescription>
-          These AI-generated questions help us understand your customer's needs and pain points.
-          The answers will be used to prepare the workshop and generate the application.
+          AI-genererte spørsmål basert på bedriften, systemene og opplastet dokumentasjon.
+          Foreslåtte svar er basert på tilgjengelig kontekst - rediger eller godta som de er.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {isGenerating ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            <span className="ml-2 text-muted-foreground">Generating questions based on company context...</span>
+          <div className="flex flex-col items-center justify-center py-12">
+            <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
+            <span className="text-muted-foreground">Genererer spørsmål basert på all kontekst fra steg 1...</span>
+            <span className="text-xs text-muted-foreground mt-2">
+              Inkluderer: selskap, systemer, partnere, beskrivelse og dokumenter
+            </span>
           </div>
         ) : (
           <>
-            <Button 
-              variant="outline" 
-              onClick={generateQuestions}
-              className="mb-4"
-            >
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Regenerate Questions
-            </Button>
+            <div className="flex items-center justify-between">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={generateQuestions}
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Generer nye spørsmål
+              </Button>
+              <span className="text-xs text-muted-foreground">
+                {questions.length} spørsmål generert
+              </span>
+            </div>
 
-            <div className="space-y-6">
-              {questions.map((q, i) => (
-                <div key={q.key || `question-${i}`} className="space-y-2">
-                  <div className="flex items-start gap-2 text-sm font-medium">
-                    <span className="bg-primary/10 text-primary rounded-full w-6 h-6 flex items-center justify-center text-sm shrink-0">
-                      {i + 1}
-                    </span>
-                    <span>{q.text || 'Question not available'}</span>
+            <div className="space-y-8">
+              {questions.map((q, i) => {
+                const currentAnswer = state.questionnaire[q.key] || '';
+                const hasSuggestion = q.suggestedAnswer && q.suggestedAnswer.trim().length > 0;
+                const isAccepted = acceptedSuggestions.has(q.key);
+                const isImproving = improvingQuestion === q.key;
+
+                return (
+                  <div key={q.key} className="border rounded-lg p-4 space-y-3">
+                    {/* Question header */}
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-3">
+                        <span className="bg-primary text-primary-foreground rounded-full w-7 h-7 flex items-center justify-center text-sm font-medium shrink-0">
+                          {i + 1}
+                        </span>
+                        <div className="space-y-1">
+                          <p className="font-medium">{q.question}</p>
+                          {q.context && (
+                            <p className="text-xs text-muted-foreground">{q.context}</p>
+                          )}
+                        </div>
+                      </div>
+                      {getCategoryBadge(q.category)}
+                    </div>
+
+                    {/* Suggested answer (if available and not yet accepted/edited) */}
+                    {hasSuggestion && !currentAnswer && !isAccepted && (
+                      <div className="ml-10 p-3 bg-muted/50 rounded-lg border border-dashed">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1">
+                            <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1">
+                              <Sparkles className="h-3 w-3" />
+                              AI-forslag basert på kontekst:
+                            </p>
+                            <p className="text-sm text-muted-foreground italic">
+                              {q.suggestedAnswer}
+                            </p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => acceptSuggestion(q.key, q.suggestedAnswer)}
+                            className="shrink-0"
+                          >
+                            <Check className="h-3 w-3 mr-1" />
+                            Bruk
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Answer textarea */}
+                    <div className="ml-10 space-y-2">
+                      <Textarea
+                        value={currentAnswer}
+                        onChange={(e) => updateAnswer(q.key, e.target.value)}
+                        placeholder={hasSuggestion ? "Skriv eget svar eller bruk forslaget over..." : "Skriv ditt svar her..."}
+                        rows={4}
+                        className="resize-none"
+                      />
+                      
+                      {/* Action buttons */}
+                      <div className="flex items-center justify-between">
+                        <div className="text-xs text-muted-foreground">
+                          {currentAnswer.length > 0 && `${currentAnswer.length} tegn`}
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => improveAnswer(q.key, q.question, q.category)}
+                          disabled={isImproving || !currentAnswer.trim()}
+                          className="h-7"
+                        >
+                          {isImproving ? (
+                            <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                          ) : (
+                            <Sparkles className="h-3 w-3 mr-1" />
+                          )}
+                          Forbedre med AI
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                  <Textarea
-                    value={state.questionnaire[q.key] || ''}
-                    onChange={(e) => updateAnswer(q.key, e.target.value)}
-                    placeholder={q.placeholder || "Enter your answer..."}
-                    rows={3}
-                    className="ml-8"
-                  />
-                </div>
-              ))}
+                );
+              })}
+            </div>
+
+            {/* Summary */}
+            <div className="pt-4 border-t">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">
+                  {Object.values(state.questionnaire).filter(v => v && v.trim()).length} av {questions.length} spørsmål besvart
+                </span>
+              </div>
             </div>
           </>
         )}
@@ -1530,6 +1830,7 @@ interface Step3Props {
 function Step3Workshop({ state, setState, tenantId }: Step3Props) {
   const [isPreparingBoard, setIsPreparingBoard] = useState(false);
   const [isProcessingResults, setIsProcessingResults] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState<string>('');
 
   const prepareWorkshopBoard = async () => {
     if (!state.projectId) {
@@ -1539,6 +1840,28 @@ function Step3Workshop({ state, setState, tenantId }: Step3Props) {
 
     setIsPreparingBoard(true);
     try {
+      // Step 1: Generate AI workshop elements based on project context
+      setGenerationProgress('Genererer workshop-elementer med AI...');
+      
+      const { data: aiElements, error: aiError } = await supabase.functions.invoke('generate-workshop-elements', {
+        body: {
+          projectId: state.projectId,
+          tenantId,
+          elementType: 'all',
+        },
+      });
+
+      if (aiError) {
+        console.error('AI generation error:', aiError);
+        // Continue without AI elements - board will still be created
+        toast.warning('AI-generering feilet. Oppretter tom tavle.');
+      } else {
+        console.log('[Workshop] AI generated elements:', aiElements?.elements?.length || 0);
+      }
+
+      // Step 2: Create Miro board with AI-generated elements
+      setGenerationProgress('Oppretter Miro-tavle...');
+      
       const { data, error } = await supabase.functions.invoke('trigger-n8n-workflow', {
         body: {
           workflowKey: 'prepare-miro-workshop',
@@ -1548,6 +1871,9 @@ function Step3Workshop({ state, setState, tenantId }: Step3Props) {
             company_id: state.companyId,
             systems: state.systems,
             questionnaire: state.questionnaire,
+            // Pass AI-generated elements to n8n
+            ai_elements: aiElements?.elements || [],
+            ai_summary: aiElements?.summary || '',
           },
           tenantId,
         },
@@ -1572,13 +1898,15 @@ function Step3Workshop({ state, setState, tenantId }: Step3Props) {
           } as any)
           .eq('id', state.projectId);
 
-        toast.success('Workshop board created!');
+        const elementCount = aiElements?.elements?.length || 0;
+        toast.success(`Workshop board opprettet med ${elementCount} AI-genererte elementer!`);
       }
     } catch (error: any) {
       console.error('Failed to create board:', error);
       toast.error('Failed to create workshop board. Make sure n8n workflow is configured.');
     } finally {
       setIsPreparingBoard(false);
+      setGenerationProgress('');
     }
   };
 
@@ -1691,27 +2019,36 @@ function Step3Workshop({ state, setState, tenantId }: Step3Props) {
                 1. Prepare Miro Board
               </h3>
               <p className="text-sm text-muted-foreground mt-1">
-                Creates a workshop board pre-populated with company info and discovery insights
+                AI genererer workshop-elementer basert på prosjektbeskrivelse, discovery-svar og opplastede dokumenter.
+                Elementene plasseres automatisk på en Miro-tavle.
               </p>
             </div>
             
             <div className="flex gap-2">
               {state.workshopStatus === 'not_started' && (
-                <>
-                  <Button 
-                    onClick={prepareWorkshopBoard}
-                    disabled={isPreparingBoard}
-                  >
-                    {isPreparingBoard && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Create Board
-                  </Button>
-                  <Button 
-                    variant="outline"
-                    onClick={() => markWorkshopStatus('complete')}
-                  >
-                    Skip (Manual Workshop)
-                  </Button>
-                </>
+                <div className="flex flex-col items-end gap-2">
+                  <div className="flex gap-2">
+                    <Button 
+                      onClick={prepareWorkshopBoard}
+                      disabled={isPreparingBoard}
+                    >
+                      {isPreparingBoard && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      Generer med AI
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      onClick={() => markWorkshopStatus('complete')}
+                    >
+                      Skip (Manual Workshop)
+                    </Button>
+                  </div>
+                  {generationProgress && (
+                    <span className="text-sm text-muted-foreground animate-pulse">
+                      {generationProgress}
+                    </span>
+                  )}
+                </div>
               )}
               
               {state.miroUrl && (

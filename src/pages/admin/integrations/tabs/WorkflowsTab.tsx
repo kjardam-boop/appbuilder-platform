@@ -143,10 +143,12 @@ export default function WorkflowsTab() {
     queryKey: ['integration-definitions', 'workflow'],
     queryFn: async () => {
       // First try with type filter (new schema)
+      // Only show active workflows (is_active = true)
       const { data, error } = await supabase
         .from('integration_definitions')
         .select('*')
         .eq('type', 'workflow')
+        .eq('is_active', true)
         .order('name');
       
       // If error (likely column doesn't exist), try without filter

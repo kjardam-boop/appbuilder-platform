@@ -30,7 +30,19 @@ import {
   Bot,
   Copy,
   Check,
+  FileJson,
+  Save,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { N8nSyncService } from "@/modules/core/integrations/services/n8nSyncService";
 import { WorkflowJsonViewer } from "@/components/admin/n8n/WorkflowJsonViewer";
 import type { IntegrationDefinition } from "@/modules/core/integrations/types/integrationRegistry.types";
@@ -109,6 +121,8 @@ export default function WorkflowDetailPage() {
   const tenantId = tenantContext?.tenant_id;
   const queryClient = useQueryClient();
   const [copied, setCopied] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importJson, setImportJson] = useState("");
 
   // Fetch workflow
   const { data: workflow, isLoading, error } = useQuery({
@@ -224,6 +238,91 @@ export default function WorkflowDetailPage() {
       toast.error('Kunne ikke oppdatere MCP', { description: (error as Error).message });
     },
   });
+
+  // Update n8n workflow mutation (for existing workflows)
+  const updateN8nMutation = useMutation({
+    mutationFn: async (workflowJson: any) => {
+      if (!tenantId || !workflow?.n8n_workflow_id) throw new Error('Missing workflow ID');
+      
+      // Call edge function to update workflow in n8n
+      const { data, error } = await supabase.functions.invoke('n8n-sync', {
+        body: {
+          action: 'update',
+          tenantId,
+          workflowId: workflow.n8n_workflow_id,
+          workflow: {
+            ...workflowJson,
+            name: workflow.name,
+          },
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      // Also update local database with new JSON
+      const { error: dbError } = await supabase
+        .from('integration_definitions')
+        .update({
+          workflow_json: workflowJson,
+          sync_status: 'synced',
+          last_synced_at: new Date().toISOString(),
+        })
+        .eq('id', workflowId);
+
+      if (dbError) throw dbError;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workflow-detail', workflowId] });
+      queryClient.invalidateQueries({ queryKey: ['integration-definitions', 'workflow'] });
+      setImportDialogOpen(false);
+      setImportJson("");
+      toast.success('Workflow oppdatert i n8n');
+    },
+    onError: (error) => {
+      toast.error('Oppdatering feilet', { description: (error as Error).message });
+    },
+  });
+
+  // Save JSON locally mutation (without pushing to n8n)
+  const saveJsonLocallyMutation = useMutation({
+    mutationFn: async (workflowJson: any) => {
+      const { error } = await supabase
+        .from('integration_definitions')
+        .update({
+          workflow_json: workflowJson,
+          sync_status: 'draft',
+        })
+        .eq('id', workflowId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workflow-detail', workflowId] });
+      setImportDialogOpen(false);
+      setImportJson("");
+      toast.success('Workflow JSON lagret lokalt');
+    },
+    onError: (error) => {
+      toast.error('Lagring feilet', { description: (error as Error).message });
+    },
+  });
+
+  const handleImportJson = () => {
+    try {
+      const parsed = JSON.parse(importJson);
+      if (workflow?.n8n_workflow_id) {
+        // Update existing n8n workflow
+        updateN8nMutation.mutate(parsed);
+      } else {
+        // Save locally first, then push
+        saveJsonLocallyMutation.mutate(parsed);
+      }
+    } catch (e) {
+      toast.error('Ugyldig JSON format');
+    }
+  };
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -447,9 +546,100 @@ export default function WorkflowDetailPage() {
                         Åpne i n8n Editor
                       </a>
                     </Button>
+
+                    <Separator />
+
+                    {/* Import/Update JSON */}
+                    <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" className="w-full">
+                          <FileJson className="h-4 w-4 mr-2" />
+                          Importer & oppdater JSON
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+                        <DialogHeader>
+                          <DialogTitle>Importer Workflow JSON</DialogTitle>
+                          <DialogDescription>
+                            Lim inn n8n workflow JSON for å oppdatere workflowen i n8n
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="flex-1 min-h-0 py-4">
+                          <Textarea
+                            placeholder='Lim inn n8n workflow JSON her...'
+                            value={importJson}
+                            onChange={(e) => setImportJson(e.target.value)}
+                            className="font-mono text-xs h-[400px] resize-none"
+                            autoResize={false}
+                          />
+                          <p className="text-xs text-muted-foreground mt-2">
+                            Tips: I n8n kan du kopiere workflow JSON via menyen (⋮) → Download
+                          </p>
+                        </div>
+                        <DialogFooter>
+                          <Button variant="outline" onClick={() => setImportDialogOpen(false)}>
+                            Avbryt
+                          </Button>
+                          <Button
+                            onClick={handleImportJson}
+                            disabled={!importJson || updateN8nMutation.isPending}
+                          >
+                            {updateN8nMutation.isPending ? (
+                              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <Upload className="h-4 w-4 mr-2" />
+                            )}
+                            Oppdater i n8n
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
                   </>
                 ) : (
                   <>
+                    {/* Import JSON first */}
+                    <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" className="w-full">
+                          <FileJson className="h-4 w-4 mr-2" />
+                          Importer workflow JSON
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+                        <DialogHeader>
+                          <DialogTitle>Importer Workflow JSON</DialogTitle>
+                          <DialogDescription>
+                            Lim inn n8n workflow JSON - du kan deretter pushe til n8n
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="flex-1 min-h-0 py-4">
+                          <Textarea
+                            placeholder='Lim inn n8n workflow JSON her...'
+                            value={importJson}
+                            onChange={(e) => setImportJson(e.target.value)}
+                            className="font-mono text-xs h-[400px] resize-none"
+                            autoResize={false}
+                          />
+                        </div>
+                        <DialogFooter>
+                          <Button variant="outline" onClick={() => setImportDialogOpen(false)}>
+                            Avbryt
+                          </Button>
+                          <Button
+                            onClick={handleImportJson}
+                            disabled={!importJson || saveJsonLocallyMutation.isPending}
+                          >
+                            {saveJsonLocallyMutation.isPending ? (
+                              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <Save className="h-4 w-4 mr-2" />
+                            )}
+                            Lagre JSON
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+
                     {/* Push to n8n (with or without JSON) */}
                     <Button 
                       className="w-full"

@@ -17,6 +17,7 @@ export { useAIMcpChat } from './hooks/useAIMcpChat';
 // Components
 export { AIChatInterface } from './components/AIChatInterface';
 export { AIGenerationButton } from './components/AIGenerationButton';
+export { AIImproveButton } from './components/AIImproveButton';
 export { AIMcpChatInterface } from '@/components/AI/AIMcpChatInterface';
 
 // Types
