@@ -179,6 +179,33 @@ export { ContextTaskButton } from "./components/ContextTaskButton";
 - `task.completed` - Oppdater prosjekt-status
 - `task.assigned` - Send varsel
 
+### 7. Wizard Module
+
+```typescript
+// modules/wizard/index.ts
+export { WizardService } from "./services/WizardService";
+export { useProject, useCustomerCompanies, useExternalSystems } from "./hooks/useWizardData";
+export { Step1Company, Step2Discovery, Step3Workshop } from "./components";
+export { StepErrorBoundary, WizardStepIndicator } from "./components";
+```
+
+**Services**:
+- `WizardService.loadFullProject(projectId)` - Laster prosjekt med alle relasjoner
+- `WizardService.saveQuestionnaireAnswer(projectId, key, text, answer)`
+- `WizardService.triggerMiroBoardCreation(projectId, ...)`
+
+**Hooks**:
+- `useProject(projectId)` - React Query for prosjektdata
+- `useQuestionnaireMutation()` - Auto-save av svar
+- `useCustomerCompanies(tenantId)` - Hent kundeselskaper
+
+**Komponenter**:
+- `WizardStepIndicator` - Progress-visning
+- `StepErrorBoundary` - Feilhåndtering per steg
+- `Step1Company` - `Step6Deploy`
+
+Se [docs/modules/wizard.md](modules/wizard.md) for komplett dokumentasjon.
+
 ## Addon Modules
 
 Valgfrie moduler som kan aktiveres per tenant.

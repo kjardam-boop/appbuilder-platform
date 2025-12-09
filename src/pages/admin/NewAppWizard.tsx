@@ -3,22 +3,34 @@
  * 
  * 6-step wizard for creating new customer applications.
  * Uses React Query for data management and modular step components.
+ * All steps use the BaseStepProps pattern for consistent state management.
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { useTenantContext } from '@/hooks/useTenantContext';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { ArrowLeft, ArrowRight, Save, Loader2, Check } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { 
+  ArrowLeft, 
+  ArrowRight, 
+  Save, 
+  Loader2, 
+  Check,
+  Building2,
+  MessageSquare,
+  Users,
+  Puzzle,
+  Wand2,
+  Rocket,
+} from 'lucide-react';
 import { PageHeader } from '@/components/shared';
 
 // Import from wizard module
 import {
   WizardStepIndicator,
+  StepErrorBoundary,
   Step1Company,
   Step2Discovery,
   Step3Workshop,
@@ -34,19 +46,18 @@ import {
   useProjectSystemsMutation,
   usePartnersMutation,
   wizardKeys,
-  WizardService,
   type WizardState,
-  type WorkshopStatus,
+  type WizardStep,
 } from '@/modules/wizard';
 
-// Step definitions
-const WIZARD_STEPS = [
-  { key: 'company', label: 'Selskap', description: 'Velg kunde og systemer' },
-  { key: 'discovery', label: 'Discovery', description: 'Kartlegg behov' },
-  { key: 'workshop', label: 'Workshop', description: 'Gjennomfør workshop' },
-  { key: 'capabilities', label: 'Capabilities', description: 'Velg funksjoner' },
-  { key: 'generate', label: 'Generer', description: 'Lag appkonfig' },
-  { key: 'deploy', label: 'Deploy', description: 'Publiser app' },
+// Step definitions with icons
+const WIZARD_STEPS: WizardStep[] = [
+  { key: 'company', label: 'Selskap', icon: Building2, description: 'Velg kunde og systemer' },
+  { key: 'discovery', label: 'Discovery', icon: MessageSquare, description: 'Kartlegg behov' },
+  { key: 'workshop', label: 'Workshop', icon: Users, description: 'Gjennomfør workshop' },
+  { key: 'capabilities', label: 'Capabilities', icon: Puzzle, description: 'Velg funksjoner' },
+  { key: 'generate', label: 'Generer', icon: Wand2, description: 'Lag appkonfig' },
+  { key: 'deploy', label: 'Deploy', icon: Rocket, description: 'Publiser app' },
 ];
 
 // Default state for new projects
@@ -111,16 +122,16 @@ export default function NewAppWizard() {
     if (localState.projectId && !projectIdFromUrl) {
       setSearchParams({ project: localState.projectId });
     }
-  }, [localState.projectId]);
+  }, [localState.projectId, projectIdFromUrl, setSearchParams]);
   
   // Update highest step reached
   useEffect(() => {
     if (currentStep > highestStepReached) {
       setHighestStepReached(currentStep);
     }
-  }, [currentStep]);
+  }, [currentStep, highestStepReached]);
   
-  // State update handler for child components
+  // State update handler for child components (single source of truth pattern)
   const handleStateChange = useCallback((updates: Partial<WizardState>) => {
     setLocalState(prev => ({ ...prev, ...updates }));
   }, []);
@@ -186,15 +197,14 @@ export default function NewAppWizard() {
   };
   
   // Navigation handlers
-  const goToStep = (step: number) => {
-    // Can go to any step up to highest reached
+  const goToStep = useCallback((step: number) => {
     if (step >= 1 && step <= WIZARD_STEPS.length && step <= highestStepReached) {
       setCurrentStep(step);
     }
-  };
+  }, [highestStepReached]);
   
   const nextStep = async () => {
-    // Save before moving forward
+    // Save before moving forward from step 1
     if (currentStep === 1) {
       const savedId = await saveProject();
       if (!savedId) return;
@@ -228,6 +238,13 @@ export default function NewAppWizard() {
   
   const tenantId = tenantContext?.tenant_id || '';
   
+  // Common props for all step components
+  const stepProps = {
+    state: localState,
+    onStateChange: handleStateChange,
+    tenantId,
+  };
+  
   return (
     <div className="space-y-6">
       <PageHeader
@@ -237,122 +254,69 @@ export default function NewAppWizard() {
         backPath="/admin/customer-apps"
       />
       
-      {/* Progress bar */}
-      <div className="flex items-center justify-between mb-8">
-        {WIZARD_STEPS.map((step, index) => {
-          const stepNum = index + 1;
-          const isActive = stepNum === currentStep;
-          const isCompleted = stepNum < currentStep;
-          const isReachable = stepNum <= highestStepReached;
-          
-          return (
-            <div key={step.key} className="flex items-center flex-1">
-              <button
-                onClick={() => goToStep(stepNum)}
-                disabled={!isReachable}
-                className={cn(
-                  "flex items-center gap-2 transition-colors",
-                  isReachable && !isActive && "cursor-pointer hover:opacity-80",
-                  !isReachable && "cursor-not-allowed opacity-50"
-                )}
-              >
-                <div
-                  className={cn(
-                    "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors",
-                    isActive && "bg-primary text-primary-foreground",
-                    isCompleted && "bg-green-500 text-white",
-                    !isActive && !isCompleted && isReachable && "bg-muted text-muted-foreground",
-                    !isReachable && "bg-muted/50 text-muted-foreground/50"
-                  )}
-                >
-                  {isCompleted ? <Check className="h-4 w-4" /> : stepNum}
-                </div>
-                <div className="hidden md:block">
-                  <p className={cn(
-                    "text-sm font-medium",
-                    isActive && "text-primary",
-                    !isActive && "text-muted-foreground"
-                  )}>
-                    {step.label}
-                  </p>
-                </div>
-              </button>
-              
-              {index < WIZARD_STEPS.length - 1 && (
-                <div className={cn(
-                  "h-0.5 flex-1 mx-2",
-                  index < currentStep - 1 ? "bg-green-500" : "bg-muted"
-                )} />
-              )}
-            </div>
-          );
-        })}
-      </div>
+      {/* Progress indicator using WizardStepIndicator */}
+      <WizardStepIndicator
+        steps={WIZARD_STEPS}
+        currentStep={currentStep}
+        highestStepReached={highestStepReached}
+        onStepClick={goToStep}
+      />
       
-      {/* Step content */}
+      {/* Step content with error boundaries */}
       <div className="min-h-[500px]">
         {currentStep === 1 && (
-          <div className="space-y-6">
-            <Step1Company
-              state={localState}
-              onStateChange={handleStateChange}
-              companies={companies}
-              externalSystems={externalSystems}
-              partners={partners}
-              isLoading={isLoading}
-            />
-            
-            {/* Document upload - only show if project exists */}
-            {localState.projectId && (
-              <ProjectDocumentUpload
-                projectId={localState.projectId}
+          <StepErrorBoundary stepName="Selskap">
+            <div className="space-y-6">
+              <Step1Company
+                state={localState}
+                onStateChange={handleStateChange}
+                companies={companies}
+                externalSystems={externalSystems}
+                partners={partners}
+                isLoading={isLoading}
                 tenantId={tenantId}
-                companyId={localState.companyId}
               />
-            )}
-          </div>
+              
+              {/* Document upload - only show if project exists */}
+              {localState.projectId && (
+                <ProjectDocumentUpload
+                  projectId={localState.projectId}
+                  tenantId={tenantId}
+                  companyId={localState.companyId}
+                />
+              )}
+            </div>
+          </StepErrorBoundary>
         )}
         
         {currentStep === 2 && localState.projectId && (
-          <Step2Discovery
-            project={localState}
-            onAnswerChange={(key, value) => {
-              handleStateChange({
-                questionnaire: { ...localState.questionnaire, [key]: value },
-              });
-            }}
-            tenantId={tenantId}
-          />
+          <StepErrorBoundary stepName="Discovery">
+            <Step2Discovery {...stepProps} />
+          </StepErrorBoundary>
         )}
         
         {currentStep === 3 && localState.projectId && (
-          <Step3Workshop
-            project={localState}
-            onStatusChange={(status: WorkshopStatus) => handleStateChange({ workshopStatus: status })}
-            onMiroUrlChange={(url) => handleStateChange({ miroUrl: url })}
-            onNotionUrlChange={(url) => handleStateChange({ notionUrl: url })}
-            tenantId={tenantId}
-          />
+          <StepErrorBoundary stepName="Workshop">
+            <Step3Workshop {...stepProps} />
+          </StepErrorBoundary>
         )}
         
         {currentStep === 4 && localState.projectId && (
-          <Step4Capabilities
-            state={localState}
-            onStateChange={handleStateChange}
-            tenantId={tenantId}
-          />
+          <StepErrorBoundary stepName="Capabilities">
+            <Step4Capabilities {...stepProps} />
+          </StepErrorBoundary>
         )}
         
         {currentStep === 5 && localState.projectId && (
-          <Step5Generate
-            project={localState}
-            onConfigGenerated={(config) => handleStateChange({ generatedConfig: config })}
-            tenantId={tenantId}
-          />
+          <StepErrorBoundary stepName="Generate">
+            <Step5Generate {...stepProps} />
+          </StepErrorBoundary>
         )}
         
         {currentStep === 6 && localState.projectId && (
-          <Step6Deploy project={localState} />
+          <StepErrorBoundary stepName="Deploy">
+            <Step6Deploy state={localState} onStateChange={handleStateChange} />
+          </StepErrorBoundary>
         )}
       </div>
       

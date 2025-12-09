@@ -2,20 +2,22 @@
  * Step 1: Company & Systems Selection
  * 
  * First step of the App Creation Wizard.
- * Select customer company, identify current systems, and add partners.
+ * Select customer company, identify current systems, add partners,
+ * and describe the project with AI assistance.
  */
 
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { X } from 'lucide-react';
-import { 
-  EmptyState, 
-  LoadingState 
-} from '@/components/shared';
+import { X, Sparkles, Globe, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { LoadingState } from '@/components/shared';
 import type { 
   WizardState, 
   CustomerCompanyOption, 
@@ -30,6 +32,7 @@ interface Step1Props {
   externalSystems: ExternalSystemOption[];
   partners: PartnerOption[];
   isLoading?: boolean;
+  tenantId?: string;
 }
 
 export function Step1Company({
@@ -39,7 +42,12 @@ export function Step1Company({
   externalSystems,
   partners,
   isLoading,
+  tenantId,
 }: Step1Props) {
+  // AI generation state
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isImproving, setIsImproving] = useState(false);
+
   // Add system to selection
   const addSystem = (systemId: string) => {
     const system = externalSystems.find(s => s.id === systemId);
@@ -78,23 +86,88 @@ export function Step1Company({
     });
   };
 
+  // Generate project description using AI
+  const generateDescription = async () => {
+    if (!state.companyId) {
+      toast.error('Velg et selskap først');
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-project-description', {
+        body: {
+          projectId: state.projectId,
+          companyId: state.companyId,
+          tenantId,
+          action: 'generate',
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.description) {
+        onStateChange({ projectDescription: data.description });
+        toast.success('Beskrivelse generert basert på selskapsinformasjon');
+      }
+    } catch (error) {
+      console.error('Failed to generate description:', error);
+      toast.error('Kunne ikke generere beskrivelse');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // Improve existing description using AI
+  const improveDescription = async () => {
+    if (!state.projectDescription?.trim()) {
+      toast.error('Skriv en beskrivelse først');
+      return;
+    }
+
+    setIsImproving(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-project-description', {
+        body: {
+          projectId: state.projectId,
+          companyId: state.companyId,
+          tenantId,
+          action: 'improve',
+          existingText: state.projectDescription,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.description) {
+        onStateChange({ projectDescription: data.description });
+        toast.success('Beskrivelse forbedret med AI');
+      }
+    } catch (error) {
+      console.error('Failed to improve description:', error);
+      toast.error('Kunne ikke forbedre beskrivelse');
+    } finally {
+      setIsImproving(false);
+    }
+  };
+
   if (isLoading) {
     return <LoadingState message="Laster data..." />;
   }
 
   return (
     <div className="space-y-6">
-      {/* Project Details */}
+      {/* 1. Project Name (øverst) */}
       <Card>
         <CardHeader>
-          <CardTitle>Prosjektdetaljer</CardTitle>
+          <CardTitle>Prosjektnavn</CardTitle>
           <CardDescription>
-            Grunnleggende informasjon om applikasjonen du bygger
+            Gi prosjektet et beskrivende navn
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent>
           <div className="space-y-2">
-            <Label htmlFor="projectName">Prosjektnavn *</Label>
+            <Label htmlFor="projectName">Navn *</Label>
             <Input
               id="projectName"
               value={state.projectName}
@@ -102,21 +175,10 @@ export function Step1Company({
               placeholder="f.eks. Acme Corp Dashboard"
             />
           </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="projectDescription">Beskrivelse</Label>
-            <Textarea
-              id="projectDescription"
-              value={state.projectDescription}
-              onChange={(e) => onStateChange({ projectDescription: e.target.value })}
-              placeholder="Kort beskrivelse av applikasjonen..."
-              rows={3}
-            />
-          </div>
         </CardContent>
       </Card>
 
-      {/* Customer Company */}
+      {/* 2. Customer Company */}
       <Card>
         <CardHeader>
           <CardTitle>Kundeselskap</CardTitle>
@@ -158,7 +220,7 @@ export function Step1Company({
         </CardContent>
       </Card>
 
-      {/* Current Systems */}
+      {/* 3. Current Systems */}
       <Card>
         <CardHeader>
           <CardTitle>Eksisterende systemer</CardTitle>
@@ -218,7 +280,7 @@ export function Step1Company({
         </CardContent>
       </Card>
 
-      {/* Implementation Partners */}
+      {/* 4. Implementation Partners */}
       <Card>
         <CardHeader>
           <CardTitle>Implementeringspartnere</CardTitle>
@@ -278,7 +340,75 @@ export function Step1Company({
           </div>
         </CardContent>
       </Card>
+
+      {/* 5. Project Description with AI (før dokumenter) */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-primary" />
+            Prosjektbeskrivelse
+          </CardTitle>
+          <CardDescription>
+            Beskriv applikasjonen og dens formål. Bruk AI for å generere eller forbedre beskrivelsen 
+            basert på valgt selskap og systemer.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* AI Action Buttons */}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={generateDescription}
+              disabled={isGenerating || isImproving || !state.companyId}
+            >
+              {isGenerating ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Globe className="mr-2 h-4 w-4" />
+              )}
+              Generer forslag
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={improveDescription}
+              disabled={isImproving || isGenerating || !state.projectDescription?.trim()}
+            >
+              {isImproving ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Sparkles className="mr-2 h-4 w-4" />
+              )}
+              Forbedre med AI
+            </Button>
+          </div>
+
+          {!state.companyId && (
+            <p className="text-xs text-muted-foreground">
+              Velg et selskap først for å kunne generere beskrivelse automatisk.
+            </p>
+          )}
+
+          {/* Description Textarea */}
+          <div className="space-y-2">
+            <Label htmlFor="projectDescription">Beskrivelse</Label>
+            <Textarea
+              id="projectDescription"
+              value={state.projectDescription}
+              onChange={(e) => onStateChange({ projectDescription: e.target.value })}
+              placeholder="Beskriv applikasjonen, dens formål, målgruppe og hovedfunksjoner..."
+              autoResize
+              maxHeight={400}
+            />
+            <p className="text-xs text-muted-foreground">
+              {state.projectDescription?.length || 0} tegn
+            </p>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
-

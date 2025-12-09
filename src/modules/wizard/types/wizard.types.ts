@@ -82,12 +82,29 @@ export interface WizardState {
   selectedCapabilities: SelectedCapability[];
 }
 
-// Step definition
+// Step definition (for progress indicator)
 export interface WizardStepDefinition {
   key: string;
   label: string;
   icon: LucideIcon;
   description?: string;
+}
+
+// =============================================================================
+// COMMON STEP COMPONENT PROPS
+// =============================================================================
+
+/**
+ * Common props interface for all wizard step components.
+ * Uses a consistent pattern: state + onStateChange + tenantId
+ */
+export interface BaseStepProps {
+  /** Current wizard state (read-only, use onStateChange to update) */
+  state: WizardState;
+  /** Callback to update wizard state */
+  onStateChange: (updates: Partial<WizardState>) => void;
+  /** Current tenant ID */
+  tenantId: string;
 }
 
 // =============================================================================

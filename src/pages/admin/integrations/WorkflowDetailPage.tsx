@@ -166,8 +166,9 @@ export default function WorkflowDetailPage() {
       if (!tenantId || !workflow) throw new Error('Missing data');
       
       // Create workflow payload - either from existing JSON or create empty
+      // Sanitize to remove extra properties that n8n API doesn't accept
       const workflowPayload = workflow.workflow_json 
-        ? { name: workflow.name, ...workflow.workflow_json }
+        ? { name: workflow.name, ...sanitizeWorkflowForN8n(workflow.workflow_json) }
         : {
             name: workflow.name,
             nodes: [
@@ -241,10 +242,32 @@ export default function WorkflowDetailPage() {
     },
   });
 
+  // Sanitize workflow JSON for n8n API (remove extra properties)
+  const sanitizeWorkflowForN8n = (workflowJson: any) => {
+    // n8n only accepts specific properties - strip out our documentation fields
+    const { 
+      version, 
+      changelog, 
+      triggerCount,
+      meta,
+      tags,
+      ...cleanWorkflow 
+    } = workflowJson;
+    
+    return {
+      ...cleanWorkflow,
+      // Only include settings if present
+      settings: workflowJson.settings || { executionOrder: 'v1' },
+    };
+  };
+
   // Update n8n workflow mutation (for existing workflows)
   const updateN8nMutation = useMutation({
     mutationFn: async (workflowJson: any) => {
       if (!tenantId || !workflow?.n8n_workflow_id) throw new Error('Missing workflow ID');
+      
+      // Sanitize workflow JSON for n8n API
+      const sanitizedWorkflow = sanitizeWorkflowForN8n(workflowJson);
       
       // Call edge function to update workflow in n8n
       const { data, error } = await supabase.functions.invoke('n8n-sync', {
@@ -253,7 +276,7 @@ export default function WorkflowDetailPage() {
           tenantId,
           workflowId: workflow.n8n_workflow_id,
           workflow: {
-            ...workflowJson,
+            ...sanitizedWorkflow,
             name: workflow.name,
           },
         },

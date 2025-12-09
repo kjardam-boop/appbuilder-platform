@@ -2,10 +2,10 @@
  * Step 2: Discovery Questions
  * 
  * AI-generated questions based on project context from Step 1.
- * Includes suggested answers, AI improvement, and auto-save.
+ * Uses state from parent (single source of truth) via BaseStepProps pattern.
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -15,17 +15,10 @@ import { Sparkles, Loader2, Plus, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { WizardService } from '../services/WizardService';
 import { useQuestionnaireMutation } from '../hooks/useWizardData';
-import type { WizardState, DiscoveryQuestion } from '../types/wizard.types';
+import type { BaseStepProps, DiscoveryQuestion } from '../types/wizard.types';
 
-interface Step2DiscoveryProps {
-  project: WizardState;
-  onAnswerChange: (key: string, value: string) => void;
-  tenantId: string;
-}
-
-export function Step2Discovery({ project, onAnswerChange, tenantId }: Step2DiscoveryProps) {
-  const [questions, setQuestions] = useState<DiscoveryQuestion[]>(project.questions || []);
-  const [localAnswers, setLocalAnswers] = useState<Record<string, string>>(project.questionnaire || {});
+export function Step2Discovery({ state, onStateChange, tenantId }: BaseStepProps) {
+  // Local UI state only (not data state)
   const [isLoading, setIsLoading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [improvingQuestion, setImprovingQuestion] = useState<string | null>(null);
@@ -34,50 +27,46 @@ export function Step2Discovery({ project, onAnswerChange, tenantId }: Step2Disco
   
   const questionnaireMutation = useQuestionnaireMutation();
 
-  // Sync local answers with project state when it changes
-  useEffect(() => {
-    if (project.questionnaire && Object.keys(project.questionnaire).length > 0) {
-      setLocalAnswers(project.questionnaire);
-    }
-  }, [project.questionnaire]);
+  // Derived data from parent state (single source of truth)
+  const questions = state.questions || [];
+  const answers = state.questionnaire || {};
 
-  // Sync questions from project state
-  useEffect(() => {
-    if (project.questions && project.questions.length > 0) {
-      setQuestions(project.questions);
-    }
-  }, [project.questions]);
-
-  // Load questions on mount if not already loaded
+  // Load questions on mount if needed
   useEffect(() => {
     if (hasInitialized.current) return;
+    if (!state.projectId) return;
     hasInitialized.current = true;
 
     const initialize = async () => {
-      // If we already have questions from project state, use those
-      if (project.questions && project.questions.length > 0) {
-        setQuestions(project.questions);
+      // If we already have questions with proper text, skip loading
+      if (questions.length > 0 && !questions.some(q => /^q\d+$/.test(q.question))) {
         return;
       }
 
-      // Otherwise, try to load from database
       setIsLoading(true);
       try {
-        const { questions: loadedQuestions, answers } = await WizardService.loadProjectQuestionnaire(project.projectId!);
+        const { questions: loadedQuestions, answers: loadedAnswers } = 
+          await WizardService.loadProjectQuestionnaire(state.projectId!);
         
         if (loadedQuestions.length > 0) {
-          setQuestions(loadedQuestions.map(q => ({
-            ...q,
-            suggestedAnswer: '',
-            context: '',
-          })));
+          // Check if questions have legacy format (q0, q1, q2, etc.)
+          const hasLegacyFormat = loadedQuestions.some(q => /^q\d+$/.test(q.question));
           
-          // If we got answers from DB but not from project state, use DB answers
-          if (Object.keys(answers).length > 0 && Object.keys(localAnswers).length === 0) {
-            setLocalAnswers(answers);
-            // Also update parent
-            Object.entries(answers).forEach(([key, value]) => {
-              onAnswerChange(key, value);
+          if (hasLegacyFormat) {
+            // Regenerate questions with AI, but preserve existing answers
+            console.log('[Step2] Legacy format detected, regenerating questions while preserving answers');
+            const existingAnswers = { ...answers, ...loadedAnswers };
+            onStateChange({ questionnaire: existingAnswers });
+            await generateQuestions();
+          } else {
+            // Normal loading - questions have proper text
+            onStateChange({
+              questions: loadedQuestions.map(q => ({
+                ...q,
+                suggestedAnswer: '',
+                context: '',
+              })),
+              questionnaire: { ...answers, ...loadedAnswers },
             });
           }
         } else {
@@ -93,19 +82,19 @@ export function Step2Discovery({ project, onAnswerChange, tenantId }: Step2Disco
     };
 
     initialize();
-  }, [project.projectId]);
+  }, [state.projectId]);
 
-  const generateQuestions = async () => {
+  const generateQuestions = useCallback(async () => {
     setIsGenerating(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-discovery-questions', {
         body: {
-          projectId: project.projectId,
-          companyId: project.companyId,
+          projectId: state.projectId,
+          companyId: state.companyId,
           tenantId,
-          systems: project.systems,
-          projectDescription: project.projectDescription,
-          partners: project.partners,
+          systems: state.systems,
+          projectDescription: state.projectDescription,
+          partners: state.partners,
         },
       });
 
@@ -114,18 +103,19 @@ export function Step2Discovery({ project, onAnswerChange, tenantId }: Step2Disco
       if (data?.questions && Array.isArray(data.questions)) {
         const newQuestions: DiscoveryQuestion[] = data.questions;
         
+        // Merge with existing or set new
+        const existingKeys = new Set(questions.map(q => q.key));
+        const uniqueNew = newQuestions.filter(q => !existingKeys.has(q.key));
+        
+        onStateChange({
+          questions: [...questions, ...uniqueNew],
+        });
+        
+        // Save to database
+        await saveQuestionMetadata(uniqueNew);
+        
         if (questions.length > 0) {
-          // Add new questions to existing ones
-          const existingKeys = new Set(questions.map(q => q.key));
-          const uniqueNew = newQuestions.filter(q => !existingKeys.has(q.key));
-          setQuestions(prev => [...prev, ...uniqueNew]);
-          
-          // Save new question metadata
-          await saveQuestionMetadata(uniqueNew);
           toast.success(`${uniqueNew.length} nye spørsmål generert`);
-        } else {
-          setQuestions(newQuestions);
-          await saveQuestionMetadata(newQuestions);
         }
       }
     } catch (error) {
@@ -134,36 +124,52 @@ export function Step2Discovery({ project, onAnswerChange, tenantId }: Step2Disco
       
       // Fallback questions if none exist
       if (questions.length === 0) {
-        setQuestions([
-          { key: 'pain_points', question: 'Hva er de største utfordringene i dagens arbeidsflyt?', suggestedAnswer: '', context: 'Viktig for å forstå hvor applikasjonen kan gi mest verdi', category: 'pain_points' },
-          { key: 'manual_tasks', question: 'Hvilke oppgaver gjøres manuelt som kunne vært automatisert?', suggestedAnswer: '', context: 'Identifiserer potensial for effektivisering', category: 'processes' },
-          { key: 'integrations', question: 'Hvilke systemer må dele data med hverandre?', suggestedAnswer: '', context: 'Viktig for integrasjonsdesign', category: 'integrations' },
-          { key: 'goals', question: 'Hva er hovedmålene med den nye løsningen?', suggestedAnswer: '', context: 'Definerer suksesskriterier', category: 'goals' },
-          { key: 'users', question: 'Hvem er hovedbrukerne og hva er deres behov?', suggestedAnswer: '', context: 'Viktig for brukeropplevelse', category: 'users' },
-        ]);
+        onStateChange({
+          questions: [
+            { key: 'pain_points', question: 'Hva er de største utfordringene i dagens arbeidsflyt?', suggestedAnswer: '', context: 'Viktig for å forstå hvor applikasjonen kan gi mest verdi', category: 'pain_points' },
+            { key: 'manual_tasks', question: 'Hvilke oppgaver gjøres manuelt som kunne vært automatisert?', suggestedAnswer: '', context: 'Identifiserer potensial for effektivisering', category: 'processes' },
+            { key: 'integrations', question: 'Hvilke systemer må dele data med hverandre?', suggestedAnswer: '', context: 'Viktig for integrasjonsdesign', category: 'integrations' },
+            { key: 'goals', question: 'Hva er hovedmålene med den nye løsningen?', suggestedAnswer: '', context: 'Definerer suksesskriterier', category: 'goals' },
+            { key: 'users', question: 'Hvem er hovedbrukerne og hva er deres behov?', suggestedAnswer: '', context: 'Viktig for brukeropplevelse', category: 'users' },
+          ],
+        });
       }
     } finally {
       setIsGenerating(false);
     }
-  };
+  }, [state, tenantId, questions, onStateChange]);
 
-  const saveQuestionMetadata = async (questionsToSave: DiscoveryQuestion[]) => {
-    if (!project.projectId) return;
+  const saveQuestionMetadata = async (questionsToSave: DiscoveryQuestion[], updateExisting = false) => {
+    if (!state.projectId) return;
     
     try {
       for (const q of questionsToSave) {
         const { data: existing } = await supabase
           .from('project_questionnaire_responses')
-          .select('question_key')
-          .eq('project_id', project.projectId)
+          .select('question_key, question_text, answer')
+          .eq('project_id', state.projectId)
           .eq('question_key', q.key)
           .single();
         
-        if (!existing) {
+        if (existing) {
+          // Update existing question with new text if it has legacy format or if updateExisting is true
+          const hasLegacyFormat = /^q\d+$/.test(existing.question_text || '');
+          if (hasLegacyFormat || updateExisting) {
+            await supabase
+              .from('project_questionnaire_responses')
+              .update({
+                question_text: q.question,
+                category: q.category,
+              })
+              .eq('project_id', state.projectId)
+              .eq('question_key', q.key);
+          }
+        } else {
+          // Insert new question
           await supabase
             .from('project_questionnaire_responses')
             .insert({
-              project_id: project.projectId,
+              project_id: state.projectId,
               question_key: q.key,
               question_text: q.question,
               category: q.category,
@@ -177,26 +183,25 @@ export function Step2Discovery({ project, onAnswerChange, tenantId }: Step2Disco
     }
   };
 
-  const updateAnswer = (key: string, value: string) => {
+  const updateAnswer = useCallback((key: string, value: string) => {
     const question = questions.find(q => q.key === key);
     
-    // Update local state immediately
-    setLocalAnswers(prev => ({ ...prev, [key]: value }));
+    // Update parent state (single source of truth)
+    onStateChange({
+      questionnaire: { ...answers, [key]: value },
+    });
     
-    // Notify parent
-    onAnswerChange(key, value);
-    
-    // Persist to database via mutation
-    if (project.projectId && question) {
+    // Persist to database
+    if (state.projectId && question) {
       questionnaireMutation.mutate({
-        projectId: project.projectId,
+        projectId: state.projectId,
         questionKey: key,
         questionText: question.question,
         answer: value,
         category: question.category,
       });
     }
-  };
+  }, [state.projectId, questions, answers, onStateChange, questionnaireMutation]);
 
   const acceptSuggestion = (key: string, suggestion: string) => {
     updateAnswer(key, suggestion);
@@ -207,17 +212,17 @@ export function Step2Discovery({ project, onAnswerChange, tenantId }: Step2Disco
   const improveAnswer = async (questionKey: string, questionText: string, category: string) => {
     setImprovingQuestion(questionKey);
     try {
-      const currentAnswer = localAnswers[questionKey] || '';
+      const currentAnswer = answers[questionKey] || '';
       
       const { data, error } = await supabase.functions.invoke('improve-discovery-answer', {
         body: {
           questionText,
           currentAnswer,
-          projectId: project.projectId,
-          companyId: project.companyId,
+          projectId: state.projectId,
+          companyId: state.companyId,
           tenantId,
           category,
-          otherAnswers: localAnswers,
+          otherAnswers: answers,
         },
       });
 
@@ -262,7 +267,7 @@ export function Step2Discovery({ project, onAnswerChange, tenantId }: Step2Disco
     );
   };
 
-  const answeredCount = Object.values(localAnswers).filter(v => v && v.trim()).length;
+  const answeredCount = Object.values(answers).filter(v => v && v.trim()).length;
 
   return (
     <Card>
@@ -313,7 +318,7 @@ export function Step2Discovery({ project, onAnswerChange, tenantId }: Step2Disco
 
             <div className="space-y-8">
               {questions.map((q, i) => {
-                const currentAnswer = localAnswers[q.key] || '';
+                const currentAnswer = answers[q.key] || '';
                 const hasSuggestion = q.suggestedAnswer && q.suggestedAnswer.trim().length > 0;
                 const isAccepted = acceptedSuggestions.has(q.key);
                 const isImproving = improvingQuestion === q.key;
@@ -414,4 +419,3 @@ export function Step2Discovery({ project, onAnswerChange, tenantId }: Step2Disco
     </Card>
   );
 }
-

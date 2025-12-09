@@ -282,6 +282,43 @@ Bruk `get_effective_ai_provider()` for å finne riktig provider.
 **Unntak:** Brønnøysund (brreg) kjører som edge function pga. ytelse.
 - Spør alltid om du mener det er best med en direkte integrasjon
 
+### n8n Workflow Versjonering
+
+**ALLTID bruk semantic versioning (SemVer) for n8n workflows:**
+
+| Endring | Versjon | Eksempel |
+|---------|---------|----------|
+| **Major** (x.0.0) | Breaking changes, ny arkitektur | v1.0.0 → v2.0.0 |
+| **Minor** (0.x.0) | Ny funksjonalitet, bakoverkompatibel | v2.0.0 → v2.1.0 |
+| **Patch** (0.0.x) | Bugfixes, små justeringer | v2.1.0 → v2.1.1 |
+
+**Filnavn-konvensjon:**
+```
+docs/n8n-workflows/<workflow-name>-v<major>.<minor>.<patch>.json
+```
+
+Eksempler:
+- `prepare-miro-workshop-v2.1.0.json`
+- `sync-odoo-customers-v1.0.0.json`
+
+**Påkrevde felter i workflow JSON:**
+```json
+{
+  "name": "Workflow Name v2.1.0",
+  "version": "2.1.0",
+  "changelog": "v2.1.0: Beskrivelse av endringer",
+  "nodes": [...],
+  "tags": [{ "name": "v2.1.0" }]
+}
+```
+
+**Når oppdatere versjon:**
+- Legg til kommentar i Code-noder: `// Node Name vX.Y.Z`
+- Oppdater `version` felt i JSON
+- Oppdater `changelog` med beskrivelse
+- Legg til version-tag
+- Behold gamle versjoner for rollback
+
 ---
 
 ## 🧩 Capability Design
@@ -370,3 +407,192 @@ const [isLoading, setIsLoading] = useState(true);
 - Lange AI-genererte kommentarer
 - Egne integrasjonsadaptere (bruk n8n)
 - Anta datatyper fra API uten sjekk
+
+---
+
+## 🎯 Kvalitetskrav: Mål 9/10
+
+**Hver implementasjon skal score minst 9/10. Unngå quick-fixes og workarounds.**
+
+### Før du starter implementering
+
+1. **Analyser grundig** - Forstå hele problemet før du begynner å kode
+2. **Sjekk eksisterende mønstre** - Bruk etablerte patterns fra kodebasen
+3. **Design først** - Tenk gjennom arkitekturen før implementering
+4. **Single Source of Truth** - Unngå duplisert state mellom komponenter
+
+### Krav til komponenter
+
+```tsx
+// ✅ Konsistent props-mønster for alle step/form komponenter
+interface BaseStepProps {
+  state: WizardState;           // Data fra parent
+  onStateChange: (updates: Partial<WizardState>) => void;  // Callback til parent
+  tenantId: string;
+}
+
+// ❌ IKKE bland forskjellige prop-mønstre
+interface InconsistentProps {
+  project: WizardState;         // Noen kaller det "project"
+  onAnswerChange: () => void;   // Noen har spesifikke callbacks
+}
+```
+
+### Krav til state management
+
+```tsx
+// ✅ Parent eier state, children bruker callbacks
+function Parent() {
+  const [state, setState] = useState(initialState);
+  return <Child state={state} onStateChange={setState} />;
+}
+
+// ❌ IKKE dupliser state i children
+function BadChild({ state }) {
+  const [localCopy, setLocalCopy] = useState(state); // FEIL!
+}
+```
+
+### Krav til data-lasting
+
+```tsx
+// ✅ Bruk React Query som single source of truth
+const { data: project } = useProject(projectId);
+// Alle relaterte data lastes via loadFullProject()
+
+// ❌ IKKE last data flere steder
+// Unngå direkte supabase-kall i komponenter når hook finnes
+```
+
+### Krav til error handling
+
+```tsx
+// ✅ Wrap komponenter med Error Boundaries
+<StepErrorBoundary stepName="Discovery">
+  <Step2Discovery {...props} />
+</StepErrorBoundary>
+
+// ✅ Håndter edge cases
+if (!projectId) return <EmptyState />;
+if (isLoading) return <LoadingState />;
+```
+
+### Sjekkliste før PR
+
+- [ ] Ingen duplisert state mellom parent/child
+- [ ] Konsistent props-mønster (`state` + `onStateChange`)
+- [ ] React Query for all server state
+- [ ] Error boundaries rundt feilprone komponenter
+- [ ] TypeScript types eksportert fra `index.ts`
+- [ ] Unit tester for kritisk logikk
+
+---
+
+## 🧪 Testing (OBLIGATORISK)
+
+**Alle moduler SKAL ha unit tester. Ingen PR uten tester.**
+
+### Filstruktur for tester
+
+```
+src/modules/<modul>/
+├── __tests__/
+│   ├── services/
+│   │   └── ModuleService.test.ts
+│   └── components/
+│       └── Component.test.tsx
+├── components/
+├── hooks/
+├── services/
+└── index.ts
+```
+
+### Minimumskrav for tester
+
+1. **Services** - Test alle public metoder
+2. **Hooks** - Test custom hooks med `renderHook`
+3. **Komponenter** - Test kritiske user interactions
+4. **Edge cases** - Test error states og tomme data
+
+### Test-konvensjoner
+
+- Bruk Vitest og React Testing Library
+- Test services separat fra komponenter
+- Mock Supabase og external APIs
+- Fokuser på kritisk business logikk
+- **Kjør `npm run test` før commit**
+
+```typescript
+// ✅ Eksempel: Service test
+describe('WizardService', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should load full project with all related data', async () => {
+    // Arrange
+    mockSupabase.from('customer_app_projects').select().single
+      .mockResolvedValue({ data: mockProject, error: null });
+    
+    // Act
+    const result = await WizardService.loadFullProject('project-id');
+    
+    // Assert
+    expect(result).toBeDefined();
+    expect(result?.systems).toHaveLength(2);
+  });
+
+  it('should return null when project not found', async () => {
+    mockSupabase.from('customer_app_projects').select().single
+      .mockResolvedValue({ data: null, error: { code: 'PGRST116' } });
+    
+    const result = await WizardService.loadFullProject('invalid-id');
+    
+    expect(result).toBeNull();
+  });
+});
+```
+
+### Sjekkliste for nye moduler
+
+- [ ] `__tests__/` mappe opprettet
+- [ ] Service-tester for alle public metoder
+- [ ] Hook-tester for custom hooks  
+- [ ] Komponent-tester for user interactions
+- [ ] Alle tester passerer (`npm run test`)
+
+---
+
+## 📚 Dokumentasjon
+
+### Automatisk katalog
+
+Dokumentasjon genereres automatisk til `/admin/documentation` via:
+```bash
+npm run generate:docs
+```
+
+### Når oppdatere dokumentasjon
+
+1. **Ny modul** → Lag `README.md` i modulens rotmappe
+2. **Ny capability** → Lag `docs/capabilities/<navn>.md`
+3. **Ny workflow** → Legg til i `docs/n8n-workflows/README.md`
+4. **Arkitektur-endringer** → Oppdater `docs/architecture.md`
+
+### Dokumentasjonsformat
+
+```markdown
+# [Modul/Feature Navn]
+
+## Oversikt
+[1-2 setninger om hva dette er]
+
+## Arkitektur
+[Diagram med mermaid hvis relevant]
+
+## API/Interface
+[Viktigste types og funksjoner]
+
+## Eksempler
+[Kodeeksempler på bruk]
+```

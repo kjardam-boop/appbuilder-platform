@@ -28,7 +28,8 @@ export {
 } from './hooks/useWizardData';
 
 // Components
-export { WizardStepIndicator } from './components/WizardStepIndicator';
+export { WizardStepIndicator, type WizardStep } from './components/WizardStepIndicator';
+export { StepErrorBoundary } from './components/StepErrorBoundary';
 export { Step1Company } from './components/Step1Company';
 export { Step2Discovery } from './components/Step2Discovery';
 export { Step3Workshop } from './components/Step3Workshop';

@@ -276,17 +276,32 @@ Generer relevante og spesifikke workshop-elementer som vil hjelpe teamet med å 
     // Position tracking per category/frame
     const categoryPositions: Record<string, { count: number }> = {};
     
-    // Frame configuration - each category maps to a frame with offset
-    const frameConfig: Record<string, { baseX: number; baseY: number; cols: number; itemWidth: number; itemHeight: number }> = {
-      'pain_point': { baseX: 1600, baseY: 100, cols: 3, itemWidth: 420, itemHeight: 220 },
-      'solution': { baseX: 100, baseY: 1100, cols: 3, itemWidth: 420, itemHeight: 220 },
-      'user_story': { baseX: 100, baseY: 1100, cols: 3, itemWidth: 420, itemHeight: 220 },
-      'moscow_must': { baseX: 1700, baseY: 1150, cols: 1, itemWidth: 380, itemHeight: 200 },
-      'moscow_should': { baseX: 2150, baseY: 1150, cols: 1, itemWidth: 380, itemHeight: 200 },
-      'moscow_could': { baseX: 2600, baseY: 1150, cols: 1, itemWidth: 380, itemHeight: 200 },
-      'moscow_wont': { baseX: 3050, baseY: 1150, cols: 1, itemWidth: 380, itemHeight: 200 },
-      'process_map': { baseX: 600, baseY: 100, cols: 3, itemWidth: 350, itemHeight: 200 },
-      'default': { baseX: 100, baseY: 100, cols: 3, itemWidth: 420, itemHeight: 220 },
+    // Frame ABSOLUTE positions on the board (top-left corner of each frame)
+    // Frame 1 (Kontekst & Bakgrunn): x=0, y=0, width=1400, height=800
+    // Frame 2 (Smertepunkter): x=1600, y=0, width=1400, height=800
+    // Frame 3 (Løsningsforslag): x=0, y=1000, width=1400, height=800
+    // Frame 4 (MoSCoW): x=1600, y=1000, width=2000, height=800
+    
+    // Elements are placed at BOARD level (not inside frames), so we need absolute positions
+    const frameConfig: Record<string, { frameX: number; frameY: number; baseX: number; baseY: number; cols: number; itemWidth: number; itemHeight: number }> = {
+      // Frame 1: Kontekst (reserved for company sticky, so process_map uses offset)
+      'process_map': { frameX: 0, frameY: 0, baseX: 500, baseY: 100, cols: 2, itemWidth: 400, itemHeight: 200 },
+      
+      // Frame 2: Smertepunkter
+      'pain_point': { frameX: 1600, frameY: 0, baseX: 100, baseY: 100, cols: 3, itemWidth: 400, itemHeight: 200 },
+      
+      // Frame 3: Løsningsforslag (solutions top, user stories bottom)
+      'solution': { frameX: 0, frameY: 1000, baseX: 100, baseY: 100, cols: 3, itemWidth: 400, itemHeight: 200 },
+      'user_story': { frameX: 0, frameY: 1000, baseX: 100, baseY: 450, cols: 3, itemWidth: 400, itemHeight: 200 },
+      
+      // Frame 4: MoSCoW (4 columns)
+      'moscow_must': { frameX: 1600, frameY: 1000, baseX: 100, baseY: 150, cols: 1, itemWidth: 380, itemHeight: 180 },
+      'moscow_should': { frameX: 1600, frameY: 1000, baseX: 550, baseY: 150, cols: 1, itemWidth: 380, itemHeight: 180 },
+      'moscow_could': { frameX: 1600, frameY: 1000, baseX: 1000, baseY: 150, cols: 1, itemWidth: 380, itemHeight: 180 },
+      'moscow_wont': { frameX: 1600, frameY: 1000, baseX: 1450, baseY: 150, cols: 1, itemWidth: 380, itemHeight: 180 },
+      
+      // Default fallback (Frame 1 area)
+      'default': { frameX: 0, frameY: 0, baseX: 100, baseY: 400, cols: 3, itemWidth: 400, itemHeight: 200 },
     };
 
     const sanitizedElements = (parsed.elements || []).map((element: any) => {
@@ -303,7 +318,7 @@ Generer relevante og spesifikke workshop-elementer som vil hjelpe teamet med å 
         color = 'yellow';
       }
 
-      // Calculate position based on category
+      // Calculate ABSOLUTE board position based on category
       const category = element.category || 'default';
       if (!categoryPositions[category]) {
         categoryPositions[category] = { count: 0 };
@@ -314,10 +329,17 @@ Generer relevante og spesifikke workshop-elementer som vil hjelpe teamet med å 
       const col = pos.count % config.cols;
       const row = Math.floor(pos.count / config.cols);
       
-      const x = config.baseX + col * config.itemWidth;
-      const y = config.baseY + row * config.itemHeight;
+      // Calculate position relative to frame, then add frame's absolute position
+      const relativeX = config.baseX + col * config.itemWidth;
+      const relativeY = config.baseY + row * config.itemHeight;
+      
+      // Add frame's absolute position to get board-level coordinates
+      const x = config.frameX + relativeX;
+      const y = config.frameY + relativeY;
       
       pos.count++;
+      
+      console.log(`[Position] ${element.title} (${category}): frame(${config.frameX},${config.frameY}) + rel(${relativeX},${relativeY}) = abs(${x},${y})`);
       
       return {
         ...element,

@@ -2,6 +2,7 @@
  * Step 5: Generate Application
  * 
  * AI-generates application configuration based on discovery and workshop results.
+ * Uses BaseStepProps pattern for consistent state management.
  */
 
 import { useState } from 'react';
@@ -10,15 +11,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Wand2, Sparkles, Loader2, CheckCircle2, RefreshCw } from 'lucide-react';
-import type { WizardState } from '../types/wizard.types';
+import type { BaseStepProps } from '../types/wizard.types';
 
-interface Step5GenerateProps {
-  project: WizardState;
-  onConfigGenerated: (config: unknown) => void;
-  tenantId: string;
-}
-
-export function Step5Generate({ project, onConfigGenerated, tenantId }: Step5GenerateProps) {
+export function Step5Generate({ state, onStateChange, tenantId }: BaseStepProps) {
   const [isGenerating, setIsGenerating] = useState(false);
 
   const generateAppConfig = async () => {
@@ -26,18 +21,18 @@ export function Step5Generate({ project, onConfigGenerated, tenantId }: Step5Gen
     try {
       const { data, error } = await supabase.functions.invoke('generate-tenant-app', {
         body: {
-          projectId: project.projectId,
-          companyId: project.companyId,
-          systems: project.systems,
-          questionnaire: project.questionnaire,
-          selectedCapabilities: project.selectedCapabilities,
+          projectId: state.projectId,
+          companyId: state.companyId,
+          systems: state.systems,
+          questionnaire: state.questionnaire,
+          selectedCapabilities: state.selectedCapabilities,
           tenantId,
         },
       });
 
       if (error) throw error;
 
-      onConfigGenerated(data.config);
+      onStateChange({ generatedConfig: data.config });
       toast.success('Application config generated!');
     } catch (error: any) {
       console.error('Failed to generate config:', error);
@@ -59,7 +54,7 @@ export function Step5Generate({ project, onConfigGenerated, tenantId }: Step5Gen
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {!project.generatedConfig ? (
+        {!state.generatedConfig ? (
           <div className="text-center py-12">
             <Wand2 className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium mb-2">Ready to Generate</h3>
@@ -92,8 +87,12 @@ export function Step5Generate({ project, onConfigGenerated, tenantId }: Step5Gen
                 <CheckCircle2 className="h-5 w-5 text-green-500" />
                 Configuration Generated
               </h3>
-              <Button variant="outline" onClick={generateAppConfig}>
-                <RefreshCw className="mr-2 h-4 w-4" />
+              <Button variant="outline" onClick={generateAppConfig} disabled={isGenerating}>
+                {isGenerating ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                )}
                 Regenerate
               </Button>
             </div>
@@ -101,7 +100,7 @@ export function Step5Generate({ project, onConfigGenerated, tenantId }: Step5Gen
             {/* Preview of generated config */}
             <div className="bg-muted rounded-lg p-4">
               <pre className="text-sm overflow-auto max-h-96">
-                {JSON.stringify(project.generatedConfig, null, 2)}
+                {JSON.stringify(state.generatedConfig, null, 2)}
               </pre>
             </div>
             
@@ -114,4 +113,3 @@ export function Step5Generate({ project, onConfigGenerated, tenantId }: Step5Gen
     </Card>
   );
 }
-

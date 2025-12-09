@@ -2,6 +2,7 @@
  * Step 6: Deploy Application
  * 
  * Final deployment step to push the application to preview.
+ * Uses BaseStepProps pattern for consistent state management.
  */
 
 import { useState } from 'react';
@@ -10,13 +11,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Rocket, ExternalLink, Loader2, CheckCircle2 } from 'lucide-react';
-import type { WizardState } from '../types/wizard.types';
+import type { BaseStepProps } from '../types/wizard.types';
 
-interface Step6DeployProps {
-  project: WizardState;
-}
-
-export function Step6Deploy({ project }: Step6DeployProps) {
+export function Step6Deploy({ state, onStateChange }: Omit<BaseStepProps, 'tenantId'>) {
   const [isDeploying, setIsDeploying] = useState(false);
   const [isDeployed, setIsDeployed] = useState(false);
 
@@ -24,8 +21,8 @@ export function Step6Deploy({ project }: Step6DeployProps) {
     setIsDeploying(true);
     try {
       // Save the config to the project
-      if (project.projectId && project.generatedConfig) {
-        const config = project.generatedConfig as any;
+      if (state.projectId && state.generatedConfig) {
+        const config = state.generatedConfig as any;
         await supabase
           .from('customer_app_projects')
           .update({
@@ -33,7 +30,7 @@ export function Step6Deploy({ project }: Step6DeployProps) {
             branding: config.theme,
             deployed_to_preview_at: new Date().toISOString(),
           })
-          .eq('id', project.projectId);
+          .eq('id', state.projectId);
       }
       
       setIsDeployed(true);
@@ -61,37 +58,37 @@ export function Step6Deploy({ project }: Step6DeployProps) {
         <div className="grid grid-cols-2 gap-4">
           <div className="border rounded-lg p-4">
             <h4 className="text-sm font-medium text-muted-foreground mb-1">Project</h4>
-            <p className="font-medium">{project.projectName}</p>
+            <p className="font-medium">{state.projectName}</p>
           </div>
           <div className="border rounded-lg p-4">
             <h4 className="text-sm font-medium text-muted-foreground mb-1">Systems</h4>
-            <p className="font-medium">{project.systems.length} integrations</p>
+            <p className="font-medium">{state.systems.length} integrations</p>
           </div>
-          {project.selectedCapabilities.length > 0 && (
+          {state.selectedCapabilities.length > 0 && (
             <div className="border rounded-lg p-4">
               <h4 className="text-sm font-medium text-muted-foreground mb-1">Capabilities</h4>
-              <p className="font-medium">{project.selectedCapabilities.length} selected</p>
+              <p className="font-medium">{state.selectedCapabilities.length} selected</p>
             </div>
           )}
           <div className="border rounded-lg p-4">
             <h4 className="text-sm font-medium text-muted-foreground mb-1">Workshop</h4>
-            <p className="font-medium capitalize">{project.workshopStatus.replace('_', ' ')}</p>
+            <p className="font-medium capitalize">{state.workshopStatus.replace('_', ' ')}</p>
           </div>
         </div>
 
         {/* Links */}
         <div className="flex gap-4">
-          {project.miroUrl && (
+          {state.miroUrl && (
             <Button variant="outline" size="sm" asChild>
-              <a href={project.miroUrl} target="_blank" rel="noopener noreferrer">
+              <a href={state.miroUrl} target="_blank" rel="noopener noreferrer">
                 <ExternalLink className="mr-2 h-4 w-4" />
                 Miro Board
               </a>
             </Button>
           )}
-          {project.notionUrl && (
+          {state.notionUrl && (
             <Button variant="outline" size="sm" asChild>
-              <a href={project.notionUrl} target="_blank" rel="noopener noreferrer">
+              <a href={state.notionUrl} target="_blank" rel="noopener noreferrer">
                 <ExternalLink className="mr-2 h-4 w-4" />
                 Notion Docs
               </a>
@@ -105,7 +102,7 @@ export function Step6Deploy({ project }: Step6DeployProps) {
             <Button 
               size="lg"
               onClick={deployApp}
-              disabled={isDeploying || !project.generatedConfig}
+              disabled={isDeploying || !state.generatedConfig}
             >
               {isDeploying ? (
                 <>
@@ -119,7 +116,7 @@ export function Step6Deploy({ project }: Step6DeployProps) {
                 </>
               )}
             </Button>
-            {!project.generatedConfig && (
+            {!state.generatedConfig && (
               <p className="text-sm text-muted-foreground mt-2">
                 Generate the application config in the previous step first.
               </p>
@@ -138,4 +135,3 @@ export function Step6Deploy({ project }: Step6DeployProps) {
     </Card>
   );
 }
-
