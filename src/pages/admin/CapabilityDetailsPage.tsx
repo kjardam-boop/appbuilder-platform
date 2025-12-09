@@ -14,10 +14,11 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MarkdownViewer } from "@/components/ui/markdown-viewer";
-import { ArrowLeft, ExternalLink, Package, Tag, Building2, Code, Database, FileCode, Webhook, BookOpen } from "lucide-react";
+import { ArrowLeft, ExternalLink, Package, Tag, Building2, Code, Database, FileCode, Webhook, BookOpen, FlaskConical } from "lucide-react";
 import * as Icons from "lucide-react";
 import { LucideIcon } from "lucide-react";
 import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
+import { CapabilityTestSandbox } from "@/modules/core/capabilities";
 
 export default function CapabilityDetailsPage() {
   const { capabilityId } = useParams<{ capabilityId: string }>();
@@ -125,6 +126,10 @@ export default function CapabilityDetailsPage() {
           <Tabs defaultValue="overview" className="w-full">
             <TabsList>
               <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="test">
+                <FlaskConical className="mr-2 h-4 w-4" />
+                Test
+              </TabsTrigger>
               {capability.documentation_path && (
                 <TabsTrigger value="docs">
                   <BookOpen className="mr-2 h-4 w-4" />
@@ -339,6 +344,16 @@ export default function CapabilityDetailsPage() {
               )}
             </TabsContent>
             
+            {/* Test Tab */}
+            <TabsContent value="test">
+              <CapabilityTestSandbox 
+                capability={capability} 
+                onDefaultsSaved={() => {
+                  // Could refetch capability here if needed
+                }}
+              />
+            </TabsContent>
+
             {/* Documentation Tab */}
             {capability.documentation_path && (
               <TabsContent value="docs">

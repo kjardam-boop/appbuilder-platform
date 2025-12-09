@@ -33,6 +33,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useDebounce } from '@/hooks/useDebounce';
 import type { WizardState } from '../types/wizard.types';
+import { AICapabilitySuggestions } from './AICapabilitySuggestions';
 
 interface Step4Props {
   state: WizardState;
@@ -205,6 +206,24 @@ export function Step4Capabilities({
     return tenantCaps?.some(tc => tc.capability_id === capabilityId && tc.is_enabled);
   };
 
+  // Handler for AI suggestion selection (works with capability details from suggestion)
+  const handleAISuggestionSelect = (
+    capabilityId: string, 
+    capabilityKey: string, 
+    capabilityName: string, 
+    category: string
+  ) => {
+    const isSelected = selectedCapabilities.some(c => c.id === capabilityId);
+    if (isSelected) {
+      setSelectedCapabilities(selectedCapabilities.filter(c => c.id !== capabilityId));
+    } else {
+      setSelectedCapabilities([
+        ...selectedCapabilities,
+        { id: capabilityId, key: capabilityKey, name: capabilityName, category },
+      ]);
+    }
+  };
+
   // Get unique categories from optional capabilities (core shown separately)
   const categories = optionalCapabilities.length > 0
     ? ['all', ...Array.from(new Set(optionalCapabilities.map(c => c.category)))]
@@ -267,6 +286,17 @@ export function Step4Capabilities({
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* AI-powered Capability Suggestions */}
+      {state.projectId && (
+        <AICapabilitySuggestions
+          projectId={state.projectId}
+          tenantId={tenantId}
+          selectedCapabilityIds={selectedCapabilities.map(c => c.id)}
+          onSelectCapability={handleAISuggestionSelect}
+          disabled={saveStatus === 'saving'}
+        />
       )}
 
       {/* Selected Optional Capabilities Summary */}

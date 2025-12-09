@@ -31,6 +31,9 @@ interface WorkshopElement {
   content: string;
   color?: string;
   position?: { x: number; y: number };
+  // For relative positioning inside frames
+  parentFrame?: string;  // 'context' | 'pain_points' | 'solutions' | 'moscow'
+  relativePosition?: { x: number; y: number };
   children?: WorkshopElement[];
 }
 
@@ -276,32 +279,35 @@ Generer relevante og spesifikke workshop-elementer som vil hjelpe teamet med å 
     // Position tracking per category/frame
     const categoryPositions: Record<string, { count: number }> = {};
     
-    // Frame ABSOLUTE positions on the board (top-left corner of each frame)
-    // Frame 1 (Kontekst & Bakgrunn): x=0, y=0, width=1400, height=800
-    // Frame 2 (Smertepunkter): x=1600, y=0, width=1400, height=800
-    // Frame 3 (Løsningsforslag): x=0, y=1000, width=1400, height=800
-    // Frame 4 (MoSCoW): x=1600, y=1000, width=2000, height=800
-    
-    // Elements are placed at BOARD level (not inside frames), so we need absolute positions
-    const frameConfig: Record<string, { frameX: number; frameY: number; baseX: number; baseY: number; cols: number; itemWidth: number; itemHeight: number }> = {
-      // Frame 1: Kontekst (reserved for company sticky, so process_map uses offset)
-      'process_map': { frameX: 0, frameY: 0, baseX: 500, baseY: 100, cols: 2, itemWidth: 400, itemHeight: 200 },
+    // Map categories to parent frames and relative positioning within frames
+    // Positions are RELATIVE to frame origin (center of frame in Miro)
+    // Using smaller values and consistent grid layout
+    const frameConfig: Record<string, { 
+      parentFrame: string;  // Which frame this category belongs to
+      startX: number;       // Start X relative to frame center
+      startY: number;       // Start Y relative to frame center
+      cols: number;         // Number of columns
+      itemWidth: number;    // Width between items (spacing)
+      itemHeight: number;   // Height between items (spacing)
+    }> = {
+      // Context Frame - process maps (offset to leave room for company sticky at top-left)
+      'process_map': { parentFrame: 'context', startX: 200, startY: -200, cols: 2, itemWidth: 350, itemHeight: 180 },
       
-      // Frame 2: Smertepunkter
-      'pain_point': { frameX: 1600, frameY: 0, baseX: 100, baseY: 100, cols: 3, itemWidth: 400, itemHeight: 200 },
+      // Pain Points Frame
+      'pain_point': { parentFrame: 'pain_points', startX: -500, startY: -250, cols: 3, itemWidth: 380, itemHeight: 180 },
       
-      // Frame 3: Løsningsforslag (solutions top, user stories bottom)
-      'solution': { frameX: 0, frameY: 1000, baseX: 100, baseY: 100, cols: 3, itemWidth: 400, itemHeight: 200 },
-      'user_story': { frameX: 0, frameY: 1000, baseX: 100, baseY: 450, cols: 3, itemWidth: 400, itemHeight: 200 },
+      // Solutions Frame - solutions at top, user stories below
+      'solution': { parentFrame: 'solutions', startX: -500, startY: -250, cols: 3, itemWidth: 380, itemHeight: 180 },
+      'user_story': { parentFrame: 'solutions', startX: -500, startY: 100, cols: 3, itemWidth: 380, itemHeight: 180 },
       
-      // Frame 4: MoSCoW (4 columns)
-      'moscow_must': { frameX: 1600, frameY: 1000, baseX: 100, baseY: 150, cols: 1, itemWidth: 380, itemHeight: 180 },
-      'moscow_should': { frameX: 1600, frameY: 1000, baseX: 550, baseY: 150, cols: 1, itemWidth: 380, itemHeight: 180 },
-      'moscow_could': { frameX: 1600, frameY: 1000, baseX: 1000, baseY: 150, cols: 1, itemWidth: 380, itemHeight: 180 },
-      'moscow_wont': { frameX: 1600, frameY: 1000, baseX: 1450, baseY: 150, cols: 1, itemWidth: 380, itemHeight: 180 },
+      // MoSCoW Frame - 4 columns (Must, Should, Could, Won't)
+      'moscow_must': { parentFrame: 'moscow', startX: -800, startY: -200, cols: 1, itemWidth: 350, itemHeight: 150 },
+      'moscow_should': { parentFrame: 'moscow', startX: -350, startY: -200, cols: 1, itemWidth: 350, itemHeight: 150 },
+      'moscow_could': { parentFrame: 'moscow', startX: 100, startY: -200, cols: 1, itemWidth: 350, itemHeight: 150 },
+      'moscow_wont': { parentFrame: 'moscow', startX: 550, startY: -200, cols: 1, itemWidth: 350, itemHeight: 150 },
       
-      // Default fallback (Frame 1 area)
-      'default': { frameX: 0, frameY: 0, baseX: 100, baseY: 400, cols: 3, itemWidth: 400, itemHeight: 200 },
+      // Default fallback to context frame
+      'default': { parentFrame: 'context', startX: 0, startY: 100, cols: 3, itemWidth: 350, itemHeight: 180 },
     };
 
     const sanitizedElements = (parsed.elements || []).map((element: any) => {
@@ -318,7 +324,7 @@ Generer relevante og spesifikke workshop-elementer som vil hjelpe teamet med å 
         color = 'yellow';
       }
 
-      // Calculate ABSOLUTE board position based on category
+      // Calculate RELATIVE position within the frame based on category
       const category = element.category || 'default';
       if (!categoryPositions[category]) {
         categoryPositions[category] = { count: 0 };
@@ -329,22 +335,22 @@ Generer relevante og spesifikke workshop-elementer som vil hjelpe teamet med å 
       const col = pos.count % config.cols;
       const row = Math.floor(pos.count / config.cols);
       
-      // Calculate position relative to frame, then add frame's absolute position
-      const relativeX = config.baseX + col * config.itemWidth;
-      const relativeY = config.baseY + row * config.itemHeight;
-      
-      // Add frame's absolute position to get board-level coordinates
-      const x = config.frameX + relativeX;
-      const y = config.frameY + relativeY;
+      // Calculate position RELATIVE to frame center
+      const relativeX = config.startX + col * config.itemWidth;
+      const relativeY = config.startY + row * config.itemHeight;
       
       pos.count++;
       
-      console.log(`[Position] ${element.title} (${category}): frame(${config.frameX},${config.frameY}) + rel(${relativeX},${relativeY}) = abs(${x},${y})`);
+      console.log(`[Position] ${element.title} (${category}) -> frame: ${config.parentFrame}, relative: (${relativeX}, ${relativeY})`);
       
       return {
         ...element,
         color,
-        position: { x, y },
+        // Relative position for use with parent frame
+        relativePosition: { x: relativeX, y: relativeY },
+        parentFrame: config.parentFrame,
+        // Also include absolute position for backwards compatibility (without parent)
+        position: { x: relativeX, y: relativeY },
       };
     });
 

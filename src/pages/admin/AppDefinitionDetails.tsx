@@ -332,7 +332,7 @@ export default function AppDefinitionDetails() {
                       size="sm"
                       asChild
                     >
-                      <Link to="/admin/n8n/workflows">
+                      <Link to="/admin/integrations?tab=workflows">
                         <ExternalLink className="h-4 w-4" />
                       </Link>
                     </Button>

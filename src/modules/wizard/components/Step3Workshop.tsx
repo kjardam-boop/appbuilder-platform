@@ -75,6 +75,14 @@ export function Step3Workshop({ state, onStateChange, tenantId }: BaseStepProps)
         if (companyData?.name) companyName = companyData.name;
       }
 
+      // Get workflow version from integration_definitions
+      const { data: workflowDef } = await supabase
+        .from('integration_definitions')
+        .select('version')
+        .eq('key', 'prepare-miro-workshop')
+        .eq('type', 'workflow')
+        .single();
+
       const { data, error } = await supabase.functions.invoke('trigger-n8n-workflow', {
         body: {
           workflowKey: 'prepare-miro-workshop',
@@ -88,6 +96,7 @@ export function Step3Workshop({ state, onStateChange, tenantId }: BaseStepProps)
             questionnaire: state.questionnaire,
             ai_elements: aiElements?.elements || [],
             ai_summary: aiElements?.summary || '',
+            workflow_version: workflowDef?.version || 'unknown',
           },
           tenantId,
         },

@@ -1,0 +1,351 @@
+{
+  "name": "Prepare Miro Workshop Board",
+  "version": "2.4.0",
+  "changelog": "v2.4.0: Use absolute board positions instead of parent-relative. Removed parent reference that wasn't working correctly. Increased frame sizes and spacing.",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "prepare-miro-workshop",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 300],
+      "webhookId": "prepare-miro-workshop"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Input v2.4.0\nconst input = $input.first().json;\n\nconst projectId = input.body?.input?.project_id;\nconst projectName = input.body?.input?.project_name || 'Prosjekt';\nconst companyId = input.body?.input?.company_id;\nconst companyName = input.body?.input?.company_name || 'Selskap';\nconst description = input.body?.input?.description || '';\nconst systems = input.body?.input?.systems || [];\nconst questionnaire = input.body?.input?.questionnaire || {};\nconst aiElements = input.body?.input?.ai_elements || [];\nconst aiSummary = input.body?.input?.ai_summary || '';\nconst workflowVersion = input.body?.input?.workflow_version || 'unknown';\nconst context = input.body?.context || {};\n\nif (!projectId) {\n  throw new Error('project_id is required');\n}\n\nconsole.log('Workflow version:', workflowVersion);\n\nreturn {\n  projectId,\n  projectName,\n  companyId,\n  companyName,\n  description,\n  systems,\n  questionnaire,\n  aiElements,\n  aiSummary,\n  workflowVersion,\n  tenantId: context.tenant_id,\n  userId: context.user_id,\n  requestId: context.request_id\n};"
+      },
+      "id": "parse-input",
+      "name": "Parse Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.miro.com/v2/boards",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "miroOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"name\": \"{{ $json.companyName }} - {{ $json.projectName }}\",\n  \"description\": \"AI-generert Discovery Workshop board\"\n}",
+        "options": {}
+      },
+      "id": "create-miro-board",
+      "name": "Create Miro Board",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 300],
+      "credentials": {
+        "miroOAuth2Api": {
+          "id": "MIRO_OAUTH_CREDENTIAL_ID",
+          "name": "Miro account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.miro.com/v2/boards/{{ $('Create Miro Board').first().json.id }}/frames",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "miroOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"data\": {\n    \"title\": \"1. Kontekst & Bakgrunn\",\n    \"format\": \"custom\"\n  },\n  \"geometry\": {\n    \"width\": 1600,\n    \"height\": 1000\n  },\n  \"position\": {\n    \"x\": 0,\n    \"y\": 0\n  }\n}",
+        "options": {}
+      },
+      "id": "create-context-frame",
+      "name": "Create Context Frame",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 100],
+      "credentials": {
+        "miroOAuth2Api": {
+          "id": "MIRO_OAUTH_CREDENTIAL_ID",
+          "name": "Miro account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.miro.com/v2/boards/{{ $('Create Miro Board').first().json.id }}/frames",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "miroOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"data\": {\n    \"title\": \"2. Smertepunkter & Utfordringer\",\n    \"format\": \"custom\"\n  },\n  \"geometry\": {\n    \"width\": 1600,\n    \"height\": 1000\n  },\n  \"position\": {\n    \"x\": 1800,\n    \"y\": 0\n  }\n}",
+        "options": {}
+      },
+      "id": "create-painpoints-frame",
+      "name": "Create Pain Points Frame",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 300],
+      "credentials": {
+        "miroOAuth2Api": {
+          "id": "MIRO_OAUTH_CREDENTIAL_ID",
+          "name": "Miro account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.miro.com/v2/boards/{{ $('Create Miro Board').first().json.id }}/frames",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "miroOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"data\": {\n    \"title\": \"3. Løsningsforslag & Muligheter\",\n    \"format\": \"custom\"\n  },\n  \"geometry\": {\n    \"width\": 1600,\n    \"height\": 1000\n  },\n  \"position\": {\n    \"x\": 0,\n    \"y\": 1200\n  }\n}",
+        "options": {}
+      },
+      "id": "create-solutions-frame",
+      "name": "Create Solutions Frame",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 500],
+      "credentials": {
+        "miroOAuth2Api": {
+          "id": "MIRO_OAUTH_CREDENTIAL_ID",
+          "name": "Miro account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.miro.com/v2/boards/{{ $('Create Miro Board').first().json.id }}/frames",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "miroOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"data\": {\n    \"title\": \"4. Prioritering (MoSCoW)\",\n    \"format\": \"custom\"\n  },\n  \"geometry\": {\n    \"width\": 2200,\n    \"height\": 1000\n  },\n  \"position\": {\n    \"x\": 1800,\n    \"y\": 1200\n  }\n}",
+        "options": {}
+      },
+      "id": "create-moscow-frame",
+      "name": "Create MoSCoW Frame",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 700],
+      "credentials": {
+        "miroOAuth2Api": {
+          "id": "MIRO_OAUTH_CREDENTIAL_ID",
+          "name": "Miro account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare Company Data v2.4.0 - Absolute board positions\nconst boardId = $('Create Miro Board').first().json.id;\nconst input = $('Parse Input').first().json;\n\n// Frame 1 (Context) starts at board position (0, 0)\n// Place company sticky inside the frame area (with offset for title)\nreturn {\n  boardId,\n  companyName: input.companyName || 'Ukjent selskap',\n  projectName: input.projectName || 'Ukjent prosjekt',\n  description: input.description || '',\n  industry: 'Ikke spesifisert',\n  // Absolute position on board - inside Context Frame\n  x: 200,\n  y: 150\n};"
+      },
+      "id": "prepare-company-data",
+      "name": "Prepare Company Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.miro.com/v2/boards/{{ $json.boardId }}/sticky_notes",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "miroOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"data\": {\n    \"content\": \"<strong>{{ $json.companyName }}</strong>\\n\\nProsjekt: {{ $json.projectName }}\\n\\nBransje: {{ $json.industry }}\",\n    \"shape\": \"square\"\n  },\n  \"style\": {\n    \"fillColor\": \"light_blue\",\n    \"textAlign\": \"left\",\n    \"textAlignVertical\": \"top\"\n  },\n  \"position\": {\n    \"x\": {{ $json.x }},\n    \"y\": {{ $json.y }}\n  },\n  \"geometry\": {\n    \"width\": 350\n  }\n}",
+        "options": {}
+      },
+      "id": "add-company-sticky",
+      "name": "Add Company Sticky",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 100],
+      "credentials": {
+        "miroOAuth2Api": {
+          "id": "MIRO_OAUTH_CREDENTIAL_ID",
+          "name": "Miro account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare AI Elements v2.4.0\n// Uses ABSOLUTE board positions (not parent-relative)\nconst boardId = $('Create Miro Board').first().json.id;\nconst aiElements = $('Parse Input').first().json.aiElements || [];\n\n// Frame layout on board (absolute positions)\n// Increased sizes and spacing for better visibility\nconst frameLayout = {\n  'context': { x: 0, y: 0, width: 1600, height: 1000 },\n  'pain_points': { x: 1800, y: 0, width: 1600, height: 1000 },\n  'solutions': { x: 0, y: 1200, width: 1600, height: 1000 },\n  'moscow': { x: 1800, y: 1200, width: 2200, height: 1000 },\n};\n\n// Element layout within frames (grid positions)\nconst elementLayout = {\n  'process_map': { frameKey: 'context', startX: 550, startY: 100, cols: 2, itemWidth: 400, itemHeight: 250 },\n  'pain_point': { frameKey: 'pain_points', startX: 100, startY: 100, cols: 3, itemWidth: 450, itemHeight: 250 },\n  'solution': { frameKey: 'solutions', startX: 100, startY: 100, cols: 3, itemWidth: 450, itemHeight: 250 },\n  'user_story': { frameKey: 'solutions', startX: 100, startY: 500, cols: 3, itemWidth: 450, itemHeight: 250 },\n  'moscow_must': { frameKey: 'moscow', startX: 100, startY: 200, cols: 1, itemWidth: 450, itemHeight: 200 },\n  'moscow_should': { frameKey: 'moscow', startX: 600, startY: 200, cols: 1, itemWidth: 450, itemHeight: 200 },\n  'moscow_could': { frameKey: 'moscow', startX: 1100, startY: 200, cols: 1, itemWidth: 450, itemHeight: 200 },\n  'moscow_wont': { frameKey: 'moscow', startX: 1600, startY: 200, cols: 1, itemWidth: 450, itemHeight: 200 },\n};\n\nconst colorMap = {\n  'pain_point': 'red',\n  'solution': 'green',\n  'user_story': 'light_blue',\n  'moscow_must': 'red',\n  'moscow_should': 'yellow',\n  'moscow_could': 'light_green',\n  'moscow_wont': 'gray',\n  'process_map': 'cyan',\n};\n\nif (aiElements.length === 0) {\n  return [];\n}\n\n// Track position counters per category\nconst categoryCounters = {};\n\nreturn aiElements.map((element, index) => {\n  const category = element.category || 'process_map';\n  const layout = elementLayout[category] || elementLayout['process_map'];\n  const frame = frameLayout[layout.frameKey];\n  \n  // Get counter for this category\n  if (!categoryCounters[category]) {\n    categoryCounters[category] = 0;\n  }\n  const counter = categoryCounters[category]++;\n  \n  // Calculate grid position\n  const col = counter % layout.cols;\n  const row = Math.floor(counter / layout.cols);\n  \n  // Calculate absolute board position\n  const x = frame.x + layout.startX + (col * layout.itemWidth);\n  const y = frame.y + layout.startY + (row * layout.itemHeight);\n  \n  const color = element.color || colorMap[category] || 'yellow';\n  \n  return {\n    boardId,\n    title: element.title || '',\n    content: element.content || element.title || '',\n    color,\n    x,\n    y,\n    category\n  };\n});"
+      },
+      "id": "prepare-ai-elements",
+      "name": "Prepare AI Elements",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.miro.com/v2/boards/{{ $json.boardId }}/sticky_notes",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "miroOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"data\": {\n    \"content\": \"<strong>{{ $json.title }}</strong>\\n\\n{{ $json.content.substring(0, 200) }}\",\n    \"shape\": \"square\"\n  },\n  \"style\": {\n    \"fillColor\": \"{{ $json.color }}\",\n    \"textAlign\": \"left\",\n    \"textAlignVertical\": \"top\"\n  },\n  \"position\": {\n    \"x\": {{ $json.x }},\n    \"y\": {{ $json.y }}\n  },\n  \"geometry\": {\n    \"width\": 350\n  }\n}",
+        "options": {}
+      },
+      "id": "add-ai-stickies",
+      "name": "Add AI Stickies",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 400],
+      "credentials": {
+        "miroOAuth2Api": {
+          "id": "MIRO_OAUTH_CREDENTIAL_ID",
+          "name": "Miro account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare MoSCoW Headers v2.4.0\n// Absolute board positions\nconst boardId = $('Create Miro Board').first().json.id;\n\n// MoSCoW frame starts at board position (1800, 1200)\nconst frameX = 1800;\nconst frameY = 1200;\n\nconst columns = [\n  { title: 'MUST HAVE', color: 'red', offsetX: 100 },\n  { title: 'SHOULD HAVE', color: 'yellow', offsetX: 600 },\n  { title: 'COULD HAVE', color: 'light_green', offsetX: 1100 },\n  { title: 'WON\\'T HAVE', color: 'gray', offsetX: 1600 }\n];\n\nreturn columns.map(col => ({\n  boardId,\n  title: col.title,\n  color: col.color,\n  x: frameX + col.offsetX,\n  y: frameY + 80\n}));"
+      },
+      "id": "prepare-moscow-headers",
+      "name": "Prepare MoSCoW Headers",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 700]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.miro.com/v2/boards/{{ $json.boardId }}/sticky_notes",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "miroOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"data\": {\n    \"content\": \"<strong>{{ $json.title }}</strong>\",\n    \"shape\": \"rectangle\"\n  },\n  \"style\": {\n    \"fillColor\": \"{{ $json.color }}\",\n    \"textAlign\": \"center\",\n    \"textAlignVertical\": \"middle\"\n  },\n  \"position\": {\n    \"x\": {{ $json.x }},\n    \"y\": {{ $json.y }}\n  },\n  \"geometry\": {\n    \"width\": 400\n  }\n}",
+        "options": {}
+      },
+      "id": "add-moscow-headers",
+      "name": "Add MoSCoW Headers",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 700],
+      "credentials": {
+        "miroOAuth2Api": {
+          "id": "MIRO_OAUTH_CREDENTIAL_ID",
+          "name": "Miro account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare Response v2.4.0\nconst boardId = $('Create Miro Board').first().json.id;\nconst viewLink = $('Create Miro Board').first().json.viewLink;\nconst projectId = $('Parse Input').first().json.projectId;\nconst aiElements = $('Parse Input').first().json.aiElements || [];\nconst workflowVersion = $('Parse Input').first().json.workflowVersion;\n\nreturn {\n  success: true,\n  board_id: boardId,\n  board_url: viewLink,\n  project_id: projectId,\n  elements_created: aiElements.length,\n  workflow_version: workflowVersion,\n  status: 'board_ready'\n};"
+      },
+      "id": "prepare-response",
+      "name": "Prepare Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "respond-success",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1540, 400]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [{ "node": "Parse Input", "type": "main", "index": 0 }]
+      ]
+    },
+    "Parse Input": {
+      "main": [
+        [{ "node": "Create Miro Board", "type": "main", "index": 0 }]
+      ]
+    },
+    "Create Miro Board": {
+      "main": [
+        [
+          { "node": "Create Context Frame", "type": "main", "index": 0 },
+          { "node": "Create Pain Points Frame", "type": "main", "index": 0 },
+          { "node": "Create Solutions Frame", "type": "main", "index": 0 },
+          { "node": "Create MoSCoW Frame", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Create Context Frame": {
+      "main": [
+        [{ "node": "Prepare Company Data", "type": "main", "index": 0 }]
+      ]
+    },
+    "Create Pain Points Frame": {
+      "main": [[]]
+    },
+    "Create Solutions Frame": {
+      "main": [[]]
+    },
+    "Create MoSCoW Frame": {
+      "main": [
+        [
+          { "node": "Prepare AI Elements", "type": "main", "index": 0 },
+          { "node": "Prepare MoSCoW Headers", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Prepare Company Data": {
+      "main": [
+        [{ "node": "Add Company Sticky", "type": "main", "index": 0 }]
+      ]
+    },
+    "Add Company Sticky": {
+      "main": [[]]
+    },
+    "Prepare AI Elements": {
+      "main": [
+        [{ "node": "Add AI Stickies", "type": "main", "index": 0 }]
+      ]
+    },
+    "Add AI Stickies": {
+      "main": [
+        [{ "node": "Prepare Response", "type": "main", "index": 0 }]
+      ]
+    },
+    "Prepare MoSCoW Headers": {
+      "main": [
+        [{ "node": "Add MoSCoW Headers", "type": "main", "index": 0 }]
+      ]
+    },
+    "Add MoSCoW Headers": {
+      "main": [[]]
+    },
+    "Prepare Response": {
+      "main": [
+        [{ "node": "Respond Success", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    { "name": "workshop" },
+    { "name": "miro" },
+    { "name": "appbuilder" },
+    { "name": "ai" },
+    { "name": "v2.4.0" }
+  ]
+}
+

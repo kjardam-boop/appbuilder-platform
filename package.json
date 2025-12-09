@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "generate:docs": "node scripts/generate-docs-catalog.js"
+    "generate:docs": "node scripts/generate-docs-catalog.js",
+    "import:workflow": "npx ts-node scripts/import-workflow-template.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

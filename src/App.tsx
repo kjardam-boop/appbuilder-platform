@@ -76,7 +76,7 @@ import Jul25MemberEdit from "./pages/apps/Jul25MemberEdit";
 import InviteMembersPage from "./pages/apps/jul25/InviteMembersPage";
 import AIChatApp from "./pages/apps/AIChatApp";
 import McpPolicy from "./pages/admin/McpPolicy";
-import N8nWorkflows from "./pages/admin/N8nWorkflows";
+// N8nWorkflows removed - consolidated to /admin/integrations?tab=workflows
 import McpSecrets from "./pages/admin/McpSecrets";
 import McpObservability from "./pages/admin/McpObservability";
 import AIMcpDemo from "./pages/admin/AIMcpDemo";
@@ -273,8 +273,8 @@ const App = () => (
               <Route path="mcp/policy" element={<PermissionProtectedRoute resource="mcp_secret" action="admin"><McpPolicy /></PermissionProtectedRoute>} />
               <Route path="ai/mcp-demo" element={<PermissionProtectedRoute resource="integration" action="admin"><AIMcpDemo /></PermissionProtectedRoute>} />
               
-              {/* n8n Workflows - renamed from mcp/workflows */}
-              <Route path="n8n/workflows" element={<PermissionProtectedRoute resource="integration" action="admin"><N8nWorkflows /></PermissionProtectedRoute>} />
+              {/* n8n Workflows - redirect to consolidated location */}
+              <Route path="n8n/workflows" element={<Navigate to="/admin/integrations?tab=workflows" replace />} />
               
               {/* Redirects from old MCP URLs */}
               <Route path="mcp/workflows" element={<Navigate to="/admin/integrations?tab=workflows" replace />} />

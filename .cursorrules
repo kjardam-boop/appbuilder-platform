@@ -12,9 +12,7 @@
 
 | Tabell | Migrasjon | Beskrivelse |
 |--------|-----------|-------------|
-| `workflow_templates` | 20251126000001 | n8n workflow-maler |
-| `tenant_workflows` | 20251126000001 | Aktiverte workflows per tenant |
-| `integration_definitions` | 20251110200947 | Unified integrasjonskatalog (type-kolonne) |
+| `integration_definitions` | 20251110200947 | **SINGLE SOURCE OF TRUTH** for workflows med `type='workflow'` |
 | `tenant_integrations` | 20251023133841 | Per-tenant integrasjonsconfig med scope |
 | `vault_credentials` | Tidligere | Krypterte credentials (Vault) for alle integrasjoner |
 | `n8n_workflow_mappings` | 20251203130000 | n8n webhook mappings (tidligere mcp_tenant_workflow_map) |
@@ -23,6 +21,8 @@
 | `tenant_capabilities` | Tidligere | Aktiverte capabilities |
 | `tenants` | Tidligere | Multi-tenant config |
 | `user_roles` | Tidligere | RBAC roller |
+
+**VIKTIG: workflow_templates er DEPRECATED!** Bruk `integration_definitions` med `type='workflow'` for alle nye workflows.
 
 **MCP (Model Context Protocol) - Riktig bruk:**
 
@@ -88,9 +88,10 @@ Alle moduler følger denne strukturen under `src/modules/core/<modul>/`:
 
 ### Integrasjoner
 
-- **n8n**: Primær integrasjons-hub, bruk `workflow_templates`
+- **n8n**: Primær integrasjons-hub, lagres i `integration_definitions` med `type='workflow'`
 - **Adapter pattern**: `src/modules/core/integrations/adapters/`
 - **Webhook support**: `src/modules/core/integrations/webhooks/`
+- **Admin UI**: `/admin/integrations?tab=workflows` - Workflow-administrasjon med test og sync
 
 ### Capabilities
 
@@ -282,9 +283,11 @@ Bruk `get_effective_ai_provider()` for å finne riktig provider.
 **Unntak:** Brønnøysund (brreg) kjører som edge function pga. ytelse.
 - Spør alltid om du mener det er best med en direkte integrasjon
 
-### n8n Workflow Versjonering
+### n8n Workflow Versjonering (KONSOLIDERT)
 
-**ALLTID bruk semantic versioning (SemVer) for n8n workflows:**
+**Single Source of Truth: `integration_definitions` med `type='workflow'`**
+
+#### Semantic Versioning
 
 | Endring | Versjon | Eksempel |
 |---------|---------|----------|
@@ -292,32 +295,55 @@ Bruk `get_effective_ai_provider()` for å finne riktig provider.
 | **Minor** (0.x.0) | Ny funksjonalitet, bakoverkompatibel | v2.0.0 → v2.1.0 |
 | **Patch** (0.0.x) | Bugfixes, små justeringer | v2.1.0 → v2.1.1 |
 
-**Filnavn-konvensjon:**
-```
-docs/n8n-workflows/<workflow-name>-v<major>.<minor>.<patch>.json
+#### Workflow Naming
+
+| Sted | Format | Eksempel |
+|------|--------|----------|
+| **Database** | Uten versjon i navn | `Prepare Miro Workshop Board` |
+| **JSON-fil** | Med versjon | `prepare-miro-workshop-v2.3.0.json` |
+| **version felt** | SemVer | `2.3.0` |
+
+#### Oppdatere Workflow (FØLG ALLTID DISSE STEGENE)
+
+**Alternativ 1: Import fra JSON (ANBEFALT)**
+```bash
+# 1. Lag/oppdater JSON-fil i docs/n8n-workflows/
+# 2. Kjør import-script
+npm run import:workflow docs/n8n-workflows/prepare-miro-workshop-v2.4.0.json
+
+# 3. Gå til /admin/integrations?tab=workflows
+# 4. Åpne workflowen og push til n8n
 ```
 
-Eksempler:
-- `prepare-miro-workshop-v2.1.0.json`
-- `sync-odoo-customers-v1.0.0.json`
+**Alternativ 2: Import via UI**
+1. Gå til `/admin/integrations?tab=workflows`
+2. Velg workflowen
+3. Klikk "Importer & oppdater JSON"
+4. Lim inn JSON og lagre
 
-**Påkrevde felter i workflow JSON:**
+**Alternativ 3: Sync fra n8n**
+1. Rediger workflow direkte i n8n
+2. Gå til `/admin/integrations?tab=workflows`
+3. Åpne workflowen og klikk "Sync fra n8n"
+
+#### Påkrevde felter i JSON
+
 ```json
 {
-  "name": "Workflow Name v2.1.0",
-  "version": "2.1.0",
-  "changelog": "v2.1.0: Beskrivelse av endringer",
+  "name": "Workflow Name",
+  "version": "2.3.0",
+  "changelog": "v2.3.0: Beskrivelse av endringer",
   "nodes": [...],
-  "tags": [{ "name": "v2.1.0" }]
+  "connections": {...}
 }
 ```
 
-**Når oppdatere versjon:**
-- Legg til kommentar i Code-noder: `// Node Name vX.Y.Z`
-- Oppdater `version` felt i JSON
-- Oppdater `changelog` med beskrivelse
-- Legg til version-tag
-- Behold gamle versjoner for rollback
+#### IKKE lag migrasjoner for workflow JSON!
+
+- ✅ Bruk `npm run import:workflow` scriptet
+- ✅ Bruk UI for import/sync
+- ❌ IKKE lag SQL migrasjoner for workflow JSON
+- ❌ IKKE bruk `workflow_templates` tabellen (deprecated)
 
 ---
 

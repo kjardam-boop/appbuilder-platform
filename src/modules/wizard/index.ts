@@ -37,4 +37,5 @@ export { Step4Capabilities } from './components/Step4Capabilities';
 export { Step5Generate } from './components/Step5Generate';
 export { Step6Deploy } from './components/Step6Deploy';
 export { ProjectDocumentUpload } from './components/ProjectDocumentUpload';
+export { AICapabilitySuggestions } from './components/AICapabilitySuggestions';
 

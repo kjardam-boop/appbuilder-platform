@@ -50,6 +50,10 @@ export {
 export { CapabilityCard } from "./components/CapabilityCard";
 export { CapabilityBrowser } from "./components/CapabilityBrowser";
 export { AppCapabilityDrawer } from "./components/AppCapabilityDrawer";
+export { CapabilityTestSandbox } from "./components/CapabilityTestSandbox";
+
+// Capability Testers
+export { OCRCapabilityTester } from "./components/testers/OCRCapabilityTester";
 
 // Services
 export { AppCapabilityService } from "./services/appCapabilityService";

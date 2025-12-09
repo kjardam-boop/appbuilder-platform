@@ -3,6 +3,9 @@
  * 
  * A component for selecting and comparing workflow templates.
  * Shows available templates and a diff view comparing current workflow with selected template.
+ * 
+ * CONSOLIDATED: Now reads from integration_definitions with type='workflow'
+ * instead of the deprecated workflow_templates table.
  */
 
 import { useState } from "react";
@@ -42,11 +45,11 @@ interface WorkflowTemplate {
   id: string;
   key: string;
   name: string;
-  description: string;
-  version: string;
+  description: string | null;
+  version: string | null;
   changelog: string | null;
   workflow_json: any;
-  category: string;
+  tags: string[] | null;
 }
 
 interface N8nNode {
@@ -126,14 +129,16 @@ export function WorkflowTemplatePicker({
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [showDiff, setShowDiff] = useState(false);
 
-  // Fetch available templates
+  // Fetch available templates from integration_definitions (type='workflow')
   const { data: templates, isLoading } = useQuery({
-    queryKey: ['workflow-templates'],
+    queryKey: ['workflow-templates-consolidated'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('workflow_templates')
-        .select('id, key, name, description, version, changelog, workflow_json, category')
+        .from('integration_definitions')
+        .select('id, key, name, description, version, changelog, workflow_json, tags')
+        .eq('type', 'workflow')
         .eq('is_active', true)
+        .not('workflow_json', 'is', null)
         .order('name');
       
       if (error) {
@@ -144,10 +149,12 @@ export function WorkflowTemplatePicker({
     },
   });
 
-  // Get related templates (same base key or category)
+  // Get related templates (same base key or has 'workshop' tag)
   const relatedTemplates = (templates || []).filter(t => {
-    const baseKey = workflowKey.replace(/-v\d+$/, '').replace(/-board$/, '');
-    return t.key.includes(baseKey) || t.category === 'workshop';
+    const baseKey = workflowKey.replace(/-v\d+.*$/, '').replace(/-board$/, '');
+    const hasMatchingKey = t.key.includes(baseKey);
+    const hasWorkshopTag = t.tags?.includes('workshop') ?? false;
+    return hasMatchingKey || hasWorkshopTag;
   });
 
   const selectedTemplate = selectedTemplateId 
@@ -208,9 +215,11 @@ export function WorkflowTemplatePicker({
                 <div className="flex items-center gap-2">
                   <FileJson className="h-4 w-4" />
                   <span>{template.name}</span>
-                  <Badge variant="outline" className="ml-2 text-xs">
-                    v{template.version}
-                  </Badge>
+                  {template.version && (
+                    <Badge variant="outline" className="ml-2 text-xs">
+                      v{template.version}
+                    </Badge>
+                  )}
                 </div>
               </SelectItem>
             ))}
@@ -224,9 +233,11 @@ export function WorkflowTemplatePicker({
           <div className="flex items-center justify-between">
             <div>
               <p className="font-medium text-sm">{selectedTemplate.name}</p>
-              <p className="text-xs text-muted-foreground">{selectedTemplate.description}</p>
+              <p className="text-xs text-muted-foreground">{selectedTemplate.description || ''}</p>
             </div>
-            <Badge variant="outline">v{selectedTemplate.version}</Badge>
+            {selectedTemplate.version && (
+              <Badge variant="outline">v{selectedTemplate.version}</Badge>
+            )}
           </div>
           
           {selectedTemplate.changelog && (

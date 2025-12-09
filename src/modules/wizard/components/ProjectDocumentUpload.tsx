@@ -19,11 +19,11 @@ import {
   Upload, 
   FileText, 
   File, 
-  X, 
   Loader2, 
   CheckCircle2,
   AlertCircle,
-  Trash2 
+  Trash2,
+  Image
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -60,6 +60,11 @@ const ACCEPTED_FILE_TYPES = {
   'application/vnd.ms-powerpoint': ['.ppt'],
   'text/plain': ['.txt'],
   'text/markdown': ['.md'],
+  // Image types for OCR
+  'image/jpeg': ['.jpg', '.jpeg'],
+  'image/png': ['.png'],
+  'image/gif': ['.gif'],
+  'image/webp': ['.webp'],
 };
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -195,7 +200,11 @@ export function ProjectDocumentUpload({
             file_type: file.type.includes('pdf') ? 'pdf' : 
                        file.type.includes('word') ? 'docx' : 
                        file.type.includes('presentation') || file.type.includes('powerpoint') ? 'pptx' :
-                       file.type.includes('markdown') ? 'markdown' : 'txt',
+                       file.type.includes('markdown') ? 'markdown' :
+                       file.type.includes('image/jpeg') ? 'jpeg' :
+                       file.type.includes('image/png') ? 'png' :
+                       file.type.includes('image/gif') ? 'gif' :
+                       file.type.includes('image/webp') ? 'webp' : 'txt',
             file_size_bytes: file.size,
             file_storage_path: fileId,
             original_filename: file.name,
@@ -273,6 +282,7 @@ export function ProjectDocumentUpload({
     },
   });
 
+
   // Dropzone setup
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const validFiles = acceptedFiles.filter(file => {
@@ -305,8 +315,10 @@ export function ProjectDocumentUpload({
     if (fileType === 'pdf' || fileType.includes('pdf')) return <FileText className="h-4 w-4 text-red-500" />;
     if (fileType === 'docx' || fileType.includes('word')) return <FileText className="h-4 w-4 text-blue-500" />;
     if (fileType === 'pptx' || fileType.includes('presentation') || fileType.includes('powerpoint')) return <FileText className="h-4 w-4 text-orange-500" />;
+    if (['jpeg', 'jpg', 'png', 'gif', 'webp', 'image'].some(t => fileType.toLowerCase().includes(t))) return <Image className="h-4 w-4 text-purple-500" />;
     return <File className="h-4 w-4 text-muted-foreground" />;
   };
+
 
   return (
     <Card>
@@ -346,7 +358,7 @@ export function ProjectDocumentUpload({
             <>
               <p className="font-medium mb-1">Dra og slipp filer her</p>
               <p className="text-sm text-muted-foreground">
-                eller klikk for å velge filer (PDF, DOCX, PPTX, TXT, MD - maks 10MB)
+                eller klikk for å velge filer (PDF, DOCX, PPTX, TXT, MD, bilder - maks 10MB)
               </p>
             </>
           )}

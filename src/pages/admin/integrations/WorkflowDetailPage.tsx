@@ -48,7 +48,8 @@ import { N8nSyncService } from "@/modules/core/integrations/services/n8nSyncServ
 import { WorkflowJsonViewer } from "@/components/admin/n8n/WorkflowJsonViewer";
 import { WorkflowTemplatePicker } from "@/components/admin/n8n/WorkflowTemplatePicker";
 import type { IntegrationDefinition } from "@/modules/core/integrations/types/integrationRegistry.types";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { PlayCircle, FlaskConical } from "lucide-react";
 
 // Sync status type
 type SyncStatus = 'draft' | 'pushed' | 'synced' | 'outdated';
@@ -125,6 +126,9 @@ export default function WorkflowDetailPage() {
   const [copied, setCopied] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importJson, setImportJson] = useState("");
+  const [testPayload, setTestPayload] = useState<string>('');
+  const [testResult, setTestResult] = useState<{ success: boolean; data?: any; error?: string } | null>(null);
+  const [isTesting, setIsTesting] = useState(false);
 
   // Fetch workflow
   const { data: workflow, isLoading, error } = useQuery({
@@ -143,6 +147,18 @@ export default function WorkflowDetailPage() {
     },
     enabled: !!workflowId,
   });
+
+  // Initialize test payload with version when workflow loads
+  useEffect(() => {
+    if (workflow) {
+      const version = (workflow as any).version || 'unknown';
+      setTestPayload(JSON.stringify({
+        test: true,
+        workflow_version: version,
+        timestamp: new Date().toISOString(),
+      }, null, 2));
+    }
+  }, [workflow]);
 
   // Sync from n8n mutation
   const syncMutation = useMutation({
@@ -353,6 +369,59 @@ export default function WorkflowDetailPage() {
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  // Test trigger function
+  const handleTestTrigger = async () => {
+    if (!tenantId || !workflow?.key) {
+      toast.error('Mangler tenant eller workflow data');
+      return;
+    }
+
+    setIsTesting(true);
+    setTestResult(null);
+
+    try {
+      let inputPayload: Record<string, unknown>;
+      try {
+        inputPayload = JSON.parse(testPayload);
+      } catch {
+        toast.error('Ugyldig JSON i test payload');
+        setIsTesting(false);
+        return;
+      }
+
+      console.log('[WorkflowDetail] Triggering workflow:', { tenantId, workflowKey: workflow.key, inputPayload });
+      
+      const { data, error } = await supabase.functions.invoke('trigger-n8n-workflow', {
+        body: {
+          tenantId: tenantId,
+          workflowKey: workflow.key,
+          action: 'test_trigger',
+          input: inputPayload,
+        },
+      });
+
+      console.log('[WorkflowDetail] Trigger response:', { data, error });
+
+      if (error) {
+        const msg = String((error as any)?.message || 'Unknown error');
+        setTestResult({ success: false, error: msg });
+        toast.error('Test feilet', { description: msg });
+      } else if (data?.error) {
+        setTestResult({ success: false, error: data.error });
+        toast.error('Workflow feilet', { description: data.error });
+      } else {
+        setTestResult({ success: true, data });
+        toast.success('Workflow trigget!');
+      }
+    } catch (err) {
+      const msg = (err as Error).message;
+      setTestResult({ success: false, error: msg });
+      toast.error('Feil ved triggering', { description: msg });
+    } finally {
+      setIsTesting(false);
+    }
   };
 
   if (isLoading) {
@@ -717,6 +786,79 @@ export default function WorkflowDetailPage() {
               />
             </CardContent>
           </Card>
+
+          {/* Test Workflow */}
+          {workflow.n8n_workflow_id && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <FlaskConical className="h-4 w-4" />
+                  Test Workflow
+                </CardTitle>
+                <CardDescription>
+                  Send test-data til workflowen
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Test Payload (JSON)</Label>
+                  <Textarea
+                    value={testPayload}
+                    onChange={(e) => setTestPayload(e.target.value)}
+                    className="font-mono text-xs mt-1"
+                    placeholder='{"key": "value"}'
+                    autoResize={true}
+                    maxHeight={200}
+                  />
+                </div>
+                
+                <Button 
+                  onClick={handleTestTrigger}
+                  disabled={isTesting}
+                  className="w-full"
+                >
+                  {isTesting ? (
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <PlayCircle className="h-4 w-4 mr-2" />
+                  )}
+                  {isTesting ? 'Kjører...' : 'Kjør Test'}
+                </Button>
+
+                {/* Test Result */}
+                {testResult && (
+                  <div className={`p-3 rounded-lg text-sm ${
+                    testResult.success 
+                      ? 'bg-green-50 border border-green-200' 
+                      : 'bg-red-50 border border-red-200'
+                  }`}>
+                    <div className="flex items-center gap-2 mb-2">
+                      {testResult.success ? (
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <AlertCircle className="h-4 w-4 text-red-600" />
+                      )}
+                      <span className={testResult.success ? 'text-green-700' : 'text-red-700'}>
+                        {testResult.success ? 'Suksess!' : 'Feilet'}
+                      </span>
+                    </div>
+                    {testResult.data && (
+                      <pre className="text-xs overflow-auto max-h-32 bg-white/50 p-2 rounded">
+                        {JSON.stringify(testResult.data, null, 2)}
+                      </pre>
+                    )}
+                    {testResult.error && (
+                      <p className="text-xs text-red-600">{testResult.error}</p>
+                    )}
+                  </div>
+                )}
+
+                <p className="text-xs text-muted-foreground">
+                  Tips: Sørg for at workflowen er aktivert i n8n før du tester.
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Trigger Methods */}
           <Card>
