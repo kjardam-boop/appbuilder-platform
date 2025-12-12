@@ -226,7 +226,7 @@ export function CapabilityTestSandbox({ capability, onDefaultsSaved }: Capabilit
   const renderTester = () => {
     switch (capability.key) {
       case 'document-ocr':
-        return <OCRCapabilityTester config={testConfig} />;
+        return <OCRCapabilityTester config={testConfig} capabilityId={capability.id} />;
       // Add more testers here as capabilities are added
       default:
         return (

@@ -1,18 +1,20 @@
 /**
  * process-document-ocr
  * 
- * Extracts text from PDF/image documents.
+ * Extracts text from PDF/image/spreadsheet documents.
  * 
  * Methods:
- * - PDF with searchable text: pdf-parse library + optional GPT structuring
+ * - PDF with searchable text: unpdf library + optional GPT structuring
  * - Images: OpenAI Vision API
+ * - Excel (.xlsx): SheetJS for parsing + GPT for structuring
+ * - CSV: Direct text parsing + GPT for structuring
  * 
  * Can be called:
  * 1. Directly after document upload (sync)
  * 2. Via database webhook on INSERT (async)
  * 3. For batch processing of pending documents
  * 
- * Supports: PDF, JPG, PNG, GIF, WebP
+ * Supports: PDF, JPG, PNG, GIF, WebP, XLSX, XLS, CSV
  */
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
@@ -20,6 +22,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 // unpdf - PDF text extraction for edge environments
 import { extractText } from 'https://esm.sh/unpdf@0.11.0';
+// SheetJS for Excel/CSV parsing
+import * as XLSX from 'https://esm.sh/xlsx@0.18.5';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -75,8 +79,12 @@ serve(async (req) => {
     if (testMode && imageBase64) {
       const effectiveMimeType = mimeType || 'image/png';
       const isPdf = effectiveMimeType === 'application/pdf';
+      const isExcel = effectiveMimeType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+                      effectiveMimeType === 'application/vnd.ms-excel';
+      const isCsv = effectiveMimeType === 'text/csv' || effectiveMimeType === 'application/csv';
       
-      console.log(`[process-document-ocr] Test mode - processing ${(imageBase64.length / 1024).toFixed(1)}KB ${isPdf ? 'PDF' : 'image'}`);
+      const fileType = isPdf ? 'PDF' : isExcel ? 'Excel' : isCsv ? 'CSV' : 'image';
+      console.log(`[process-document-ocr] Test mode - processing ${(imageBase64.length / 1024).toFixed(1)}KB ${fileType}`);
       
       let extractedText = '';
       let provider = 'openai_vision';
@@ -149,6 +157,98 @@ Returner kun den strukturerte teksten, ingen kommentarer.`
         } catch (pdfError) {
           console.error('PDF parse error:', pdfError);
           throw new Error(`Kunne ikke lese PDF: ${pdfError.message}`);
+        }
+      } else if (isExcel || isCsv) {
+        // ===== Excel/CSV: Use SheetJS for parsing =====
+        provider = isCsv ? 'csv_parser' : 'xlsx_parser';
+        try {
+          // Convert base64 to Uint8Array
+          const binaryString = atob(imageBase64);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          
+          // Parse with SheetJS
+          const workbook = XLSX.read(bytes, { type: 'array' });
+          const allSheetsText: string[] = [];
+          
+          for (const sheetName of workbook.SheetNames) {
+            const worksheet = workbook.Sheets[sheetName];
+            
+            // Convert to markdown table format
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as unknown[][];
+            
+            if (jsonData.length === 0) continue;
+            
+            let sheetText = `## ${sheetName}\n\n`;
+            
+            // Create markdown table
+            const headers = jsonData[0] as string[];
+            if (headers && headers.length > 0) {
+              sheetText += '| ' + headers.map(h => String(h || '')).join(' | ') + ' |\n';
+              sheetText += '| ' + headers.map(() => '---').join(' | ') + ' |\n';
+              
+              for (let i = 1; i < jsonData.length; i++) {
+                const row = jsonData[i] as unknown[];
+                if (row && row.length > 0) {
+                  sheetText += '| ' + row.map(cell => String(cell ?? '')).join(' | ') + ' |\n';
+                }
+              }
+            }
+            
+            allSheetsText.push(sheetText);
+          }
+          
+          extractedText = allSheetsText.join('\n\n');
+          console.log(`[process-document-ocr] ${fileType} parsed: ${workbook.SheetNames.length} sheet(s), ${extractedText.length} chars`);
+          
+          // Optional: Use GPT to summarize/structure the data
+          const structureWithGpt = config?.structureWithGpt !== false;
+          if (structureWithGpt && extractedText.length > 0) {
+            console.log(`[process-document-ocr] Structuring with GPT...`);
+            provider = isCsv ? 'csv+gpt' : 'xlsx+gpt';
+            
+            const gptResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${OPENAI_API_KEY}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                model: 'gpt-4o-mini',
+                messages: [
+                  {
+                    role: 'system',
+                    content: `Du er en assistent som analyserer og strukturerer data fra regneark.
+Oppgaven din er å:
+1. Identifisere nøkkelkolonner og datatyper
+2. Oppsummere innholdet
+3. Bevare viktig informasjon i strukturert markdown-format
+4. Identifisere nøkkelinformasjon som datoer, beløp, navn etc.
+
+Returner strukturert tekst med:
+- En kort oppsummering øverst
+- Deretter de viktigste dataene i tabellformat`
+                  },
+                  {
+                    role: 'user',
+                    content: `Analyser og strukturer følgende regnearkdata:\n\n${extractedText.substring(0, 15000)}`
+                  }
+                ],
+                max_tokens: 4096,
+                temperature: 0,
+              }),
+            });
+
+            if (gptResponse.ok) {
+              const gptData = await gptResponse.json();
+              extractedText = gptData.choices[0]?.message?.content || extractedText;
+            }
+          }
+        } catch (spreadsheetError) {
+          console.error('Spreadsheet parse error:', spreadsheetError);
+          throw new Error(`Kunne ikke lese ${fileType}: ${spreadsheetError.message}`);
         }
       } else {
         // ===== Image: Use OpenAI Vision =====
@@ -264,7 +364,7 @@ Do not add any commentary or explanations - just the extracted text.`
     }
 
     // 3. Check file type
-    const supportedTypes = ['pdf', 'image', 'jpeg', 'jpg', 'png', 'gif', 'webp', 'tiff'];
+    const supportedTypes = ['pdf', 'image', 'jpeg', 'jpg', 'png', 'gif', 'webp', 'tiff', 'xlsx', 'xls', 'csv'];
     if (!supportedTypes.includes(document.file_type?.toLowerCase())) {
       // Skip OCR for text files
       await supabase
@@ -317,8 +417,6 @@ Do not add any commentary or explanations - just the extracted text.`
     let documentMimeType = 'image/png';
     const fileType = document.file_type?.toLowerCase();
     if (fileType === 'pdf') {
-      // For PDF, we'd need to convert to image first - for MVP, just handle images
-      // In production, use pdf-lib or similar to extract first page as image
       documentMimeType = 'application/pdf';
     } else if (fileType === 'jpeg' || fileType === 'jpg') {
       documentMimeType = 'image/jpeg';
@@ -326,6 +424,84 @@ Do not add any commentary or explanations - just the extracted text.`
       documentMimeType = 'image/gif';
     } else if (fileType === 'webp') {
       documentMimeType = 'image/webp';
+    } else if (fileType === 'xlsx') {
+      documentMimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    } else if (fileType === 'xls') {
+      documentMimeType = 'application/vnd.ms-excel';
+    } else if (fileType === 'csv') {
+      documentMimeType = 'text/csv';
+    }
+    
+    // Check if we need to use spreadsheet parser
+    const isSpreadsheet = ['xlsx', 'xls', 'csv'].includes(fileType || '');
+    
+    // For spreadsheets, use SheetJS instead of Vision API
+    if (isSpreadsheet) {
+      console.log(`[process-document-ocr] Using SheetJS for ${fileType} file`);
+      
+      try {
+        const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
+        const allSheetsText: string[] = [];
+        
+        for (const sheetName of workbook.SheetNames) {
+          const worksheet = workbook.Sheets[sheetName];
+          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as unknown[][];
+          
+          if (jsonData.length === 0) continue;
+          
+          let sheetText = `## ${sheetName}\n\n`;
+          const headers = jsonData[0] as string[];
+          if (headers && headers.length > 0) {
+            sheetText += '| ' + headers.map(h => String(h || '')).join(' | ') + ' |\n';
+            sheetText += '| ' + headers.map(() => '---').join(' | ') + ' |\n';
+            
+            for (let i = 1; i < jsonData.length; i++) {
+              const row = jsonData[i] as unknown[];
+              if (row && row.length > 0) {
+                sheetText += '| ' + row.map(cell => String(cell ?? '')).join(' | ') + ' |\n';
+              }
+            }
+          }
+          allSheetsText.push(sheetText);
+        }
+        
+        const extractedText = allSheetsText.join('\n\n');
+        const confidence = extractedText.length > 50 ? 0.98 : 0.8;
+        
+        console.log(`[process-document-ocr] Spreadsheet parsed: ${workbook.SheetNames.length} sheets, ${extractedText.length} chars`);
+        
+        // Update document with extracted text
+        const { error: updateError } = await supabase
+          .from('content_library')
+          .update({
+            extracted_text: extractedText,
+            ocr_status: 'completed',
+            ocr_confidence: confidence,
+            ocr_provider: fileType === 'csv' ? 'csv_parser' : 'xlsx_parser',
+            ocr_processed_at: new Date().toISOString(),
+            ocr_error: null,
+          })
+          .eq('id', documentId);
+
+        if (updateError) {
+          throw new Error(`Failed to update document: ${updateError.message}`);
+        }
+
+        const processingTimeMs = Date.now() - startTime;
+        
+        return new Response(
+          JSON.stringify({
+            success: true,
+            extractedText,
+            confidence,
+            provider: fileType === 'csv' ? 'csv_parser' : 'xlsx_parser',
+            processingTimeMs,
+          } as OCRResult),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      } catch (spreadsheetError) {
+        throw new Error(`Failed to parse spreadsheet: ${spreadsheetError.message}`);
+      }
     }
 
     // 7. Call OpenAI Vision API

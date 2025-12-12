@@ -64,11 +64,60 @@ export interface Capability {
   domain_tables: string[]; // Database tables used
   database_migrations: string[]; // Migration file references
   
+  // Input/Output types for capability chaining
+  output_types: CapabilityIOType[]; // What this capability produces
+  input_types: CapabilityIOType[]; // What this capability accepts
+  destination_config: DestinationConfig | null; // Default routing configuration
+  
   created_at: string;
   updated_at: string;
   
   // Relations (populated)
   usage_count?: number; // How many apps use this capability
+}
+
+/**
+ * Data types that capabilities can produce or consume
+ */
+export type CapabilityIOType = 'text' | 'json' | 'file' | 'image' | 'structured_data';
+
+/**
+ * Destination configuration for capability output routing
+ */
+export interface DestinationConfig {
+  default_destination?: string;
+  available_destinations?: ('content_library' | 'integration' | 'capability' | 'webhook')[];
+  auto_store?: boolean;
+}
+
+/**
+ * Types of destinations for capability output
+ */
+export type DestinationType = 'capability' | 'integration' | 'webhook' | 'create_workflow';
+
+/**
+ * A destination where capability output can be routed
+ */
+export interface CapabilityDestination {
+  id: string;
+  source_capability_id: string;
+  destination_type: DestinationType;
+  destination_id: string | null; // capability_id or integration_definition_id
+  destination_url: string | null; // For custom webhooks
+  config: Record<string, unknown>;
+  priority: number;
+  is_enabled: boolean;
+  created_at: string;
+  updated_at: string;
+  
+  // Populated fields
+  destination_capability?: Capability;
+  destination_integration?: {
+    id: string;
+    key: string;
+    name: string;
+    type: string;
+  };
 }
 
 export interface CapabilityVersion {
@@ -200,6 +249,10 @@ export interface CapabilityInput {
   hooks?: string[];
   domain_tables?: string[];
   database_migrations?: string[];
+  // Input/Output types for capability chaining
+  output_types?: CapabilityIOType[];
+  input_types?: CapabilityIOType[];
+  destination_config?: DestinationConfig;
 }
 
 // ============================================================================

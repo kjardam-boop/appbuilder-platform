@@ -1,0 +1,246 @@
+{
+  "name": "Budget vs Actual Dashboard",
+  "version": "1.0.0",
+  "changelog": "v1.0.0: MVP - Google Sheets only (Budget, Actual, Prognosis from sheets)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule (6 timer)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 200]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "url",
+          "value": "https://docs.google.com/spreadsheets/d/1R7RrI5GTjZS9_G_OlSUdw7AtGRC9PHpI0Jk8e4SyjOA/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=1455797473",
+          "mode": "list",
+          "cachedResultName": "Budgets"
+        },
+        "options": {
+          "returnAllMatches": true
+        }
+      },
+      "id": "read-budget",
+      "name": "Read Budget",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [250, 100],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "68zOyjWDCs2jFOUP",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "url",
+          "value": "https://docs.google.com/spreadsheets/d/1R7RrI5GTjZS9_G_OlSUdw7AtGRC9PHpI0Jk8e4SyjOA/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Actuals"
+        },
+        "options": {
+          "returnAllMatches": true
+        }
+      },
+      "id": "read-actuals",
+      "name": "Read Actuals",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [250, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "68zOyjWDCs2jFOUP",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "url",
+          "value": "https://docs.google.com/spreadsheets/d/1R7RrI5GTjZS9_G_OlSUdw7AtGRC9PHpI0Jk8e4SyjOA/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=1948137103",
+          "mode": "list",
+          "cachedResultName": "Prognosis"
+        },
+        "options": {
+          "returnAllMatches": true
+        }
+      },
+      "id": "read-prognosis",
+      "name": "Read Prognosis",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [250, 500],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "68zOyjWDCs2jFOUP",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Hent data fra alle tre kilder\nconst budgetData = $('Read Budget').all();\nconst actualData = $('Read Actuals').all();\nconst prognosisData = $('Read Prognosis').all();\n\n// Bygg lookup maps\nconst budgetMap = new Map();\nbudgetData.forEach(item => {\n  const key = item.json.Account || item.json.account;\n  if (key) {\n    budgetMap.set(key, {\n      budget: parseFloat(item.json['Budget Amount'] || item.json.budget || 0),\n      period: item.json.Period || item.json.period || 'Unknown'\n    });\n  }\n});\n\nconst actualMap = new Map();\nactualData.forEach(item => {\n  const key = item.json.Account || item.json.account;\n  if (key) {\n    actualMap.set(key, parseFloat(item.json['Actual Amount'] || item.json.actual || 0));\n  }\n});\n\nconst prognosisMap = new Map();\nprognosisData.forEach(item => {\n  const key = item.json.Account || item.json.account;\n  if (key) {\n    prognosisMap.set(key, parseFloat(item.json['Prognosis Amount'] || item.json.prognosis || item.json['Expected Revenue'] || 0));\n  }\n});\n\n// Kombiner alle unike accounts\nconst allAccounts = new Set([\n  ...budgetMap.keys(),\n  ...actualMap.keys(),\n  ...prognosisMap.keys()\n]);\n\n// Bygg combined output med variance-beregninger\nconst results = [];\nfor (const account of allAccounts) {\n  const budgetInfo = budgetMap.get(account) || { budget: 0, period: 'Unknown' };\n  const budget = budgetInfo.budget;\n  const actual = actualMap.get(account) || 0;\n  const prognosis = prognosisMap.get(account) || 0;\n  \n  // Beregn variances\n  const varVsBudget = actual - budget;\n  const varVsBudgetPct = budget !== 0 ? ((actual - budget) / budget) * 100 : 0;\n  const varVsPrognosis = actual - prognosis;\n  const varVsPrognosisPct = prognosis !== 0 ? ((actual - prognosis) / prognosis) * 100 : 0;\n  \n  results.push({\n    json: {\n      Account: account,\n      Period: budgetInfo.period,\n      Budget: budget,\n      Prognosis: prognosis,\n      Actual: actual,\n      'Var vs Budget': varVsBudget,\n      'Var vs Budget %': Math.round(varVsBudgetPct * 10) / 10,\n      'Var vs Prognosis': varVsPrognosis,\n      'Var vs Prognosis %': Math.round(varVsPrognosisPct * 10) / 10,\n      'Updated': new Date().toISOString()\n    }\n  });\n}\n\n// Sorter etter Account\nresults.sort((a, b) => a.json.Account.localeCompare(b.json.Account));\n\nreturn results;"
+      },
+      "id": "merge-calculate",
+      "name": "Merge & Calculate Variances",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "url",
+          "value": "https://docs.google.com/spreadsheets/d/1R7RrI5GTjZS9_G_OlSUdw7AtGRC9PHpI0Jk8e4SyjOA/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=dashboard",
+          "mode": "list",
+          "cachedResultName": "Dashboard"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": ["Account"],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "write-dashboard",
+      "name": "Write Dashboard",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [750, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "68zOyjWDCs2jFOUP",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "errorMessage": "={{ $json.error || 'Unknown error in Budget vs Actual workflow' }}"
+      },
+      "id": "error-trigger",
+      "name": "Error Handler",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [500, 500]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "url",
+          "value": "https://docs.google.com/spreadsheets/d/1R7RrI5GTjZS9_G_OlSUdw7AtGRC9PHpI0Jk8e4SyjOA/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=errors",
+          "mode": "list",
+          "cachedResultName": "Error Log"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ new Date().toISOString() }}",
+            "Error": "={{ $json.error }}",
+            "Node": "={{ $json.node }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "log-error",
+      "name": "Log Error",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [750, 500],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "68zOyjWDCs2jFOUP",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule (6 timer)": {
+      "main": [
+        [
+          { "node": "Read Budget", "type": "main", "index": 0 },
+          { "node": "Read Actuals", "type": "main", "index": 0 },
+          { "node": "Read Prognosis", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Read Budget": {
+      "main": [
+        [{ "node": "Merge & Calculate Variances", "type": "main", "index": 0 }]
+      ]
+    },
+    "Read Actuals": {
+      "main": [
+        [{ "node": "Merge & Calculate Variances", "type": "main", "index": 0 }]
+      ]
+    },
+    "Read Prognosis": {
+      "main": [
+        [{ "node": "Merge & Calculate Variances", "type": "main", "index": 0 }]
+      ]
+    },
+    "Merge & Calculate Variances": {
+      "main": [
+        [{ "node": "Write Dashboard", "type": "main", "index": 0 }]
+      ]
+    },
+    "Error Handler": {
+      "main": [
+        [{ "node": "Log Error", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": ["financial", "dashboard", "budget"]
+}
+

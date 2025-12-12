@@ -1,0 +1,319 @@
+{
+  "name": "Budget vs Actual Dashboard",
+  "version": "2.1.1",
+  "changelog": "v2.1.1: Fixed merge issue - using chained Merge nodes for reliable 3-way append",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule (6 timer)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 300]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "url",
+          "value": "https://docs.google.com/spreadsheets/d/1R7RrI5GTjZS9_G_OlSUdw7AtGRC9PHpI0Jk8e4SyjOA/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=1455797473",
+          "mode": "list",
+          "cachedResultName": "Budgets"
+        },
+        "options": {
+          "returnAllMatches": true
+        }
+      },
+      "id": "read-budget",
+      "name": "Read Budget",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [250, 100],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "68zOyjWDCs2jFOUP",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "url",
+          "value": "https://docs.google.com/spreadsheets/d/1R7RrI5GTjZS9_G_OlSUdw7AtGRC9PHpI0Jk8e4SyjOA/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Actuals"
+        },
+        "options": {
+          "returnAllMatches": true
+        }
+      },
+      "id": "read-actuals",
+      "name": "Read Actuals",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [250, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "68zOyjWDCs2jFOUP",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "custom",
+        "operation": "getMany",
+        "customResource": "crm.lead",
+        "customResourceOptions": {
+          "returnAll": true,
+          "fields": "id,name,display_name,partner_name,partner_id,expected_revenue,prorated_revenue,probability,stage_id,date_deadline,won_status,active"
+        },
+        "additionalFields": {
+          "domain": "[[\"type\",\"=\",\"opportunity\"],[\"active\",\"=\",true]]"
+        }
+      },
+      "id": "read-odoo-opportunities",
+      "name": "Read Odoo Opportunities",
+      "type": "n8n-nodes-base.odoo",
+      "typeVersion": 1,
+      "position": [250, 500],
+      "credentials": {
+        "odooApi": {
+          "id": "YOUR_ODOO_CREDENTIAL_ID",
+          "name": "Odoo account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Transform Budget data to common format\nconst items = $input.all();\nconst results = [];\n\nconsole.log('Budget input items:', items.length);\n\nfor (const item of items) {\n  const json = item.json;\n  \n  // Skip header row or empty rows\n  if (!json.Account) {\n    console.log('Skipping item without Account:', JSON.stringify(json));\n    continue;\n  }\n  \n  results.push({\n    json: {\n      Account: json.Account,\n      Date: json.Period || json.Date || null,\n      Amount: parseFloat(json.Budget) || 0,\n      Type: 'Budget',\n      Description: json['Budget Name'] || '',\n      SourceType: 'Budget'\n    }\n  });\n}\n\nconsole.log('Budget output items:', results.length);\nreturn results;"
+      },
+      "id": "transform-budget",
+      "name": "Transform Budget",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 100]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Transform Actuals data to common format\nconst items = $input.all();\nconst results = [];\n\nconsole.log('Actuals input items:', items.length);\n\nfor (const item of items) {\n  const json = item.json;\n  \n  // Skip header row or empty rows\n  if (!json.Account) {\n    console.log('Skipping item without Account:', JSON.stringify(json));\n    continue;\n  }\n  \n  results.push({\n    json: {\n      Account: json.Account,\n      Date: json.Period || json.Date || null,\n      Amount: parseFloat(json.Actual) || 0,\n      Type: 'Actual',\n      Description: json.Opportunity || '',\n      SourceType: 'Actual'\n    }\n  });\n}\n\nconsole.log('Actuals output items:', results.length);\nreturn results;"
+      },
+      "id": "transform-actuals",
+      "name": "Transform Actuals",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Transform Odoo opportunities - keep full dates, no aggregation\nconst opportunities = $input.all();\nconst results = [];\n\nconsole.log('Odoo input items:', opportunities.length);\n\nfor (const opp of opportunities) {\n  const json = opp.json;\n  \n  // Get account name from partner_name or partner_id array\n  const account = json.partner_name || \n                  (Array.isArray(json.partner_id) ? json.partner_id[1] : null);\n  \n  if (!account) {\n    console.log('Skipping opportunity without account:', json.name);\n    continue;\n  }\n  \n  // Check stage\n  const stageInfo = json.stage_id;\n  const stageName = Array.isArray(stageInfo) ? stageInfo[1] : (stageInfo || '');\n  const isWon = stageName.toLowerCase().includes('won') || json.won_status === 'won';\n  const isLost = stageName.toLowerCase().includes('lost') || json.won_status === 'lost' || json.active === false;\n  \n  if (isLost) {\n    console.log('Skipping lost opportunity:', json.name);\n    continue;\n  }\n  \n  results.push({\n    json: {\n      Account: account,\n      Date: json.date_deadline || null,\n      Amount: parseFloat(json.prorated_revenue) || 0,\n      Type: isWon ? 'Won' : 'Pipeline',\n      Description: json.name || json.display_name,\n      SourceType: 'Prognosis'\n    }\n  });\n}\n\nconsole.log('Odoo output items:', results.length);\nreturn results;"
+      },
+      "id": "transform-odoo",
+      "name": "Transform Odoo Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 500]
+    },
+    {
+      "parameters": {
+        "mode": "append",
+        "options": {}
+      },
+      "id": "merge-budget-actuals",
+      "name": "Merge Budget + Actuals",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.1,
+      "position": [750, 200]
+    },
+    {
+      "parameters": {
+        "mode": "append",
+        "options": {}
+      },
+      "id": "merge-all",
+      "name": "Merge All + Odoo",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.1,
+      "position": [1000, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Add timestamp and prepare for Dashboard\nconst items = $input.all();\nconst timestamp = new Date().toISOString();\n\nconsole.log('Final output items:', items.length);\n\nreturn items.map(item => ({\n  json: {\n    ...item.json,\n    Updated: timestamp\n  }\n}));"
+      },
+      "id": "add-timestamp",
+      "name": "Add Timestamp",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "url",
+          "value": "https://docs.google.com/spreadsheets/d/1R7RrI5GTjZS9_G_OlSUdw7AtGRC9PHpI0Jk8e4SyjOA/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "RawData"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": ["Account", "Type", "Description"],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "write-rawdata",
+      "name": "Write Raw Data",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [1500, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "68zOyjWDCs2jFOUP",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "errorMessage": "={{ $json.error || 'Unknown error in Budget vs Actual workflow' }}"
+      },
+      "id": "error-trigger",
+      "name": "Error Handler",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [1000, 600]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "url",
+          "value": "https://docs.google.com/spreadsheets/d/1R7RrI5GTjZS9_G_OlSUdw7AtGRC9PHpI0Jk8e4SyjOA/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Error Log"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ new Date().toISOString() }}",
+            "Error": "={{ $json.error }}",
+            "Node": "={{ $json.node }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "log-error",
+      "name": "Log Error",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [1250, 600],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "68zOyjWDCs2jFOUP",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule (6 timer)": {
+      "main": [
+        [
+          { "node": "Read Budget", "type": "main", "index": 0 },
+          { "node": "Read Actuals", "type": "main", "index": 0 },
+          { "node": "Read Odoo Opportunities", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Read Budget": {
+      "main": [
+        [{ "node": "Transform Budget", "type": "main", "index": 0 }]
+      ]
+    },
+    "Read Actuals": {
+      "main": [
+        [{ "node": "Transform Actuals", "type": "main", "index": 0 }]
+      ]
+    },
+    "Read Odoo Opportunities": {
+      "main": [
+        [{ "node": "Transform Odoo Data", "type": "main", "index": 0 }]
+      ]
+    },
+    "Transform Budget": {
+      "main": [
+        [{ "node": "Merge Budget + Actuals", "type": "main", "index": 0 }]
+      ]
+    },
+    "Transform Actuals": {
+      "main": [
+        [{ "node": "Merge Budget + Actuals", "type": "main", "index": 1 }]
+      ]
+    },
+    "Merge Budget + Actuals": {
+      "main": [
+        [{ "node": "Merge All + Odoo", "type": "main", "index": 0 }]
+      ]
+    },
+    "Transform Odoo Data": {
+      "main": [
+        [{ "node": "Merge All + Odoo", "type": "main", "index": 1 }]
+      ]
+    },
+    "Merge All + Odoo": {
+      "main": [
+        [{ "node": "Add Timestamp", "type": "main", "index": 0 }]
+      ]
+    },
+    "Add Timestamp": {
+      "main": [
+        [{ "node": "Write Raw Data", "type": "main", "index": 0 }]
+      ]
+    },
+    "Error Handler": {
+      "main": [
+        [{ "node": "Log Error", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": ["financial", "dashboard", "budget", "odoo", "crm"]
+}
+

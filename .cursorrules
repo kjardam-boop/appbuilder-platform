@@ -622,3 +622,41 @@ npm run generate:docs
 ## Eksempler
 [Kodeeksempler på bruk]
 ```
+
+### Notion Feature Specifications
+
+**Alle requirement-sider for nye features skal opprettes i Notion-databasen "Feature Specifications":**
+
+- **Database URL:** https://www.notion.so/94e3d4a456eb4565a571a85ff41106b7
+- **Data Source ID:** `bcedb797-6174-4679-be93-e6477bb7d131`
+
+**Påkrevde properties:**
+
+| Property | Type | Verdier |
+|----------|------|---------|
+| Title | title | Beskrivende navn på feature |
+| Type | select | Capability, Bugfix, Refactor, Integration, UI/UX |
+| Platform Module | multi_select | wizard, capabilities, integrations, permissions, ai, company, project, mcp |
+| Priority | select | Critical, High, Medium, Low |
+| Sprint | select | Current, Next, Backlog |
+| Status | select | Draft, In Review, Approved, In Progress, Done, Cancelled |
+
+**Innholdsstruktur:**
+- Oversikt (mål, brukerverdi, avhengigheter)
+- Problem/bakgrunn
+- Løsning
+- Teknisk design med mermaid-diagrammer
+- Funksjonelle krav (Must-have, Should-have, Could-have)
+- Testcases
+- Estimat
+
+**Arbeidsflyt for feature-implementering:**
+
+1. **Opprett spec i Notion** → Feature Specifications database
+2. **Diskuter med bruker** → Bruker legger inn kommentarer (page comments)
+3. **Les kommentarer** → Bruk `notion-get-comments` for å hente feedback
+4. **Oppdater Notion-siden** → Inkluder beslutninger og endringer FØR implementering starter
+5. **Sett status til "Approved"** → Når alle beslutninger er tatt
+6. **Start implementering** → Følg planen fra Notion-siden
+
+**VIKTIG:** Alltid oppdater Notion-siden med beslutninger fra diskusjonen FØR du starter koding!

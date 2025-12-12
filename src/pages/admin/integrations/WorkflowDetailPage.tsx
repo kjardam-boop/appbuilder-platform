@@ -614,6 +614,22 @@ export default function WorkflowDetailPage() {
               <div className="space-y-2">
                 {workflow.n8n_workflow_id ? (
                   <>
+                    {/* Push updates to n8n */}
+                    {workflow.workflow_json && (
+                      <Button 
+                        className="w-full"
+                        onClick={() => updateN8nMutation.mutate(workflow.workflow_json)}
+                        disabled={updateN8nMutation.isPending}
+                      >
+                        {updateN8nMutation.isPending ? (
+                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Upload className="h-4 w-4 mr-2" />
+                        )}
+                        Push til n8n
+                      </Button>
+                    )}
+
                     {/* Sync from n8n */}
                     <Button 
                       variant="outline" 

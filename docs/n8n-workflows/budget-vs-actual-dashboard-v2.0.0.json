@@ -1,0 +1,271 @@
+{
+  "name": "Budget vs Actual Dashboard",
+  "version": "2.0.0",
+  "changelog": "v2.0.0: Replaced Prognosis Google Sheet with Odoo CRM opportunities. Added monthly breakdown, Won/Pipeline split, and improved aggregation.",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule (6 timer)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 300]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "url",
+          "value": "https://docs.google.com/spreadsheets/d/1R7RrI5GTjZS9_G_OlSUdw7AtGRC9PHpI0Jk8e4SyjOA/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=1455797473",
+          "mode": "list",
+          "cachedResultName": "Budgets"
+        },
+        "options": {
+          "returnAllMatches": true
+        }
+      },
+      "id": "read-budget",
+      "name": "Read Budget",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [250, 100],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "68zOyjWDCs2jFOUP",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "url",
+          "value": "https://docs.google.com/spreadsheets/d/1R7RrI5GTjZS9_G_OlSUdw7AtGRC9PHpI0Jk8e4SyjOA/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Actuals"
+        },
+        "options": {
+          "returnAllMatches": true
+        }
+      },
+      "id": "read-actuals",
+      "name": "Read Actuals",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [250, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "68zOyjWDCs2jFOUP",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "custom",
+        "operation": "getMany",
+        "customResource": "crm.lead",
+        "customResourceOptions": {
+          "returnAll": true,
+          "fields": "id,name,display_name,partner_name,partner_id,expected_revenue,prorated_revenue,probability,stage_id,date_deadline,won_status,active"
+        },
+        "additionalFields": {
+          "domain": "[[\"type\",\"=\",\"opportunity\"],[\"active\",\"=\",true]]"
+        }
+      },
+      "id": "read-odoo-opportunities",
+      "name": "Read Odoo Opportunities",
+      "type": "n8n-nodes-base.odoo",
+      "typeVersion": 1,
+      "position": [250, 500],
+      "credentials": {
+        "odooApi": {
+          "id": "YOUR_ODOO_CREDENTIAL_ID",
+          "name": "Odoo account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Transform Odoo opportunities to match expected format\nconst opportunities = $input.all();\nconst results = [];\n\nfor (const opp of opportunities) {\n  const json = opp.json;\n  \n  // Get date_deadline for period calculation\n  const deadline = json.date_deadline;\n  let period = 'Unknown';\n  \n  if (deadline) {\n    const date = new Date(deadline);\n    period = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;\n  }\n  \n  // Get account name from partner_name or partner_id array\n  const account = json.partner_name || \n                  (Array.isArray(json.partner_id) ? json.partner_id[1] : null);\n  \n  if (!account) {\n    console.log('Skipping opportunity without account:', json.name);\n    continue;\n  }\n  \n  // Check if Won stage\n  const stageInfo = json.stage_id;\n  const stageName = Array.isArray(stageInfo) ? stageInfo[1] : (stageInfo || '');\n  const isWon = stageName.toLowerCase().includes('won') || \n                json.won_status === 'won';\n  \n  // Check if Lost (we exclude these)\n  const isLost = stageName.toLowerCase().includes('lost') || \n                 json.won_status === 'lost' ||\n                 json.active === false;\n  \n  if (isLost) {\n    console.log('Skipping lost opportunity:', json.name);\n    continue;\n  }\n  \n  results.push({\n    json: {\n      Account: account,\n      Period: period,\n      Prognosis: parseFloat(json.prorated_revenue) || 0,\n      OpportunityName: json.name || json.display_name,\n      IsWon: isWon,\n      Stage: stageName,\n      SourceType: 'odoo'\n    }\n  });\n}\n\nconsole.log(`Transformed ${results.length} opportunities from Odoo`);\nreturn results;"
+      },
+      "id": "transform-odoo",
+      "name": "Transform Odoo Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 500]
+    },
+    {
+      "parameters": {
+        "mode": "append",
+        "options": {}
+      },
+      "id": "merge-inputs",
+      "name": "Wait for All Data",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.1,
+      "position": [750, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Merge & Calculate Variances with Monthly Breakdown and Won/Pipeline Split\nconst allItems = $input.all();\n\n// Separate data by source type\nconst budgetData = [];\nconst actualData = [];\nconst prognosisData = [];\n\nfor (const item of allItems) {\n  const json = item.json;\n  \n  // Odoo data has SourceType = 'odoo'\n  if (json.SourceType === 'odoo') {\n    prognosisData.push(item);\n  }\n  // Budget data has 'Budget Name' field\n  else if (json['Budget Name'] !== undefined && typeof json.Budget === 'number') {\n    budgetData.push(item);\n  }\n  // Actual data has 'Actual' field\n  else if (json.Actual !== undefined) {\n    actualData.push(item);\n  }\n}\n\nconsole.log(`Budget: ${budgetData.length}, Actual: ${actualData.length}, Prognosis: ${prognosisData.length}`);\n\n// Build aggregation maps with Account + Period as key\n// Budget Map: { 'Account|Period': { budget: number, period: string } }\nconst budgetMap = new Map();\nbudgetData.forEach(item => {\n  const account = item.json.Account;\n  // Convert period to YYYY-MM format if needed\n  let period = String(item.json.Period || 'Unknown');\n  if (/^\\d{4}$/.test(period)) {\n    // If just year, assume January\n    period = `${period}-01`;\n  }\n  \n  const key = `${account}|${period}`;\n  const existing = budgetMap.get(key) || { budget: 0 };\n  budgetMap.set(key, {\n    budget: existing.budget + (parseFloat(item.json.Budget) || 0),\n    account,\n    period\n  });\n});\n\n// Actual Map: { 'Account|Period': { actual: number } }\nconst actualMap = new Map();\nactualData.forEach(item => {\n  const account = item.json.Account;\n  let period = String(item.json.Period || 'Unknown');\n  if (/^\\d{4}$/.test(period)) {\n    period = `${period}-01`;\n  }\n  \n  const key = `${account}|${period}`;\n  const existing = actualMap.get(key) || { actual: 0 };\n  actualMap.set(key, {\n    actual: existing.actual + (parseFloat(item.json.Actual) || 0),\n    account,\n    period\n  });\n});\n\n// Prognosis Map with Won/Pipeline split\n// { 'Account|Period': { won: number, pipeline: number, total: number } }\nconst prognosisMap = new Map();\nprognosisData.forEach(item => {\n  const account = item.json.Account;\n  const period = item.json.Period || 'Unknown';\n  const amount = parseFloat(item.json.Prognosis) || 0;\n  const isWon = item.json.IsWon === true;\n  \n  const key = `${account}|${period}`;\n  const existing = prognosisMap.get(key) || { won: 0, pipeline: 0, total: 0 };\n  \n  if (isWon) {\n    existing.won += amount;\n  } else {\n    existing.pipeline += amount;\n  }\n  existing.total = existing.won + existing.pipeline;\n  existing.account = account;\n  existing.period = period;\n  \n  prognosisMap.set(key, existing);\n});\n\n// Collect all unique Account|Period combinations\nconst allKeys = new Set([\n  ...budgetMap.keys(),\n  ...actualMap.keys(),\n  ...prognosisMap.keys()\n]);\n\n// Build results\nconst results = [];\nfor (const key of allKeys) {\n  const budgetInfo = budgetMap.get(key);\n  const actualInfo = actualMap.get(key);\n  const progInfo = prognosisMap.get(key);\n  \n  // Extract account and period from the key\n  const [account, period] = key.split('|');\n  \n  const budget = budgetInfo?.budget || 0;\n  const actual = actualInfo?.actual || 0;\n  const won = progInfo?.won || 0;\n  const pipeline = progInfo?.pipeline || 0;\n  const prognosis = won + pipeline;\n  \n  // Calculate variances\n  const varVsBudget = actual - budget;\n  const varVsBudgetPct = budget !== 0 ? Math.round(((actual - budget) / budget) * 1000) / 10 : 0;\n  const varVsPrognosis = actual - prognosis;\n  const varVsPrognosisPct = prognosis !== 0 ? Math.round(((actual - prognosis) / prognosis) * 1000) / 10 : 0;\n  \n  results.push({\n    json: {\n      Account: account,\n      Period: period,\n      Budget: budget,\n      Won: won,\n      Pipeline: pipeline,\n      Prognosis: prognosis,\n      Actual: actual,\n      'Var vs Budget': varVsBudget,\n      'Var vs Budget %': varVsBudgetPct,\n      'Var vs Prognosis': varVsPrognosis,\n      'Var vs Prognosis %': varVsPrognosisPct,\n      Updated: new Date().toISOString()\n    }\n  });\n}\n\n// Sort by Account, then Period\nresults.sort((a, b) => {\n  const accountCmp = a.json.Account.localeCompare(b.json.Account);\n  if (accountCmp !== 0) return accountCmp;\n  return a.json.Period.localeCompare(b.json.Period);\n});\n\nif (results.length === 0) {\n  return [{ json: { error: 'No data found in any source' } }];\n}\n\nconsole.log(`Generated ${results.length} dashboard rows`);\nreturn results;"
+      },
+      "id": "merge-calculate",
+      "name": "Merge & Calculate Variances",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1000, 300]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "url",
+          "value": "https://docs.google.com/spreadsheets/d/1R7RrI5GTjZS9_G_OlSUdw7AtGRC9PHpI0Jk8e4SyjOA/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Dashboard"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": ["Account", "Period"],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "write-dashboard",
+      "name": "Write Dashboard",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [1250, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "68zOyjWDCs2jFOUP",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "errorMessage": "={{ $json.error || 'Unknown error in Budget vs Actual workflow' }}"
+      },
+      "id": "error-trigger",
+      "name": "Error Handler",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [750, 600]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "url",
+          "value": "https://docs.google.com/spreadsheets/d/1R7RrI5GTjZS9_G_OlSUdw7AtGRC9PHpI0Jk8e4SyjOA/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Error Log"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ new Date().toISOString() }}",
+            "Error": "={{ $json.error }}",
+            "Node": "={{ $json.node }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "log-error",
+      "name": "Log Error",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [1000, 600],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "68zOyjWDCs2jFOUP",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule (6 timer)": {
+      "main": [
+        [
+          { "node": "Read Budget", "type": "main", "index": 0 },
+          { "node": "Read Actuals", "type": "main", "index": 0 },
+          { "node": "Read Odoo Opportunities", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Read Budget": {
+      "main": [
+        [{ "node": "Wait for All Data", "type": "main", "index": 0 }]
+      ]
+    },
+    "Read Actuals": {
+      "main": [
+        [{ "node": "Wait for All Data", "type": "main", "index": 1 }]
+      ]
+    },
+    "Read Odoo Opportunities": {
+      "main": [
+        [{ "node": "Transform Odoo Data", "type": "main", "index": 0 }]
+      ]
+    },
+    "Transform Odoo Data": {
+      "main": [
+        [{ "node": "Wait for All Data", "type": "main", "index": 2 }]
+      ]
+    },
+    "Wait for All Data": {
+      "main": [
+        [{ "node": "Merge & Calculate Variances", "type": "main", "index": 0 }]
+      ]
+    },
+    "Merge & Calculate Variances": {
+      "main": [
+        [{ "node": "Write Dashboard", "type": "main", "index": 0 }]
+      ]
+    },
+    "Error Handler": {
+      "main": [
+        [{ "node": "Log Error", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": ["financial", "dashboard", "budget", "odoo", "crm"]
+}
+

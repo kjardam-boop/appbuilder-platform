@@ -21,13 +21,38 @@ export type {
   WorkflowTemplate,
   WorkflowCategory,
   TenantWorkflow,
+  // Destination types
+  CapabilityIOType,
+  DestinationConfig,
+  DestinationType,
+  CapabilityDestination,
 } from "./types/capability.types";
 
 // Services
 export { CapabilityService } from "./services/capabilityService";
 export { TenantCapabilityService } from "./services/tenantCapabilityService";
+export { DestinationService } from "./services/destinationService";
+export type { DestinationOption, DestinationGroup } from "./services/destinationService";
 export { seedCapabilities } from "./services/seedCapabilities";
 export { syncCapabilityToNotion, syncAllCapabilitiesToNotion } from "./services/notionSyncService";
+
+// Workflow Services (workflow-builder capability)
+export { 
+  WorkflowCompatibilityService,
+  parseWorkflowJson,
+  checkOcrCompatibility,
+  getCompatibleWorkflows,
+} from "./services/workflowCompatibilityService";
+
+export { 
+  WorkflowCreatorService,
+  createFromTemplate,
+  createCustomWorkflow,
+  getAvailableTemplates,
+  type WorkflowTemplateId,
+  type WorkflowConfig,
+  type WorkflowBuilderResult,
+} from "./services/workflowCreatorService";
 
 // Hooks
 export {
@@ -51,6 +76,8 @@ export { CapabilityCard } from "./components/CapabilityCard";
 export { CapabilityBrowser } from "./components/CapabilityBrowser";
 export { AppCapabilityDrawer } from "./components/AppCapabilityDrawer";
 export { CapabilityTestSandbox } from "./components/CapabilityTestSandbox";
+export { DestinationSelector } from "./components/DestinationSelector";
+export { CreateWorkflowDialog } from "./components/CreateWorkflowDialog";
 
 // Capability Testers
 export { OCRCapabilityTester } from "./components/testers/OCRCapabilityTester";
