@@ -6,6 +6,19 @@ import { cn } from "@/lib/utils";
 // Format: { THEME_NAME: CSS_SELECTOR }
 const THEMES = { light: "", dark: ".dark" } as const;
 
+const SAFE_CSS_VAR_KEY = /^[a-zA-Z0-9_-]+$/;
+
+function sanitizeChartId(id: string): string {
+  // Used in a CSS attribute selector string. Keep it readable but safe.
+  return id.replace(/[^a-zA-Z0-9_-]/g, "_");
+}
+
+function escapeCssAttrValue(value: string): string {
+  // Escape for use inside a double-quoted CSS attribute selector: [data-x="..."]
+  // (We still sanitize chartId, but this is defense-in-depth.)
+  return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/[\n\r\f]/g, "");
+}
+
 export type ChartConfig = {
   [k in string]: {
     label?: React.ReactNode;
@@ -37,7 +50,8 @@ const ChartContainer = React.forwardRef<
   }
 >(({ id, className, children, config, ...props }, ref) => {
   const uniqueId = React.useId();
-  const chartId = `chart-${id || uniqueId.replace(/:/g, "")}`;
+  const rawChartId = `chart-${id || uniqueId.replace(/:/g, "")}`;
+  const chartId = sanitizeChartId(rawChartId);
 
   return (
     <ChartContext.Provider value={{ config }}>
@@ -60,10 +74,19 @@ ChartContainer.displayName = "Chart";
 
 const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
   const colorConfig = Object.entries(config).filter(([_, config]) => config.theme || config.color);
+  const safeColorConfig = colorConfig.filter(([key]) => SAFE_CSS_VAR_KEY.test(key));
 
-  if (!colorConfig.length) {
+  if (!safeColorConfig.length) {
+    if (colorConfig.length) {
+      console.warn(
+        "[ChartStyle] Skipping unsafe chart config keys (must match /^[a-zA-Z0-9_-]+$/) to prevent CSS injection.",
+      );
+    }
     return null;
   }
+
+  const safeId = sanitizeChartId(id);
+  const escapedId = escapeCssAttrValue(safeId);
 
   return (
     <style
@@ -71,8 +94,8 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
         __html: Object.entries(THEMES)
           .map(
             ([theme, prefix]) => `
-${prefix} [data-chart=${id}] {
-${colorConfig
+${prefix} [data-chart="${escapedId}"] {
+${safeColorConfig
   .map(([key, itemConfig]) => {
     const color = itemConfig.theme?.[theme as keyof typeof itemConfig.theme] || itemConfig.color;
     return color ? `  --color-${key}: ${color};` : null;
