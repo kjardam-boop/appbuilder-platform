@@ -13,6 +13,7 @@ import { Card } from "./card";
 import { Alert, AlertDescription } from "./alert";
 import { AlertCircle, FileText } from "lucide-react";
 import { Skeleton } from "./skeleton";
+import { normalizeDocsMarkdownPath, sanitizeMarkdownHref, sanitizeMermaidSvg } from "./markdown-viewer.utils";
 
 interface MarkdownViewerProps {
   /** Path to markdown file (e.g., "docs/capabilities/ai-generation.md") */
@@ -86,29 +87,6 @@ function initializeMermaid() {
       fontSize: '14px',
     },
   });
-}
-
-/**
- * Defense-in-depth sanitizer for Mermaid-generated SVG.
- * Mermaid strict mode already sanitizes, but we also strip:
- * - <script> blocks
- * - <foreignObject> blocks (HTML in SVG)
- * - inline event handlers (onload=..., onclick=...)
- * - javascript: URLs in href/xlink:href
- */
-export function sanitizeMermaidSvg(svg: string): string {
-  if (!svg) return svg;
-  let cleaned = svg;
-
-  cleaned = cleaned.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "");
-  cleaned = cleaned.replace(/<foreignObject[\s\S]*?>[\s\S]*?<\/foreignObject>/gi, "");
-  cleaned = cleaned.replace(/\son[a-z]+\s*=\s*(?:"[^"]*"|'[^']*')/gi, "");
-  cleaned = cleaned.replace(
-    /\s(?:href|xlink:href)\s*=\s*(?:"\s*javascript:[^"]*"|'\s*javascript:[^']*')/gi,
-    "",
-  );
-
-  return cleaned;
 }
 
 // Initialize on module load
@@ -200,8 +178,12 @@ export function MarkdownViewer({
       setError(null);
 
       try {
-        const normalizedPath = markdownPath.startsWith('/') ? markdownPath : `/${markdownPath}`;
-        const response = await fetch(normalizedPath);
+        const normalized = normalizeDocsMarkdownPath(markdownPath);
+        if (!normalized.ok) {
+          throw new Error(normalized.error);
+        }
+
+        const response = await fetch(normalized.path);
         if (!response.ok) {
           throw new Error(`Failed to load documentation: ${response.statusText}`);
         }
@@ -323,9 +305,26 @@ export function MarkdownViewer({
             <li className="leading-relaxed">{children}</li>
           ),
           a: ({ href, children }) => (
-            <a href={href} className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">
-              {children}
-            </a>
+            (() => {
+              const safeHref = sanitizeMarkdownHref(href);
+              if (!safeHref) {
+                return (
+                  <span className="text-destructive underline decoration-dotted" title="Blocked unsafe link">
+                    {children}
+                  </span>
+                );
+              }
+              return (
+                <a
+                  href={safeHref}
+                  className="text-primary hover:underline"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {children}
+                </a>
+              );
+            })()
           ),
           strong: ({ children }) => (
             <strong className="font-semibold">{children}</strong>

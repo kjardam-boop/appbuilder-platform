@@ -14,6 +14,7 @@ describe("ChartStyle CSS injection hardening", () => {
         config={{
           foo: { color: "red" },
           [`x;body{background:red}`]: { color: "blue" },
+          bar: { color: `red; } body { background: red } /*` },
         }}
       />,
     );
@@ -31,6 +32,8 @@ describe("ChartStyle CSS injection hardening", () => {
 
     // Unsafe key should not be emitted (prevents CSS injection / broken parsing).
     expect(css).not.toContain("--color-x;body");
+    // Unsafe value should not be emitted.
+    expect(css).not.toContain("--color-bar:");
 
     warnSpy.mockRestore();
   });

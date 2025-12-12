@@ -19,6 +19,27 @@ function escapeCssAttrValue(value: string): string {
   return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/[\n\r\f]/g, "");
 }
 
+function isSafeCssValue(value: string): boolean {
+  // Hard block characters that can break out of a declaration.
+  if (!value) return false;
+  if (/[;\n\r\f{}<>]/.test(value)) return false;
+  if (value.toLowerCase().includes("</style")) return false;
+
+  // If CSS.supports exists, use it to validate legitimate color syntaxes.
+  // (Still keep the hard block above to prevent injection.)
+  if (typeof CSS !== "undefined" && typeof CSS.supports === "function") {
+    return CSS.supports("color", value);
+  }
+
+  // Fallback allowlist (covers common cases)
+  return (
+    /^#[0-9a-f]{3,8}$/i.test(value) ||
+    /^(rgb|rgba|hsl|hsla)\([^)]*\)$/i.test(value) ||
+    /^var\(--[a-zA-Z0-9_-]+\)$/.test(value) ||
+    /^[a-zA-Z]+$/.test(value)
+  );
+}
+
 export type ChartConfig = {
   [k in string]: {
     label?: React.ReactNode;
@@ -98,7 +119,12 @@ ${prefix} [data-chart="${escapedId}"] {
 ${safeColorConfig
   .map(([key, itemConfig]) => {
     const color = itemConfig.theme?.[theme as keyof typeof itemConfig.theme] || itemConfig.color;
-    return color ? `  --color-${key}: ${color};` : null;
+    if (!color) return null;
+    if (!isSafeCssValue(color)) {
+      console.warn(`[ChartStyle] Skipping unsafe CSS color value for key "${key}".`);
+      return null;
+    }
+    return `  --color-${key}: ${color};`;
   })
   .join("\n")}
 }
