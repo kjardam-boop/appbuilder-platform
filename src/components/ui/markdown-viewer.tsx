@@ -5,7 +5,7 @@
  * Used for displaying capability documentation and other markdown files.
  */
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, type ComponentPropsWithoutRef } from "react";
 import ReactMarkdown from 'react-markdown';
 import mermaid from 'mermaid';
 import { useTheme } from "next-themes";
@@ -13,6 +13,7 @@ import { Card } from "./card";
 import { Alert, AlertDescription } from "./alert";
 import { AlertCircle, FileText } from "lucide-react";
 import { Skeleton } from "./skeleton";
+import { normalizeDocsMarkdownPath, sanitizeMarkdownHref, sanitizeMermaidSvg } from "./markdown-viewer.utils";
 
 interface MarkdownViewerProps {
   /** Path to markdown file (e.g., "docs/capabilities/ai-generation.md") */
@@ -65,7 +66,9 @@ function initializeMermaid() {
   mermaid.initialize({
     startOnLoad: true,
     theme: currentTheme,
-    securityLevel: 'loose',
+    // SECURITY: Mermaid diagrams can be content-controlled (docs/content). "loose" enables
+    // HTML labels/foreignObject and becomes a serious XSS footgun when combined with SVG injection.
+    securityLevel: 'strict',
     themeVariables: {
       primaryColor: getHSLColor('--primary'),
       primaryTextColor: foregroundColor,
@@ -97,9 +100,11 @@ if (typeof window !== 'undefined') {
 function MermaidDiagram({ code, themeKey }: { code: string; themeKey: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const [svg, setSvg] = useState<string>('');
+  const [renderError, setRenderError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!code) return;
+    let cancelled = false;
 
     const renderDiagram = async () => {
       try {
@@ -108,15 +113,31 @@ function MermaidDiagram({ code, themeKey }: { code: string; themeKey: string }) 
         
         const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
         const { svg } = await mermaid.render(id, code);
-        setSvg(svg);
+        if (cancelled) return;
+        setRenderError(null);
+        setSvg(sanitizeMermaidSvg(svg));
       } catch (error) {
         console.error('Mermaid render error:', error);
-        setSvg(`<pre class="text-destructive">Error rendering diagram</pre>`);
+        if (cancelled) return;
+        setSvg('');
+        setRenderError('Error rendering diagram');
       }
     };
 
     renderDiagram();
+
+    return () => {
+      cancelled = true;
+    };
   }, [code, themeKey]);
+
+  if (renderError) {
+    return (
+      <pre className="my-6 overflow-x-auto rounded-lg bg-muted/30 p-4 text-destructive">
+        {renderError}
+      </pre>
+    );
+  }
 
   return (
     <div 
@@ -157,8 +178,12 @@ export function MarkdownViewer({
       setError(null);
 
       try {
-        const normalizedPath = markdownPath.startsWith('/') ? markdownPath : `/${markdownPath}`;
-        const response = await fetch(normalizedPath);
+        const normalized = normalizeDocsMarkdownPath(markdownPath);
+        if (!normalized.ok) {
+          throw new Error(normalized.error);
+        }
+
+        const response = await fetch(normalized.path);
         if (!response.ok) {
           throw new Error(`Failed to load documentation: ${response.statusText}`);
         }
@@ -224,35 +249,40 @@ export function MarkdownViewer({
       <div className="prose prose-sm max-w-none dark:prose-invert">
         <ReactMarkdown
           components={{
-            code({ className, children, ...props }: any) {
+            code({
+              className,
+              children,
+              node: _node,
+              ...props
+            }: ComponentPropsWithoutRef<"code"> & { node?: unknown }) {
               const inline = !className;
-            const match = /language-(\w+)/.exec(className || '');
-            const language = match ? match[1] : '';
-            const code = String(children).replace(/\n$/, '');
+              const match = /language-(\w+)/.exec(className || '');
+              const language = match ? match[1] : '';
+              const code = String(children).replace(/\n$/, '');
 
-            // Render Mermaid diagrams
-            if (!inline && language === 'mermaid') {
-              return <MermaidDiagram code={code} themeKey={themeKey} />;
-            }
+              // Render Mermaid diagrams
+              if (!inline && language === 'mermaid') {
+                return <MermaidDiagram code={code} themeKey={themeKey} />;
+              }
 
-            // Regular code blocks
-            if (!inline) {
+              // Regular code blocks
+              if (!inline) {
+                return (
+                  <pre className="bg-muted p-4 rounded-lg overflow-x-auto my-4">
+                    <code className="text-sm" {...props}>
+                      {children}
+                    </code>
+                  </pre>
+                );
+              }
+
+              // Inline code
               return (
-                <pre className="bg-muted p-4 rounded-lg overflow-x-auto my-4">
-                  <code className="text-sm" {...props}>
-                    {children}
-                  </code>
-                </pre>
+                <code className="bg-muted px-1.5 py-0.5 rounded text-sm" {...props}>
+                  {children}
+                </code>
               );
-            }
-
-            // Inline code
-            return (
-              <code className="bg-muted px-1.5 py-0.5 rounded text-sm" {...props}>
-                {children}
-              </code>
-            );
-          },
+            },
           h1: ({ children }) => (
             <h1 className="text-2xl font-bold mb-8 mt-0">{children}</h1>
           ),
@@ -275,9 +305,26 @@ export function MarkdownViewer({
             <li className="leading-relaxed">{children}</li>
           ),
           a: ({ href, children }) => (
-            <a href={href} className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">
-              {children}
-            </a>
+            (() => {
+              const safeHref = sanitizeMarkdownHref(href);
+              if (!safeHref) {
+                return (
+                  <span className="text-destructive underline decoration-dotted" title="Blocked unsafe link">
+                    {children}
+                  </span>
+                );
+              }
+              return (
+                <a
+                  href={safeHref}
+                  className="text-primary hover:underline"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {children}
+                </a>
+              );
+            })()
           ),
           strong: ({ children }) => (
             <strong className="font-semibold">{children}</strong>

@@ -34,13 +34,18 @@ export function useAutoSave({
 }: UseAutoSaveOptions): UseAutoSaveReturn {
   const [status, setStatus] = useState<AutoSaveStatus>('idle');
   const [error, setError] = useState<Error | null>(null);
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>();
+  const statusResetTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>();
+  const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>();
   const isSavingRef = useRef(false);
   const retryCountRef = useRef(0);
   const lastSaveContentRef = useRef<string>('');
+  const saveTokenRef = useRef(0);
+  const isMountedRef = useRef(true);
 
   const performSave = useCallback(async (content?: string) => {
     if (!enabled || isSavingRef.current) return;
+    const saveToken = ++saveTokenRef.current;
 
     isSavingRef.current = true;
     setStatus('saving');
@@ -48,6 +53,7 @@ export function useAutoSave({
 
     try {
       await onSave();
+      if (!isMountedRef.current) return;
       if (content !== undefined) {
         lastSaveContentRef.current = content;
       }
@@ -55,18 +61,32 @@ export function useAutoSave({
       retryCountRef.current = 0;
       
       // Reset to idle after showing "saved" status for 2 seconds
-      setTimeout(() => {
-        setStatus('idle');
+      if (statusResetTimeoutRef.current) {
+        clearTimeout(statusResetTimeoutRef.current);
+      }
+      statusResetTimeoutRef.current = setTimeout(() => {
+        // Avoid stale timers overwriting a newer state transition (e.g. pending/saving)
+        if (!isMountedRef.current) return;
+        if (saveTokenRef.current !== saveToken) return;
+        setStatus((current) => (current === 'saved' ? 'idle' : current));
       }, 2000);
     } catch (err) {
       console.error('[useAutoSave] Save failed:', err);
+      if (!isMountedRef.current) return;
       
       // Retry once on network errors
       if (retryCountRef.current === 0 && err instanceof Error && err.message.includes('fetch')) {
         console.log('[useAutoSave] Retrying save...');
         retryCountRef.current++;
         isSavingRef.current = false;
-        setTimeout(() => performSave(content), 1000);
+        if (retryTimeoutRef.current) {
+          clearTimeout(retryTimeoutRef.current);
+        }
+        retryTimeoutRef.current = setTimeout(() => {
+          // Only retry if this is still the latest save attempt
+          if (saveTokenRef.current !== saveToken) return;
+          performSave(content);
+        }, 1000);
         return;
       }
       
@@ -80,6 +100,17 @@ export function useAutoSave({
 
   const trigger = useCallback((content?: string) => {
     if (!enabled) return;
+
+    // If the user edits after a successful save, cancel the "saved -> idle" timer
+    // so we don't overwrite 'pending' with an old timeout.
+    if (statusResetTimeoutRef.current) {
+      clearTimeout(statusResetTimeoutRef.current);
+      statusResetTimeoutRef.current = undefined;
+    }
+    if (retryTimeoutRef.current) {
+      clearTimeout(retryTimeoutRef.current);
+      retryTimeoutRef.current = undefined;
+    }
 
     // Don't trigger if content hasn't changed
     if (content !== undefined && content === lastSaveContentRef.current) {
@@ -101,8 +132,15 @@ export function useAutoSave({
   // Cleanup - only clear timeout, don't force save
   useEffect(() => {
     return () => {
+      isMountedRef.current = false;
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
+      }
+      if (statusResetTimeoutRef.current) {
+        clearTimeout(statusResetTimeoutRef.current);
+      }
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
       }
     };
   }, []);
